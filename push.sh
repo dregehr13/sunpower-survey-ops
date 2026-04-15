@@ -9,6 +9,7 @@
 
 set -e
 export PROJ=~/Projects/survey-ops
+export DATA_DATE=$(date +%Y-%m-%d)
 
 # --- Find the SF export ---
 if [ -n "$1" ]; then
@@ -31,10 +32,13 @@ node --input-type=module << 'EOF'
 import { readFileSync, writeFileSync } from 'fs';
 const raw = process.env.RAW_JSON;
 const proj = process.env.PROJ;
+const date = process.env.DATA_DATE;
 
 for (const f of [`${proj}/index.html`, `${proj}/compose/index.html`]) {
-  const content = readFileSync(f, 'utf8');
-  writeFileSync(f, content.replace(/const RAW = \[[\s\S]*?\];/, `const RAW = ${raw};`));
+  let content = readFileSync(f, 'utf8');
+  content = content.replace(/const RAW = \[[\s\S]*?\];/, `const RAW = ${raw};`);
+  content = content.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
+  writeFileSync(f, content);
 }
 console.log('Done.');
 EOF
@@ -45,5 +49,11 @@ rm "$SF_FILE"
 echo "Committing and pushing..."
 cd "$PROJ"
 git add index.html compose/index.html
-git commit -m "Data update $(date +%Y-%m-%d)"
-git push
+# Commit only if something actually changed
+if git diff --cached --quiet; then
+  echo "No changes to commit (data identical to last push)."
+else
+  git commit -m "Data update $DATA_DATE"
+  git push
+  echo "Done — live in ~30 seconds."
+fi

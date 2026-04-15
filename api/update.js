@@ -53,7 +53,8 @@ export default async function handler(req, res) {
     for (const file of FILES) {
       const { sha, content: b64 } = await ghGet(file, token);
       const current = Buffer.from(b64.replace(/\n/g, ''), 'base64').toString('utf8');
-      const updated = current.replace(/const RAW = \[[\s\S]*?\];/, rawJS);
+      let updated = current.replace(/const RAW = \[[\s\S]*?\];/, rawJS);
+      updated = updated.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
       if (updated === current) throw new Error(`RAW pattern not found in ${file}`);
       await ghPut(file, updated, sha, commitMsg, token);
     }

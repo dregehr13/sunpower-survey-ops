@@ -278,8 +278,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 .upd-drophere{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;font-size:11px;color:var(--muted);margin-top:8px;transition:border-color .15s,background .15s;}
 .upd-drophere.drag-over{border-color:#2563eb;background:#eff6ff;color:#2563eb;}
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
-.export-btn{font-size:11px;padding:5px 12px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
-.export-btn:hover{background:#333;}
 .upd-or{font-size:10px;color:var(--faint);text-align:center;margin:6px 0;}
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:11px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
 .toast.on{opacity:1;transform:translateY(0);}
@@ -303,7 +301,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="outliers">Outliers</div>
   <div class="ntab" data-page="data">Source Data</div>
   <div class="nav-r">
-    <span class="nav-ts" id="nav-ts" style="display:none;"></span>
+    <span class="nav-ts" id="nav-ts"></span>
     <span class="nbadge" id="navBadge">766 projects</span>
     <button class="nsf" onclick="openSF()">⬡ Salesforce</button>
     <button class="nload" onclick="openUpdateModal()" title="Update data">↑ Update data</button>
@@ -332,7 +330,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
       <h2>Update dashboard data</h2>
       <button onclick="closeUpdateModal()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">×</button>
     </div>
-    <p class="msub">Pull a fresh export from Salesforce and load it here. Takes about 2 minutes.</p>
+    <p class="msub">Pull a fresh export from Salesforce and drop it here to update the dashboard for everyone.</p>
 
     <div class="upd-step">
       <div class="upd-num">1</div>
@@ -363,8 +361,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
             <strong>Drop .xls file here</strong>
             or click to browse
           </div>
-          <div class="upd-or">— or —</div>
-          <label class="upd-sfbtn" for="fileInput" style="background:var(--surface);color:var(--text);border:1px solid var(--border);cursor:pointer;">Browse files</label>
         </div>
       </div>
     </div>
@@ -422,6 +418,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 Chart.register(window['chartjs-plugin-annotation']);
 
 const VERSION = 'v5.9 · 2026-04-14';
+const DATA_TS = '2026-04-15'; // Updated automatically by push.sh and api/update.js
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -525,6 +522,7 @@ function getF(){ return globalMode ? globalF : pageF[currentPage]; }
 
 function applyFilter(){
   const f = getF();
+  if(!f) return; // settings page or other non-data page — no filter needed
   const fence = f.removeOutliers ? calcFence(f.outlierMult) : Infinity;
   filtered = rows.filter(r=>{
     if(f.dateFrom && r.start && r.start < f.dateFrom) return false;
@@ -1516,6 +1514,14 @@ function openUpdateModal(){
   tsLine.textContent = dataTimestamp
     ? 'Last updated: ' + dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
     : 'No data loaded yet';
+  // Reset save panel
+  const savePanel = document.getElementById('upd-save');
+  savePanel.style.display = 'none'; savePanel.classList.remove('visible');
+  const btn = document.getElementById('upd-save-btn');
+  btn.disabled = false; btn.textContent = 'Save to dashboard';
+  document.getElementById('upd-save-status').textContent = '';
+  document.getElementById('upd-save-status').style.color = '';
+  document.getElementById('upd-password').value = '';
 }
 function closeUpdateModal(){ document.getElementById('updateModal').classList.add('hidden'); }
 document.getElementById('updateModal').addEventListener('click',e=>{ if(e.target===document.getElementById('updateModal')) closeUpdateModal(); });
@@ -1612,6 +1618,9 @@ window.addEventListener('load',()=>{
     globalF.dateFrom=dates[0]; globalF.dateTo=dates[dates.length-1];
     PAGES.forEach(p=>{pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];});
   }
+  // Show data freshness in nav
+  const navTs = document.getElementById('nav-ts');
+  if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS; navTs.style.display=''; }
   applyFilter();
   renderFBars();
   nav(S.defaultPage||'exec');
