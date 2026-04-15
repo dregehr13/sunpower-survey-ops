@@ -333,12 +333,18 @@ tr:hover td{background:#fafaf8;}
       </div>
     </div>
 
+    <div id="upd-save" style="display:none;margin-top:14px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;" id="upd-save-summary"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="password" id="upd-password" placeholder="Update password" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+        <button class="mbtn" onclick="saveToServer()" id="upd-save-btn">Save to dashboard</button>
+      </div>
+      <div id="upd-save-status" style="font-size:11px;color:var(--muted);margin-top:7px;min-height:16px;"></div>
+    </div>
+
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0ec;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div style="font-size:10px;color:var(--faint);" id="upd-ts-line"></div>
-      <div style="display:flex;gap:8px;">
-        <button class="export-btn" onclick="exportDashboard()" title="Bake current data into a new HTML file ready to deploy">↓ Export dashboard</button>
-        <button class="mbtn" onclick="closeUpdateModal()">Done</button>
-      </div>
+      <button class="mbtn" onclick="closeUpdateModal()">Done</button>
     </div>
   </div>
 </div>
@@ -662,6 +668,7 @@ function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function fmtDate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}, ${y}`; }
 function fmtDateShort(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}`; }
+function fmtWeekLabel(w){ return fmtDateShort(w.week)+' – '+fmtDateShort(w.weekEnd); }
 function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),3400); }
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
@@ -814,7 +821,7 @@ function renderExec(){
   dc('ex-trend');
   CH['ex-trend']=new Chart(document.getElementById('ex-trend'),{
     type:'bar',
-    data:{labels:trendWeekly.map(w=>w.week.slice(5)+'–'+w.weekEnd.slice(5)),datasets:[
+    data:{labels:trendWeekly.map(fmtWeekLabel),datasets:[
       {label:'Weekly avg',data:trendWeekly.map(w=>w.start_to_complete),backgroundColor:'#e2e8f0',borderRadius:3,order:2},
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',
        tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,order:1},
@@ -958,7 +965,7 @@ function renderRegionTable(){
 function renderWeekly(){
   const weekly=weeklyStats(filtered);
   const roll3=rollingAvg(weekly,'start_to_complete',3);
-  const labels=weekly.map(w=>`${w.week.slice(5)}–${w.weekEnd.slice(5)}`);
+  const labels=weekly.map(fmtWeekLabel);
   const al=weekly.map(w=>w.count<5?.4:1);
 
   document.getElementById('wk-content').innerHTML=`
@@ -1413,12 +1420,15 @@ function loadFile(file){
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
     ts.textContent='as of '+dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-    // Update modal timestamp
     const tsLine=document.getElementById('upd-ts-line');
     if(tsLine) tsLine.textContent='Last updated: '+dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-    closeUpdateModal();
     applyFilter(); renderFBars(); renderPage(currentPage);
-    toast(`Loaded ${parsed.length} projects across ${[...new Set(parsed.map(r=>r.region).filter(Boolean))].length} regions`);
+    // Show save panel
+    const regions=[...new Set(parsed.map(r=>r.region).filter(Boolean))].length;
+    document.getElementById('upd-save-summary').textContent=`${parsed.length} projects across ${regions} regions loaded. Save to dashboard for everyone?`;
+    document.getElementById('upd-save-status').textContent='';
+    document.getElementById('upd-save').style.display='';
+    lastParsedRows=parsed;
   };
   reader.readAsText(file,'ISO-8859-1');
 }
@@ -1480,20 +1490,27 @@ dropZone.addEventListener('drop',e=>{
   loadFile(file);
 });
 
-// ═══ EXPORT DASHBOARD ════════════════════════════════════
-function exportDashboard(){
-  const rowJSON = JSON.stringify(rows, null, 0);
-  const ts = new Date().toISOString().slice(0,10);
+// ═══ SAVE TO SERVER ══════════════════════════════════════
+let lastParsedRows = null;
 
-  // Export index.html — replace from live DOM
-  const dashHTML = document.documentElement.outerHTML.replace(
-    /const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';'
-  );
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([dashHTML],{type:'text/html'}));
-  a.download = 'survey-dashboard.html';
-  a.click();
-  toast('Downloaded survey-dashboard.html — run push.sh to deploy.');
+async function saveToServer(){
+  const pw=document.getElementById('upd-password').value.trim();
+  if(!pw){ document.getElementById('upd-save-status').textContent='Enter the update password.'; return; }
+  const btn=document.getElementById('upd-save-btn');
+  const status=document.getElementById('upd-save-status');
+  btn.disabled=true; btn.textContent='Saving...'; status.textContent='Pushing to GitHub — live in ~30 seconds...';
+  try{
+    const res=await fetch('/api/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:lastParsedRows,password:pw})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Unknown error');
+    status.style.color='var(--green)';
+    status.textContent=`Saved — ${data.rows} projects committed. Dashboard will update in ~30 seconds.`;
+    btn.textContent='Saved';
+  }catch(err){
+    status.style.color='var(--red)';
+    status.textContent='Error: '+err.message;
+    btn.disabled=false; btn.textContent='Save to dashboard';
+  }
 }
 
 // ═══ SALESFORCE ═══════════════════════════════════════════
