@@ -379,7 +379,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.7 · 2026-04-14';
+const VERSION = 'v5.8 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -835,7 +835,7 @@ function renderExec(){
       scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999'}}}}
   });
 
-  const stats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).slice(0,16);
+  const stats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).sort((a,b)=>b.count-a.count).slice(0,16);
   const rh=Math.max(220,stats.length*26+50);
   document.getElementById('ex-rg-wrap').style.height=rh+'px';
   dc('ex-rg');
