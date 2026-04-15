@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/compose", "destination": "/compose/index.html" },
+    { "source": "/compose/(.*)", "destination": "/compose/index.html" }
+  ]
+}
