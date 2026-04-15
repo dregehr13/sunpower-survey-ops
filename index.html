@@ -49,6 +49,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .fsep{width:1px;height:18px;background:var(--border);flex-shrink:0;}
 .fbtn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;height:28px;white-space:nowrap;}
 .fbtn:hover{background:var(--bg);}
+.fbtn-active{background:var(--text)!important;color:#fff!important;border-color:var(--text)!important;}
 .fglobal{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
 .fglobal input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);}
 .fhint{font-size:10px;color:var(--faint);}
@@ -378,7 +379,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.6 · 2026-04-14';
+const VERSION = 'v5.7 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -520,11 +521,17 @@ function buildFBar(page){
   const fence = calcFence(f.outlierMult);
   const outlierCount = rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
 
+  const lw=weekRange(-1), tw=weekRange(0);
+  const isLW=f.dateFrom===lw.from&&f.dateTo===lw.to;
+  const isTW=f.dateFrom===tw.from&&f.dateTo===tw.to;
+
   return `<div class="fbar">
     <span class="flabel">Project start</span>
     <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
     <span style="color:var(--faint);font-size:10px;">to</span>
     <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
+    <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last week</button>
+    <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This week</button>
     <div class="fsep"></div>
     <span class="flabel">Region</span>
     <select onchange="onF('${page}','region',this.value)">
@@ -571,6 +578,18 @@ function updateOutlierSlider(page, val){
 
 function renderFBars(){
   PAGES.forEach(p=>{ const el=document.getElementById('fb-'+p); if(el) el.innerHTML=buildFBar(p); });
+}
+
+function weekRange(offsetWeeks){
+  const today=new Date(), dow=today.getDay();
+  const mon=new Date(today); mon.setDate(today.getDate()-(dow===0?6:dow-1)+(offsetWeeks*7));
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  return {from:mon.toISOString().slice(0,10), to:sun.toISOString().slice(0,10)};
+}
+function setDateRange(page,from,to){
+  if(globalMode){globalF.dateFrom=from;globalF.dateTo=to;PAGES.forEach(p=>{pageF[p].dateFrom=from;pageF[p].dateTo=to;});}
+  else{pageF[page].dateFrom=from;pageF[page].dateTo=to;}
+  saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
 }
 
 function onF(page,key,value){
