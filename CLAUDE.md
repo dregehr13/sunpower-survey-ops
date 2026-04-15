@@ -43,7 +43,5 @@ When these arrive, uncomment them in FIELDS registry in index.html:
 Set via `const PASSWORD` in compose/index.html. Currently `sunpower`.
 
 ## Change list (next build)
-- Exec Summary: default to last full Mon–Sun week on load (e.g. Tuesday → show prior Mon–Sun)
-- Weekly chart x-axis: show Mon–Sun range instead of just week-start date
 - Resource breakdown on Regions page (auto-shows once `resource` field is active)
 - FPY + Absolute FPY metrics (needs `resurvey_attributed` field)

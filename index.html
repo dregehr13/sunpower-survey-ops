@@ -814,7 +814,7 @@ function renderExec(){
   dc('ex-trend');
   CH['ex-trend']=new Chart(document.getElementById('ex-trend'),{
     type:'bar',
-    data:{labels:trendWeekly.map(w=>w.week.slice(5)),datasets:[
+    data:{labels:trendWeekly.map(w=>w.week.slice(5)+'–'+w.weekEnd.slice(5)),datasets:[
       {label:'Weekly avg',data:trendWeekly.map(w=>w.start_to_complete),backgroundColor:'#e2e8f0',borderRadius:3,order:2},
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',
        tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,order:1},
@@ -991,7 +991,7 @@ function renderWeekly(){
   dc('wk-wf');
   CH['wk-wf']=new Chart(document.getElementById('wk-wf'),{
     type:'bar',
-    data:{labels:weekly.map(w=>w.week.slice(5)),datasets:[{
+    data:{labels,datasets:[{
       label:'Avg total',
       data:weekly.map(w=>w.start_to_complete),
       backgroundColor:weekly.map((w,i)=>{
@@ -1013,7 +1013,7 @@ function renderWeekly(){
   dc('wk-vol');
   CH['wk-vol']=new Chart(document.getElementById('wk-vol'),{
     type:'bar',
-    data:{labels:weekly.map(w=>w.week.slice(5)),datasets:[
+    data:{labels,datasets:[
       {label:'Volume',data:weekly.map(w=>w.count),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y1',order:3},
       {label:'Weekly avg',data:weekly.map(w=>w.start_to_complete),type:'line',borderColor:'#94a3b8',backgroundColor:'transparent',
        tension:.3,pointRadius:3,pointBackgroundColor:'#94a3b8',spanGaps:false,yAxisID:'y',order:2},
@@ -1535,6 +1535,10 @@ window.addEventListener('load',()=>{
     globalF.outlierMult=S.defaultOutlierMult;
     globalF.removeOutliers=S.defaultRemoveOutliers;
     PAGES.forEach(p=>{pageF[p].outlierMult=S.defaultOutlierMult; pageF[p].removeOutliers=S.defaultRemoveOutliers;});
+    // Default exec (and global) to last full Mon–Sun week on first load
+    const lw=weekRange(-1);
+    globalF.dateFrom=lw.from; globalF.dateTo=lw.to;
+    PAGES.forEach(p=>{pageF[p].dateFrom=lw.from; pageF[p].dateTo=lw.to;});
   }
 
   // Set date range — autoDateRange always wins over saved dates
