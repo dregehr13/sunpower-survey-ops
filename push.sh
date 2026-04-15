@@ -1,33 +1,49 @@
 #!/bin/bash
-# Morning deploy script
-# Usage: ~/Projects/survey-ops/push.sh
+# Data update + deploy script
+# Usage: ~/Projects/survey-ops/push.sh [path/to/report.xls]
+#
+# If a file argument is given, uses that. Otherwise looks for the most recently
+# modified report*.xls in ~/Downloads.
+#
+# For code-only deploys (no data update): git push
 
-PROJ=~/Projects/survey-ops
-DL=~/Downloads/survey-dashboard.html
+set -e
+export PROJ=~/Projects/survey-ops
 
-if [ ! -f "$DL" ]; then
-  echo "ERROR: survey-dashboard.html not found in Downloads."
-  echo "Go to the dashboard, load your SF export, then click Export Dashboard."
+# --- Find the SF export ---
+if [ -n "$1" ]; then
+  SF_FILE="$1"
+else
+  SF_FILE=$(ls -t ~/Downloads/report*.xls 2>/dev/null | head -1)
+fi
+
+if [ -z "$SF_FILE" ] || [ ! -f "$SF_FILE" ]; then
+  echo "ERROR: No Salesforce export found."
+  echo "Export from Salesforce (Details Only → Excel format) and re-run, or pass the file path as an argument."
   exit 1
 fi
 
-echo "Updating dashboard..."
-cp "$DL" "$PROJ/index.html"
+echo "Parsing $SF_FILE..."
+export RAW_JSON=$(node "$PROJ/parse-sf.js" "$SF_FILE")
 
-echo "Updating email generator..."
-node -e "
-  const fs = require('fs');
-  const src = fs.readFileSync('$DL', 'utf8');
-  const match = src.match(/const RAW = (\[[\s\S]*?\]);/);
-  if (!match) { console.error('Could not find data in export file.'); process.exit(1); }
-  const compose = fs.readFileSync('$PROJ/compose/index.html', 'utf8');
-  const updated = compose.replace(/const RAW = \[[\s\S]*?\];/, 'const RAW = ' + match[1] + ';');
-  fs.writeFileSync('$PROJ/compose/index.html', updated);
-  console.log('Done.');
-"
+echo "Splicing data..."
+node --input-type=module << 'EOF'
+import { readFileSync, writeFileSync } from 'fs';
+const raw = process.env.RAW_JSON;
+const proj = process.env.PROJ;
+
+for (const f of [`${proj}/index.html`, `${proj}/compose/index.html`]) {
+  const content = readFileSync(f, 'utf8');
+  writeFileSync(f, content.replace(/const RAW = \[[\s\S]*?\];/, `const RAW = ${raw};`));
+}
+console.log('Done.');
+EOF
 
 echo "Cleaning up..."
-rm "$DL"
+rm "$SF_FILE"
 
-echo "Deploying..."
-cd "$PROJ" && vercel --prod
+echo "Committing and pushing..."
+cd "$PROJ"
+git add index.html compose/index.html
+git commit -m "Data update $(date +%Y-%m-%d)"
+git push

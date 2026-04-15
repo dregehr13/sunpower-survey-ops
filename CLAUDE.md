@@ -25,8 +25,12 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 - Only initial surveys for now — no resurvey tracking until Resource/Type of Survey fields are in SF
 
 ## Morning workflow
-1. Go to dashboard → Update data → drop SF export → Export Dashboard (downloads `survey-dashboard.html`)
+1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
 2. Terminal: `~/Projects/survey-ops/push.sh`
+   - Finds the latest `report*.xls` in Downloads automatically
+   - Parses it via `parse-sf.js`, splices RAW data into index.html + compose/index.html
+   - Commits and pushes → Vercel auto-deploys
+3. For code-only deploys (no data update): `git push`
 
 ## Pending Salesforce fields (IT ticket in progress)
 When these arrive, uncomment them in FIELDS registry in index.html:
