@@ -226,6 +226,42 @@ tr:hover td{background:#fafaf8;}
 .mbtn-sf:hover{background:#005fb2;}
 .mbtn-sf:disabled{opacity:.5;cursor:default;}
 
+/* ANIMATIONS */
+@keyframes pageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes modalIn{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes backdropIn{from{background:rgba(0,0,0,0)}to{background:rgba(0,0,0,.5)}}
+@keyframes badgePop{0%,100%{transform:scale(1)}40%{transform:scale(1.18)}}
+@keyframes hintFlash{0%{color:var(--blue)}100%{color:var(--faint)}}
+@keyframes dragPulse{0%,100%{border-color:#2563eb}50%{border-color:#93c5fd}}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page.entering{animation:pageIn .14s ease}
+.mback:not(.hidden){animation:backdropIn .15s ease forwards}
+.mback:not(.hidden) .modal{animation:modalIn .16s ease}
+.nbadge.pop{animation:badgePop .3s ease}
+.fhint.pop{animation:hintFlash .7s ease forwards}
+.upd-drophere.drag-over{animation:dragPulse .9s ease infinite}
+#upd-save.visible{animation:fadeSlideIn .18s ease}
+
+/* BUTTON INTERACTIONS */
+button{transition:background .1s,color .1s,border-color .1s,opacity .1s,transform .08s,box-shadow .1s;}
+button:active:not(:disabled){transform:scale(.96);}
+.fbtn:active,.mbtn:active,.tbtn:active,.epbtn:active,.set-save-btn:active{transform:scale(.96)!important;}
+
+/* CARD HOVER */
+.kcard{transition:box-shadow .15s,transform .15s;}
+.kcard:hover{box-shadow:0 2px 10px rgba(0,0,0,.07);transform:translateY(-1px);}
+.sec{transition:box-shadow .15s;}
+
+/* TABLE */
+td{transition:background .07s;}
+
+/* INPUT FOCUS */
+select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:focus,input[type=number]:focus{
+  border-color:var(--blue)!important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.1);
+  outline:none;
+}
+
 /* TOAST */
 
 /* UPDATE MODAL */
@@ -583,7 +619,12 @@ function updateOutlierSlider(page, val){
 }
 
 function renderFBars(){
-  PAGES.forEach(p=>{ const el=document.getElementById('fb-'+p); if(el) el.innerHTML=buildFBar(p); });
+  PAGES.forEach(p=>{
+    const el=document.getElementById('fb-'+p); if(!el) return;
+    el.innerHTML=buildFBar(p);
+    const hint=el.querySelector('.fhint');
+    if(hint){ hint.classList.remove('pop'); void hint.offsetWidth; hint.classList.add('pop'); }
+  });
 }
 
 function localISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -632,13 +673,16 @@ let currentPage = 'exec';
 
 function nav(page){
   currentPage=page;
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active','entering'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
+  const pageEl=document.getElementById('page-'+page);
+  pageEl.classList.add('active','entering');
+  setTimeout(()=>pageEl.classList.remove('entering'),160);
   const tab=document.querySelector(`.ntab[data-page="${page}"]`);
   if(tab) tab.classList.add('active');
   const sb=document.getElementById('settings-btn');
   if(sb) sb.classList.toggle('active', page==='settings');
+  window.scrollTo({top:0,behavior:'smooth'});
   applyFilter();
   renderPage(page);
 }
@@ -1423,11 +1467,15 @@ function loadFile(file){
     const tsLine=document.getElementById('upd-ts-line');
     if(tsLine) tsLine.textContent='Last updated: '+dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
     applyFilter(); renderFBars(); renderPage(currentPage);
+    // Pop the nav badge
+    const badge=document.getElementById('navBadge');
+    if(badge){ badge.textContent=parsed.length+' projects'; badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop'); }
     // Show save panel
     const regions=[...new Set(parsed.map(r=>r.region).filter(Boolean))].length;
     document.getElementById('upd-save-summary').textContent=`${parsed.length} projects across ${regions} regions loaded. Save to dashboard for everyone?`;
     document.getElementById('upd-save-status').textContent='';
-    document.getElementById('upd-save').style.display='';
+    const savePanel=document.getElementById('upd-save');
+    savePanel.style.display=''; savePanel.classList.remove('visible'); void savePanel.offsetWidth; savePanel.classList.add('visible');
     lastParsedRows=parsed;
   };
   reader.readAsText(file,'ISO-8859-1');
