@@ -378,7 +378,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.4 · 2026-04-14';
+const VERSION = 'v5.5 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -1466,26 +1466,11 @@ function exportDashboard(){
   const dashHTML = document.documentElement.outerHTML.replace(
     /const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';'
   );
-  dl(dashHTML, 'survey-dashboard.html');
-
-  // Export compose/index.html — fetch template, inject same data
-  fetch('/compose/index.html')
-    .then(r=>r.text())
-    .then(html=>{
-      const updated = html.replace(/const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';');
-      dl(updated, 'survey-compose.html');
-      toast('Two files downloaded. Run push.sh to deploy.');
-    })
-    .catch(()=>{
-      toast('Dashboard downloaded. Could not fetch compose template.');
-    });
-
-  function dl(content, filename){
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([content],{type:'text/html'}));
-    a.download = filename;
-    a.click();
-  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([dashHTML],{type:'text/html'}));
+  a.download = 'survey-dashboard.html';
+  a.click();
+  toast('Downloaded survey-dashboard.html — run push.sh to deploy.');
 }
 
 // ═══ SALESFORCE ═══════════════════════════════════════════
