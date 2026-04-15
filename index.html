@@ -378,7 +378,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.3 · 2026-04-14';
+const VERSION = 'v5.4 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -1466,18 +1466,18 @@ function exportDashboard(){
   const dashHTML = document.documentElement.outerHTML.replace(
     /const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';'
   );
-  dl(dashHTML, 'index.html');
+  dl(dashHTML, 'survey-dashboard.html');
 
   // Export compose/index.html — fetch template, inject same data
   fetch('/compose/index.html')
     .then(r=>r.text())
     .then(html=>{
       const updated = html.replace(/const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';');
-      dl(updated, 'compose-index.html');
-      toast('Exported index.html + compose-index.html (rename to compose/index.html) — then vercel --prod');
+      dl(updated, 'survey-compose.html');
+      toast('Two files downloaded. Run push.sh to deploy.');
     })
     .catch(()=>{
-      toast('index.html exported. Could not fetch compose template — export it separately.');
+      toast('Dashboard downloaded. Could not fetch compose template.');
     });
 
   function dl(content, filename){
