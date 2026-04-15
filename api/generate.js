@@ -1,14 +1,87 @@
-// Vercel serverless function — Survey Ops email commentary generator
-// ANTHROPIC_API_KEY must be set in Vercel environment variables (never commit it)
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env
+
+const SYSTEM_PROMPT = `You write short email commentary for Doug Regehr, Site Survey Manager at SunPower.
+
+Voice rules — follow these exactly:
+- Direct and confident. Short sentences that carry weight.
+- Refined casual: professional but never corporate.
+- State conclusions plainly. "Cycle time is trending down." Not "we are pleased to report an improvement in cycle time metrics."
+- Never use: "it's worth noting", "additionally", "as we can see", "moving forward", "I wanted to", "please note", passive voice, or filler phrases.
+- Do not oversell routine performance. Site survey is a minor department when running smoothly.
+- Flag problems clearly. Explain outliers. Note if something needs attention.
+- Audience: Allie Morais (Site Survey Sr Lead), Rob Barker (Director Ops Pre-Install), Spencer Jensen (SVP Ops — reads in 45 seconds, wants to know if there's a problem and what it is).
+
+Format: Return exactly 3 options. Each is 2–3 sentences. Label them 1. 2. 3. on separate lines. No preamble.`;
+
+function buildPrompt(stats, mode, observations, manualNote) {
+  const lines = [];
+
+  if (mode === 'monday') {
+    lines.push(`Mode: Monday weekly recap`);
+    lines.push(`Period: ${stats.periodLabel}`);
+    lines.push(`Completed: ${stats.completedCount} site surveys`);
+    if (stats.medCycle != null) lines.push(`Cycle time: ${stats.medCycle.toFixed(1)}d median / ${stats.avgCycle.toFixed(1)}d avg (targets: 3d med / 4d avg)`);
+    if (stats.outlierCount > 0) lines.push(`Outliers: ${stats.outlierCount} project(s) above fence. Longest: ${stats.maxOutlier.toFixed(0)}d. Avg without outliers: ${stats.avgWithout != null ? stats.avgWithout.toFixed(1)+'d' : 'n/a'}`);
+    if (stats.trend) lines.push(`3-week trend: ${stats.trend} (rolling avg: ${stats.rollingAvg != null ? stats.rollingAvg.toFixed(1)+'d' : 'n/a'})`);
+  } else {
+    lines.push(`Mode: Daily recap`);
+    lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} site surveys completed`);
+    lines.push(`Week to date: ${stats.completedWTD} completed`);
+    if (stats.avgCycleWTD != null) lines.push(`WTD avg cycle time: ${stats.avgCycleWTD.toFixed(1)}d`);
+  }
+
+  if (observations && observations.length) {
+    lines.push(`\nFlagged observations:\n${observations.map(o => '- ' + o).join('\n')}`);
+  }
+
+  if (manualNote && manualNote.trim()) {
+    lines.push(`\nOperational context (incorporate if relevant): ${manualNote.trim()}`);
+  }
+
+  lines.push(`\nWrite 3 commentary options.`);
+  return lines.join('\n');
+}
+
+function parseOptions(text) {
+  const options = [];
+  const matches = text.match(/^\d\.\s+(.+?)(?=\n\d\.|$)/gms);
+  if (matches) {
+    matches.forEach(m => {
+      const clean = m.replace(/^\d\.\s+/, '').trim();
+      if (clean) options.push(clean);
+    });
+  }
+  // Fallback: split by numbered lines
+  if (!options.length) {
+    text.split(/\n(?=\d\.)/).forEach(chunk => {
+      const clean = chunk.replace(/^\d\.\s+/, '').trim();
+      if (clean) options.push(clean);
+    });
+  }
+  return options.slice(0, 3);
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { data, mode, manualNote } = req.body;
+  const { stats, mode, observations, manualNote } = req.body;
+  if (!stats || !mode) return res.status(400).json({ error: 'Missing stats or mode' });
 
-  // TODO: build prompt from data + mode + voice spec
-  // TODO: call claude-sonnet-4-6 via Anthropic SDK
-  // TODO: return 3 commentary options in Doug's voice
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: buildPrompt(stats, mode, observations, manualNote) }],
+    });
 
-  res.status(200).json({ options: ['(scaffold — not yet implemented)'] });
+    const text = message.content[0].text;
+    const options = parseOptions(text);
+    res.status(200).json({ options });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 }

@@ -378,7 +378,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.2 · 2026-04-14';
+const VERSION = 'v5.3 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -1459,21 +1459,33 @@ dropZone.addEventListener('drop',e=>{
 
 // ═══ EXPORT DASHBOARD ════════════════════════════════════
 function exportDashboard(){
-  // Read the current HTML file source, replace RAW data with current rows
-  const currentHTML = document.documentElement.outerHTML;
   const rowJSON = JSON.stringify(rows, null, 0);
-  // Find and replace the RAW constant with current data
-  const updated = currentHTML.replace(
-    /const RAW = \[[\s\S]*?\];/,
-    'const RAW = ' + rowJSON + ';'
-  );
-  const blob = new Blob([updated], {type:'text/html'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
   const ts = new Date().toISOString().slice(0,10);
-  a.download = 'survey_dashboard_' + ts + '.html';
-  a.click();
-  toast('Dashboard exported — drop the file into your Vercel project to deploy.');
+
+  // Export index.html — replace from live DOM
+  const dashHTML = document.documentElement.outerHTML.replace(
+    /const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';'
+  );
+  dl(dashHTML, 'index.html');
+
+  // Export compose/index.html — fetch template, inject same data
+  fetch('/compose/index.html')
+    .then(r=>r.text())
+    .then(html=>{
+      const updated = html.replace(/const RAW = \[[\s\S]*?\];/, 'const RAW = ' + rowJSON + ';');
+      dl(updated, 'compose-index.html');
+      toast('Exported index.html + compose-index.html (rename to compose/index.html) — then vercel --prod');
+    })
+    .catch(()=>{
+      toast('index.html exported. Could not fetch compose template — export it separately.');
+    });
+
+  function dl(content, filename){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content],{type:'text/html'}));
+    a.download = filename;
+    a.click();
+  }
 }
 
 // ═══ SALESFORCE ═══════════════════════════════════════════
