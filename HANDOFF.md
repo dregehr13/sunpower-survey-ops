@@ -248,10 +248,10 @@ export default async function handler(req, res) {
 - 'type' label stays 'Install Type' — see NOTE in field registry
 - Future 'resource' field: sfCol is 'Resource', label is 'Resource' (already correct in registry comments)
 - Future 'survey_type' field: sfCol is 'Type of Survey' — distinct from Project Installation Type
-- Export dashboard writes both files (index.html + compose/index.html)
 - Weekly waterfall x-axis shows only week start — should show Mon-Sun range
 
 ### Features pending
+- Exec Summary: on load, auto-filter to last full Mon–Sun week (e.g. if today is Tuesday Apr 14, default to Apr 6–12). Currently shows all data. Should set dateFrom/dateTo in filter state on init, not just from autoDateRange.
 - Resource breakdown on Regions page (auto-shows when field exists)
 - FPY + Absolute FPY metrics (needs Resurvey Attributed To field)
 - Delay reason filter + chart (needs IT ticket field)
