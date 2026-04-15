@@ -378,6 +378,8 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
+const VERSION = 'v5.1 · 2026-04-14';
+
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
   {key:'contact',       sfCol:'Primary Contact',           label:'Contact',       type:'text',     filterable:false, editable:true},
@@ -1134,7 +1136,7 @@ function renderSettings(){
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
-  const pendingList = ['surveyor_type','surveyor_name','resurvey','resurvey_reason','resurvey_attempt'];
+  const pendingList = ['resource','surveyor_name','survey_type','resurvey_reason','resurvey_attributed'];
 
   document.getElementById('settings-content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
@@ -1143,6 +1145,7 @@ function renderSettings(){
       </svg>
       <span style="font-size:16px;font-weight:600;">Settings</span>
       <span style="font-size:11px;color:var(--faint);margin-left:4px;">All settings saved automatically to this browser</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--faint);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:monospace;">${VERSION}</span>
     </div>
 
     <div class="settings-grid">
