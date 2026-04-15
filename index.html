@@ -378,7 +378,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.1 · 2026-04-14';
+const VERSION = 'v5.2 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -454,9 +454,22 @@ let dataTimestamp = null;
 // ═══ FILTER STATE ═════════════════════════════════════════
 const PAGES = ['exec','overview','weekly','regions','outliers','data'];
 let globalMode = true;
-let globalF = {dateFrom:'',dateTo:'',region:'all',type:'all',surveyor_type:'all',outlierMult:1.5,removeOutliers:false};
+let globalF = {dateFrom:'',dateTo:'',region:'all',type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
 const pageF = {};
 PAGES.forEach(p => pageF[p] = {...globalF});
+
+function saveFilterState(){
+  try{ localStorage.setItem('ops_filters', JSON.stringify({globalMode, globalF, pageF})); }catch(e){}
+}
+function loadFilterState(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('ops_filters')||'null');
+    if(!saved) return;
+    globalMode = saved.globalMode ?? true;
+    if(saved.globalF) Object.assign(globalF, saved.globalF);
+    if(saved.pageF) PAGES.forEach(p=>{ if(saved.pageF[p]) pageF[p]={...globalF,...saved.pageF[p]}; });
+  }catch(e){}
+}
 
 function calcFence(mult){
   const v = rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0).sort((a,b)=>a-b);
@@ -475,7 +488,7 @@ function applyFilter(){
     if(f.dateTo   && r.start && r.start > f.dateTo)   return false;
     if(f.region !== 'all' && r.region !== f.region)   return false;
     if(f.type   !== 'all' && r.type   !== f.type)     return false;
-    if(f.surveyor_type && f.surveyor_type !== 'all' && r.surveyor_type !== f.surveyor_type) return false;
+    if(f.resource && f.resource !== 'all' && r.resource !== f.resource) return false;
     if(f.removeOutliers && r.ct_total!=null && r.ct_total > fence) return false;
     return true;
   });
@@ -544,6 +557,7 @@ function buildFBar(page){
 function updateOutlierSlider(page, val){
   if(globalMode){ globalF.outlierMult=val; PAGES.forEach(p=>pageF[p].outlierMult=val); }
   else pageF[page].outlierMult=val;
+  saveFilterState();
   // Update label inline without full rebuild
   PAGES.forEach(p=>{
     const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR';
@@ -564,6 +578,7 @@ function onF(page,key,value){
   if(typeof value==='string' && value==='false') value=false;
   if(globalMode){ globalF[key]=value; PAGES.forEach(p=>pageF[p][key]=value); }
   else pageF[page][key]=value;
+  saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
@@ -571,16 +586,18 @@ function toggleGlobal(on, fromPage){
   globalMode=on;
   if(on){ globalF={...pageF[fromPage]}; PAGES.forEach(p=>pageF[p]={...globalF}); }
   else { PAGES.forEach(p=>pageF[p]={...globalF}); }
+  saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
 function clearF(page){
-  const def={dateFrom:'',dateTo:'',region:'all',type:'all',surveyor_type:'all',
+  const def={dateFrom:'',dateTo:'',region:'all',type:'all',resource:'all',
     outlierMult:S.defaultOutlierMult, removeOutliers:S.defaultRemoveOutliers};
   const dates=rows.map(r=>r.start).filter(Boolean).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
   if(globalMode){ globalF={...def}; PAGES.forEach(p=>pageF[p]={...def}); }
   else pageF[page]={...def};
+  saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
@@ -1490,12 +1507,17 @@ window.addEventListener('load',()=>{
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';
 
-  // Apply default outlier settings from saved prefs
-  globalF.outlierMult=S.defaultOutlierMult;
-  globalF.removeOutliers=S.defaultRemoveOutliers;
-  PAGES.forEach(p=>{pageF[p].outlierMult=S.defaultOutlierMult; pageF[p].removeOutliers=S.defaultRemoveOutliers;});
+  // Restore saved filter state (region, type, dates, outlier settings, global mode)
+  loadFilterState();
 
-  // Set date range
+  // Apply default outlier settings from saved prefs (only if no saved state existed)
+  if(!localStorage.getItem('ops_filters')){
+    globalF.outlierMult=S.defaultOutlierMult;
+    globalF.removeOutliers=S.defaultRemoveOutliers;
+    PAGES.forEach(p=>{pageF[p].outlierMult=S.defaultOutlierMult; pageF[p].removeOutliers=S.defaultRemoveOutliers;});
+  }
+
+  // Set date range — autoDateRange always wins over saved dates
   const dates=RAW.map(r=>r.start).filter(Boolean).sort();
   if(S.autoDateRange&&dates.length){
     globalF.dateFrom=dates[0]; globalF.dateTo=dates[dates.length-1];
