@@ -11,26 +11,11 @@ const OWNER = 'dregehr13';
 const REPO  = 'sunpower-survey-ops';
 const FILES = ['index.html', 'compose/index.html'];
 
-async function ghGet(path, token) {
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+const gh = (path, token, opts = {}) =>
+  fetch(`https://api.github.com/repos/${OWNER}/${REPO}${path}`, {
+    ...opts,
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', ...(opts.headers||{}) }
   });
-  if (!res.ok) throw new Error(`GitHub GET ${path} → ${res.status}`);
-  return res.json(); // { sha, content (base64) }
-}
-
-async function ghPut(path, content, sha, message, token) {
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, content: Buffer.from(content).toString('base64'), sha })
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`GitHub PUT ${path} → ${res.status}: ${body}`);
-  }
-  return res.json();
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -45,20 +30,67 @@ export default async function handler(req, res) {
   const token = process.env.GITHUB_TOKEN;
   if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN env var not set' });
 
-  const rawJS = `const RAW = ${JSON.stringify(rows)};`;
   const date = new Date().toISOString().slice(0, 10);
-  const commitMsg = `Data update ${date} (dashboard upload)`;
+  const rawJS = `const RAW = ${JSON.stringify(rows)};`;
 
   try {
+    // 1. Get latest commit SHA on main
+    const refRes = await gh('/git/refs/heads/main', token);
+    if (!refRes.ok) throw new Error(`GET ref → ${refRes.status}`);
+    const { object: { sha: latestCommitSha } } = await refRes.json();
+
+    // 2. Get the tree SHA of that commit
+    const commitRes = await gh(`/git/commits/${latestCommitSha}`, token);
+    if (!commitRes.ok) throw new Error(`GET commit → ${commitRes.status}`);
+    const { tree: { sha: baseTreeSha } } = await commitRes.json();
+
+    // 3. Fetch and update each file, create blobs
+    const treeEntries = [];
     for (const file of FILES) {
-      const { sha, content: b64 } = await ghGet(file, token);
-      const current = Buffer.from(b64.replace(/\n/g, ''), 'base64').toString('utf8');
-      let updated = current.replace(/const RAW = \[[\s\S]*?\];/, rawJS);
-      updated = updated.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
-      if (updated === current) throw new Error(`RAW pattern not found in ${file}`);
-      await ghPut(file, updated, sha, commitMsg, token);
+      const fileRes = await gh(`/contents/${file}`, token);
+      if (!fileRes.ok) throw new Error(`GET ${file} → ${fileRes.status}`);
+      const { content: b64 } = await fileRes.json();
+      let content = Buffer.from(b64.replace(/\n/g, ''), 'base64').toString('utf8');
+      content = content.replace(/const RAW = \[[\s\S]*?\];/, rawJS);
+      content = content.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
+
+      const blobRes = await gh('/git/blobs', token, {
+        method: 'POST',
+        body: JSON.stringify({ content, encoding: 'utf-8' })
+      });
+      if (!blobRes.ok) throw new Error(`POST blob ${file} → ${blobRes.status}`);
+      const { sha: blobSha } = await blobRes.json();
+      treeEntries.push({ path: file, mode: '100644', type: 'blob', sha: blobSha });
     }
-    res.status(200).json({ ok: true, rows: rows.length, message: commitMsg });
+
+    // 4. Create new tree
+    const treeRes = await gh('/git/trees', token, {
+      method: 'POST',
+      body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries })
+    });
+    if (!treeRes.ok) throw new Error(`POST tree → ${treeRes.status}`);
+    const { sha: newTreeSha } = await treeRes.json();
+
+    // 5. Create commit
+    const newCommitRes = await gh('/git/commits', token, {
+      method: 'POST',
+      body: JSON.stringify({
+        message: `Data update ${date} (dashboard upload)`,
+        tree: newTreeSha,
+        parents: [latestCommitSha]
+      })
+    });
+    if (!newCommitRes.ok) throw new Error(`POST commit → ${newCommitRes.status}`);
+    const { sha: newCommitSha } = await newCommitRes.json();
+
+    // 6. Update ref
+    const updateRefRes = await gh('/git/refs/heads/main', token, {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: newCommitSha })
+    });
+    if (!updateRefRes.ok) throw new Error(`PATCH ref → ${updateRefRes.status}`);
+
+    res.status(200).json({ ok: true, rows: rows.length, commit: newCommitSha.slice(0, 7) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
