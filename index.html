@@ -378,7 +378,7 @@ tr:hover td{background:#fafaf8;}
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.5 · 2026-04-14';
+const VERSION = 'v5.6 · 2026-04-14';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -719,10 +719,13 @@ function sortArrow(k){ if(sortKey!==k) return 'sarr-no'; return sortAsc?'sarr-up
 function renderExec(){
   const src=filtered;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const r2s=src.map(r=>r.ct_r2s).filter(x=>x!=null&&x>=0);
-  const avgT=avg(tots), medT=med(tots), onTgt=pctTgt(tots), avgR2S=avg(r2s);
-  const weekly=weeklyStats(src);
-  const roll3=rollingAvg(weekly,'start_to_complete',3);
+  const avgT=avg(tots), medT=med(tots), onTgt=pctTgt(tots);
+
+  // Trend chart: always trailing 10 weeks from all data ending at filter end date
+  const endDate=getF().dateTo||'';
+  const allWeekly=weeklyStats(rows);
+  const trendWeekly=(endDate?allWeekly.filter(w=>w.week<=endDate):allWeekly).slice(-10);
+  const roll3=rollingAvg(trendWeekly,'start_to_complete',3);
   const latest=roll3.filter(x=>x!=null).slice(-1)[0];
   const prev=roll3.filter(x=>x!=null).slice(-2,-1)[0];
   // Trend: lower is better (shorter cycle = improvement)
@@ -769,7 +772,7 @@ function renderExec(){
     </div>
     <div class="g2">
       <div class="sec">
-        <div class="shead"><div><div class="stitle">Weekly trend</div><div class="ssub">Avg total + 3-week rolling avg</div></div></div>
+        <div class="shead"><div><div class="stitle">Weekly trend</div><div class="ssub">Trailing 10 weeks · unaffected by date filter</div></div></div>
         <div class="leg">
           <span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekly avg</span>
           <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
@@ -791,8 +794,8 @@ function renderExec(){
   dc('ex-trend');
   CH['ex-trend']=new Chart(document.getElementById('ex-trend'),{
     type:'bar',
-    data:{labels:weekly.map(w=>w.week.slice(5)),datasets:[
-      {label:'Weekly avg',data:weekly.map(w=>w.start_to_complete),backgroundColor:'#e2e8f0',borderRadius:3,order:2},
+    data:{labels:trendWeekly.map(w=>w.week.slice(5)),datasets:[
+      {label:'Weekly avg',data:trendWeekly.map(w=>w.start_to_complete),backgroundColor:'#e2e8f0',borderRadius:3,order:2},
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',
        tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,order:1},
     ]},
