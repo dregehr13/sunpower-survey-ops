@@ -416,7 +416,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v6.1 · 2026-04-16';
+const VERSION = 'v6.2 · 2026-04-16';
 const DATA_TS = '2026-04-15'; // Updated automatically by push.sh and api/update.js
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
@@ -1036,19 +1036,32 @@ function renderWeekly(){
   const weekly=weeklyStats(filtered);           // start-date bucketed (for New In)
   const weeklyC=weeklyStatsByComplete(filtered); // completion-date bucketed (for cycle time)
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
-  const labels=weekly.map(fmtWeekLabel);   // for In/Out chart (start-based weeks)
-  const labelsC=weeklyC.map(fmtWeekLabel); // for cycle time charts (completion-based weeks)
+  const labelsC=weeklyC.map(fmtWeekLabel); // for cycle time charts
   const al=weeklyC.map(w=>w.count<5?.4:1);
-  const completions=weekly.map(w=>filtered.filter(r=>r.complete>=w.week&&r.complete<=w.weekEnd).length);
+
+  // Unified week list + lookup maps (used by In/Out chart, WIP line, and detail table)
+  const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
+  const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
+  const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort();
+  const wkEndMap={}; [...weekly,...weeklyC].forEach(w=>{wkEndMap[w.week]=w.weekEnd;});
+
+  const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
+  const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
+  const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
+  const wipLine=allWks.map(wk=>{
+    const we=wkEndMap[wk]; if(!we) return null;
+    return filtered.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length;
+  });
 
   document.getElementById('wk-content').innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys in (by start date) vs completions out (by complete date)</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys in (by start date) vs completions out (by complete date) · Line = WIP balance</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>New In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
+        <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div class="cw" style="height:230px;"><canvas id="wk-inout"></canvas></div>
+      <div class="cw" style="height:260px;"><canvas id="wk-inout"></canvas></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Cycle time for surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
@@ -1071,27 +1084,31 @@ function renderWeekly(){
     <div class="sec">
       <div class="shead"><div class="stitle">Weekly detail</div></div>
       <table><thead><tr>
-        <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">Avg total</th>
-        <th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
+        <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
+        <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
       </tr></thead><tbody id="wk-tbody"></tbody></table>
     </div>`;
 
   dc('wk-inout');
   CH['wk-inout']=new Chart(document.getElementById('wk-inout'),{
     type:'bar',
-    data:{labels,datasets:[
-      {label:'New In',data:weekly.map(w=>w.count),backgroundColor:'rgba(96,165,250,.75)',borderRadius:3},
-      {label:'Completed',data:completions,backgroundColor:'rgba(52,211,153,.75)',borderRadius:3},
+    data:{labels:inOutLabels,datasets:[
+      {label:'New In',data:inOutNewIn,backgroundColor:'rgba(96,165,250,.75)',borderRadius:3,yAxisID:'y',order:2},
+      {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(52,211,153,.75)',borderRadius:3,yAxisID:'y',order:2},
+      {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
+       tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
-          title:ctx=>'Week of '+weekly[ctx[0].dataIndex].week,
-          label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
+          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`
+            :` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}},
+        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}}}}
   });
 
   dc('wk-wf');
@@ -1135,10 +1152,6 @@ function renderWeekly(){
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
   });
 
-  // Merge start-based and completion-based week maps for detail table
-  const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort();
-  const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
-  const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
   document.getElementById('wk-tbody').innerHTML=allWks.map(wk=>{
     const ws=wkMap[wk], wc=wkCMap[wk];
     const wkEnd=ws?.weekEnd||wc?.weekEnd||'';
@@ -1152,10 +1165,12 @@ function renderWeekly(){
       :`<span class="pill pr">${t.toFixed(1)}d</span>`)):'<span class="pna">—</span>';
     const r3=wc?.r3;
     const onTgtVal=wc?.pct_on_target;
+    const wipSnap=wipLine[allWks.indexOf(wk)];
     return `<tr>
       <td>${fmtDateShort(wk)} – ${fmtDateShort(wkEnd)}</td>
       <td class="r">${newIn}</td>
       <td class="r">${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
+      <td class="r" style="color:#d97706;font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
       <td class="r">${vs}</td>
       <td class="r">${wc?.median_total!=null?wc.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r" style="color:var(--blue);font-weight:500;">${r3!=null?r3.toFixed(1)+'d':'—'}</td>
