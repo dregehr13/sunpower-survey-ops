@@ -225,9 +225,11 @@ function computeStats(){
       dailyCounts.push(RAW.filter(r=>r.complete===d).length);
     }
 
+    const newIn=RAW.filter(r=>r.start>=period.from&&r.start<=period.to).length;
     const periodLabel=`${fmtShort(period.from)} – ${fmtShort(period.to)}`;
     return {
       mode:'monday', period, periodLabel,
+      newIn,
       completedCount:rows.length,
       avgCycle:avg(cts), medCycle:med(cts),
       outlierCount:outlierRows.length,
@@ -240,13 +242,16 @@ function computeStats(){
     const yesterday=getYesterday();
     const wtdFrom=getThisWeekMon();
     const completedYesterday=RAW.filter(r=>r.complete===yesterday).length;
+    const newInYesterday=RAW.filter(r=>r.start===yesterday).length;
     const wtdRows=RAW.filter(r=>r.complete>=wtdFrom&&r.complete<=yesterday);
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+    const newInWTD=RAW.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
     return {
       mode:'daily', yesterday,
       wtdFrom, wtdTo:yesterday,
-      completedYesterday,
+      completedYesterday, newInYesterday,
       completedWTD:wtdRows.length,
+      newInWTD,
       avgCycleWTD:avg(wtdCts),
     };
   }
@@ -279,29 +284,52 @@ function buildEmailHTML(s, commentary, manualNote){
 
   let body='';
 
+  // ── Metrics hero block ──────────────────────────────────
+  const cell='font-family:Arial,Helvetica,sans-serif;text-align:center;padding:14px 10px;border:1px solid #e5e5e5;';
+  const metLabel='display:block;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;';
+  const metVal='display:block;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1;color:#111;';
+  const metSub='display:block;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999;margin-top:4px;';
+
   if(s.mode==='monday'){
-    // Header
-    body+=`<tr><td style="${base}padding:0 0 14px;border-bottom:2px solid #111;">
+    body+=`<tr><td style="${base}padding:0 0 12px;border-bottom:2px solid #111;">
       <strong>Site Survey — Week of ${s.periodLabel}</strong>
     </td></tr>`;
 
-    // Completions
-    body+=`<tr><td style="${base}padding:16px 0 12px;">
-      <strong>${s.completedCount}</strong> site survey${s.completedCount!==1?'s':''} completed last week.
+    const ctColor=s.medCycle==null?'#111':(s.medCycle<=3?'#2d6a0a':s.medCycle<=5?'#92400e':'#991b1b');
+    body+=`<tr><td style="padding:14px 0 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="${cell}width:33%;border-right:0;">
+            <span style="${metLabel}">New In</span>
+            <span style="${metVal}">${s.newIn}</span>
+          </td>
+          <td style="${cell}width:33%;border-right:0;">
+            <span style="${metLabel}">Completed</span>
+            <span style="${metVal}">${s.completedCount}</span>
+          </td>
+          <td style="${cell}width:34%;">
+            <span style="${metLabel}">Median Cycle</span>
+            <span style="${metVal.replace('#111',ctColor)}">${s.medCycle!=null?s.medCycle.toFixed(1)+'d':'—'}</span>
+            <span style="${metSub}">target: 3d / 4d avg</span>
+          </td>
+        </tr>
+      </table>
     </td></tr>`;
 
-    // Cycle time
-    if(s.medCycle!=null){
-      let cycleLines=`<strong>Cycle time:</strong> ${s.medCycle.toFixed(1)}d median / ${s.avgCycle.toFixed(1)}d avg &nbsp;<span style="color:#999;font-size:11px;">(target: 3d / 4d)</span>`;
-      if(s.outlierCount>0){
-        cycleLines+=`<br><span style="color:#666;">One project skewed the average at ${s.maxOutlier.toFixed(0)}d. Removing it brings avg to ${s.avgWithout!=null?s.avgWithout.toFixed(1)+'d':'n/a'}.</span>`;
-      }
-      if(s.trend){
-        const arrow=s.trend==='Improving'?'↓':s.trend==='Slipping'?'↑':'→';
-        const color=s.trend==='Improving'?'#2d6a0a':s.trend==='Slipping'?'#991b1b':'#555';
-        cycleLines+=`<br><span style="color:${color};">${arrow} Trend: ${s.trend}${s.rollingAvg!=null?' · 3-wk avg '+s.rollingAvg.toFixed(1)+'d':''}</span>`;
-      }
-      body+=`<tr><td style="${base}padding:0 0 16px;">${cycleLines}</td></tr>`;
+    // Trend + outlier footnote
+    const notes=[];
+    if(s.trend){
+      const arrow=s.trend==='Improving'?'↓':s.trend==='Slipping'?'↑':'→';
+      const tcolor=s.trend==='Improving'?'#2d6a0a':s.trend==='Slipping'?'#991b1b':'#555';
+      notes.push(`<span style="color:${tcolor};">${arrow} Trend: ${s.trend}${s.rollingAvg!=null?' &nbsp;·&nbsp; 3-wk avg '+s.rollingAvg.toFixed(1)+'d':''}</span>`);
+    }
+    if(s.outlierCount>0){
+      notes.push(`<span style="color:#666;">${s.outlierCount} outlier${s.outlierCount>1?'s':''} above fence (max ${s.maxOutlier.toFixed(0)}d). Removing ${s.outlierCount>1?'them':'it'} brings avg to ${s.avgWithout!=null?s.avgWithout.toFixed(1)+'d':'n/a'}.</span>`);
+    }
+    if(notes.length){
+      body+=`<tr><td style="${small}padding:8px 0 14px;">${notes.join('<br>')}</td></tr>`;
+    } else {
+      body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
     }
 
     // Table-based daily chart
@@ -333,13 +361,33 @@ function buildEmailHTML(s, commentary, manualNote){
   } else {
     // Daily mode
     const dayName=new Date(s.yesterday+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
-    body+=`<tr><td style="${base}padding:0 0 14px;border-bottom:2px solid #111;">
+    body+=`<tr><td style="${base}padding:0 0 12px;border-bottom:2px solid #111;">
       <strong>Site Survey — ${fmtMed(s.yesterday)}</strong>
     </td></tr>`;
-    body+=`<tr><td style="${base}padding:16px 0 12px;">
-      <strong>${dayName}:</strong> ${s.completedYesterday} site survey${s.completedYesterday!==1?'s':''} completed.<br>
-      <strong>Week to date:</strong> ${s.completedWTD} completed${s.avgCycleWTD!=null?` · ${s.avgCycleWTD.toFixed(1)}d avg cycle`:''}.
+
+    const ctColor=s.avgCycleWTD==null?'#111':(s.avgCycleWTD<=4?'#2d6a0a':s.avgCycleWTD<=6?'#92400e':'#991b1b');
+    body+=`<tr><td style="padding:14px 0 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="${cell}width:33%;border-right:0;">
+            <span style="${metLabel}">New In WTD</span>
+            <span style="${metVal}">${s.newInWTD}</span>
+            <span style="${metSub}">${s.newInYesterday} yesterday</span>
+          </td>
+          <td style="${cell}width:33%;border-right:0;">
+            <span style="${metLabel}">Completed WTD</span>
+            <span style="${metVal}">${s.completedWTD}</span>
+            <span style="${metSub}">${s.completedYesterday} ${dayName}</span>
+          </td>
+          <td style="${cell}width:34%;">
+            <span style="${metLabel}">WTD Avg Cycle</span>
+            <span style="${metVal.replace('#111',ctColor)}">${s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—'}</span>
+            <span style="${metSub}">target: 4d avg</span>
+          </td>
+        </tr>
+      </table>
     </td></tr>`;
+    body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
   }
 
   // Commentary
@@ -405,6 +453,7 @@ function renderStats(){
     const ct=stats.medCycle;
     const ctClass=ct==null?'':(ct<=3?'good':ct<=5?'warn':'bad');
     el.innerHTML=`
+      <div class="stat-row"><span class="stat-label">New In</span><span class="stat-val">${stats.newIn}</span></div>
       <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-val">${stats.completedCount}</span></div>
       <div class="stat-row"><span class="stat-label">Median cycle</span><span class="stat-val ${ctClass}">${ct!=null?ct.toFixed(1)+'d':'—'}</span></div>
       <div class="stat-row"><span class="stat-label">Avg cycle</span><span class="stat-val">${stats.avgCycle!=null?stats.avgCycle.toFixed(1)+'d':'—'}</span></div>
@@ -414,8 +463,10 @@ function renderStats(){
   } else {
     pel.textContent=`Yesterday · ${fmtMed(stats.yesterday)}`;
     el.innerHTML=`
+      <div class="stat-row"><span class="stat-label">New in yesterday</span><span class="stat-val">${stats.newInYesterday}</span></div>
       <div class="stat-row"><span class="stat-label">Completed yesterday</span><span class="stat-val">${stats.completedYesterday}</span></div>
-      <div class="stat-row"><span class="stat-label">Week to date</span><span class="stat-val">${stats.completedWTD}</span></div>
+      <div class="stat-row"><span class="stat-label">New in WTD</span><span class="stat-val">${stats.newInWTD}</span></div>
+      <div class="stat-row"><span class="stat-label">Completed WTD</span><span class="stat-val">${stats.completedWTD}</span></div>
       ${stats.avgCycleWTD!=null?`<div class="stat-row"><span class="stat-label">WTD avg cycle</span><span class="stat-val">${stats.avgCycleWTD.toFixed(1)}d</span></div>`:''}`;
   }
 }

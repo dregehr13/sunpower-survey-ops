@@ -143,7 +143,7 @@ tr:hover td{background:#fafaf8;}
 .exec-wrap.theme-minimal .exec-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:14px;}
 .exec-wrap.theme-minimal .exec-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:2px;}
 .exec-wrap.theme-minimal .exec-sub{font-size:11px;color:var(--muted);margin-bottom:18px;}
-.exec-wrap.theme-minimal .exec-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.exec-wrap.theme-minimal .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .exec-wrap.theme-minimal .ekcard{background:var(--bg);border-radius:var(--radius);padding:13px 15px;border:1px solid var(--border);}
 .exec-wrap.theme-minimal .eklabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
 .exec-wrap.theme-minimal .ekval{font-size:26px;font-weight:600;}
@@ -154,7 +154,7 @@ tr:hover td{background:#fafaf8;}
 .exec-wrap.theme-dark .exec-hero{background:#0f172a;border-radius:var(--radius-lg);padding:26px 28px;margin-bottom:14px;}
 .exec-wrap.theme-dark .exec-title{font-size:20px;font-weight:600;color:#fff;margin-bottom:2px;}
 .exec-wrap.theme-dark .exec-sub{font-size:11px;color:#64748b;margin-bottom:20px;}
-.exec-wrap.theme-dark .exec-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.exec-wrap.theme-dark .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .exec-wrap.theme-dark .ekcard{background:rgba(255,255,255,.06);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.08);}
 .exec-wrap.theme-dark .eklabel{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
 .exec-wrap.theme-dark .ekval{font-size:26px;font-weight:600;color:#fff;}
@@ -166,7 +166,7 @@ tr:hover td{background:#fafaf8;}
 .exec-wrap.theme-bold .exec-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,255,255,.03);border-radius:50%;}
 .exec-wrap.theme-bold .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
 .exec-wrap.theme-bold .exec-sub{font-size:11px;color:#7eb3e0;margin-bottom:20px;}
-.exec-wrap.theme-bold .exec-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.exec-wrap.theme-bold .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .exec-wrap.theme-bold .ekcard{background:rgba(255,255,255,.08);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.12);}
 .exec-wrap.theme-bold .eklabel{font-size:10px;color:#7eb3e0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
 .exec-wrap.theme-bold .ekval{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.02em;}
@@ -301,8 +301,8 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="outliers">Outliers</div>
   <div class="ntab" data-page="data">Source Data</div>
   <div class="nav-r">
-    <span class="nav-ts" id="nav-ts"></span>
     <span class="nbadge" id="navBadge">766 projects</span>
+    <span class="nav-ts" id="nav-ts"></span>
     <button class="nload" onclick="openUpdateModal()" title="Update data">↑ Update data</button>
     <input type="file" id="fileInput" accept=".xls,.html,.htm" style="display:none;">
     <button class="nsettings" id="settings-btn" onclick="nav('settings')" title="Settings">
@@ -416,7 +416,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v5.9 · 2026-04-14';
+const VERSION = 'v6.0 · 2026-04-16';
 const DATA_TS = '2026-04-15'; // Updated automatically by push.sh and api/update.js
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
@@ -532,7 +532,7 @@ function applyFilter(){
     if(f.removeOutliers && r.ct_total!=null && r.ct_total > fence) return false;
     return true;
   });
-  document.getElementById('navBadge').textContent = filtered.length+' projects';
+  document.getElementById('navBadge').textContent = rows.length+' projects';
   PAGES.forEach(p=>{ const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
 }
 
@@ -828,6 +828,11 @@ function renderExec(){
       <div class="eklabel">Projects</div>
       <div class="ekval">${src.length.toLocaleString()}</div>
       <div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div>
+    </div>
+    <div class="ekcard">
+      <div class="eklabel">WIP</div>
+      <div class="ekval">${rows.filter(r=>r.start&&!r.complete).length.toLocaleString()}</div>
+      <div class="ektgt">Open surveys</div>
     </div>`;
 
   document.getElementById('exec-content').innerHTML=`
@@ -911,11 +916,12 @@ function renderOverview(){
   const cls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
 
   document.getElementById('ov-content').innerHTML=`
-    <div class="kg kg4">
+    <div class="kg kg5">
       <div class="kcard"><div class="klabel">Projects</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
       <div class="kcard"><div class="klabel">Median total</div><div class="kval ${cls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${cls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">${tots.length} w/ data</div></div>
+      <div class="kcard"><div class="klabel">WIP</div><div class="kval">${rows.filter(r=>r.start&&!r.complete).length.toLocaleString()}</div><div class="ksub">Open surveys</div></div>
     </div>
     <div class="g2">
       <div class="sec">
@@ -1008,8 +1014,17 @@ function renderWeekly(){
   const roll3=rollingAvg(weekly,'start_to_complete',3);
   const labels=weekly.map(fmtWeekLabel);
   const al=weekly.map(w=>w.count<5?.4:1);
+  const completions=weekly.map(w=>filtered.filter(r=>r.complete>=w.week&&r.complete<=w.weekEnd).length);
 
   document.getElementById('wk-content').innerHTML=`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys in (by start date) vs completions out (by complete date)</div></div></div>
+      <div class="leg">
+        <span class="li"><span class="ld" style="background:#60a5fa;"></span>New In</span>
+        <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
+      </div>
+      <div class="cw" style="height:230px;"><canvas id="wk-inout"></canvas></div>
+    </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Project start → survey complete · Mon–Sun weeks · Faded = &lt;5 projects</div></div></div>
       <div class="leg">
@@ -1031,10 +1046,28 @@ function renderWeekly(){
     <div class="sec">
       <div class="shead"><div class="stitle">Weekly detail</div></div>
       <table><thead><tr>
-        <th>Week (Mon–Sun)</th><th class="r">Projects</th><th class="r">Avg total</th>
+        <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">Avg total</th>
         <th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
       </tr></thead><tbody id="wk-tbody"></tbody></table>
     </div>`;
+
+  dc('wk-inout');
+  CH['wk-inout']=new Chart(document.getElementById('wk-inout'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'New In',data:weekly.map(w=>w.count),backgroundColor:'rgba(96,165,250,.75)',borderRadius:3},
+      {label:'Completed',data:completions,backgroundColor:'rgba(52,211,153,.75)',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{
+          title:ctx=>'Week of '+weekly[ctx[0].dataIndex].week,
+          label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`
+        }}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
+        y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
+  });
 
   dc('wk-wf');
   CH['wk-wf']=new Chart(document.getElementById('wk-wf'),{
@@ -1083,9 +1116,12 @@ function renderWeekly(){
       :(t<=S.targetAvg?`<span class="pill pam">${t.toFixed(1)}d</span>`
       :`<span class="pill pr">${t.toFixed(1)}d</span>`)):'<span class="pna">—</span>';
     const onTgtVal=w.pct_on_target;
+    const diff=completions[i]-w.count;
+    const diffStr=diff===0?'—':(diff>0?`<span style="color:var(--green);">+${diff}</span>`:`<span style="color:var(--red);">${diff}</span>`);
     return `<tr>
-      <td>${fmtDateShort(w.week)} – ${fmtDateShort(w.weekEnd)}<span style="font-size:10px;color:var(--faint);margin-left:5px;">(${w.count})</span></td>
+      <td>${fmtDateShort(w.week)} – ${fmtDateShort(w.weekEnd)}</td>
       <td class="r">${w.count}</td>
+      <td class="r">${completions[i]}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
       <td class="r">${vs}</td>
       <td class="r">${w.median_total!=null?w.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r" style="color:var(--blue);font-weight:500;">${r3!=null?r3.toFixed(1)+'d':'—'}</td>
