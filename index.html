@@ -1036,7 +1036,8 @@ function renderWeekly(){
   const weekly=weeklyStats(filtered);           // start-date bucketed (for New In)
   const weeklyC=weeklyStatsByComplete(filtered); // completion-date bucketed (for cycle time)
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
-  const labelsC=weeklyC.map(fmtWeekLabel);
+  const labels=weekly.map(fmtWeekLabel);   // for In/Out chart (start-based weeks)
+  const labelsC=weeklyC.map(fmtWeekLabel); // for cycle time charts (completion-based weeks)
   const al=weeklyC.map(w=>w.count<5?.4:1);
   const completions=weekly.map(w=>filtered.filter(r=>r.complete>=w.week&&r.complete<=w.weekEnd).length);
 
