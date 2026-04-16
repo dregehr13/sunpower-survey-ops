@@ -27,6 +27,8 @@ function buildPrompt(stats, mode, observations, manualNote) {
     if (stats.medCycle != null) lines.push(`Median cycle time: ${stats.medCycle.toFixed(1)}d (target: 3d)`);
     if (stats.outlierCount > 0) lines.push(`Outliers: ${stats.outlierCount} project(s) above IQR fence. Longest: ${stats.maxOutlier.toFixed(0)}d.`);
     if (stats.trend) lines.push(`3-week median trend: ${stats.trend} (rolling median: ${stats.rollingMed != null ? stats.rollingMed.toFixed(1)+'d' : 'n/a'})`);
+    if (stats.weeklyTrend) lines.push(`4-week cycle trend: ${stats.weeklyTrend.map(w=>`${w.label}: ${w.med!=null?w.med.toFixed(1)+'d':'no data'} (${w.count} completions)`).join(' → ')}`);
+    if (stats.onTargetPct != null) lines.push(`On target (≤4d): ${stats.onTargetPct}%`);
   } else {
     lines.push(`Mode: Daily recap`);
     lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} completed, ${stats.newInYesterday} new in`);

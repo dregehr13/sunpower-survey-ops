@@ -28,10 +28,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .stat-val.good{color:var(--green);}
 .stat-val.warn{color:var(--amber);}
 .stat-val.bad{color:var(--red);}
-.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;}
-.pg{background:var(--green-bg);color:var(--green);}
-.pam{background:var(--amber-bg);color:var(--amber);}
-.pr{background:var(--red-bg);color:var(--red);}
 .obs-list{margin:8px 0 0;}
 .obs-item{display:flex;align-items:flex-start;gap:7px;padding:5px 8px;border-radius:6px;background:#fef9ec;border:1px solid #fde68a;font-size:11px;color:#78350f;margin-bottom:5px;line-height:1.5;cursor:pointer;}
 .obs-item input[type=checkbox]{flex-shrink:0;margin-top:2px;cursor:pointer;}
@@ -50,7 +46,7 @@ textarea:focus{border-color:#999;}
 .opt.selected{border-color:var(--blue);background:#eff6ff;}
 .opt-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:4px;}
 .loading{font-size:11px;color:var(--muted);padding:12px 0;text-align:center;}
-.preview-frame{width:100%;border:none;border-radius:var(--radius-lg);background:#fff;}
+.preview-frame{width:100%;border:none;border-radius:var(--radius-lg);background:#f4f4f4;}
 .preview-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
 .preview-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg);}
 .preview-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
@@ -74,7 +70,6 @@ textarea:focus{border-color:#999;}
 </nav>
 
 <div class="wrap">
-  <!-- Left panel: stats + compose controls -->
   <div>
     <div class="panel" id="stats-panel">
       <div class="ptitle" id="stats-period">Stats</div>
@@ -94,13 +89,12 @@ textarea:focus{border-color:#999;}
         </div>
       </div>
       <div class="section-gap">
-        <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional — things the model can't see)</span></label>
+        <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
         <textarea id="manual-note" rows="3" placeholder="e.g. One team was short-staffed Tuesday. Scheduling system was down Thursday morning." oninput="refreshPreview()"></textarea>
       </div>
     </div>
   </div>
 
-  <!-- Right: email preview -->
   <div>
     <div class="preview-wrap">
       <div class="preview-bar">
@@ -120,7 +114,7 @@ textarea:focus{border-color:#999;}
           <input type="text" id="subject-field" value="">
         </div>
       </div>
-      <div style="padding:16px;background:#f9f9f7;">
+      <div style="padding:16px;background:#eee;">
         <iframe id="preview-frame" class="preview-frame" style="min-height:500px;"></iframe>
       </div>
     </div>
@@ -130,10 +124,8 @@ textarea:focus{border-color:#999;}
 <script src="/data.js"></script>
 <script>
 // ─── CONFIG ───────────────────────────────────────────────
-const PASSWORD     = 'sunpower';   // change this
+const PASSWORD      = 'sunpower';
 const DASHBOARD_URL = 'https://sunpower-survey-ops.vercel.app';
-const SIGN_OFF = `Doug Regehr<br>Site Survey Manager<br>Phone: 801-793-1861<br>douglas.regehr@sunpower.com`;
-
 
 // ─── STATE ────────────────────────────────────────────────
 let mode = 'monday';
@@ -154,16 +146,12 @@ function toISO(d){ return d.toISOString().slice(0,10); }
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function fmtShort(s){ if(!s) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 function fmtMed(s){ if(!s) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
-function fmtLong(s){ if(!s) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
 function todayISO(){ return toISO(new Date()); }
 function getLastWeekRange(){
-  const today=new Date();
-  const dow=today.getDay();
+  const today=new Date(); const dow=today.getDay();
   const sinceMon=dow===0?6:dow-1;
-  const thisMon=addDays(today,-sinceMon);
-  const lastMon=addDays(thisMon,-7);
-  const lastSun=addDays(lastMon,6);
-  return {from:toISO(lastMon),to:toISO(lastSun)};
+  const lastMon=addDays(today,-(sinceMon+7));
+  return {from:toISO(lastMon),to:toISO(addDays(lastMon,6))};
 }
 function getThisWeekMon(){
   const today=new Date(); const dow=today.getDay();
@@ -171,7 +159,7 @@ function getThisWeekMon(){
 }
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
-// ─── STATS ────────────────────────────────────────────────
+// ─── STATS HELPERS ────────────────────────────────────────
 function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
 function med(arr){
   if(!arr.length) return null;
@@ -185,11 +173,11 @@ function iqrFence(arr,mult=1.5){
   return q3+mult*(q3-q1);
 }
 function weekMedCycle(from,to){
-  const r=RAW.filter(r=>r.complete>=from&&r.complete<=to);
-  const cts=r.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const cts=RAW.filter(r=>r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   return med(cts);
 }
 
+// ─── COMPUTE STATS ────────────────────────────────────────
 function computeStats(){
   if(!RAW.length) return null;
 
@@ -197,17 +185,14 @@ function computeStats(){
     const period=getLastWeekRange();
     const rows=RAW.filter(r=>r.complete>=period.from&&r.complete<=period.to);
     const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-    // IQR fence from all completed surveys in RAW, not just this week
     const allCtsM=RAW.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const fence=iqrFence(allCtsM);
     const outlierRows=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence);
 
-    // WIP as of end of Sunday (period.to), and WIP entering the week (end of prior Sunday)
     const wip=RAW.filter(r=>r.start&&r.start<=period.to&&(!r.complete||r.complete>period.to)).length;
     const wipPrior=RAW.filter(r=>r.start&&r.start<period.from&&(!r.complete||r.complete>=period.from)).length;
     const wipChange=wip-wipPrior;
 
-    // 3-week rolling: weeks -3, -2, -1 (last week) — all using median
     const w1={from:toISO(addDays(new Date(period.from+'T12:00:00'),-14)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-8))};
     const w2={from:toISO(addDays(new Date(period.from+'T12:00:00'),-7)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-1))};
     const medW1=weekMedCycle(w1.from,w1.to);
@@ -221,28 +206,25 @@ function computeStats(){
       trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slipping':'Holding';
     }
 
-    // Daily completion counts (Mon–Sun)
-    const dailyCounts=[];
-    const dayLabels=[];
-    for(let i=0;i<7;i++){
-      const d=toISO(addDays(new Date(period.from+'T12:00:00'),i));
-      const label=new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
-      dayLabels.push(label);
-      dailyCounts.push(RAW.filter(r=>r.complete===d).length);
+    // 4-week trend for visual (oldest → newest, last week is final entry)
+    const weeklyTrend=[];
+    for(let i=3;i>=0;i--){
+      const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
+      const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
+      weeklyTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),count:RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length});
     }
 
+    const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
     const newIn=RAW.filter(r=>r.start>=period.from&&r.start<=period.to).length;
-    const periodLabel=`${fmtShort(period.from)} – ${fmtShort(period.to)}`;
     return {
-      mode:'monday', period, periodLabel,
+      mode:'monday', period, periodLabel:`${fmtShort(period.from)} – ${fmtShort(period.to)}`,
       newIn, wip, wipChange,
       completedCount:rows.length,
-      medCycle:med(cts),
+      medCycle:med(cts), onTargetPct,
       outlierCount:outlierRows.length,
       outlierRows,
       maxOutlier:outlierRows.length?Math.max(...outlierRows.map(r=>r.ct_total)):null,
-      trend, rollingMed,
-      dailyCounts, dayLabels,
+      trend, rollingMed, weeklyTrend,
     };
   } else {
     const yesterday=getYesterday();
@@ -253,36 +235,37 @@ function computeStats(){
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const newInWTD=RAW.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
 
-    // Slow account detection: flag completions yesterday above global IQR fence
-    const allCts=RAW.filter(r=>r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
+    // Pace projection
+    const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
+    const daysThruYest=yesterdayDow===0?5:yesterdayDow-1; // Mon=1…Fri=5
+    const projectedWeek=daysThruYest>0?Math.round(wtdRows.length/daysThruYest*5):null;
+
+    // 4-week historical weekly completion avg
+    const wtdMonday=new Date(wtdFrom+'T12:00:00');
+    const fourWkComps=[1,2,3,4].map(i=>{
+      const wk=toISO(addDays(wtdMonday,-7*i));
+      const wkEnd=toISO(addDays(new Date(wk+'T12:00:00'),6));
+      return RAW.filter(r=>r.complete>=wk&&r.complete<=wkEnd).length;
+    });
+    const histAvg=Math.round(fourWkComps.reduce((a,b)=>a+b,0)/4);
+
+    // Slow account detection
+    const allCts=RAW.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const globalFence=iqrFence(allCts);
     const slowYesterday=RAW.filter(r=>r.complete===yesterday&&r.ct_total!=null&&r.ct_total>globalFence);
 
-    // WTD daily completion breakdown (Mon → yesterday)
-    const wtdDailyCounts=[];
-    const wtdDayLabels=[];
-    let dc=new Date(wtdFrom+'T12:00:00');
-    const yestD=new Date(yesterday+'T12:00:00');
-    while(dc<=yestD){
-      const iso=toISO(dc);
-      wtdDayLabels.push(dc.toLocaleDateString('en-US',{weekday:'short'}));
-      wtdDailyCounts.push(RAW.filter(r=>r.complete===iso).length);
-      dc=addDays(dc,1);
-    }
-
     return {
-      mode:'daily', yesterday,
-      wtdFrom, wtdTo:yesterday,
+      mode:'daily', yesterday, wtdFrom, wtdTo:yesterday,
       completedYesterday, newInYesterday,
-      completedWTD:wtdRows.length,
-      newInWTD,
+      completedWTD:wtdRows.length, newInWTD,
       medCycleWTD:med(wtdCts),
+      projectedWeek, histAvg,
       slowYesterday,
-      wtdDailyCounts, wtdDayLabels,
     };
   }
 }
 
+// ─── OBSERVATIONS ─────────────────────────────────────────
 function getObservations(s){
   const obs=[];
   if(!s) return obs;
@@ -310,171 +293,161 @@ function getObservations(s){
 function buildEmailHTML(s, commentary, manualNote){
   if(!s) return '<p style="font-family:Arial;padding:24px;color:#999;">No data.</p>';
 
-  const base='font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#111;line-height:1.6;';
-  const muted='font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#666;line-height:1.6;';
-  const small='font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#999;line-height:1.6;';
+  const f='font-family:Arial,Helvetica,sans-serif;';
+  const base=`${f}font-size:13px;color:#111;line-height:1.6;`;
+  const small=`${f}font-size:11px;color:#888;line-height:1.6;`;
 
-  let body='';
+  // Card style helpers
+  function cardCell(bg,border,extra=''){
+    return `${f}text-align:center;padding:14px 12px;background:${bg};border:1px solid ${border};${extra}`;
+  }
+  function metLabel(c='#999'){ return `display:block;${f}font-size:10px;color:${c};text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;`; }
+  function metVal(c='#111'){   return `display:block;${f}font-size:26px;font-weight:700;line-height:1;color:${c};`; }
+  function metSub(c='#aaa',bc='#e8e8e8'){ return `display:block;${f}font-size:10px;color:${c};margin-top:5px;border-top:1px solid ${bc};padding-top:5px;`; }
 
-  // ── Metrics hero block ──────────────────────────────────
-  const cell='font-family:Arial,Helvetica,sans-serif;text-align:center;padding:14px 10px;border:1px solid #e5e5e5;';
-  const metLabel='display:block;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;';
-  const metVal='display:block;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1;color:#111;';
-  const metSub='display:block;font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999;margin-top:4px;';
-
-  if(s.mode==='monday'){
-    body+=`<tr><td style="${base}padding:0 0 12px;border-bottom:2px solid #111;">
-      <strong>Site Survey — Week of ${s.periodLabel}</strong>
-    </td></tr>`;
-
-    const ctColor=s.medCycle==null?'#111':(s.medCycle<=3?'#2d6a0a':s.medCycle<=5?'#92400e':'#991b1b');
-    body+=`<tr><td style="padding:14px 0 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="${cell}width:25%;border-right:0;">
-            <span style="${metLabel}">New In</span>
-            <span style="${metVal}">${s.newIn}</span>
-          </td>
-          <td style="${cell}width:25%;border-right:0;">
-            <span style="${metLabel}">Completed</span>
-            <span style="${metVal}">${s.completedCount}</span>
-          </td>
-          <td style="${cell}width:25%;border-right:0;">
-            <span style="${metLabel}">Median Cycle</span>
-            <span style="${metVal.replace('#111',ctColor)}">${s.medCycle!=null?s.medCycle.toFixed(1)+'d':'—'}</span>
-            <span style="${metSub}">target: 3d</span>
-          </td>
-          <td style="${cell}width:25%;">
-            <span style="${metLabel}">WIP</span>
-            <span style="${metVal}">${s.wip}</span>
-            <span style="${metSub}">${s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week'}</span>
-          </td>
-        </tr>
-      </table>
-    </td></tr>`;
-
-    // Trend + outlier footnote
-    const notes=[];
-    if(s.trend){
-      const arrow=s.trend==='Improving'?'↓':s.trend==='Slipping'?'↑':'→';
-      const tcolor=s.trend==='Improving'?'#2d6a0a':s.trend==='Slipping'?'#991b1b':'#555';
-      notes.push(`<span style="color:${tcolor};">${arrow} Trend: ${s.trend}${s.rollingMed!=null?' &nbsp;·&nbsp; 3-wk med '+s.rollingMed.toFixed(1)+'d':''}</span>`);
-    }
-    if(s.outlierCount>0){
-      notes.push(`<span style="color:#666;">${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence (max ${s.maxOutlier.toFixed(0)}d) — not counted in median above.</span>`);
-    }
-    if(notes.length){
-      body+=`<tr><td style="${small}padding:8px 0 14px;">${notes.join('<br>')}</td></tr>`;
-    } else {
-      body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
-    }
-
-    // Table-based daily completion chart
-    if(s.dailyCounts&&s.dailyCounts.some(x=>x>0)){
-      const max=Math.max(...s.dailyCounts,1);
-      const BAR_MAX=200;
-      let chartRows='';
-      s.dayLabels.forEach((lbl,i)=>{
-        const count=s.dailyCounts[i];
-        const barW=count>0?Math.round(count/max*BAR_MAX):0;
-        chartRows+=`<tr>
-          <td width="32" style="${small}padding:2px 8px 2px 0;white-space:nowrap;">${lbl}</td>
-          <td style="padding:2px 0;">
-            <table cellpadding="0" cellspacing="0" border="0"><tr>
-              ${barW>0?`<td width="${barW}" height="14" bgcolor="#378ADD" style="font-size:0;line-height:0;">&nbsp;</td>`:''}
-              <td>&nbsp;</td>
-            </tr></table>
-          </td>
-          <td width="28" style="${small}padding:2px 0 2px 8px;text-align:right;">${count||''}</td>
-        </tr>`;
-      });
-      body+=`<tr><td style="padding:0 0 16px;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:10px 0;">
-          ${chartRows}
-        </table>
-      </td></tr>`;
-    }
-
-  } else {
-    // Daily mode
-    body+=`<tr><td style="${base}padding:0 0 12px;border-bottom:2px solid #111;">
-      <strong>Site Survey — ${fmtMed(s.yesterday)}</strong>
-    </td></tr>`;
-
-    const ctColor=s.medCycleWTD==null?'#111':(s.medCycleWTD<=3?'#2d6a0a':s.medCycleWTD<=5?'#92400e':'#991b1b');
-    body+=`<tr><td style="padding:14px 0 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="${cell}width:33%;border-right:0;">
-            <span style="${metLabel}">New In WTD</span>
-            <span style="${metVal}">${s.newInWTD}</span>
-            <span style="${metSub}">${s.newInYesterday} yesterday</span>
-          </td>
-          <td style="${cell}width:33%;border-right:0;">
-            <span style="${metLabel}">Completed WTD</span>
-            <span style="${metVal}">${s.completedWTD}</span>
-            <span style="${metSub}">${s.completedYesterday} yesterday</span>
-          </td>
-          <td style="${cell}width:34%;">
-            <span style="${metLabel}">WTD Median Cycle</span>
-            <span style="${metVal.replace('#111',ctColor)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
-            <span style="${metSub}">target: 3d</span>
-          </td>
-        </tr>
-      </table>
-    </td></tr>`;
-
-    // WTD daily completion bar chart (Mon → yesterday)
-    if(s.wtdDailyCounts&&s.wtdDailyCounts.some(x=>x>0)){
-      const max=Math.max(...s.wtdDailyCounts,1);
-      const BAR_MAX=200;
-      let chartRows='';
-      s.wtdDayLabels.forEach((lbl,i)=>{
-        const count=s.wtdDailyCounts[i];
-        const barW=count>0?Math.round(count/max*BAR_MAX):0;
-        chartRows+=`<tr>
-          <td width="32" style="${small}padding:2px 8px 2px 0;white-space:nowrap;">${lbl}</td>
-          <td style="padding:2px 0;">
-            <table cellpadding="0" cellspacing="0" border="0"><tr>
-              ${barW>0?`<td width="${barW}" height="14" bgcolor="#378ADD" style="font-size:0;line-height:0;">&nbsp;</td>`:''}
-              <td>&nbsp;</td>
-            </tr></table>
-          </td>
-          <td width="28" style="${small}padding:2px 0 2px 8px;text-align:right;">${count||''}</td>
-        </tr>`;
-      });
-      body+=`<tr><td style="padding:8px 0 16px;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:10px 0;">
-          ${chartRows}
-        </table>
-      </td></tr>`;
-    } else {
-      body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
-    }
+  // Cycle time card colors
+  function ctColors(v){
+    if(v==null)       return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
+    if(v<=3)          return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
+    if(v<=5)          return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a',mark:''};
+    return             {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca',mark:''};
   }
 
-  // Commentary
+  let rows='';
+
+  // ── Header ──────────────────────────────────────────────
+  const title=s.mode==='monday'
+    ?`Site Survey — Week of ${s.periodLabel}`
+    :`Site Survey — ${fmtMed(s.yesterday)}`;
+  rows+=`<tr><td style="border-left:4px solid #378ADD;padding:16px 24px 16px 20px;">
+    <span style="${f}font-size:13px;font-weight:700;color:#111;letter-spacing:.02em;">${title}</span>
+  </td></tr>`;
+
+  // ── Metric cards ────────────────────────────────────────
+  rows+=`<tr><td style="padding:20px 24px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+      <tr>`;
+
+  if(s.mode==='monday'){
+    const ct=ctColors(s.medCycle);
+    const wipSub=(s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week');
+    rows+=`
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
+          <span style="${metLabel()}">New In</span>
+          <span style="${metVal()}">${s.newIn}</span>
+          <span style="${metSub()}">week started</span>
+        </td>
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
+          <span style="${metLabel()}">Completed</span>
+          <span style="${metVal()}">${s.completedCount}</span>
+          <span style="${metSub()}">this week</span>
+        </td>
+        <td style="${cardCell(ct.bg,ct.b,'width:25%;border-right:0;')}">
+          <span style="${metLabel(ct.lc)}">Median Cycle</span>
+          <span style="${metVal(ct.vc)}">${s.medCycle!=null?s.medCycle.toFixed(1)+'d':'—'}</span>
+          <span style="${metSub(ct.sc,ct.sbc)}">target: 3d${ct.mark}${s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''}</span>
+        </td>
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;')}">
+          <span style="${metLabel()}">WIP</span>
+          <span style="${metVal()}">${s.wip}</span>
+          <span style="${metSub()}">${wipSub}</span>
+        </td>`;
+  } else {
+    const ct=ctColors(s.medCycleWTD);
+    rows+=`
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:33%;border-right:0;')}">
+          <span style="${metLabel()}">New In WTD</span>
+          <span style="${metVal()}">${s.newInWTD}</span>
+          <span style="${metSub()}">${s.newInYesterday} yesterday</span>
+        </td>
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:33%;border-right:0;')}">
+          <span style="${metLabel()}">Completed WTD</span>
+          <span style="${metVal()}">${s.completedWTD}</span>
+          <span style="${metSub()}">${s.completedYesterday} yesterday</span>
+        </td>
+        <td style="${cardCell(ct.bg,ct.b,'width:34%;')}">
+          <span style="${metLabel(ct.lc)}">WTD Median Cycle</span>
+          <span style="${metVal(ct.vc)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
+          <span style="${metSub(ct.sc,ct.sbc)}">target: 3d${ct.mark}</span>
+        </td>`;
+  }
+
+  rows+=`
+      </tr>
+    </table>
+  </td></tr>`;
+
+  // ── 4-week trend visual (Monday only) ───────────────────
+  if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.some(w=>w.med!=null)){
+    const maxMed=Math.max(...s.weeklyTrend.map(w=>w.med||0),1);
+    const BAR_MAX=260;
+    let trendRows='';
+    s.weeklyTrend.forEach((w,i)=>{
+      const isLast=i===s.weeklyTrend.length-1;
+      const barW=w.med!=null?Math.round(w.med/maxMed*BAR_MAX):0;
+      const bc=w.med==null?'#e0e0e0':w.med<=3?'#5aaa2a':w.med<=5?'#f59e0b':'#ef4444';
+      const valColor=w.med==null?'#aaa':w.med<=3?'#2d6a0a':w.med<=5?'#92400e':'#991b1b';
+      trendRows+=`<tr>
+        <td width="44" style="${f}font-size:10px;color:${isLast?'#333':'#999'};font-weight:${isLast?'700':'400'};padding:3px 8px 3px 0;white-space:nowrap;">${w.label}</td>
+        <td style="padding:3px 0;">
+          <table cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#f0f0f0;border-radius:2px;overflow:hidden;"><tr>
+            ${barW>0?`<td width="${barW}" height="14" bgcolor="${bc}" style="font-size:0;line-height:0;border-radius:2px;">&nbsp;</td>`:''}
+            <td>&nbsp;</td>
+          </tr></table>
+        </td>
+        <td width="36" style="${f}font-size:10px;color:${valColor};font-weight:700;padding:3px 0 3px 8px;text-align:right;white-space:nowrap;">${w.med!=null?w.med.toFixed(1)+'d':'—'}</td>
+        <td width="28" style="${f}font-size:10px;color:#bbb;padding:3px 0 3px 6px;text-align:right;">${w.count||''}</td>
+      </tr>`;
+    });
+    rows+=`<tr><td style="padding:16px 24px 0;">
+      <div style="${f}font-size:9px;color:#bbb;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">4-Week Trend · Median Cycle</div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">${trendRows}</table>
+    </td></tr>`;
+  }
+
+  // ── Footnotes (outliers / pace) ──────────────────────────
+  const notes=[];
+  if(s.mode==='monday'){
+    if(s.outlierCount>0){
+      notes.push(`<span style="color:#888;">${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence (max ${s.maxOutlier.toFixed(0)}d) — not counted in median above.</span>`);
+    }
+  } else {
+    if(s.projectedWeek!=null){
+      notes.push(`<span style="color:#555;">On pace for ~${s.projectedWeek} completions this week · 4-wk avg: ${s.histAvg}</span>`);
+    }
+  }
+  if(notes.length){
+    rows+=`<tr><td style="${small}padding:10px 24px 4px;">${notes.join('<br>')}</td></tr>`;
+  }
+
+  // ── Commentary ──────────────────────────────────────────
   if(commentary&&commentary.trim()){
-    body+=`<tr><td style="${base}padding:14px 0;border-top:1px solid #e5e5e5;line-height:1.7;">${commentary.replace(/\n/g,'<br>')}</td></tr>`;
+    rows+=`<tr><td style="${base}padding:16px 24px;border-top:1px solid #ebebeb;line-height:1.7;">${commentary.replace(/\n/g,'<br>')}</td></tr>`;
   }
 
   // Manual note
   if(manualNote&&manualNote.trim()){
-    body+=`<tr><td style="${muted}padding:0 0 14px;">${manualNote.trim().replace(/\n/g,'<br>')}</td></tr>`;
+    rows+=`<tr><td style="${f}font-size:12px;color:#666;line-height:1.6;padding:0 24px 16px;">${manualNote.trim().replace(/\n/g,'<br>')}</td></tr>`;
   }
 
-  // Dashboard link
-  body+=`<tr><td style="${small}padding:12px 0 0;border-top:1px solid #e5e5e5;">
-    <a href="${DASHBOARD_URL}" style="color:#2563eb;text-decoration:none;">View full dashboard ↗</a>
+  // ── Dashboard link ───────────────────────────────────────
+  rows+=`<tr><td style="padding:${commentary||manualNote?'0':'16px'} 24px 20px;">
+    <a href="${DASHBOARD_URL}" style="${f}font-size:11px;color:#888;text-decoration:none;border-bottom:1px solid #ccc;">View full dashboard ↗</a>
   </td></tr>`;
 
-  // Sign-off
-  body+=`<tr><td style="${muted}padding:20px 0 0;">${SIGN_OFF}</td></tr>`;
+  // ── Signature footer ─────────────────────────────────────
+  rows+=`<tr><td style="background:#f8f8f8;border-top:1px solid #e8e8e8;padding:16px 24px;">
+    <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
+    <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Site Survey Manager</span>
+    <span style="display:block;${f}font-size:11px;color:#888;margin-top:1px;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="color:#888;text-decoration:none;">douglas.regehr@sunpower.com</a></span>
+  </td></tr>`;
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:20px;background:#f9f9f9;">
-<table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;padding:24px 28px;">
-  ${body}
-</table></body></html>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:32px 0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0;">
+  ${rows}
+</table>
+</body></html>`;
 }
 
 // ─── SUBJECT LINE ─────────────────────────────────────────
@@ -509,7 +482,7 @@ function render(){
 function renderStats(){
   const el=document.getElementById('stats-body');
   const pel=document.getElementById('stats-period');
-  if(!stats){ el.innerHTML='<div class="empty-state">No data loaded.<br>Export the dashboard first.</div>'; return; }
+  if(!stats){ el.innerHTML='<div class="empty-state">No data loaded.</div>'; return; }
 
   if(stats.mode==='monday'){
     pel.textContent=`Week of ${stats.periodLabel}`;
@@ -532,7 +505,8 @@ function renderStats(){
       <div class="stat-row"><span class="stat-label">Completed yesterday</span><span class="stat-val">${stats.completedYesterday}</span></div>
       <div class="stat-row"><span class="stat-label">New in WTD</span><span class="stat-val">${stats.newInWTD}</span></div>
       <div class="stat-row"><span class="stat-label">Completed WTD</span><span class="stat-val">${stats.completedWTD}</span></div>
-      ${ct!=null?`<div class="stat-row"><span class="stat-label">WTD median cycle</span><span class="stat-val ${ctClass}">${ct.toFixed(1)}d</span></div>`:''}`;
+      ${ct!=null?`<div class="stat-row"><span class="stat-label">WTD median cycle</span><span class="stat-val ${ctClass}">${ct.toFixed(1)}d</span></div>`:''}
+      ${stats.projectedWeek!=null?`<div class="stat-row"><span class="stat-label">Projected week total</span><span class="stat-val">${stats.projectedWeek} <span style="font-size:10px;font-weight:400;color:var(--muted);">(4-wk avg: ${stats.histAvg})</span></span></div>`:''}`;
   }
 }
 
@@ -566,7 +540,6 @@ function refreshPreview(){
   const frame=document.getElementById('preview-frame');
   frame.srcdoc=html;
   frame.style.height='600px';
-  // Resize after load
   frame.onload=()=>{ try{ frame.style.height=(frame.contentDocument.body.scrollHeight+40)+'px'; }catch(e){} };
 }
 
@@ -578,13 +551,11 @@ async function generateCommentary(){
   const body=document.getElementById('commentary-body');
   body.innerHTML='<div class="loading">Calling Claude…</div>';
 
-  // Only pass observations the user has checked
   const allObs=getObservations(stats);
   const checkedObs=allObs.filter((_,i)=>{
     const cb=document.getElementById('obs-'+i);
-    return cb?cb.checked:true;
+    return cb?cb.checked:false;
   });
-
   const manualNote=document.getElementById('manual-note').value;
 
   try{
@@ -641,7 +612,6 @@ async function copyRenderedHTML(html){
     await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([html],{type:'text/plain'})})]);
     return true;
   }catch(e){
-    // Fallback for browsers that don't support ClipboardItem
     await navigator.clipboard.writeText(html);
     return false;
   }
@@ -677,7 +647,6 @@ function flash(msg){
 window.addEventListener('load',()=>{
   const today=new Date();
   document.getElementById('nav-date').textContent=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  // Auto-select mode based on day of week (0=Sun,1=Mon)
   const dow=today.getDay();
   setMode(dow===1||dow===0?'monday':'daily');
 });
