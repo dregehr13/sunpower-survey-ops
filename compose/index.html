@@ -660,7 +660,7 @@ async function openOutlook(){
   const to=document.getElementById('to-field').value.replace(/;\s*/g,',');
   const subject=document.getElementById('subject-field').value;
   await copyRenderedHTML(html);
-  window.open(`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}`,'_blank');
+  window.open(`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}`,'outlook-compose');
   flash('Outlook opening — paste body with Cmd+V');
 }
 
