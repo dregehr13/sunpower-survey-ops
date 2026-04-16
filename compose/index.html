@@ -657,10 +657,10 @@ async function copyHTML(){
 async function openOutlook(){
   const manualNote=document.getElementById('manual-note').value;
   const html=buildEmailHTML(stats, selectedCommentary, manualNote);
-  const to=document.getElementById('to-field').value;
+  const to=document.getElementById('to-field').value.replace(/;\s*/g,',');
   const subject=document.getElementById('subject-field').value;
   await copyRenderedHTML(html);
-  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}`;
+  window.open(`https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}`,'_blank');
   flash('Outlook opening — paste body with Cmd+V');
 }
 
