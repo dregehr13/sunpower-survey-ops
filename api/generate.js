@@ -21,15 +21,17 @@ function buildPrompt(stats, mode, observations, manualNote) {
   if (mode === 'monday') {
     lines.push(`Mode: Monday weekly recap`);
     lines.push(`Period: ${stats.periodLabel}`);
+    lines.push(`New in: ${stats.newIn} surveys started`);
     lines.push(`Completed: ${stats.completedCount} site surveys`);
-    if (stats.medCycle != null) lines.push(`Cycle time: ${stats.medCycle.toFixed(1)}d median / ${stats.avgCycle.toFixed(1)}d avg (targets: 3d med / 4d avg)`);
-    if (stats.outlierCount > 0) lines.push(`Outliers: ${stats.outlierCount} project(s) above fence. Longest: ${stats.maxOutlier.toFixed(0)}d. Avg without outliers: ${stats.avgWithout != null ? stats.avgWithout.toFixed(1)+'d' : 'n/a'}`);
-    if (stats.trend) lines.push(`3-week trend: ${stats.trend} (rolling avg: ${stats.rollingAvg != null ? stats.rollingAvg.toFixed(1)+'d' : 'n/a'})`);
+    lines.push(`WIP at end of week: ${stats.wip}${stats.wipChange != null ? ' ('+(stats.wipChange >= 0 ? '+' : '')+stats.wipChange+' vs prior week)' : ''}`);
+    if (stats.medCycle != null) lines.push(`Median cycle time: ${stats.medCycle.toFixed(1)}d (target: 3d)`);
+    if (stats.outlierCount > 0) lines.push(`Outliers: ${stats.outlierCount} project(s) above IQR fence. Longest: ${stats.maxOutlier.toFixed(0)}d.`);
+    if (stats.trend) lines.push(`3-week median trend: ${stats.trend} (rolling median: ${stats.rollingMed != null ? stats.rollingMed.toFixed(1)+'d' : 'n/a'})`);
   } else {
     lines.push(`Mode: Daily recap`);
-    lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} site surveys completed`);
-    lines.push(`Week to date: ${stats.completedWTD} completed`);
-    if (stats.avgCycleWTD != null) lines.push(`WTD avg cycle time: ${stats.avgCycleWTD.toFixed(1)}d`);
+    lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} completed, ${stats.newInYesterday} new in`);
+    lines.push(`Week to date: ${stats.completedWTD} completed, ${stats.newInWTD} new in`);
+    if (stats.medCycleWTD != null) lines.push(`WTD median cycle time: ${stats.medCycleWTD.toFixed(1)}d (target: 3d)`);
   }
 
   if (observations && observations.length) {

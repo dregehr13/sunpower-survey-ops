@@ -513,11 +513,14 @@ function loadFilterState(){
   }catch(e){}
 }
 
+let _fenceCache = {};
+function clearFenceCache(){ _fenceCache = {}; }
 function calcFence(mult){
-  const v = rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0).sort((a,b)=>a-b);
-  if(!v.length) return Infinity;
+  if(_fenceCache[mult] != null) return _fenceCache[mult];
+  const v = rows.filter(r=>r.complete).map(r=>r.ct_total).filter(x=>x!=null&&x>=0).sort((a,b)=>a-b);
+  if(!v.length) return _fenceCache[mult] = Infinity;
   const q1=v[Math.floor(v.length*.25)], q3=v[Math.floor(v.length*.75)];
-  return q3 + mult*(q3-q1);
+  return _fenceCache[mult] = q3 + mult*(q3-q1);
 }
 
 function getF(){ return globalMode ? globalF : pageF[currentPage]; }
@@ -527,8 +530,9 @@ function applyFilter(){
   if(!f) return; // settings page or other non-data page — no filter needed
   const fence = f.removeOutliers ? calcFence(f.outlierMult) : Infinity;
   filtered = rows.filter(r=>{
-    if(f.dateFrom && r.start && r.start < f.dateFrom) return false;
-    if(f.dateTo   && r.start && r.start > f.dateTo)   return false;
+    if(!r.complete) return false; // in-progress surveys excluded from filtered; WIP always uses rows directly
+    if(f.dateFrom && r.complete < f.dateFrom) return false;
+    if(f.dateTo   && r.complete > f.dateTo)   return false;
     if(f.region !== 'all' && r.region !== f.region)   return false;
     if(f.type   !== 'all' && r.type   !== f.type)     return false;
     if(f.resource && f.resource !== 'all' && r.resource !== f.resource) return false;
@@ -572,7 +576,7 @@ function buildFBar(page){
 
   return `<div class="fbar">
     <div class="fgroup">
-      <span class="flabel">Start date</span>
+      <span class="flabel">Completion date</span>
       <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
       <span style="color:var(--faint);font-size:10px;">–</span>
       <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
@@ -688,7 +692,7 @@ function toggleGlobal(on, fromPage){
 function clearF(page){
   const def={dateFrom:'',dateTo:'',region:'all',type:'all',resource:'all',
     outlierMult:S.defaultOutlierMult, removeOutliers:S.defaultRemoveOutliers};
-  const dates=rows.map(r=>r.start).filter(Boolean).sort();
+  const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
   if(globalMode){ globalF={...def}; PAGES.forEach(p=>pageF[p]={...def}); }
   else pageF[page]={...def};
@@ -854,9 +858,13 @@ function renderExec(){
   const trend=latest!=null&&prev!=null?(latest<prev-0.2?'▼ Improving':latest>prev+0.2?'▲ Slipping':'— Holding'):null;
   const trendClass=trend?(trend.startsWith('▼')?'roll-up':trend.startsWith('▲')?'roll-dn':'roll-flat'):'roll-flat';
 
-  const dates=src.map(r=>r.start).filter(Boolean).sort();
+  if(!tots.length){
+    document.getElementById('exec-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
+    return;
+  }
+  const dates=src.map(r=>r.complete).filter(Boolean).sort();
   const dateRange=dates.length
-    ?`${fmtDate(dates[0])} — ${fmtDate(dates[dates.length-1])}  ·  ${src.length} projects  ·  ${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions`
+    ?`Completed ${fmtDate(dates[0])} — ${fmtDate(dates[dates.length-1])}  ·  ${src.length} projects  ·  ${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions`
     :'No data';
 
   const kcls=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
@@ -966,6 +974,10 @@ function renderExec(){
 function renderOverview(){
   const src=filtered;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  if(!tots.length){
+    document.getElementById('ov-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
+    return;
+  }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
   const cls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
 
@@ -1212,6 +1224,10 @@ function renderWeekly(){
 
 // ═══ REGIONS ══════════════════════════════════════════════
 function renderRegions(){
+  if(!filtered.length){
+    document.getElementById('rg-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
+    return;
+  }
   const stats=regionStats(filtered);
   const byTotal=[...stats].filter(r=>r.start_to_complete!=null).sort((a,b)=>(b.start_to_complete||0)-(a.start_to_complete||0)).slice(0,22);
   const top12=stats.slice(0,12);
@@ -1552,11 +1568,11 @@ function renderEditor(){
 
 function debounceSearch(){ clearTimeout(eSearchTimer); eSearchTimer=setTimeout(()=>{ePageNum=0;renderEditor();},220); }
 function updR(id,f,v){ const r=rows.find(x=>x.id===id); if(!r) return; r[f]=v; if(['start','requested','scheduled','complete'].includes(f)) recalc(r); changedIds.add(id); const el=document.getElementById('ect-'+id); if(el) el.textContent=r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'; const cb=document.getElementById('chg-b'); if(changedIds.size){cb.style.display='';cb.textContent=changedIds.size+' unsaved';}else cb.style.display='none'; }
-function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.id!==id); changedIds.delete(id); renderEditor(); toast('Row deleted.'); }
-function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
+function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.id!==id); changedIds.delete(id); clearFenceCache(); renderEditor(); toast('Row deleted.'); }
+function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
-function applyEdits(){ changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)); changedIds.clear(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -1728,7 +1744,8 @@ window.addEventListener('load',()=>{
   }
 
   // Set date range — autoDateRange always wins over saved dates
-  const dates=RAW.map(r=>r.start).filter(Boolean).sort();
+  clearFenceCache();
+  const dates=RAW.filter(r=>r.complete).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){
     globalF.dateFrom=dates[0]; globalF.dateTo=dates[dates.length-1];
     PAGES.forEach(p=>{pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];});

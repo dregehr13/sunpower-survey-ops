@@ -33,8 +33,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .pam{background:var(--amber-bg);color:var(--amber);}
 .pr{background:var(--red-bg);color:var(--red);}
 .obs-list{margin:8px 0 0;}
-.obs-item{display:flex;align-items:flex-start;gap:7px;padding:5px 8px;border-radius:6px;background:#fef9ec;border:1px solid #fde68a;font-size:11px;color:#78350f;margin-bottom:5px;line-height:1.5;}
-.obs-item .dot{flex-shrink:0;margin-top:3px;width:5px;height:5px;border-radius:50%;background:#d97706;}
+.obs-item{display:flex;align-items:flex-start;gap:7px;padding:5px 8px;border-radius:6px;background:#fef9ec;border:1px solid #fde68a;font-size:11px;color:#78350f;margin-bottom:5px;line-height:1.5;cursor:pointer;}
+.obs-item input[type=checkbox]{flex-shrink:0;margin-top:2px;cursor:pointer;}
+.obs-item.unchecked{opacity:.45;background:#f5f5f2;border-color:#e0e0db;color:var(--muted);}
 textarea{width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;}
 textarea:focus{border-color:#999;}
 .btn{font-size:12px;padding:6px 13px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;}
@@ -81,7 +82,7 @@ textarea:focus{border-color:#999;}
     </div>
 
     <div class="panel section-gap" id="obs-panel">
-      <div class="ptitle">Flagged observations</div>
+      <div class="ptitle">Flagged observations <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);">— check to include in AI commentary</span></div>
       <div id="obs-body"></div>
     </div>
 
@@ -183,10 +184,10 @@ function iqrFence(arr,mult=1.5){
   const q1=s[Math.floor(s.length*.25)],q3=s[Math.floor(s.length*.75)];
   return q3+mult*(q3-q1);
 }
-function weekAvgCycle(from,to){
-  const rows=RAW.filter(r=>r.complete>=from&&r.complete<=to);
-  const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  return avg(cts);
+function weekMedCycle(from,to){
+  const r=RAW.filter(r=>r.complete>=from&&r.complete<=to);
+  const cts=r.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  return med(cts);
 }
 
 function computeStats(){
@@ -196,25 +197,31 @@ function computeStats(){
     const period=getLastWeekRange();
     const rows=RAW.filter(r=>r.complete>=period.from&&r.complete<=period.to);
     const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-    const fence=iqrFence(cts);
+    // IQR fence from all completed surveys in RAW, not just this week
+    const allCtsM=RAW.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
+    const fence=iqrFence(allCtsM);
     const outlierRows=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence);
-    const cleanCts=cts.filter(x=>x<=fence);
 
-    // 3-week rolling: weeks -3, -2, -1 (last week)
+    // WIP as of end of Sunday (period.to), and WIP entering the week (end of prior Sunday)
+    const wip=RAW.filter(r=>r.start&&r.start<=period.to&&(!r.complete||r.complete>period.to)).length;
+    const wipPrior=RAW.filter(r=>r.start&&r.start<period.from&&(!r.complete||r.complete>=period.from)).length;
+    const wipChange=wip-wipPrior;
+
+    // 3-week rolling: weeks -3, -2, -1 (last week) — all using median
     const w1={from:toISO(addDays(new Date(period.from+'T12:00:00'),-14)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-8))};
     const w2={from:toISO(addDays(new Date(period.from+'T12:00:00'),-7)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-1))};
-    const avgW1=weekAvgCycle(w1.from,w1.to);
-    const avgW2=weekAvgCycle(w2.from,w2.to);
-    const avgW3=avg(cts);
-    const rolling=[avgW1,avgW2,avgW3].filter(x=>x!=null);
-    const rollingAvg=rolling.length?rolling.reduce((a,b)=>a+b,0)/rolling.length:null;
-    const prevAvg=avg([avgW1,avgW2].filter(x=>x!=null));
+    const medW1=weekMedCycle(w1.from,w1.to);
+    const medW2=weekMedCycle(w2.from,w2.to);
+    const medW3=med(cts);
+    const rolling=[medW1,medW2,medW3].filter(x=>x!=null);
+    const rollingMed=rolling.length?rolling.reduce((a,b)=>a+b,0)/rolling.length:null;
+    const prevMed=avg([medW1,medW2].filter(x=>x!=null));
     let trend=null;
-    if(avgW3!=null&&prevAvg!=null){
-      trend=avgW3<prevAvg-0.3?'Improving':avgW3>prevAvg+0.3?'Slipping':'Holding';
+    if(medW3!=null&&prevMed!=null){
+      trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slipping':'Holding';
     }
 
-    // Daily counts (Mon–Sun)
+    // Daily completion counts (Mon–Sun)
     const dailyCounts=[];
     const dayLabels=[];
     for(let i=0;i<7;i++){
@@ -228,13 +235,13 @@ function computeStats(){
     const periodLabel=`${fmtShort(period.from)} – ${fmtShort(period.to)}`;
     return {
       mode:'monday', period, periodLabel,
-      newIn,
+      newIn, wip, wipChange,
       completedCount:rows.length,
-      avgCycle:avg(cts), medCycle:med(cts),
+      medCycle:med(cts),
       outlierCount:outlierRows.length,
+      outlierRows,
       maxOutlier:outlierRows.length?Math.max(...outlierRows.map(r=>r.ct_total)):null,
-      avgWithout:avg(cleanCts),
-      trend, rollingAvg,
+      trend, rollingMed,
       dailyCounts, dayLabels,
     };
   } else {
@@ -245,13 +252,33 @@ function computeStats(){
     const wtdRows=RAW.filter(r=>r.complete>=wtdFrom&&r.complete<=yesterday);
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const newInWTD=RAW.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
+
+    // Slow account detection: flag completions yesterday above global IQR fence
+    const allCts=RAW.filter(r=>r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
+    const globalFence=iqrFence(allCts);
+    const slowYesterday=RAW.filter(r=>r.complete===yesterday&&r.ct_total!=null&&r.ct_total>globalFence);
+
+    // WTD daily completion breakdown (Mon → yesterday)
+    const wtdDailyCounts=[];
+    const wtdDayLabels=[];
+    let dc=new Date(wtdFrom+'T12:00:00');
+    const yestD=new Date(yesterday+'T12:00:00');
+    while(dc<=yestD){
+      const iso=toISO(dc);
+      wtdDayLabels.push(dc.toLocaleDateString('en-US',{weekday:'short'}));
+      wtdDailyCounts.push(RAW.filter(r=>r.complete===iso).length);
+      dc=addDays(dc,1);
+    }
+
     return {
       mode:'daily', yesterday,
       wtdFrom, wtdTo:yesterday,
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length,
       newInWTD,
-      avgCycleWTD:avg(wtdCts),
+      medCycleWTD:med(wtdCts),
+      slowYesterday,
+      wtdDailyCounts, wtdDayLabels,
     };
   }
 }
@@ -263,12 +290,18 @@ function getObservations(s){
     if(s.completedCount===0) obs.push('Zero completions this week — confirm data loaded correctly.');
     if(s.medCycle!=null&&s.medCycle>6) obs.push(`Median cycle time (${s.medCycle.toFixed(1)}d) is significantly above the 3d target.`);
     else if(s.medCycle!=null&&s.medCycle>4) obs.push(`Median cycle time (${s.medCycle.toFixed(1)}d) is above target.`);
-    if(s.outlierCount>0) obs.push(`${s.outlierCount} outlier${s.outlierCount>1?'s':''} above fence. Longest: ${s.maxOutlier.toFixed(0)}d.`);
-    if(s.trend==='Slipping') obs.push('3-week trend is slipping — cycle time is moving up.');
-    if(s.trend==='Improving') obs.push('3-week trend is improving — cycle time is moving down.');
+    if(s.outlierCount>0) obs.push(`${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence. Longest: ${s.maxOutlier.toFixed(0)}d.`);
+    if(s.trend==='Slipping') obs.push('3-week trend is slipping — median cycle time is moving up.');
+    if(s.trend==='Improving') obs.push('3-week trend is improving — median cycle time is moving down.');
   } else {
     if(s.completedYesterday===0) obs.push('Zero completions yesterday — confirm this is correct.');
-    if(s.avgCycleWTD!=null&&s.avgCycleWTD>6) obs.push(`WTD avg cycle time (${s.avgCycleWTD.toFixed(1)}d) is significantly above target.`);
+    if(s.medCycleWTD!=null&&s.medCycleWTD>6) obs.push(`WTD median cycle (${s.medCycleWTD.toFixed(1)}d) is significantly above the 3d target.`);
+    else if(s.medCycleWTD!=null&&s.medCycleWTD>4) obs.push(`WTD median cycle (${s.medCycleWTD.toFixed(1)}d) is above target.`);
+    if(s.slowYesterday&&s.slowYesterday.length>0){
+      s.slowYesterday.forEach(r=>{
+        obs.push(`Outlier completed yesterday: ${r.ct_total.toFixed(0)}d${r.region?' ('+r.region+')':''} — may warrant a note.`);
+      });
+    }
   }
   return obs;
 }
@@ -298,18 +331,23 @@ function buildEmailHTML(s, commentary, manualNote){
     body+=`<tr><td style="padding:14px 0 0;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="${cell}width:33%;border-right:0;">
+          <td style="${cell}width:25%;border-right:0;">
             <span style="${metLabel}">New In</span>
             <span style="${metVal}">${s.newIn}</span>
           </td>
-          <td style="${cell}width:33%;border-right:0;">
+          <td style="${cell}width:25%;border-right:0;">
             <span style="${metLabel}">Completed</span>
             <span style="${metVal}">${s.completedCount}</span>
           </td>
-          <td style="${cell}width:34%;">
+          <td style="${cell}width:25%;border-right:0;">
             <span style="${metLabel}">Median Cycle</span>
             <span style="${metVal.replace('#111',ctColor)}">${s.medCycle!=null?s.medCycle.toFixed(1)+'d':'—'}</span>
-            <span style="${metSub}">target: 3d / 4d avg</span>
+            <span style="${metSub}">target: 3d</span>
+          </td>
+          <td style="${cell}width:25%;">
+            <span style="${metLabel}">WIP</span>
+            <span style="${metVal}">${s.wip}</span>
+            <span style="${metSub}">${s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week'}</span>
           </td>
         </tr>
       </table>
@@ -320,10 +358,10 @@ function buildEmailHTML(s, commentary, manualNote){
     if(s.trend){
       const arrow=s.trend==='Improving'?'↓':s.trend==='Slipping'?'↑':'→';
       const tcolor=s.trend==='Improving'?'#2d6a0a':s.trend==='Slipping'?'#991b1b':'#555';
-      notes.push(`<span style="color:${tcolor};">${arrow} Trend: ${s.trend}${s.rollingAvg!=null?' &nbsp;·&nbsp; 3-wk avg '+s.rollingAvg.toFixed(1)+'d':''}</span>`);
+      notes.push(`<span style="color:${tcolor};">${arrow} Trend: ${s.trend}${s.rollingMed!=null?' &nbsp;·&nbsp; 3-wk med '+s.rollingMed.toFixed(1)+'d':''}</span>`);
     }
     if(s.outlierCount>0){
-      notes.push(`<span style="color:#666;">${s.outlierCount} outlier${s.outlierCount>1?'s':''} above fence (max ${s.maxOutlier.toFixed(0)}d). Removing ${s.outlierCount>1?'them':'it'} brings avg to ${s.avgWithout!=null?s.avgWithout.toFixed(1)+'d':'n/a'}.</span>`);
+      notes.push(`<span style="color:#666;">${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence (max ${s.maxOutlier.toFixed(0)}d) — not counted in median above.</span>`);
     }
     if(notes.length){
       body+=`<tr><td style="${small}padding:8px 0 14px;">${notes.join('<br>')}</td></tr>`;
@@ -331,7 +369,7 @@ function buildEmailHTML(s, commentary, manualNote){
       body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
     }
 
-    // Table-based daily chart
+    // Table-based daily completion chart
     if(s.dailyCounts&&s.dailyCounts.some(x=>x>0)){
       const max=Math.max(...s.dailyCounts,1);
       const BAR_MAX=200;
@@ -359,12 +397,11 @@ function buildEmailHTML(s, commentary, manualNote){
 
   } else {
     // Daily mode
-    const dayName=new Date(s.yesterday+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
     body+=`<tr><td style="${base}padding:0 0 12px;border-bottom:2px solid #111;">
       <strong>Site Survey — ${fmtMed(s.yesterday)}</strong>
     </td></tr>`;
 
-    const ctColor=s.avgCycleWTD==null?'#111':(s.avgCycleWTD<=4?'#2d6a0a':s.avgCycleWTD<=6?'#92400e':'#991b1b');
+    const ctColor=s.medCycleWTD==null?'#111':(s.medCycleWTD<=3?'#2d6a0a':s.medCycleWTD<=5?'#92400e':'#991b1b');
     body+=`<tr><td style="padding:14px 0 0;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
@@ -376,17 +413,44 @@ function buildEmailHTML(s, commentary, manualNote){
           <td style="${cell}width:33%;border-right:0;">
             <span style="${metLabel}">Completed WTD</span>
             <span style="${metVal}">${s.completedWTD}</span>
-            <span style="${metSub}">${s.completedYesterday} ${dayName}</span>
+            <span style="${metSub}">${s.completedYesterday} yesterday</span>
           </td>
           <td style="${cell}width:34%;">
-            <span style="${metLabel}">WTD Avg Cycle</span>
-            <span style="${metVal.replace('#111',ctColor)}">${s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—'}</span>
-            <span style="${metSub}">target: 4d avg</span>
+            <span style="${metLabel}">WTD Median Cycle</span>
+            <span style="${metVal.replace('#111',ctColor)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
+            <span style="${metSub}">target: 3d</span>
           </td>
         </tr>
       </table>
     </td></tr>`;
-    body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
+
+    // WTD daily completion bar chart (Mon → yesterday)
+    if(s.wtdDailyCounts&&s.wtdDailyCounts.some(x=>x>0)){
+      const max=Math.max(...s.wtdDailyCounts,1);
+      const BAR_MAX=200;
+      let chartRows='';
+      s.wtdDayLabels.forEach((lbl,i)=>{
+        const count=s.wtdDailyCounts[i];
+        const barW=count>0?Math.round(count/max*BAR_MAX):0;
+        chartRows+=`<tr>
+          <td width="32" style="${small}padding:2px 8px 2px 0;white-space:nowrap;">${lbl}</td>
+          <td style="padding:2px 0;">
+            <table cellpadding="0" cellspacing="0" border="0"><tr>
+              ${barW>0?`<td width="${barW}" height="14" bgcolor="#378ADD" style="font-size:0;line-height:0;">&nbsp;</td>`:''}
+              <td>&nbsp;</td>
+            </tr></table>
+          </td>
+          <td width="28" style="${small}padding:2px 0 2px 8px;text-align:right;">${count||''}</td>
+        </tr>`;
+      });
+      body+=`<tr><td style="padding:8px 0 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;padding:10px 0;">
+          ${chartRows}
+        </table>
+      </td></tr>`;
+    } else {
+      body+=`<tr><td style="padding:0 0 14px;"></td></tr>`;
+    }
   }
 
   // Commentary
@@ -454,19 +518,21 @@ function renderStats(){
     el.innerHTML=`
       <div class="stat-row"><span class="stat-label">New In</span><span class="stat-val">${stats.newIn}</span></div>
       <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-val">${stats.completedCount}</span></div>
+      <div class="stat-row"><span class="stat-label">WIP (end of week)</span><span class="stat-val">${stats.wip}${stats.wipChange!=null?' ('+(stats.wipChange>=0?'+':'')+stats.wipChange+' vs prior wk)':''}</span></div>
       <div class="stat-row"><span class="stat-label">Median cycle</span><span class="stat-val ${ctClass}">${ct!=null?ct.toFixed(1)+'d':'—'}</span></div>
-      <div class="stat-row"><span class="stat-label">Avg cycle</span><span class="stat-val">${stats.avgCycle!=null?stats.avgCycle.toFixed(1)+'d':'—'}</span></div>
-      ${stats.outlierCount>0?`<div class="stat-row"><span class="stat-label">Outliers</span><span class="stat-val warn">${stats.outlierCount} (max ${stats.maxOutlier.toFixed(0)}d)</span></div>`:''}
+      ${stats.outlierCount>0?`<div class="stat-row"><span class="stat-label">Outliers above fence</span><span class="stat-val warn">${stats.outlierCount} (max ${stats.maxOutlier.toFixed(0)}d)</span></div>`:''}
       <div class="stat-row"><span class="stat-label">3-wk trend</span><span class="stat-val ${stats.trend==='Improving'?'good':stats.trend==='Slipping'?'bad':''}">${stats.trend||'—'}</span></div>
-      ${stats.rollingAvg!=null?`<div class="stat-row"><span class="stat-label">Rolling avg</span><span class="stat-val">${stats.rollingAvg.toFixed(1)}d</span></div>`:''}`;
+      ${stats.rollingMed!=null?`<div class="stat-row"><span class="stat-label">3-wk rolling med</span><span class="stat-val">${stats.rollingMed.toFixed(1)}d</span></div>`:''}`;
   } else {
     pel.textContent=`Yesterday · ${fmtMed(stats.yesterday)}`;
+    const ct=stats.medCycleWTD;
+    const ctClass=ct==null?'':(ct<=3?'good':ct<=5?'warn':'bad');
     el.innerHTML=`
       <div class="stat-row"><span class="stat-label">New in yesterday</span><span class="stat-val">${stats.newInYesterday}</span></div>
       <div class="stat-row"><span class="stat-label">Completed yesterday</span><span class="stat-val">${stats.completedYesterday}</span></div>
       <div class="stat-row"><span class="stat-label">New in WTD</span><span class="stat-val">${stats.newInWTD}</span></div>
       <div class="stat-row"><span class="stat-label">Completed WTD</span><span class="stat-val">${stats.completedWTD}</span></div>
-      ${stats.avgCycleWTD!=null?`<div class="stat-row"><span class="stat-label">WTD avg cycle</span><span class="stat-val">${stats.avgCycleWTD.toFixed(1)}d</span></div>`:''}`;
+      ${ct!=null?`<div class="stat-row"><span class="stat-label">WTD median cycle</span><span class="stat-val ${ctClass}">${ct.toFixed(1)}d</span></div>`:''}`;
   }
 }
 
@@ -474,7 +540,17 @@ function renderObs(){
   const obs=getObservations(stats);
   const el=document.getElementById('obs-body');
   if(!obs.length){ el.innerHTML='<div style="font-size:11px;color:var(--faint);padding:4px 0;">Nothing flagged.</div>'; return; }
-  el.innerHTML='<div class="obs-list">'+obs.map(o=>`<div class="obs-item"><span class="dot"></span>${o}</div>`).join('')+'</div>';
+  el.innerHTML='<div class="obs-list">'+obs.map((o,i)=>`
+    <label class="obs-item unchecked" id="obs-label-${i}">
+      <input type="checkbox" id="obs-${i}" onchange="onObsToggle(${i})">
+      <span>${o}</span>
+    </label>`).join('')+'</div>';
+}
+
+function onObsToggle(i){
+  const cb=document.getElementById('obs-'+i);
+  const lbl=document.getElementById('obs-label-'+i);
+  if(lbl) lbl.classList.toggle('unchecked',!cb.checked);
 }
 
 function renderCommentary(){
@@ -502,14 +578,20 @@ async function generateCommentary(){
   const body=document.getElementById('commentary-body');
   body.innerHTML='<div class="loading">Calling Claude…</div>';
 
-  const obs=getObservations(stats);
+  // Only pass observations the user has checked
+  const allObs=getObservations(stats);
+  const checkedObs=allObs.filter((_,i)=>{
+    const cb=document.getElementById('obs-'+i);
+    return cb?cb.checked:true;
+  });
+
   const manualNote=document.getElementById('manual-note').value;
 
   try{
     const res=await fetch('/api/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({stats, mode, observations:obs, manualNote}),
+      body:JSON.stringify({stats, mode, observations:checkedObs, manualNote}),
     });
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'API error');
@@ -586,7 +668,7 @@ window.addEventListener('load',()=>{
   document.getElementById('nav-date').textContent=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   // Auto-select mode based on day of week (0=Sun,1=Mon)
   const dow=today.getDay();
-  setMode(dow===1?'monday':'daily');
+  setMode(dow===1||dow===0?'monday':'daily');
 });
 </script>
 </body>
