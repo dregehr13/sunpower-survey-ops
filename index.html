@@ -50,6 +50,11 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .fbtn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;height:28px;white-space:nowrap;}
 .fbtn:hover{background:var(--bg);}
 .fbtn-active{background:var(--text)!important;color:#fff!important;border-color:var(--text)!important;}
+.fbtn-group{display:flex;flex-shrink:0;}
+.fbtn-group .fbtn{border-radius:0;border-right-width:0;}
+.fbtn-group .fbtn:first-child{border-radius:6px 0 0 6px;}
+.fbtn-group .fbtn:last-child{border-radius:0 6px 6px 0;border-right-width:1px;}
+.fgroup{display:flex;align-items:center;gap:7px;flex-shrink:0;}
 .fglobal{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
 .fglobal input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);}
 .fhint{font-size:10px;color:var(--faint);}
@@ -566,41 +571,62 @@ function buildFBar(page){
   const isAll=!f.dateFrom&&!f.dateTo;
 
   return `<div class="fbar">
-    <span class="flabel">Start date</span>
-    <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
-    <span style="color:var(--faint);font-size:10px;">to</span>
-    <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
-    <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All time</button>
-    <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">Last 4 wks</button>
-    <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">Last 13 wks</button>
-    <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last week</button>
-    <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This week</button>
-    <div class="fsep"></div>
-    <span class="flabel">Region</span>
-    <select onchange="onF('${page}','region',this.value)">
-      <option value="all">All</option>
-      ${regions.map(r=>`<option value="${r}"${f.region===r?' selected':''}>${r}</option>`).join('')}
-    </select>
-    ${catDropdowns}
-    <div class="fsep"></div>
-    <div class="outlier-ctrl">
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
-        <input type="checkbox" ${f.removeOutliers?'checked':''} onchange="onF('${page}','removeOutliers',this.checked)">
-        Remove outliers
-      </label>
-      <input type="range" min="1" max="3" step="0.1" value="${f.outlierMult}"
-        oninput="updateOutlierSlider('${page}',parseFloat(this.value))">
-      <span id="omult-${page}" style="font-size:10px;color:var(--muted);white-space:nowrap;">${f.outlierMult.toFixed(1)}×IQR = ${fence.toFixed(1)}d</span>
-      <span class="outlier-badge">${outlierCount} outlier${outlierCount!==1?'s':''}</span>
+    <div class="fgroup">
+      <span class="flabel">Start date</span>
+      <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
+      <span style="color:var(--faint);font-size:10px;">–</span>
+      <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
+    </div>
+    <div class="fbtn-group">
+      <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All time</button>
+      <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">13 wks</button>
+      <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">4 wks</button>
+      <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last wk</button>
+      <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This wk</button>
     </div>
     <div class="fsep"></div>
-    <button class="fbtn" onclick="clearF('${page}')">Clear</button>
-    <label class="fglobal">
-      <input type="checkbox" ${globalMode?'checked':''} onchange="toggleGlobal(this.checked,'${page}')">
-      Global
-    </label>
-    <span class="fhint" id="fb-hint-${page}">${filtered.length} of ${rows.length} shown</span>
+    <div class="fgroup">
+      <span class="flabel">Region</span>
+      <select onchange="onF('${page}','region',this.value)">
+        <option value="all">All</option>
+        ${regions.map(r=>`<option value="${r}"${f.region===r?' selected':''}>${r}</option>`).join('')}
+      </select>
+    </div>
+    ${catDropdowns}
+    <div class="fsep"></div>
+    <div class="fgroup">
+      <span class="flabel">Outliers</span>
+      <div class="fbtn-group">
+        <button class="fbtn${!f.removeOutliers?' fbtn-active':''}" onclick="setOutlierPreset('${page}',null)">Show all</button>
+        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-1)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',1)">above ${calcFence(1).toFixed(0)}d</button>
+        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-1.5)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',1.5)">above ${calcFence(1.5).toFixed(0)}d</button>
+        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-2)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',2)">above ${calcFence(2).toFixed(0)}d</button>
+      </div>
+      ${f.removeOutliers
+        ? `<span class="outlier-badge">${outlierCount} hidden</span>`
+        : `<span class="fhint">${outlierCount} above ${fence.toFixed(0)}d</span>`}
+    </div>
+    <div class="fsep"></div>
+    <div class="fgroup" style="margin-left:auto;">
+      <button class="fbtn" onclick="clearF('${page}')">Reset</button>
+      <label class="fglobal">
+        <input type="checkbox" ${globalMode?'checked':''} onchange="toggleGlobal(this.checked,'${page}')">
+        Global
+      </label>
+      <span class="fhint" id="fb-hint-${page}">${filtered.length} of ${rows.length} shown</span>
+    </div>
   </div>`;
+}
+
+function setOutlierPreset(page, mult){
+  const remove = mult !== null;
+  if(globalMode){
+    globalF.removeOutliers=remove; if(remove) globalF.outlierMult=mult;
+    PAGES.forEach(p=>{ pageF[p].removeOutliers=remove; if(remove) pageF[p].outlierMult=mult; });
+  } else {
+    pageF[page].removeOutliers=remove; if(remove) pageF[page].outlierMult=mult;
+  }
+  saveFilterState(); applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
 // Slider gets special treatment — only update label+badge, never rebuild DOM
@@ -610,8 +636,8 @@ function updateOutlierSlider(page, val){
   saveFilterState();
   // Update label inline without full rebuild
   PAGES.forEach(p=>{
-    const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR = '+fence.toFixed(1)+'d';
     const fence=calcFence(val);
+    const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR = '+fence.toFixed(1)+'d';
     const cnt=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
     const badge=document.querySelector(`#fb-${p} .outlier-badge`); if(badge) badge.textContent=cnt+' outlier'+(cnt!==1?'s':'');
   });
