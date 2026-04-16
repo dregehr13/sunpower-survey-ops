@@ -1033,8 +1033,8 @@ function renderRegionTable(){
 
 // ═══ WEEKLY ══════════════════════════════════════════════
 function renderWeekly(){
-  const weekly=weeklyStats(filtered);           // start-date bucketed (for New In)
-  const weeklyC=weeklyStatsByComplete(filtered); // completion-date bucketed (for cycle time)
+  const weekly=weeklyStats(rows);           // start-date bucketed (for New In) — uses full dataset like exec trend
+  const weeklyC=weeklyStatsByComplete(rows); // completion-date bucketed (for cycle time)
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
   const labelsC=weeklyC.map(fmtWeekLabel); // for cycle time charts
   const al=weeklyC.map(w=>w.count<5?.4:1);
@@ -1050,7 +1050,7 @@ function renderWeekly(){
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
   const wipLine=allWks.map(wk=>{
     const we=wkEndMap[wk]; if(!we) return null;
-    return filtered.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length;
+    return rows.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length;
   });
 
   document.getElementById('wk-content').innerHTML=`
