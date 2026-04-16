@@ -27,19 +27,13 @@ fi
 echo "Parsing $SF_FILE..."
 export RAW_JSON=$(node "$PROJ/parse-sf.js" "$SF_FILE")
 
-echo "Splicing data..."
+echo "Writing data.js..."
 node --input-type=module << 'EOF'
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 const raw = process.env.RAW_JSON;
 const proj = process.env.PROJ;
 const date = process.env.DATA_DATE;
-
-for (const f of [`${proj}/index.html`, `${proj}/compose/index.html`]) {
-  let content = readFileSync(f, 'utf8');
-  content = content.replace(/const RAW = \[[\s\S]*?\];/, `const RAW = ${raw};`);
-  content = content.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
-  writeFileSync(f, content);
-}
+writeFileSync(`${proj}/data.js`, `const RAW = ${raw};\nconst DATA_TS = '${date}';\n`);
 console.log('Done.');
 EOF
 
@@ -48,7 +42,7 @@ rm "$SF_FILE"
 
 echo "Committing and pushing..."
 cd "$PROJ"
-git add index.html compose/index.html
+git add data.js
 # Commit only if something actually changed
 if git diff --cached --quiet; then
   echo "No changes to commit (data identical to last push)."

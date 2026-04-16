@@ -9,7 +9,7 @@ export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
 const OWNER = 'dregehr13';
 const REPO  = 'sunpower-survey-ops';
-const FILES = ['index.html', 'compose/index.html'];
+const FILES = ['data.js'];
 
 const gh = (path, token, opts = {}) =>
   fetch(`https://api.github.com/repos/${OWNER}/${REPO}${path}`, {
