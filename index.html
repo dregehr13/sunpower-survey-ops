@@ -557,15 +557,21 @@ function buildFBar(page){
   const fence = calcFence(f.outlierMult);
   const outlierCount = rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
 
-  const lw=weekRange(-1), tw=weekRange(0);
+  const lw=weekRange(-1), tw=weekRange(0), r4=recentRange(4), r13=recentRange(13);
   const isLW=f.dateFrom===lw.from&&f.dateTo===lw.to;
   const isTW=f.dateFrom===tw.from&&f.dateTo===tw.to;
+  const isR4=f.dateFrom===r4.from&&f.dateTo===r4.to;
+  const isR13=f.dateFrom===r13.from&&f.dateTo===r13.to;
+  const isAll=!f.dateFrom&&!f.dateTo;
 
   return `<div class="fbar">
-    <span class="flabel">Project start</span>
+    <span class="flabel">Start date</span>
     <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
     <span style="color:var(--faint);font-size:10px;">to</span>
     <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
+    <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All time</button>
+    <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">Last 4 wks</button>
+    <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">Last 13 wks</button>
     <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last week</button>
     <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This week</button>
     <div class="fsep"></div>
@@ -583,7 +589,7 @@ function buildFBar(page){
       </label>
       <input type="range" min="1" max="3" step="0.1" value="${f.outlierMult}"
         oninput="updateOutlierSlider('${page}',parseFloat(this.value))">
-      <span id="omult-${page}" style="font-size:10px;color:var(--muted);min-width:42px;">${f.outlierMult.toFixed(1)}×IQR</span>
+      <span id="omult-${page}" style="font-size:10px;color:var(--muted);white-space:nowrap;">${f.outlierMult.toFixed(1)}×IQR = ${fence.toFixed(1)}d</span>
       <span class="outlier-badge">${outlierCount} outlier${outlierCount!==1?'s':''}</span>
     </div>
     <div class="fsep"></div>
@@ -603,7 +609,7 @@ function updateOutlierSlider(page, val){
   saveFilterState();
   // Update label inline without full rebuild
   PAGES.forEach(p=>{
-    const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR';
+    const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR = '+fence.toFixed(1)+'d';
     const fence=calcFence(val);
     const cnt=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
     const badge=document.querySelector(`#fb-${p} .outlier-badge`); if(badge) badge.textContent=cnt+' outlier'+(cnt!==1?'s':'');
@@ -622,6 +628,7 @@ function renderFBars(){
 }
 
 function localISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function recentRange(n){ return {from:weekRange(-n).from, to:weekRange(-1).to}; }
 function weekRange(offsetWeeks){
   const today=new Date(), dow=today.getDay();
   const mon=new Date(today); mon.setDate(today.getDate()-(dow===0?6:dow-1)+(offsetWeeks*7));
