@@ -636,21 +636,32 @@ function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/
 function escAttr(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
 
 // ─── SEND ACTIONS ─────────────────────────────────────────
-function copyHTML(){
-  const manualNote=document.getElementById('manual-note').value;
-  const html=buildEmailHTML(stats, selectedCommentary, manualNote);
-  navigator.clipboard.writeText(html).then(()=>flash('HTML copied to clipboard'));
+async function copyRenderedHTML(html){
+  try{
+    await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([html],{type:'text/plain'})})]);
+    return true;
+  }catch(e){
+    // Fallback for browsers that don't support ClipboardItem
+    await navigator.clipboard.writeText(html);
+    return false;
+  }
 }
 
-function openOutlook(){
+async function copyHTML(){
+  const manualNote=document.getElementById('manual-note').value;
+  const html=buildEmailHTML(stats, selectedCommentary, manualNote);
+  const rich=await copyRenderedHTML(html);
+  flash(rich?'Email copied — paste into Outlook or Gmail body':'HTML source copied (browser limitation)');
+}
+
+async function openOutlook(){
   const manualNote=document.getElementById('manual-note').value;
   const html=buildEmailHTML(stats, selectedCommentary, manualNote);
   const to=document.getElementById('to-field').value;
   const subject=document.getElementById('subject-field').value;
-  navigator.clipboard.writeText(html).then(()=>{
-    window.location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}`;
-    flash('HTML copied — paste into Outlook body');
-  });
+  await copyRenderedHTML(html);
+  window.location.href=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}`;
+  flash('Outlook opening — paste body with Cmd+V');
 }
 
 function flash(msg){
