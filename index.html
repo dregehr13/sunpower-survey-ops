@@ -416,7 +416,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v6.0 · 2026-04-16';
+const VERSION = 'v6.1 · 2026-04-16';
 const DATA_TS = '2026-04-15'; // Updated automatically by push.sh and api/update.js
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
@@ -765,6 +765,29 @@ function weeklyStats(src){
   });
 }
 
+function weeklyStatsByComplete(src){
+  const m={};
+  src.forEach(r=>{
+    if(!r.complete) return;
+    const [y,mo,d]=r.complete.split('-').map(Number);
+    const dt=new Date(y,mo-1,d);
+    const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1));
+    const wk=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+    if(!m[wk]) m[wk]={week:wk,count:0,tot:[]};
+    const x=m[wk]; x.count++;
+    if(r.ct_total!=null&&r.ct_total>=0) x.tot.push(r.ct_total);
+  });
+  return Object.keys(m).sort().map(wk=>{
+    const x=m[wk];
+    const [wy,wmo,wd]=wk.split('-').map(Number);
+    const monDt=new Date(wy,wmo-1,wd);
+    const sunDt=new Date(monDt); sunDt.setDate(monDt.getDate()+6);
+    const wkEnd=`${sunDt.getFullYear()}-${String(sunDt.getMonth()+1).padStart(2,'0')}-${String(sunDt.getDate()).padStart(2,'0')}`;
+    return {week:wk, weekEnd:wkEnd, count:x.count,
+      start_to_complete:avg(x.tot), median_total:med(x.tot), pct_on_target:pctTgt(x.tot)};
+  });
+}
+
 function rollingAvg(arr,field,n=3){
   return arr.map((w,i)=>{
     const slice=arr.slice(Math.max(0,i-n+1),i+1).map(x=>x[field]).filter(x=>x!=null);
@@ -791,7 +814,7 @@ function renderExec(){
 
   // Trend chart: always trailing 10 weeks from all data ending at filter end date
   const endDate=getF().dateTo||'';
-  const allWeekly=weeklyStats(rows);
+  const allWeekly=weeklyStatsByComplete(rows);
   const trendWeekly=(endDate?allWeekly.filter(w=>w.week<=endDate):allWeekly).slice(-10);
   const roll3=rollingAvg(trendWeekly,'start_to_complete',3);
   const latest=roll3.filter(x=>x!=null).slice(-1)[0];
@@ -845,7 +868,7 @@ function renderExec(){
     </div>
     <div class="g2">
       <div class="sec">
-        <div class="shead"><div><div class="stitle">Weekly trend</div><div class="ssub">Trailing 10 weeks · unaffected by date filter</div></div></div>
+        <div class="shead"><div><div class="stitle">Weekly trend</div><div class="ssub">Trailing 10 weeks by completion date · unaffected by date filter</div></div></div>
         <div class="leg">
           <span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekly avg</span>
           <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
@@ -1010,10 +1033,11 @@ function renderRegionTable(){
 
 // ═══ WEEKLY ══════════════════════════════════════════════
 function renderWeekly(){
-  const weekly=weeklyStats(filtered);
-  const roll3=rollingAvg(weekly,'start_to_complete',3);
-  const labels=weekly.map(fmtWeekLabel);
-  const al=weekly.map(w=>w.count<5?.4:1);
+  const weekly=weeklyStats(filtered);           // start-date bucketed (for New In)
+  const weeklyC=weeklyStatsByComplete(filtered); // completion-date bucketed (for cycle time)
+  const roll3=rollingAvg(weeklyC,'start_to_complete',3);
+  const labelsC=weeklyC.map(fmtWeekLabel);
+  const al=weeklyC.map(w=>w.count<5?.4:1);
   const completions=weekly.map(w=>filtered.filter(r=>r.complete>=w.week&&r.complete<=w.weekEnd).length);
 
   document.getElementById('wk-content').innerHTML=`
@@ -1026,7 +1050,7 @@ function renderWeekly(){
       <div class="cw" style="height:230px;"><canvas id="wk-inout"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Project start → survey complete · Mon–Sun weeks · Faded = &lt;5 projects</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Cycle time for surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
@@ -1034,7 +1058,7 @@ function renderWeekly(){
       <div class="cw" style="height:290px;"><canvas id="wk-wf"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = project count · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
+      <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = completions · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#ddd;"></span>Volume</span>
         <span class="li"><span class="ld" style="background:#94a3b8;"></span>Weekly avg</span>
@@ -1072,10 +1096,10 @@ function renderWeekly(){
   dc('wk-wf');
   CH['wk-wf']=new Chart(document.getElementById('wk-wf'),{
     type:'bar',
-    data:{labels,datasets:[{
+    data:{labels:labelsC,datasets:[{
       label:'Avg total',
-      data:weekly.map(w=>w.start_to_complete),
-      backgroundColor:weekly.map((w,i)=>{
+      data:weeklyC.map(w=>w.start_to_complete),
+      backgroundColor:weeklyC.map((w,i)=>{
         const v=w.start_to_complete,a=al[i];
         if(v==null) return `rgba(226,232,240,${a})`;
         if(v<=S.targetAvg) return `rgba(29,158,117,${a})`;
@@ -1085,7 +1109,7 @@ function renderWeekly(){
       borderRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{title:ctx=>'Week of '+weekly[ctx[0].dataIndex].week+' ('+weekly[ctx[0].dataIndex].count+' projects)',label:ctx=>` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`}},
+        tooltip:{callbacks:{title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',label:ctx=>` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`}},
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
               y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'}}}}}
@@ -1094,9 +1118,9 @@ function renderWeekly(){
   dc('wk-vol');
   CH['wk-vol']=new Chart(document.getElementById('wk-vol'),{
     type:'bar',
-    data:{labels,datasets:[
-      {label:'Volume',data:weekly.map(w=>w.count),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y1',order:3},
-      {label:'Weekly avg',data:weekly.map(w=>w.start_to_complete),type:'line',borderColor:'#94a3b8',backgroundColor:'transparent',
+    data:{labels:labelsC,datasets:[
+      {label:'Completions',data:weeklyC.map(w=>w.count),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y1',order:3},
+      {label:'Weekly avg',data:weeklyC.map(w=>w.start_to_complete),type:'line',borderColor:'#94a3b8',backgroundColor:'transparent',
        tension:.3,pointRadius:3,pointBackgroundColor:'#94a3b8',spanGaps:false,yAxisID:'y',order:2},
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'transparent',
        tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
@@ -1107,23 +1131,32 @@ function renderWeekly(){
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
         y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}},
-        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#bbb'},title:{display:true,text:'Projects',color:'#bbb',font:{size:10}}}}}
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
   });
 
-  document.getElementById('wk-tbody').innerHTML=weekly.map((w,i)=>{
-    const t=w.start_to_complete,r3=roll3[i];
+  // Merge start-based and completion-based week maps for detail table
+  const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort();
+  const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
+  const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
+  document.getElementById('wk-tbody').innerHTML=allWks.map(wk=>{
+    const ws=wkMap[wk], wc=wkCMap[wk];
+    const wkEnd=ws?.weekEnd||wc?.weekEnd||'';
+    const newIn=ws?.count??0;
+    const compl=wc?.count??0;
+    const diff=compl-newIn;
+    const diffStr=diff===0?'—':(diff>0?`<span style="color:var(--green);">+${diff}</span>`:`<span style="color:var(--red);">${diff}</span>`);
+    const t=wc?.start_to_complete;
     const vs=t!=null?(t<=S.targetMedian?`<span class="pill pg">✓ ${t.toFixed(1)}d</span>`
       :(t<=S.targetAvg?`<span class="pill pam">${t.toFixed(1)}d</span>`
       :`<span class="pill pr">${t.toFixed(1)}d</span>`)):'<span class="pna">—</span>';
-    const onTgtVal=w.pct_on_target;
-    const diff=completions[i]-w.count;
-    const diffStr=diff===0?'—':(diff>0?`<span style="color:var(--green);">+${diff}</span>`:`<span style="color:var(--red);">${diff}</span>`);
+    const r3=wc?.r3;
+    const onTgtVal=wc?.pct_on_target;
     return `<tr>
-      <td>${fmtDateShort(w.week)} – ${fmtDateShort(w.weekEnd)}</td>
-      <td class="r">${w.count}</td>
-      <td class="r">${completions[i]}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
+      <td>${fmtDateShort(wk)} – ${fmtDateShort(wkEnd)}</td>
+      <td class="r">${newIn}</td>
+      <td class="r">${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
       <td class="r">${vs}</td>
-      <td class="r">${w.median_total!=null?w.median_total.toFixed(1)+'d':'—'}</td>
+      <td class="r">${wc?.median_total!=null?wc.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r" style="color:var(--blue);font-weight:500;">${r3!=null?r3.toFixed(1)+'d':'—'}</td>
       <td class="r">${onTgtVal!=null?onTgtVal+'%':'—'}</td>
     </tr>`;
