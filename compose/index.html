@@ -193,25 +193,25 @@ function computeStats(){
     const wipPrior=RAW.filter(r=>r.start&&r.start<period.from&&(!r.complete||r.complete>=period.from)).length;
     const wipChange=wip-wipPrior;
 
-    const w1={from:toISO(addDays(new Date(period.from+'T12:00:00'),-14)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-8))};
-    const w2={from:toISO(addDays(new Date(period.from+'T12:00:00'),-7)),to:toISO(addDays(new Date(period.from+'T12:00:00'),-1))};
-    const medW1=weekMedCycle(w1.from,w1.to);
-    const medW2=weekMedCycle(w2.from,w2.to);
-    const medW3=med(cts);
+    // Fetch 7 weeks of medians (last 5 displayed, first 2 provide rolling context)
+    const allTrend=[];
+    for(let i=6;i>=0;i--){
+      const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
+      const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),count:RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length});
+    }
+    for(let i=0;i<allTrend.length;i++){
+      const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
+      allTrend[i].roll3=ms.length===3?ms.reduce((a,b)=>a+b,0)/3:null;
+    }
+    const weeklyTrend=allTrend.slice(-5);
+    const medW1=allTrend[4].med,medW2=allTrend[5].med,medW3=med(cts);
     const rolling=[medW1,medW2,medW3].filter(x=>x!=null);
     const rollingMed=rolling.length?rolling.reduce((a,b)=>a+b,0)/rolling.length:null;
     const prevMed=avg([medW1,medW2].filter(x=>x!=null));
     let trend=null;
     if(medW3!=null&&prevMed!=null){
       trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slipping':'Holding';
-    }
-
-    // 4-week trend for visual (oldest → newest, last week is final entry)
-    const weeklyTrend=[];
-    for(let i=3;i>=0;i--){
-      const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
-      const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      weeklyTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),count:RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length});
     }
 
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
@@ -377,38 +377,75 @@ function buildEmailHTML(s, commentary, manualNote){
     </table>
   </td></tr>`;
 
-  // ── 4-week trend visual (Monday only) ───────────────────
+  // ── Weekly trend SVG chart (Monday only) ────────────────
   if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.some(w=>w.med!=null)){
-    const maxMed=Math.max(...s.weeklyTrend.map(w=>w.med||0),1);
-    const CHART_H=60;
-    const barCells=s.weeklyTrend.map((w,i)=>{
-      const isLast=i===s.weeklyTrend.length-1;
-      const barH=w.med!=null?Math.max(Math.round(w.med/maxMed*CHART_H),4):0;
-      const spacerH=CHART_H-barH;
-      const bc=w.med==null?'#e0e0e0':w.med<=3?'#5aaa2a':w.med<=5?'#f59e0b':'#ef4444';
-      return `<td width="25%" style="padding:0 4px;vertical-align:bottom;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td height="${spacerH}" style="font-size:0;line-height:0;">&nbsp;</td></tr>
-          <tr><td height="${barH}" bgcolor="${bc}" style="font-size:0;line-height:0;border-radius:2px 2px 0 0;">&nbsp;</td></tr>
-        </table>
-      </td>`;
-    }).join('');
-    const valCells=s.weeklyTrend.map(w=>{
-      const vc=w.med==null?'#aaa':w.med<=3?'#2d6a0a':w.med<=5?'#92400e':'#991b1b';
-      return `<td width="25%" style="${f}font-size:10px;color:${vc};font-weight:700;text-align:center;padding:4px 0 2px;">${w.med!=null?w.med.toFixed(1)+'d':'—'}</td>`;
-    }).join('');
-    const lblCells=s.weeklyTrend.map((w,i)=>{
-      const isLast=i===s.weeklyTrend.length-1;
-      return `<td width="25%" style="${f}font-size:9px;color:${isLast?'#555':'#bbb'};text-align:center;padding:0;">${w.label}</td>`;
-    }).join('');
-    rows+=`<tr><td style="padding:16px 24px 0;">
-      <div style="${f}font-size:9px;color:#bbb;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">4-Week Trend &middot; Median Cycle</div>
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>${barCells}</tr>
-        <tr>${valCells}</tr>
-        <tr>${lblCells}</tr>
-      </table>
-    </td></tr>`;
+    const SVG_W=552,SVG_H=175;
+    const ml=30,mr=8,mt=30,mb=42;
+    const cw=SVG_W-ml-mr,ch=SVG_H-mt-mb;
+    const yMax=5;
+    const n=s.weeklyTrend.length;
+    const colW=cw/n;
+    const barW=Math.floor(colW*0.52);
+    const cx=i=>(ml+(i+0.5)*colW).toFixed(1);
+    const cy=v=>(mt+ch-(v/yMax)*ch).toFixed(1);
+
+    let svgBody='';
+    // Grid lines + y-axis labels
+    for(let v=0;v<=yMax;v++){
+      const y=cy(v);
+      svgBody+=`<line x1="${ml}" y1="${y}" x2="${SVG_W-mr}" y2="${y}" stroke="#ebebeb" stroke-width="1"/>`;
+      svgBody+=`<text x="${ml-5}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" fill="#bbb" font-size="10" font-family="Arial,Helvetica,sans-serif">${v}d</text>`;
+    }
+    // Target line (3d, red dashed)
+    const ty=cy(3);
+    svgBody+=`<line x1="${ml}" y1="${ty}" x2="${SVG_W-mr}" y2="${ty}" stroke="#e24b4a" stroke-width="2" stroke-dasharray="5,4"/>`;
+    // Bars
+    s.weeklyTrend.forEach((w,i)=>{
+      if(w.med!=null){
+        const bh=((w.med/yMax)*ch).toFixed(1);
+        svgBody+=`<rect x="${(parseFloat(cx(i))-barW/2).toFixed(1)}" y="${cy(w.med)}" width="${barW}" height="${bh}" rx="2" fill="#e2e8f0"/>`;
+      }
+    });
+    // Rolling average line
+    let pathD='';let inSeg=false;
+    s.weeklyTrend.forEach((w,i)=>{
+      if(w.roll3!=null){
+        pathD+=inSeg?`L ${cx(i)} ${cy(w.roll3)} `:`M ${cx(i)} ${cy(w.roll3)} `;
+        inSeg=true;
+      } else { inSeg=false; }
+    });
+    if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // Dots on rolling line
+    s.weeklyTrend.forEach((w,i)=>{
+      if(w.roll3!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cy(w.roll3)}" r="3.5" fill="#2563eb"/>`;
+    });
+    // X-axis labels
+    s.weeklyTrend.forEach((w,i)=>{
+      const isLast=i===n-1;
+      svgBody+=`<text x="${cx(i)}" y="${SVG_H-26}" text-anchor="middle" fill="${isLast?'#555':'#bbb'}" font-size="9" font-family="Arial,Helvetica,sans-serif">${w.label}</text>`;
+    });
+    // Legend
+    const legItems=[
+      {x:ml,    type:'bar',    label:'Weekly median'},
+      {x:ml+118,type:'line',   label:'3-wk rolling'},
+      {x:ml+232,type:'target', label:'3d target'},
+    ];
+    legItems.forEach(({x,type,label})=>{
+      if(type==='bar'){
+        svgBody+=`<rect x="${x}" y="5" width="12" height="10" rx="1" fill="#e2e8f0"/>`;
+        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
+      } else if(type==='line'){
+        svgBody+=`<line x1="${x}" y1="10" x2="${x+12}" y2="10" stroke="#2563eb" stroke-width="2"/>`;
+        svgBody+=`<circle cx="${x+6}" cy="10" r="3" fill="#2563eb"/>`;
+        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
+      } else {
+        svgBody+=`<line x1="${x}" y1="10" x2="${x+14}" y2="10" stroke="#e24b4a" stroke-width="2" stroke-dasharray="4,3"/>`;
+        svgBody+=`<text x="${x+18}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
+      }
+    });
+
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="display:block;">${svgBody}</svg>`;
+    rows+=`<tr><td style="padding:16px 24px 4px;">${svg}</td></tr>`;
   }
 
   // ── Pace footnote (daily only) ───────────────────────────
