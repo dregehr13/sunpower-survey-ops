@@ -58,6 +58,18 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .fglobal{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
 .fglobal input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);}
 .fhint{font-size:10px;color:var(--faint);}
+.rgdrop{position:relative;}
+.rgdrop-btn{font-size:11px;padding:4px 8px 4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;height:28px;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+.rgdrop-btn:hover{background:var(--bg);}
+.rgdrop-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
+.rgdrop-btn .rg-caret{font-size:8px;opacity:.6;}
+.rgdrop-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 0;min-width:200px;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.rgdrop-panel.open{display:block;}
+.rgdrop-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;color:var(--text);}
+.rgdrop-item:hover{background:var(--bg);}
+.rgdrop-item input[type=checkbox]{accent-color:var(--blue);width:13px;height:13px;flex-shrink:0;cursor:pointer;}
+.rgdrop-clear{display:block;font-size:10px;color:var(--faint);padding:5px 12px 6px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-top:none;border-right:none;width:100%;text-align:left;}
+.rgdrop-clear:hover{color:var(--muted);}
 .outlier-ctrl{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);}
 .outlier-ctrl input[type=range]{width:80px;accent-color:var(--target);cursor:pointer;}
 .outlier-badge{font-size:10px;padding:2px 7px;border-radius:99px;background:var(--red-bg);color:var(--red);font-weight:500;white-space:nowrap;}
@@ -496,20 +508,27 @@ let dataTimestamp = null;
 // ═══ FILTER STATE ═════════════════════════════════════════
 const PAGES = ['exec','overview','weekly','regions','outliers','data'];
 let globalMode = true;
-let globalF = {dateFrom:'',dateTo:'',region:'all',type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
+let globalF = {dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
 const pageF = {};
 PAGES.forEach(p => pageF[p] = {...globalF});
 
 function saveFilterState(){
   try{ localStorage.setItem('ops_filters', JSON.stringify({globalMode, globalF, pageF})); }catch(e){}
 }
+function migrateRegion(f){
+  // Migrate old string-based region ('all' or region name) to array format
+  if(typeof f.region === 'string'){
+    f.region = (f.region==='all'||!f.region) ? [] : [f.region];
+  }
+  if(!Array.isArray(f.region)) f.region = [];
+}
 function loadFilterState(){
   try{
     const saved = JSON.parse(localStorage.getItem('ops_filters')||'null');
     if(!saved) return;
     globalMode = saved.globalMode ?? true;
-    if(saved.globalF) Object.assign(globalF, saved.globalF);
-    if(saved.pageF) PAGES.forEach(p=>{ if(saved.pageF[p]) pageF[p]={...globalF,...saved.pageF[p]}; });
+    if(saved.globalF){ Object.assign(globalF, saved.globalF); migrateRegion(globalF); }
+    if(saved.pageF) PAGES.forEach(p=>{ if(saved.pageF[p]){ pageF[p]={...globalF,...saved.pageF[p]}; migrateRegion(pageF[p]); } });
   }catch(e){}
 }
 
@@ -533,7 +552,7 @@ function applyFilter(){
     if(!r.complete) return false; // in-progress surveys excluded from filtered; WIP always uses rows directly
     if(f.dateFrom && r.complete < f.dateFrom) return false;
     if(f.dateTo   && r.complete > f.dateTo)   return false;
-    if(f.region !== 'all' && r.region !== f.region)   return false;
+    if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
     if(f.type   !== 'all' && r.type   !== f.type)     return false;
     if(f.resource && f.resource !== 'all' && r.resource !== f.resource) return false;
     if(f.removeOutliers && r.ct_total!=null && r.ct_total > fence) return false;
@@ -591,10 +610,18 @@ function buildFBar(page){
     <div class="fsep"></div>
     <div class="fgroup">
       <span class="flabel">Region</span>
-      <select onchange="onF('${page}','region',this.value)">
-        <option value="all">All</option>
-        ${regions.map(r=>`<option value="${r}"${f.region===r?' selected':''}>${r}</option>`).join('')}
-      </select>
+      ${(()=>{
+        const regArr=Array.isArray(f.region)?f.region:[];
+        const label=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
+        const panelOpen=rgDropOpenPage===page;
+        return `<div class="rgdrop">
+          <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleRegionDrop('${page}',event)">${esc(label)}<span class="rg-caret">&#9660;</span></button>
+          <div class="rgdrop-panel${panelOpen?' open':''}">
+            ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
+            ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
+          </div>
+        </div>`;
+      })()}
     </div>
     ${catDropdowns}
     <div class="fsep"></div>
@@ -649,6 +676,26 @@ function updateOutlierSlider(page, val){
   renderPage(currentPage);
 }
 
+let rgDropOpenPage=null;
+function toggleRegionDrop(page,ev){
+  ev&&ev.stopPropagation();
+  rgDropOpenPage=rgDropOpenPage===page?null:page;
+  renderFBars();
+}
+function onRegion(page,region,checked,ev){
+  ev&&ev.stopPropagation();
+  const src=globalMode?globalF:pageF[page];
+  let arr=Array.isArray(src.region)?[...src.region]:[];
+  if(checked){if(!arr.includes(region))arr.push(region);}else arr=arr.filter(r=>r!==region);
+  if(globalMode){globalF.region=arr;PAGES.forEach(p=>pageF[p].region=[...arr]);}else pageF[page].region=arr;
+  saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
+}
+function onRegionClear(page,ev){
+  ev&&ev.stopPropagation();
+  if(globalMode){globalF.region=[];PAGES.forEach(p=>pageF[p].region=[]);}else pageF[page].region=[];
+  saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
+}
+
 function renderFBars(){
   PAGES.forEach(p=>{
     const el=document.getElementById('fb-'+p); if(!el) return;
@@ -690,7 +737,7 @@ function toggleGlobal(on, fromPage){
 }
 
 function clearF(page){
-  const def={dateFrom:'',dateTo:'',region:'all',type:'all',resource:'all',
+  const def={dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',
     outlierMult:S.defaultOutlierMult, removeOutliers:S.defaultRemoveOutliers};
   const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
@@ -912,6 +959,7 @@ function renderExec(){
           <span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekly median</span>
           <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
           <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetMedian}d target</span>
+          <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
         </div>
         <div class="cw" style="height:195px;"><canvas id="ex-trend"></canvas></div>
       </div>
@@ -930,15 +978,21 @@ function renderExec(){
   CH['ex-trend']=new Chart(document.getElementById('ex-trend'),{
     type:'bar',
     data:{labels:trendWeekly.map(fmtWeekLabel),datasets:[
-      {label:'Weekly median',data:trendWeekly.map(w=>w.median_total),backgroundColor:'#e2e8f0',borderRadius:3,order:2},
+      {label:'Weekly median',data:trendWeekly.map(w=>w.median_total),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y',order:3},
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',
-       tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,order:1},
+       tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:2},
+      {label:'On target %',data:trendWeekly.map(w=>w.pct_on_target),type:'line',borderColor:'#1D9E75',
+       backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
+       pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='On target %'?` ${ctx.parsed.y}% on target`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'}`}},
         annotation:{annotations:{t:{type:'line',yMin:S.targetMedian,yMax:S.targetMedian,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},
-              y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}}}}
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
+        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
   });
 
   const dist=distBuckets(src);
@@ -1111,6 +1165,7 @@ function renderWeekly(){
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
+        <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
       </div>
       <div class="cw" style="height:290px;"><canvas id="wk-wf"></canvas></div>
     </div>
@@ -1157,23 +1212,32 @@ function renderWeekly(){
   dc('wk-wf');
   CH['wk-wf']=new Chart(document.getElementById('wk-wf'),{
     type:'bar',
-    data:{labels:labelsC,datasets:[{
-      label:'Avg total',
-      data:weeklyC.map(w=>w.start_to_complete),
-      backgroundColor:weeklyC.map((w,i)=>{
-        const v=w.start_to_complete,a=al[i];
-        if(v==null) return `rgba(226,232,240,${a})`;
-        if(v<=S.targetAvg) return `rgba(29,158,117,${a})`;
-        if(v<=(S.targetAvg+3)) return `rgba(186,117,23,${a})`;
-        return `rgba(226,75,74,${a})`;
-      }),
-      borderRadius:3}]},
+    data:{labels:labelsC,datasets:[
+      {label:'Avg total',
+       data:weeklyC.map(w=>w.start_to_complete),
+       backgroundColor:weeklyC.map((w,i)=>{
+         const v=w.start_to_complete,a=al[i];
+         if(v==null) return `rgba(226,232,240,${a})`;
+         if(v<=S.targetAvg) return `rgba(29,158,117,${a})`;
+         if(v<=(S.targetAvg+3)) return `rgba(186,117,23,${a})`;
+         return `rgba(226,75,74,${a})`;
+       }),
+       borderRadius:3,yAxisID:'y',order:2},
+      {label:'On target %',data:weeklyC.map(w=>w.pct_on_target),type:'line',borderColor:'#1D9E75',
+       backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
+       pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
+    ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',label:ctx=>` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`}},
+        tooltip:{callbacks:{
+          title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
+          label:ctx=>ctx.dataset.label==='On target %'?` ${ctx.parsed.y}% on target`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
+        }},
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-              y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'}}}}}
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'}},
+        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
   );
 
   dc('wk-vol');
@@ -1723,6 +1787,14 @@ function goSF(){
 }
 
 // ═══ INIT ════════════════════════════════════════════════
+document.addEventListener('click',function(e){
+  if(rgDropOpenPage!==null&&!e.target.closest('.rgdrop')){
+    rgDropOpenPage=null;
+    // Hide all open panels without full rebuild
+    PAGES.forEach(p=>{const el=document.querySelector('#fb-'+p+' .rgdrop-panel');if(el)el.classList.remove('open');});
+  }
+});
+
 window.addEventListener('load',()=>{
   loadSettings();
   // Sync SF credentials from localStorage into settings

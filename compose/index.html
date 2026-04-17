@@ -176,6 +176,10 @@ function weekMedCycle(from,to){
   const cts=RAW.filter(r=>r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   return med(cts);
 }
+function weekOnTargetPct(from,to){
+  const cts=RAW.filter(r=>r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  return cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
+}
 
 // ─── COMPUTE STATS ────────────────────────────────────────
 function computeStats(){
@@ -198,7 +202,7 @@ function computeStats(){
     for(let i=6;i>=0;i--){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),count:RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length});
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length});
     }
     for(let i=0;i<allTrend.length;i++){
       const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
@@ -380,7 +384,7 @@ function buildEmailHTML(s, commentary, manualNote){
   // ── Weekly trend SVG chart (Monday only) ────────────────
   if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.some(w=>w.med!=null)){
     const SVG_W=552,SVG_H=175;
-    const ml=30,mr=8,mt=30,mb=42;
+    const ml=30,mr=32,mt=30,mb=42;
     const cw=SVG_W-ml-mr,ch=SVG_H-mt-mb;
     const yMax=5;
     const n=s.weeklyTrend.length;
@@ -388,14 +392,19 @@ function buildEmailHTML(s, commentary, manualNote){
     const barW=Math.floor(colW*0.52);
     const cx=i=>(ml+(i+0.5)*colW).toFixed(1);
     const cy=v=>(mt+ch-(v/yMax)*ch).toFixed(1);
+    const cyP=v=>(mt+ch*(1-v/100)).toFixed(1);
 
     let svgBody='';
-    // Grid lines + y-axis labels
+    // Grid lines + left y-axis labels (days)
     for(let v=0;v<=yMax;v++){
       const y=cy(v);
       svgBody+=`<line x1="${ml}" y1="${y}" x2="${SVG_W-mr}" y2="${y}" stroke="#ebebeb" stroke-width="1"/>`;
       svgBody+=`<text x="${ml-5}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" fill="#bbb" font-size="10" font-family="Arial,Helvetica,sans-serif">${v}d</text>`;
     }
+    // Right y-axis labels (on-target %)
+    [0,50,100].forEach(v=>{
+      svgBody+=`<text x="${SVG_W-mr+5}" y="${(parseFloat(cyP(v))+4).toFixed(1)}" text-anchor="start" fill="#1D9E75" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}%</text>`;
+    });
     // Target line (3d, red dashed)
     const ty=cy(3);
     svgBody+=`<line x1="${ml}" y1="${ty}" x2="${SVG_W-mr}" y2="${ty}" stroke="#e24b4a" stroke-width="2" stroke-dasharray="5,4"/>`;
@@ -419,6 +428,19 @@ function buildEmailHTML(s, commentary, manualNote){
     s.weeklyTrend.forEach((w,i)=>{
       if(w.roll3!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cy(w.roll3)}" r="3.5" fill="#2563eb"/>`;
     });
+    // On-target % line (right axis)
+    let pathP='';let inSegP=false;
+    s.weeklyTrend.forEach((w,i)=>{
+      if(w.onTgt!=null){
+        pathP+=inSegP?`L ${cx(i)} ${cyP(w.onTgt)} `:`M ${cx(i)} ${cyP(w.onTgt)} `;
+        inSegP=true;
+      } else { inSegP=false; }
+    });
+    if(pathP) svgBody+=`<path d="${pathP.trim()}" fill="none" stroke="#1D9E75" stroke-width="2" stroke-dasharray="5,3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // Dots on on-target line
+    s.weeklyTrend.forEach((w,i)=>{
+      if(w.onTgt!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyP(w.onTgt)}" r="3" fill="#1D9E75"/>`;
+    });
     // X-axis labels
     s.weeklyTrend.forEach((w,i)=>{
       const isLast=i===n-1;
@@ -429,6 +451,7 @@ function buildEmailHTML(s, commentary, manualNote){
       {x:ml,    type:'bar',    label:'Weekly median'},
       {x:ml+118,type:'line',   label:'3-wk rolling'},
       {x:ml+232,type:'target', label:'3d target'},
+      {x:ml+326,type:'onTgt',  label:'On target %'},
     ];
     legItems.forEach(({x,type,label})=>{
       if(type==='bar'){
@@ -437,6 +460,10 @@ function buildEmailHTML(s, commentary, manualNote){
       } else if(type==='line'){
         svgBody+=`<line x1="${x}" y1="10" x2="${x+12}" y2="10" stroke="#2563eb" stroke-width="2"/>`;
         svgBody+=`<circle cx="${x+6}" cy="10" r="3" fill="#2563eb"/>`;
+        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
+      } else if(type==='onTgt'){
+        svgBody+=`<line x1="${x}" y1="10" x2="${x+12}" y2="10" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4,3"/>`;
+        svgBody+=`<circle cx="${x+6}" cy="10" r="3" fill="#1D9E75"/>`;
         svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
       } else {
         svgBody+=`<line x1="${x}" y1="10" x2="${x+14}" y2="10" stroke="#e24b4a" stroke-width="2" stroke-dasharray="4,3"/>`;
