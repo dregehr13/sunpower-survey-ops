@@ -448,8 +448,8 @@ const FIELDS = [
   {key:'complete',      sfCol:'Site Survey Complete',      label:'Complete',      type:'date',     filterable:false, editable:true},
   // FUTURE — uncomment + set sfCol when active in Salesforce export:
   // {key:'resource',      sfCol:'Resource',          label:'Resource',      type:'category', filterable:true,  editable:true,
-  //   pending:true, values:['Sunpower Surveyor','Sales Rep','RDCL Services']},
-  //   // ^^ SF field name is 'Resource'. Values: Sunpower Surveyor / Sales Rep / RDCL Services (per SF ticket doc).
+  //   pending:true, values:['Sunpower Surveyor','Sales Rep','Radicl']},
+  //   // ^^ SF field name is 'Resource'. Values: Sunpower Surveyor / Sales Rep / Radicl (per SF ticket doc).
   //   // David's Albatross report used 'SST' (Site Survey Team) and 'Rep' — these will map to 'Sunpower Surveyor' and 'Sales Rep' once the SF field is live.
   // {key:'surveyor_name', sfCol:'Assigned To',       label:'Assigned To',   type:'text',     filterable:false, editable:true},
   // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true,
@@ -971,7 +971,7 @@ function renderExec(){
     <div class="sec">
       <div class="shead"><div><div class="stitle">Regional performance</div><div class="ssub">Avg total cycle — top regions by volume</div></div></div>
       <div class="cw" id="ex-rg-wrap"><canvas id="ex-rg"></canvas></div>
-      <div class="note">Surveyor type context (Ambia Solar / Sales Rep / RDCL Services / Install Partner) will layer here once the Assigned To field is active in the export.</div>
+      <div class="note">Surveyor type context (Ambia Solar / Sales Rep / Radicl / Install Partner) will layer here once the Assigned To field is active in the export.</div>
     </div>`;
 
   dc('ex-trend');
@@ -993,7 +993,7 @@ function renderExec(){
         x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},
         y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
-  });
+  );
 
   const dist=distBuckets(src);
   dc('ex-dist');
@@ -1356,7 +1356,7 @@ function renderRegions(){
 
   if(hasSurveyor){
     const types=[...new Set(rows.map(r=>r.surveyor_type).filter(Boolean))];
-    const typeColors={'Ambia Solar':'#378ADD','Sales Rep':'#1D9E75','RDCL Services':'#BA7517','Install Partner':'#8b5cf6'};
+    const typeColors={'Ambia Solar':'#378ADD','Sales Rep':'#1D9E75','Radicl':'#BA7517','Install Partner':'#8b5cf6'};
     const rStats=regionStats(filtered).slice(0,12);
     dc('rg-sv');
     CH['rg-sv']=new Chart(document.getElementById('rg-sv'),{
@@ -1694,7 +1694,7 @@ function parseImport(content){
     const r={id:i,ct_s2r:null,ct_r2s:null,ct_total:null};
     FIELDS.filter(f=>!f.computed).forEach(f=>{ r[f.key]=colIdx[f.key]!==undefined?(f.type==='date'?cleanDate(cells[colIdx[f.key]]):cells[colIdx[f.key]]||''):''; });
     if(!r.region) return null;
-    if(r.surveyor_type==='RDCL Services'&&!r.surveyor_name) r.surveyor_name=null;
+    if(r.surveyor_type==='Radicl'&&!r.surveyor_name) r.surveyor_name=null;
     recalc(r); return r;
   }).filter(Boolean);
   if(!parsed.length) return null;

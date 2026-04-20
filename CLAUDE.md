@@ -34,7 +34,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 
 ## Pending Salesforce fields (IT ticket in progress)
 When these arrive, uncomment them in FIELDS registry in index.html:
-- `resource` — who does the survey (Sunpower Surveyor / Sales Rep / RDCL Services)
+- `resource` — who does the survey (Sunpower Surveyor / Sales Rep / Radicl)
 - `survey_type` — kind of survey (Site Survey / Battery Only Survey / Resurvey)
 - `resurvey_reason`, `resurvey_attributed` — FPY calculations
 
