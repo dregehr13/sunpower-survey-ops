@@ -89,8 +89,12 @@ textarea:focus{border-color:#999;}
         </div>
       </div>
       <div class="section-gap">
-        <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
-        <textarea id="manual-note" rows="3" placeholder="e.g. One team was short-staffed Tuesday. Scheduling system was down Thursday morning." oninput="refreshPreview()"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+          <button class="btn" id="polish-btn" onclick="polishNote()" style="font-size:10px;padding:2px 8px;height:22px;">Polish</button>
+        </div>
+        <textarea id="manual-note" rows="3" placeholder="e.g. One team was short-staffed Tuesday. Scheduling system was down Thursday morning." oninput="clearPolished();refreshPreview()"></textarea>
+        <div id="polished-result"></div>
       </div>
     </div>
   </div>
@@ -667,6 +671,42 @@ function clearCommentary(){
 
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
+
+// ─── POLISH NOTE ──────────────────────────────────────────
+async function polishNote(){
+  const raw = document.getElementById('manual-note').value.trim();
+  if(!raw) return;
+  const btn = document.getElementById('polish-btn');
+  const result = document.getElementById('polished-result');
+  btn.disabled = true; btn.textContent = 'Polishing…';
+  result.innerHTML = '';
+  try{
+    const res = await fetch('/api/polish',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({note:raw}),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'API error');
+    result.innerHTML = `<div class="opt" style="margin-top:7px;cursor:pointer;" onclick="usePolished(${JSON.stringify(data.polished)})">`+
+      `<div class="opt-label">Click to use</div>`+
+      `${esc(data.polished)}</div>`;
+  }catch(err){
+    result.innerHTML = `<div style="font-size:11px;color:#991b1b;padding:5px 0;">Error: ${err.message}</div>`;
+  }finally{
+    btn.disabled = false; btn.textContent = 'Polish';
+  }
+}
+
+function usePolished(text){
+  document.getElementById('manual-note').value = text;
+  document.getElementById('polished-result').innerHTML = '';
+  refreshPreview();
+}
+
+function clearPolished(){
+  document.getElementById('polished-result').innerHTML = '';
+}
 
 // ─── SEND ACTIONS ─────────────────────────────────────────
 async function copyRenderedHTML(html){
