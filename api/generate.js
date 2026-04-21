@@ -11,9 +11,13 @@ Voice rules — follow these exactly:
 - Never use: "it's worth noting", "additionally", "as we can see", "moving forward", "I wanted to", "please note", passive voice, or filler phrases.
 - Do not oversell routine performance. Site survey is a minor department when running smoothly.
 - Flag problems clearly. Explain outliers. Note if something needs attention.
+- Incorporate any operational context provided — it explains why numbers look the way they do.
 - Audience: Allie Morais (Site Survey Sr Lead), Rob Barker (Director Ops Pre-Install), Spencer Jensen (SVP Ops — reads in 45 seconds, wants to know if there's a problem and what it is).
 
-Format: Return exactly 3 options. Each is 2–3 sentences. Label them 1. 2. 3. on separate lines. No preamble.`;
+Format: Return exactly 3 options, each 2–3 sentences, labeled 1. 2. 3. on separate lines. No preamble.
+- Option 1: Terse. Facts and verdict only. One or two sentences max.
+- Option 2: Balanced. Brief context for anything notable, then status.
+- Option 3: Explanatory. Fuller picture — what happened, why, and what it means going forward if relevant.`;
 
 function buildPrompt(stats, mode, observations, manualNote) {
   const lines = [];

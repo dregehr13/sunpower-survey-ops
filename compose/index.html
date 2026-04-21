@@ -89,12 +89,8 @@ textarea:focus{border-color:#999;}
         </div>
       </div>
       <div class="section-gap">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
-          <button class="btn" id="polish-btn" onclick="polishNote()" style="font-size:10px;padding:2px 8px;height:22px;">Polish</button>
-        </div>
-        <textarea id="manual-note" rows="3" placeholder="e.g. One team was short-staffed Tuesday. Scheduling system was down Thursday morning." oninput="clearPolished();refreshPreview()"></textarea>
-        <div id="polished-result"></div>
+        <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Operational context <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional — informs generation)</span></label>
+        <textarea id="manual-note" rows="3" placeholder="e.g. One team was short-staffed Tuesday. Scheduling system was down Thursday morning."></textarea>
       </div>
     </div>
   </div>
@@ -491,13 +487,8 @@ function buildEmailHTML(s, commentary, manualNote){
     rows+=`<tr><td style="${base}padding:16px 24px;border-top:1px solid #ebebeb;line-height:1.7;">${commentary.replace(/\n/g,'<br>')}</td></tr>`;
   }
 
-  // Manual note
-  if(manualNote&&manualNote.trim()){
-    rows+=`<tr><td style="${f}font-size:12px;color:#666;line-height:1.6;padding:0 24px 16px;">${manualNote.trim().replace(/\n/g,'<br>')}</td></tr>`;
-  }
-
   // ── Dashboard link ───────────────────────────────────────
-  rows+=`<tr><td style="padding:${commentary||manualNote?'0':'16px'} 24px 20px;">
+  rows+=`<tr><td style="padding:${commentary?'0':'16px'} 24px 20px;">
     <a href="${DASHBOARD_URL}" style="${f}font-size:11px;color:#888;text-decoration:none;border-bottom:1px solid #ccc;">View full dashboard ↗</a>
   </td></tr>`;
 
@@ -639,16 +630,22 @@ async function generateCommentary(){
   }
 }
 
+const TONE_LABELS=['Terse','Balanced','Explanatory'];
+
 function renderOptions(options){
   if(!options||!options.length){
     document.getElementById('commentary-body').innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px 0;">No options returned.</div>';
     return;
   }
-  const html=`<div class="options-list">${options.map((o,i)=>`
+  const html=`<div class="options-list" id="opt-list">${options.map((o,i)=>`
     <div class="opt${selectedCommentary===o?' selected':''}" onclick="selectOption(this,'${escAttr(o)}')">
-      <div class="opt-label">Option ${i+1}</div>
+      <div class="opt-label">Option ${i+1} — ${TONE_LABELS[i]||''}</div>
       ${esc(o)}
     </div>`).join('')}</div>
+    <div id="edit-wrap" style="${selectedCommentary?'':'display:none;'}margin-top:10px;">
+      <label style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Edit</label>
+      <textarea id="edit-ta" rows="4" oninput="selectedCommentary=this.value;refreshPreview();" style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;">${esc(selectedCommentary)}</textarea>
+    </div>
     <div class="btn-row" style="margin-top:8px;">
       <button class="btn btn-primary" id="gen-btn" onclick="generateCommentary()">Regenerate</button>
       <button class="btn" onclick="clearCommentary()">Clear</button>
@@ -660,6 +657,10 @@ function selectOption(el, text){
   document.querySelectorAll('.opt').forEach(e=>e.classList.remove('selected'));
   el.classList.add('selected');
   selectedCommentary=text;
+  const wrap=document.getElementById('edit-wrap');
+  const ta=document.getElementById('edit-ta');
+  if(wrap) wrap.style.display='';
+  if(ta) ta.value=text;
   refreshPreview();
 }
 
@@ -671,42 +672,6 @@ function clearCommentary(){
 
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escAttr(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
-
-// ─── POLISH NOTE ──────────────────────────────────────────
-async function polishNote(){
-  const raw = document.getElementById('manual-note').value.trim();
-  if(!raw) return;
-  const btn = document.getElementById('polish-btn');
-  const result = document.getElementById('polished-result');
-  btn.disabled = true; btn.textContent = 'Polishing…';
-  result.innerHTML = '';
-  try{
-    const res = await fetch('/api/polish',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({note:raw}),
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error||'API error');
-    result.innerHTML = `<div class="opt" style="margin-top:7px;cursor:pointer;" onclick="usePolished(${JSON.stringify(data.polished)})">`+
-      `<div class="opt-label">Click to use</div>`+
-      `${esc(data.polished)}</div>`;
-  }catch(err){
-    result.innerHTML = `<div style="font-size:11px;color:#991b1b;padding:5px 0;">Error: ${err.message}</div>`;
-  }finally{
-    btn.disabled = false; btn.textContent = 'Polish';
-  }
-}
-
-function usePolished(text){
-  document.getElementById('manual-note').value = text;
-  document.getElementById('polished-result').innerHTML = '';
-  refreshPreview();
-}
-
-function clearPolished(){
-  document.getElementById('polished-result').innerHTML = '';
-}
 
 // ─── SEND ACTIONS ─────────────────────────────────────────
 async function copyRenderedHTML(html){
