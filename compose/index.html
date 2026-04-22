@@ -542,6 +542,9 @@ function buildEmailHTML(s, commentary, manualNote){
     const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri'];
     // 5 fixed slots — only s.wtdDays.length of them have bars
     const slots=Array(5).fill(null).map((_,i)=>s.wtdDays[i]||null);
+    // Average line overlay (CSS positioned — shows in browser, ignored by Outlook)
+    const avgBarH=s.histDailyAvg>0?Math.max(Math.round(s.histDailyAvg/yMax*BAR_H),1):0;
+    const avgLineTop=18+(BAR_H-avgBarH); // countRow(18) + space above avg bar
 
     const countRow=slots.map((d,i)=>{
       if(!d||d.count===0) return `<td width="${COL_W}" height="18"></td>`;
@@ -567,12 +570,15 @@ function buildEmailHTML(s, commentary, manualNote){
 
     rows+=`<tr><td style="padding:16px 24px 0;">
       <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:6px;">COMPLETIONS THIS WEEK</div>
-      <table width="550" cellpadding="0" cellspacing="0" border="0">
-        <tr>${countRow}</tr>
-        <tr>${barRow}</tr>
-        <tr><td colspan="5" height="1" bgcolor="#e0e0db" style="font-size:0;line-height:0;background:#e0e0db;">&nbsp;</td></tr>
-        <tr>${labelRow}</tr>
-      </table>
+      <div style="position:relative;display:inline-block;">
+        <table width="550" cellpadding="0" cellspacing="0" border="0">
+          <tr>${countRow}</tr>
+          <tr>${barRow}</tr>
+          <tr><td colspan="5" height="1" bgcolor="#e0e0db" style="font-size:0;line-height:0;background:#e0e0db;">&nbsp;</td></tr>
+          <tr>${labelRow}</tr>
+        </table>
+        ${avgBarH>0?`<div style="position:absolute;left:0;width:550px;top:${avgLineTop}px;height:0;border-top:1px dashed #c8c8c8;pointer-events:none;"></div><span style="position:absolute;right:0;top:${avgLineTop-13}px;${f}font-size:9px;color:#bbb;">4-wk avg</span>`:''}
+      </div>
       ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:6px;">${paceText}</div>`:''}
     </td></tr>`;
   }
@@ -592,7 +598,7 @@ function buildEmailHTML(s, commentary, manualNote){
     <table cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td valign="middle" style="padding-right:14px;">
-          <img src="${DASHBOARD_URL}/sunpower.png" height="32" alt="SunPower" style="display:block;border:0;">
+          <img src="${DASHBOARD_URL}/sunpower.png" height="40" alt="SunPower" style="display:block;border:0;">
         </td>
         <td valign="middle">
           <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
