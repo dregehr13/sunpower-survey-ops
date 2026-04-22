@@ -127,6 +127,37 @@ textarea:focus{border-color:#999;}
 const PASSWORD      = 'sunpower';
 const DASHBOARD_URL = 'https://sunpower-survey-ops.vercel.app';
 
+// ─── PROJECTION DIMENSIONS ────────────────────────────────
+// Fields used to segment cycle time estimates for WIP projection.
+// Order matters for fallback: most specific first. When a combo has
+// no recent completions, it drops the last dim and retries.
+// To add surveyor type once the SF field is live:
+//   const PROJECTION_DIMS = ['region', 'surveyor_type'];
+const PROJECTION_DIMS = ['region'];
+
+// Build a map of segment key → avg cycle time from a set of completions.
+function buildSegmentAvgs(completions, dims){
+  const m={};
+  completions.forEach(r=>{
+    const key=dims.map(d=>r[d]||'').join('|');
+    if(!m[key]) m[key]=[];
+    m[key].push(r.ct_total);
+  });
+  const out={};
+  Object.entries(m).forEach(([k,vals])=>{ const a=avg(vals); if(a!=null) out[k]=a; });
+  return out;
+}
+
+// Look up estimated cycle time for a single WIP row.
+// Falls back from full key → prefix subsets → global avg.
+function lookupSegmentAvg(r, dims, segAvgs, globalAvg){
+  for(let len=dims.length; len>=1; len--){
+    const key=dims.slice(0,len).map(d=>r[d]||'').join('|');
+    if(segAvgs[key]!=null) return segAvgs[key];
+  }
+  return globalAvg;
+}
+
 // ─── STATE ────────────────────────────────────────────────
 let mode = 'monday';
 let selectedCommentary = '';
@@ -245,8 +276,12 @@ function computeStats(){
     const daysRemaining=Math.max(5-daysElapsed,0);
     const wip=RAW.filter(r=>r.start&&!r.complete).length;
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
-    const recentCts=RAW.filter(r=>r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1).map(r=>r.ct_total);
-    const recentAvgCt=avg(recentCts)||4;
+    const recentCompletions=RAW.filter(r=>r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
+    const globalAvgCt=avg(recentCompletions.map(r=>r.ct_total))||4;
+    const segAvgs=buildSegmentAvgs(recentCompletions,PROJECTION_DIMS);
+    const wipProjects=RAW.filter(r=>r.start&&!r.complete);
+    const wipEstimates=wipProjects.map(r=>lookupSegmentAvg(r,PROJECTION_DIMS,segAvgs,globalAvgCt));
+    const recentAvgCt=avg(wipEstimates)||globalAvgCt;
     const dailyThroughput=recentAvgCt>0?wip/recentAvgCt:0;
     const projectedWeek=daysRemaining>0
       ?wtdRows.length+Math.round(dailyThroughput*daysRemaining)
