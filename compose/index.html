@@ -239,10 +239,18 @@ function computeStats(){
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const newInWTD=RAW.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
 
-    // Pace projection
+    // Pipeline-based projection (Little's Law: throughput = WIP / avg cycle)
     const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-    const daysThruYest=yesterdayDow===0?5:yesterdayDow-1; // Mon=1…Fri=5
-    const projectedWeek=daysThruYest>0?Math.round(wtdRows.length/daysThruYest*5):null;
+    const daysElapsed=yesterdayDow===0?5:yesterdayDow; // Mon=1…Fri=5, Sun=5
+    const daysRemaining=Math.max(5-daysElapsed,0);
+    const wip=RAW.filter(r=>r.start&&!r.complete).length;
+    const recentCts=RAW.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0)
+      .slice(-120).map(r=>r.ct_total);
+    const recentAvgCt=avg(recentCts)||4;
+    const dailyThroughput=recentAvgCt>0?wip/recentAvgCt:0;
+    const projectedWeek=daysRemaining>0
+      ?wtdRows.length+Math.round(dailyThroughput*daysRemaining)
+      :wtdRows.length;
 
     // 4-week historical weekly completion avg
     const wtdMonday=new Date(wtdFrom+'T12:00:00');
@@ -273,7 +281,7 @@ function computeStats(){
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length, newInWTD,
       medCycleWTD:med(wtdCts), avgCycleWTD:avg(wtdCts),
-      projectedWeek, histAvg, histDailyAvg, wtdDays,
+      projectedWeek, daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
       slowYesterday,
     };
   }
@@ -524,7 +532,7 @@ function buildEmailHTML(s, commentary, manualNote){
       svgBody+=`<text x="${cx(i)}" y="${SVG_H-mb+14}" text-anchor="middle" fill="${labelColor}" font-size="10" font-family="Arial,Helvetica,sans-serif">${d.label}</text>`;
     });
     // Pace sub-label
-    const paceText=s.projectedWeek!=null?`On pace for ~${s.projectedWeek} this week · 4-wk weekly avg: ${s.histAvg}`:'';
+    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week · ${s.wip} open surveys ÷ ${s.recentAvgCt.toFixed(1)}d avg cycle`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="display:block;">${svgBody}</svg>`;
     rows+=`<tr><td style="padding:16px 24px 0;">
       <div style="${f}font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Completions this week</div>
