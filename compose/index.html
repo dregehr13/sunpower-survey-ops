@@ -262,7 +262,7 @@ function computeStats(){
       mode:'daily', yesterday, wtdFrom, wtdTo:yesterday,
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length, newInWTD,
-      medCycleWTD:med(wtdCts),
+      medCycleWTD:med(wtdCts), avgCycleWTD:avg(wtdCts),
       projectedWeek, histAvg,
       slowYesterday,
     };
@@ -357,22 +357,28 @@ function buildEmailHTML(s, commentary, manualNote){
           <span style="${metSub()}">${wipSub}</span>
         </td>`;
   } else {
-    const ct=ctColors(s.medCycleWTD);
+    const ctA=ctColors(s.avgCycleWTD,4);
+    const ctM=ctColors(s.medCycleWTD,3);
     rows+=`
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:33%;border-right:0;')}">
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
           <span style="${metLabel()}">New In WTD</span>
           <span style="${metVal()}">${s.newInWTD}</span>
           <span style="${metSub()}">${s.newInYesterday} yesterday</span>
         </td>
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:33%;border-right:0;')}">
+        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
           <span style="${metLabel()}">Completed WTD</span>
           <span style="${metVal()}">${s.completedWTD}</span>
           <span style="${metSub()}">${s.completedYesterday} yesterday</span>
         </td>
-        <td style="${cardCell(ct.bg,ct.b,'width:34%;')}">
-          <span style="${metLabel(ct.lc)}">WTD Median Cycle</span>
-          <span style="${metVal(ct.vc)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
-          <span style="${metSub(ct.sc,ct.sbc)}">target: 3d${ct.mark}</span>
+        <td style="${cardCell(ctA.bg,ctA.b,'width:25%;border-right:0;')}">
+          <span style="${metLabel(ctA.lc)}">WTD Avg Cycle</span>
+          <span style="${metVal(ctA.vc)}">${s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—'}</span>
+          <span style="${metSub(ctA.sc,ctA.sbc)}">target: 4d${ctA.mark}</span>
+        </td>
+        <td style="${cardCell(ctM.bg,ctM.b,'width:25%;')}">
+          <span style="${metLabel(ctM.lc)}">WTD Median Cycle</span>
+          <span style="${metVal(ctM.vc)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
+          <span style="${metSub(ctM.sc,ctM.sbc)}">target: 3d${ctM.mark}</span>
         </td>`;
   }
 
