@@ -390,17 +390,17 @@ function buildEmailHTML(s, commentary, manualNote){
     const wipSub=(s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week');
     rows+=`
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">New In</span>
+          <span style="${metLabel()}">NEW IN</span>
           <span style="${metVal()}">${s.newIn}</span>
           <span style="${metSub()}">week started</span>
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">Completed</span>
+          <span style="${metLabel()}">COMPLETED</span>
           <span style="${metVal()}">${s.completedCount}</span>
           <span style="${metSub()}">this week</span>
         </td>
         <td style="${cardCell(ct.bg,ct.b,'width:25%;border-right:0;')}">
-          <span style="${metLabel(ct.lc)}">Avg Cycle</span>
+          <span style="${metLabel(ct.lc)}">AVG CYCLE</span>
           <span style="${metVal(ct.vc)}">${s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—'}</span>
           <span style="${metSub(ct.sc,ct.sbc)}">target: 4d${ct.mark}${s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''}</span>
         </td>
@@ -414,22 +414,22 @@ function buildEmailHTML(s, commentary, manualNote){
     const ctM=ctColors(s.medCycleWTD,3);
     rows+=`
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">New In WTD</span>
+          <span style="${metLabel()}">NEW IN WTD</span>
           <span style="${metVal()}">${s.newInWTD}</span>
           <span style="${metSub()}">${s.newInYesterday} yesterday</span>
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">Completed WTD</span>
+          <span style="${metLabel()}">COMPLETED WTD</span>
           <span style="${metVal()}">${s.completedWTD}</span>
           <span style="${metSub()}">${s.completedYesterday} yesterday</span>
         </td>
         <td style="${cardCell(ctA.bg,ctA.b,'width:25%;border-right:0;')}">
-          <span style="${metLabel(ctA.lc)}">WTD Avg Cycle</span>
+          <span style="${metLabel(ctA.lc)}">WTD AVG CYCLE</span>
           <span style="${metVal(ctA.vc)}">${s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—'}</span>
           <span style="${metSub(ctA.sc,ctA.sbc)}">target: 4d${ctA.mark}</span>
         </td>
         <td style="${cardCell(ctM.bg,ctM.b,'width:25%;')}">
-          <span style="${metLabel(ctM.lc)}">WTD Median Cycle</span>
+          <span style="${metLabel(ctM.lc)}">WTD MEDIAN CYCLE</span>
           <span style="${metVal(ctM.vc)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
           <span style="${metSub(ctM.sc,ctM.sbc)}">target: 3d${ctM.mark}</span>
         </td>`;
@@ -536,43 +536,44 @@ function buildEmailHTML(s, commentary, manualNote){
 
   // ── Daily completions bar chart ──────────────────────────
   if(s.mode==='daily'&&s.wtdDays&&s.wtdDays.length){
-    const SVG_W=552,SVG_H=118;
-    const ml=8,mr=72,mt=22,mb=26;
-    const cw=SVG_W-ml-mr,ch=SVG_H-mt-mb;
+    const BAR_H=70,COL_W=110,BAR_W=54,PAD=Math.round((COL_W-BAR_W)/2);
     const maxCount=Math.max(...s.wtdDays.map(d=>d.count),0);
     const yMax=Math.max(Math.ceil(maxCount*1.3/5)*5,10);
-    const colW=cw/5; // always 5 slots — chart fills in left to right
-    const barW=Math.floor(colW*0.5);
-    const cx=i=>(ml+(i+0.5)*colW).toFixed(1);
-    const cy=v=>(mt+ch*(1-v/yMax)).toFixed(1);
+    const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri'];
+    // 5 fixed slots — only s.wtdDays.length of them have bars
+    const slots=Array(5).fill(null).map((_,i)=>s.wtdDays[i]||null);
 
-    let svgBody='';
-    // Baseline
-    svgBody+=`<line x1="${ml}" y1="${(mt+ch).toFixed(1)}" x2="${SVG_W-mr}" y2="${(mt+ch).toFixed(1)}" stroke="#e0e0db" stroke-width="1"/>`;
-    // Daily avg reference line
-    const avgY=parseFloat(cy(s.histDailyAvg));
-    svgBody+=`<line x1="${ml}" y1="${avgY.toFixed(1)}" x2="${SVG_W-mr}" y2="${avgY.toFixed(1)}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>`;
-    svgBody+=`<text x="${SVG_W-mr+5}" y="${(avgY+4).toFixed(1)}" fill="#94a3b8" font-size="9" font-family="Arial,Helvetica,sans-serif">daily avg</text>`;
-    svgBody+=`<text x="${SVG_W-mr+5}" y="${(avgY+14).toFixed(1)}" fill="#94a3b8" font-size="9" font-family="Arial,Helvetica,sans-serif">(4-wk)</text>`;
-    // Bars + labels
-    s.wtdDays.forEach((d,i)=>{
+    const countRow=slots.map((d,i)=>{
+      if(!d||d.count===0) return `<td width="${COL_W}" height="18"></td>`;
       const isYest=d.date===s.yesterday;
+      return `<td width="${COL_W}" height="18" align="center" valign="bottom" style="${f}font-size:11px;font-weight:${isYest?'700':'400'};color:${isYest?'#111':'#888'};text-align:center;vertical-align:bottom;padding-bottom:3px;">${d.count}</td>`;
+    }).join('');
+
+    const barRow=slots.map((d,i)=>{
+      if(!d||d.count===0) return `<td width="${COL_W}" height="${BAR_H}"></td>`;
+      const isYest=d.date===s.yesterday;
+      const barH=Math.max(Math.round(d.count/yMax*BAR_H),2);
       const barColor=isYest?'#378ADD':'#cbd5e1';
-      const labelColor=isYest?'#1a1a1a':'#888';
-      if(d.count>0){
-        const bh=((d.count/yMax)*ch).toFixed(1);
-        svgBody+=`<rect x="${(parseFloat(cx(i))-barW/2).toFixed(1)}" y="${cy(d.count)}" width="${barW}" height="${bh}" rx="2" fill="${barColor}"/>`;
-        svgBody+=`<text x="${cx(i)}" y="${(parseFloat(cy(d.count))-5).toFixed(1)}" text-anchor="middle" fill="${labelColor}" font-size="11" font-weight="${isYest?'700':'400'}" font-family="Arial,Helvetica,sans-serif">${d.count}</text>`;
-      }
-      svgBody+=`<text x="${cx(i)}" y="${SVG_H-mb+14}" text-anchor="middle" fill="${labelColor}" font-size="10" font-family="Arial,Helvetica,sans-serif">${d.label}</text>`;
-    });
-    // Pace sub-label
-    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week · ${s.wip} open surveys ÷ ${s.recentAvgCt.toFixed(1)}d avg cycle · based on current pipeline composition`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="display:block;">${svgBody}</svg>`;
+      return `<td width="${COL_W}" height="${BAR_H}" valign="bottom" style="vertical-align:bottom;padding:0 ${PAD}px;"><div style="background:${barColor};height:${barH}px;font-size:0;line-height:0;">&nbsp;</div></td>`;
+    }).join('');
+
+    const labelRow=slots.map((d,i)=>{
+      const isYest=d&&d.date===s.yesterday;
+      const c=isYest?'#333':d?'#999':'#ddd';
+      return `<td width="${COL_W}" height="18" align="center" style="${f}font-size:10px;color:${c};text-align:center;padding-top:4px;">${DAY_LABELS[i]}</td>`;
+    }).join('');
+
+    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week &middot; ${s.wip} open surveys &divide; ${s.recentAvgCt.toFixed(1)}d avg cycle &middot; based on current pipeline composition`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
+
     rows+=`<tr><td style="padding:16px 24px 0;">
-      <div style="${f}font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Completions this week</div>
-      ${svg}
-      ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:5px;">${paceText}</div>`:''}
+      <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:6px;">COMPLETIONS THIS WEEK</div>
+      <table width="550" cellpadding="0" cellspacing="0" border="0">
+        <tr>${countRow}</tr>
+        <tr>${barRow}</tr>
+        <tr><td colspan="5" height="1" bgcolor="#e0e0db" style="font-size:0;line-height:0;background:#e0e0db;">&nbsp;</td></tr>
+        <tr>${labelRow}</tr>
+      </table>
+      ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:6px;">${paceText}</div>`:''}
     </td></tr>`;
   }
 
@@ -588,9 +589,18 @@ function buildEmailHTML(s, commentary, manualNote){
 
   // ── Signature footer ─────────────────────────────────────
   rows+=`<tr><td style="background:#f8f8f8;border-top:1px solid #e8e8e8;padding:16px 24px;">
-    <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
-    <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Manager - Site Surveys</span>
-    <span style="display:block;${f}font-size:11px;color:#888;margin-top:1px;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="color:#888;text-decoration:none;">douglas.regehr@sunpower.com</a></span>
+    <table cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td valign="middle" style="padding-right:14px;">
+          <img src="${DASHBOARD_URL}/sunpower.png" height="32" alt="SunPower" style="display:block;border:0;">
+        </td>
+        <td valign="middle">
+          <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
+          <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Manager - Site Surveys</span>
+          <span style="display:block;${f}font-size:11px;color:#888;margin-top:1px;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="color:#888;text-decoration:none;">douglas.regehr@sunpower.com</a></span>
+        </td>
+      </tr>
+    </table>
   </td></tr>`;
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
