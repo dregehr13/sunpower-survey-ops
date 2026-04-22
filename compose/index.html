@@ -358,9 +358,15 @@ function buildEmailHTML(s, commentary, manualNote){
   function cardCell(bg,border,extra=''){
     return `${f}text-align:center;padding:14px 12px;background:${bg};border:1px solid ${border};${extra}`;
   }
-  function metLabel(c='#999'){ return `display:block;${f}font-size:10px;color:${c};text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;`; }
-  function metVal(c='#111'){   return `display:block;${f}font-size:26px;font-weight:700;line-height:1;color:${c};`; }
-  function metSub(c='#aaa',bc='#e8e8e8'){ return `display:block;${f}font-size:10px;color:${c};margin-top:5px;border-top:1px solid ${bc};padding-top:5px;`; }
+  // Outlook-safe card interior: nested table so label/value/sub stack correctly
+  // (Outlook's Word engine ignores display:block on spans, collapsing them inline)
+  function mc(label,val,sub,lc='#999',vc='#111',sc='#aaa',sbc='#e8e8e8'){
+    return `<table cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr><td align="center" style="${f}font-size:10px;color:${lc};letter-spacing:.07em;padding-bottom:6px;">${label}</td></tr>
+      <tr><td align="center" style="${f}font-size:26px;font-weight:700;line-height:1;color:${vc};padding-bottom:5px;">${val}</td></tr>
+      <tr><td align="center" style="${f}font-size:10px;color:${sc};border-top:1px solid ${sbc};padding-top:5px;">${sub}</td></tr>
+    </table>`;
+  }
 
   // Cycle time card colors — tgt: green threshold, tgt+2: amber threshold
   function ctColors(v,tgt=3){
@@ -390,48 +396,32 @@ function buildEmailHTML(s, commentary, manualNote){
     const wipSub=(s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week');
     rows+=`
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">NEW IN</span>
-          <span style="${metVal()}">${s.newIn}</span>
-          <span style="${metSub()}">week started</span>
+          ${mc('NEW IN',s.newIn,'week started')}
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">COMPLETED</span>
-          <span style="${metVal()}">${s.completedCount}</span>
-          <span style="${metSub()}">this week</span>
+          ${mc('COMPLETED',s.completedCount,'this week')}
         </td>
         <td style="${cardCell(ct.bg,ct.b,'width:25%;border-right:0;')}">
-          <span style="${metLabel(ct.lc)}">AVG CYCLE</span>
-          <span style="${metVal(ct.vc)}">${s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—'}</span>
-          <span style="${metSub(ct.sc,ct.sbc)}">target: 4d${ct.mark}${s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''}</span>
+          ${mc('AVG CYCLE',s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—','target: 4d'+ct.mark+(s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''),ct.lc,ct.vc,ct.sc,ct.sbc)}
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;')}">
-          <span style="${metLabel()}">WIP</span>
-          <span style="${metVal()}">${s.wip}</span>
-          <span style="${metSub()}">${wipSub}</span>
+          ${mc('WIP',s.wip,wipSub)}
         </td>`;
   } else {
     const ctA=ctColors(s.avgCycleWTD,4);
     const ctM=ctColors(s.medCycleWTD,3);
     rows+=`
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">NEW IN WTD</span>
-          <span style="${metVal()}">${s.newInWTD}</span>
-          <span style="${metSub()}">${s.newInYesterday} yesterday</span>
+          ${mc('NEW IN WTD',s.newInWTD,s.newInYesterday+' yesterday')}
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          <span style="${metLabel()}">COMPLETED WTD</span>
-          <span style="${metVal()}">${s.completedWTD}</span>
-          <span style="${metSub()}">${s.completedYesterday} yesterday</span>
+          ${mc('COMPLETED WTD',s.completedWTD,s.completedYesterday+' yesterday')}
         </td>
         <td style="${cardCell(ctA.bg,ctA.b,'width:25%;border-right:0;')}">
-          <span style="${metLabel(ctA.lc)}">WTD AVG CYCLE</span>
-          <span style="${metVal(ctA.vc)}">${s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—'}</span>
-          <span style="${metSub(ctA.sc,ctA.sbc)}">target: 4d${ctA.mark}</span>
+          ${mc('WTD AVG CYCLE',s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—','target: 4d'+ctA.mark,ctA.lc,ctA.vc,ctA.sc,ctA.sbc)}
         </td>
         <td style="${cardCell(ctM.bg,ctM.b,'width:25%;')}">
-          <span style="${metLabel(ctM.lc)}">WTD MEDIAN CYCLE</span>
-          <span style="${metVal(ctM.vc)}">${s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—'}</span>
-          <span style="${metSub(ctM.sc,ctM.sbc)}">target: 3d${ctM.mark}</span>
+          ${mc('WTD MEDIAN CYCLE',s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—','target: 3d'+ctM.mark,ctM.lc,ctM.vc,ctM.sc,ctM.sbc)}
         </td>`;
   }
 
@@ -557,7 +547,11 @@ function buildEmailHTML(s, commentary, manualNote){
       const isYest=d.date===s.yesterday;
       const barH=Math.max(Math.round(d.count/yMax*BAR_H),2);
       const barColor=isYest?'#378ADD':'#cbd5e1';
-      return `<td width="${COL_W}" height="${BAR_H}" valign="bottom" style="vertical-align:bottom;padding:0 ${PAD}px;"><div style="background:${barColor};height:${barH}px;font-size:0;line-height:0;">&nbsp;</div></td>`;
+      const spacerH=BAR_H-barH;
+      // Inner table approach: explicit spacer row + colored bar row. bgcolor attribute
+      // is used alongside CSS background for Outlook compatibility (Outlook respects
+      // bgcolor but not CSS background on table cells in all versions).
+      return `<td width="${COL_W}" height="${BAR_H}" style="padding:0 ${PAD}px;vertical-align:top;"><table cellpadding="0" cellspacing="0" border="0" width="${BAR_W}">${spacerH>0?`<tr><td width="${BAR_W}" height="${spacerH}" style="font-size:0;line-height:0;">&nbsp;</td></tr>`:''}<tr><td bgcolor="${barColor}" width="${BAR_W}" height="${barH}" style="background:${barColor};height:${barH}px;font-size:0;line-height:0;">&nbsp;</td></tr></table></td>`;
     }).join('');
 
     const labelRow=slots.map((d,i)=>{
