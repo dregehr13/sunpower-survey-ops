@@ -567,7 +567,7 @@ function buildEmailHTML(s, commentary, manualNote){
       svgBody+=`<text x="${cx(i)}" y="${SVG_H-mb+14}" text-anchor="middle" fill="${labelColor}" font-size="10" font-family="Arial,Helvetica,sans-serif">${d.label}</text>`;
     });
     // Pace sub-label
-    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week · ${s.wip} open surveys ÷ ${s.recentAvgCt.toFixed(1)}d avg cycle`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
+    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week · ${s.wip} open surveys ÷ ${s.recentAvgCt.toFixed(1)}d avg cycle · based on current pipeline composition`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="display:block;">${svgBody}</svg>`;
     rows+=`<tr><td style="padding:16px 24px 0;">
       <div style="${f}font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Completions this week</div>
