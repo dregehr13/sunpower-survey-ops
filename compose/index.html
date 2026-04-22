@@ -107,7 +107,7 @@ textarea:focus{border-color:#999;}
       <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
         <div class="subject-row">
           <label>To</label>
-          <input type="text" id="to-field" value="allie.morais@sunpower.com; spencer.jensen@sunpower.com; robert.barker@sunpower.com" readonly>
+          <input type="text" id="to-field" value="allie.morais@sunpower.com; spencer.jensen@sunpower.com; Kody.Wilde@sunpower.com" readonly>
         </div>
         <div class="subject-row" style="margin-bottom:0;">
           <label>Subject</label>
@@ -224,7 +224,7 @@ function computeStats(){
       mode:'monday', period, periodLabel:`${fmtShort(period.from)} – ${fmtShort(period.to)}`,
       newIn, wip, wipChange,
       completedCount:rows.length,
-      medCycle:med(cts), onTargetPct,
+      medCycle:med(cts), avgCycle:avg(cts), onTargetPct,
       outlierCount:outlierRows.length,
       outlierRows,
       maxOutlier:outlierRows.length?Math.max(...outlierRows.map(r=>r.ct_total)):null,
@@ -309,12 +309,12 @@ function buildEmailHTML(s, commentary, manualNote){
   function metVal(c='#111'){   return `display:block;${f}font-size:26px;font-weight:700;line-height:1;color:${c};`; }
   function metSub(c='#aaa',bc='#e8e8e8'){ return `display:block;${f}font-size:10px;color:${c};margin-top:5px;border-top:1px solid ${bc};padding-top:5px;`; }
 
-  // Cycle time card colors
-  function ctColors(v){
-    if(v==null)       return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
-    if(v<=3)          return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
-    if(v<=5)          return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a',mark:''};
-    return             {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca',mark:''};
+  // Cycle time card colors — tgt: green threshold, tgt+2: amber threshold
+  function ctColors(v,tgt=3){
+    if(v==null)        return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
+    if(v<=tgt)         return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
+    if(v<=tgt+2)       return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a',mark:''};
+    return              {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca',mark:''};
   }
 
   let rows='';
@@ -333,7 +333,7 @@ function buildEmailHTML(s, commentary, manualNote){
       <tr>`;
 
   if(s.mode==='monday'){
-    const ct=ctColors(s.medCycle);
+    const ct=ctColors(s.avgCycle,4);
     const wipSub=(s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week');
     rows+=`
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
@@ -347,9 +347,9 @@ function buildEmailHTML(s, commentary, manualNote){
           <span style="${metSub()}">this week</span>
         </td>
         <td style="${cardCell(ct.bg,ct.b,'width:25%;border-right:0;')}">
-          <span style="${metLabel(ct.lc)}">Median Cycle</span>
-          <span style="${metVal(ct.vc)}">${s.medCycle!=null?s.medCycle.toFixed(1)+'d':'—'}</span>
-          <span style="${metSub(ct.sc,ct.sbc)}">target: 3d${ct.mark}${s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''}</span>
+          <span style="${metLabel(ct.lc)}">Avg Cycle</span>
+          <span style="${metVal(ct.vc)}">${s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—'}</span>
+          <span style="${metSub(ct.sc,ct.sbc)}">target: 4d${ct.mark}${s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''}</span>
         </td>
         <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;')}">
           <span style="${metLabel()}">WIP</span>
@@ -495,7 +495,7 @@ function buildEmailHTML(s, commentary, manualNote){
   // ── Signature footer ─────────────────────────────────────
   rows+=`<tr><td style="background:#f8f8f8;border-top:1px solid #e8e8e8;padding:16px 24px;">
     <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
-    <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Site Survey Manager</span>
+    <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Manager - Site Surveys</span>
     <span style="display:block;${f}font-size:11px;color:#888;margin-top:1px;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="color:#888;text-decoration:none;">douglas.regehr@sunpower.com</a></span>
   </td></tr>`;
 
