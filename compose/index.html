@@ -346,8 +346,23 @@ function getObservations(s){
   return obs;
 }
 
+// ─── SVG → PNG (canvas render for Outlook image embedding) ───
+async function svgToDataURL(svgStr,w,h){
+  return new Promise(resolve=>{
+    const dpr=2;
+    const canvas=document.createElement('canvas');
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    const ctx=canvas.getContext('2d');
+    ctx.scale(dpr,dpr);
+    const img=new Image();
+    img.onload=()=>{ ctx.drawImage(img,0,0); resolve(canvas.toDataURL('image/png')); };
+    img.onerror=()=>resolve(null);
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  });
+}
+
 // ─── EMAIL HTML ───────────────────────────────────────────
-function buildEmailHTML(s, commentary, manualNote){
+async function buildEmailHTML(s, commentary, manualNote){
   if(!s) return '<p style="font-family:Arial;padding:24px;color:#999;">No data.</p>';
 
   const f='font-family:Arial,Helvetica,sans-serif;';
@@ -520,60 +535,53 @@ function buildEmailHTML(s, commentary, manualNote){
       }
     });
 
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="display:block;">${svgBody}</svg>`;
-    rows+=`<tr><td style="padding:16px 24px 4px;">${svg}</td></tr>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}">${svgBody}</svg>`;
+    const svgPng=await svgToDataURL(svg,SVG_W,SVG_H);
+    if(svgPng) rows+=`<tr><td style="padding:16px 24px 4px;"><img src="${svgPng}" width="${SVG_W}" height="${SVG_H}" style="display:block;max-width:100%;border:0;" alt=""></td></tr>`;
   }
 
   // ── Daily completions bar chart ──────────────────────────
   if(s.mode==='daily'&&s.wtdDays&&s.wtdDays.length){
-    const BAR_H=70,COL_W=110,BAR_W=54,PAD=Math.round((COL_W-BAR_W)/2);
+    const D_W=552,D_H=120,Dml=12,Dmr=54,Dmt=22,Dmb=26;
+    const Dcw=D_W-Dml-Dmr, Dch=D_H-Dmt-Dmb;
     const maxCount=Math.max(...s.wtdDays.map(d=>d.count),0);
-    const yMax=Math.max(Math.ceil(maxCount*1.3/5)*5,10);
+    const dYMax=Math.max(Math.ceil(maxCount*1.3/5)*5,10);
+    const Dbaseline=Dmt+Dch;
+    const DcolW=Dcw/5, DbarW=Math.floor(DcolW*0.54);
+    const Dcx=i=>(Dml+(i+0.5)*DcolW).toFixed(1);
     const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri'];
-    // 5 fixed slots — only s.wtdDays.length of them have bars
-    const slots=Array(5).fill(null).map((_,i)=>s.wtdDays[i]||null);
-    // Average line overlay (CSS positioned — shows in browser, ignored by Outlook)
-    const avgBarH=s.histDailyAvg>0?Math.max(Math.round(s.histDailyAvg/yMax*BAR_H),1):0;
-    const avgLineTop=18+(BAR_H-avgBarH); // countRow(18) + space above avg bar
 
-    const countRow=slots.map((d,i)=>{
-      if(!d||d.count===0) return `<td width="${COL_W}" height="18"></td>`;
-      const isYest=d.date===s.yesterday;
-      return `<td width="${COL_W}" height="18" align="center" valign="bottom" style="${f}font-size:11px;font-weight:${isYest?'700':'400'};color:${isYest?'#111':'#888'};text-align:center;vertical-align:bottom;padding-bottom:3px;">${d.count}</td>`;
-    }).join('');
-
-    const barRow=slots.map((d,i)=>{
-      if(!d||d.count===0) return `<td width="${COL_W}" height="${BAR_H}"></td>`;
-      const isYest=d.date===s.yesterday;
-      const barH=Math.max(Math.round(d.count/yMax*BAR_H),2);
-      const barColor=isYest?'#378ADD':'#cbd5e1';
-      const spacerH=BAR_H-barH;
-      // Inner table approach: explicit spacer row + colored bar row. bgcolor attribute
-      // is used alongside CSS background for Outlook compatibility (Outlook respects
-      // bgcolor but not CSS background on table cells in all versions).
-      return `<td width="${COL_W}" height="${BAR_H}" style="padding:0 ${PAD}px;vertical-align:top;"><table cellpadding="0" cellspacing="0" border="0" width="${BAR_W}">${spacerH>0?`<tr><td width="${BAR_W}" height="${spacerH}" style="font-size:0;line-height:0;">&nbsp;</td></tr>`:''}<tr><td bgcolor="${barColor}" width="${BAR_W}" height="${barH}" style="background:${barColor};height:${barH}px;font-size:0;line-height:0;">&nbsp;</td></tr></table></td>`;
-    }).join('');
-
-    const labelRow=slots.map((d,i)=>{
+    let dBody='';
+    // Avg dashed line
+    if(s.histDailyAvg>0){
+      const ay=(Dbaseline-(s.histDailyAvg/dYMax)*Dch).toFixed(1);
+      dBody+=`<line x1="${Dml}" y1="${ay}" x2="${D_W-Dmr}" y2="${ay}" stroke="#d0d0cc" stroke-width="1" stroke-dasharray="4,3"/>`;
+      dBody+=`<text x="${D_W-Dmr+5}" y="${(parseFloat(ay)+4).toFixed(1)}" fill="#bbb" font-size="9" font-family="Arial,Helvetica,sans-serif">4-wk avg</text>`;
+    }
+    // Baseline
+    dBody+=`<line x1="${Dml}" y1="${Dbaseline}" x2="${D_W-Dmr}" y2="${Dbaseline}" stroke="#e0e0db" stroke-width="1"/>`;
+    // Bars, counts, day labels
+    for(let i=0;i<5;i++){
+      const d=s.wtdDays[i];
       const isYest=d&&d.date===s.yesterday;
-      const c=isYest?'#333':d?'#999':'#ddd';
-      return `<td width="${COL_W}" height="18" align="center" style="${f}font-size:10px;color:${c};text-align:center;padding-top:4px;">${DAY_LABELS[i]}</td>`;
-    }).join('');
+      const lc=isYest?'#444':d?'#aaa':'#d8d8d8';
+      dBody+=`<text x="${Dcx(i)}" y="${(Dbaseline+16).toFixed(1)}" text-anchor="middle" fill="${lc}" font-size="10" font-family="Arial,Helvetica,sans-serif">${DAY_LABELS[i]}</text>`;
+      if(!d||d.count===0) continue;
+      const bh=Math.max((d.count/dYMax)*Dch,2);
+      const bx=(parseFloat(Dcx(i))-DbarW/2).toFixed(1);
+      const byTop=(Dbaseline-bh).toFixed(1);
+      dBody+=`<rect x="${bx}" y="${byTop}" width="${DbarW}" height="${bh.toFixed(1)}" rx="2" fill="${isYest?'#378ADD':'#c8d6e8'}"/>`;
+      dBody+=`<text x="${Dcx(i)}" y="${(parseFloat(byTop)-5).toFixed(1)}" text-anchor="middle" fill="${isYest?'#222':'#888'}" font-size="${isYest?12:11}" font-weight="${isYest?'700':'400'}" font-family="Arial,Helvetica,sans-serif">${d.count}</text>`;
+    }
+    const dailySvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${D_W}" height="${D_H}">${dBody}</svg>`;
+    const dailyPng=await svgToDataURL(dailySvg,D_W,D_H);
 
     const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week &middot; ${s.wip} open surveys &divide; ${s.recentAvgCt.toFixed(1)}d avg cycle &middot; based on current pipeline composition`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
 
     rows+=`<tr><td style="padding:16px 24px 0;">
-      <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:6px;">COMPLETIONS THIS WEEK</div>
-      <div style="position:relative;display:inline-block;">
-        <table width="550" cellpadding="0" cellspacing="0" border="0">
-          <tr>${countRow}</tr>
-          <tr>${barRow}</tr>
-          <tr><td colspan="5" height="1" bgcolor="#e0e0db" style="font-size:0;line-height:0;background:#e0e0db;">&nbsp;</td></tr>
-          <tr>${labelRow}</tr>
-        </table>
-        ${avgBarH>0?`<div style="position:absolute;left:0;width:550px;top:${avgLineTop}px;height:0;border-top:1px dashed #c8c8c8;pointer-events:none;"></div><span style="position:absolute;right:0;top:${avgLineTop-13}px;${f}font-size:9px;color:#bbb;">4-wk avg</span>`:''}
-      </div>
-      ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:6px;">${paceText}</div>`:''}
+      <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:8px;">COMPLETIONS THIS WEEK</div>
+      ${dailyPng?`<img src="${dailyPng}" width="${D_W}" height="${D_H}" style="display:block;max-width:100%;border:0;" alt="">`:''}
+      ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:8px;">${paceText}</div>`:''}
     </td></tr>`;
   }
 
@@ -591,13 +599,15 @@ function buildEmailHTML(s, commentary, manualNote){
   rows+=`<tr><td style="background:#f8f8f8;border-top:1px solid #e8e8e8;padding:16px 24px;">
     <table cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td valign="middle" style="padding-right:14px;">
-          <img src="${DASHBOARD_URL}/sunpower.png" height="40" alt="SunPower" style="display:block;border:0;">
+        <td valign="middle" style="padding-right:16px;">
+          <img src="${DASHBOARD_URL}/sunpower.png" height="52" alt="SunPower" style="display:block;border:0;">
         </td>
         <td valign="middle">
-          <span style="display:block;${f}font-size:12px;font-weight:700;color:#222;">Doug Regehr</span>
-          <span style="display:block;${f}font-size:11px;color:#888;margin-top:2px;">Manager - Site Surveys</span>
-          <span style="display:block;${f}font-size:11px;color:#888;margin-top:1px;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="color:#888;text-decoration:none;">douglas.regehr@sunpower.com</a></span>
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="${f}font-size:13px;font-weight:700;color:#222;padding-bottom:3px;">Doug Regehr</td></tr>
+            <tr><td style="${f}font-size:11px;color:#888;padding-bottom:2px;">Manager - Site Surveys</td></tr>
+            <tr><td style="${f}font-size:11px;color:#aaa;">801-793-1861 &middot; <a href="mailto:douglas.regehr@sunpower.com" style="${f}font-size:11px;color:#aaa;text-decoration:none;">douglas.regehr@sunpower.com</a></td></tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -695,9 +705,9 @@ function renderCommentary(){
     </div>`;
 }
 
-function refreshPreview(){
+async function refreshPreview(){
   const manualNote=document.getElementById('manual-note').value;
-  const html=buildEmailHTML(stats, selectedCommentary, manualNote);
+  const html=await buildEmailHTML(stats, selectedCommentary, manualNote);
   const frame=document.getElementById('preview-frame');
   frame.srcdoc=html;
   frame.style.height='600px';
@@ -790,14 +800,14 @@ async function copyRenderedHTML(html){
 
 async function copyHTML(){
   const manualNote=document.getElementById('manual-note').value;
-  const html=buildEmailHTML(stats, selectedCommentary, manualNote);
+  const html=await buildEmailHTML(stats, selectedCommentary, manualNote);
   const rich=await copyRenderedHTML(html);
   flash(rich?'Email copied — paste into Outlook or Gmail body':'HTML source copied (browser limitation)');
 }
 
 async function openOutlook(){
   const manualNote=document.getElementById('manual-note').value;
-  const html=buildEmailHTML(stats, selectedCommentary, manualNote);
+  const html=await buildEmailHTML(stats, selectedCommentary, manualNote);
   const to=document.getElementById('to-field').value.replace(/;\s*/g,',');
   const subject=document.getElementById('subject-field').value;
   await copyRenderedHTML(html);
