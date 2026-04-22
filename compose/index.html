@@ -244,8 +244,8 @@ function computeStats(){
     const daysElapsed=yesterdayDow===0?5:yesterdayDow; // Mon=1…Fri=5, Sun=5
     const daysRemaining=Math.max(5-daysElapsed,0);
     const wip=RAW.filter(r=>r.start&&!r.complete).length;
-    const recentCts=RAW.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0)
-      .slice(-120).map(r=>r.ct_total);
+    const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
+    const recentCts=RAW.filter(r=>r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1).map(r=>r.ct_total);
     const recentAvgCt=avg(recentCts)||4;
     const dailyThroughput=recentAvgCt>0?wip/recentAvgCt:0;
     const projectedWeek=daysRemaining>0
