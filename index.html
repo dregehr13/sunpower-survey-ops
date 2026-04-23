@@ -458,7 +458,8 @@ const FIELDS = [
   // {key:'resurvey_reason',sfCol:'Resurvey Reason Category', label:'Resurvey Reason', type:'category', filterable:true,  editable:true, pending:true},
   // {key:'resurvey_attributed', sfCol:'Resurvey Attributed to', label:'Attributed To', type:'category', filterable:true, editable:true, pending:true},
   //   // ^^ Enables FPY vs Absolute FPY. Values: Sales Rep / SunPower Field / Radicl Agent / Design / Customer
-  {key:'last_comment', sfCol:'Last Reviewed Comments', label:'Last Note', type:'text', filterable:false, editable:false},
+  {key:'last_comment',   sfCol:'Last Reviewed Comments', label:'Last Note',    type:'text', filterable:false, editable:false},
+  {key:'reviewed_by',    sfCol:'Reviewed By',            label:'Reviewed By',  type:'text', filterable:false, editable:false},
   {key:'ct_s2r',  computed:true, label:'Start→Req (d)',  type:'number'},
   {key:'ct_r2s',  computed:true, label:'Req→Sched (d)',  type:'number'},
   {key:'ct_total',computed:true, label:'Total (d)',       type:'number'},
@@ -1518,6 +1519,7 @@ function renderAgingWIP(){
   // Resource column only once field is live
   const hasResource=rows.some(r=>r.resource);
   const hasNotes=rows.some(r=>r.last_comment);
+  const hasReviewedBy=rows.some(r=>r.reviewed_by);
 
   const agePill=d=>{
     if(d==null) return '<span class="pna">—</span>';
@@ -1584,6 +1586,7 @@ function renderAgingWIP(){
           <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           ${hasResource?`<th onclick="wipSortBy('resource')">Resource<span class="sarr ${arr('resource')}"></span></th>`:''}
           ${hasNotes?`<th onclick="wipSortBy('last_comment')">Last Note<span class="sarr ${arr('last_comment')}"></span></th>`:''}
+          ${hasReviewedBy?`<th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>`:''}
           <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${wip.map(r=>`<tr style="${ageRowBg(r.daysOpen)}">
@@ -1595,6 +1598,7 @@ function renderAgingWIP(){
           <td class="r">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
           ${hasResource?`<td>${esc(r.resource)||'—'}</td>`:''}
           ${hasNotes?`<td style="max-width:260px;"><span class="wip-note" title="${esc(r.last_comment)}" onclick="toggleWipNote(this)" style="cursor:pointer;color:var(--muted);font-size:11px;">${r.last_comment?(r.last_comment.length>70?esc(r.last_comment.slice(0,70))+'…':esc(r.last_comment)):'<span style="color:var(--faint);">—</span>'}</span></td>`:''}
+          ${hasReviewedBy?`<td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>`:''}
           <td class="r">${agePill(r.daysOpen)}</td>
         </tr>`).join('')}</tbody>
       </table></div>`

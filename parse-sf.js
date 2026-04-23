@@ -21,6 +21,7 @@ const FIELDS = [
   { key:'scheduled', sfCol:'Site Survey Scheduled',     type:'date' },
   { key:'complete',      sfCol:'Site Survey Complete',        type:'date' },
   { key:'last_comment',  sfCol:'Last Reviewed Comments',      type:'text' },
+  { key:'reviewed_by',   sfCol:'Reviewed By',                 type:'text' },
 ];
 
 // Parse headers
