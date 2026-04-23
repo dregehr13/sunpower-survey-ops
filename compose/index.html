@@ -346,6 +346,64 @@ function getObservations(s){
   return obs;
 }
 
+// ─── CARDS → PNG (canvas render, pixel-perfect in Outlook) ──
+// cards: [{bg,b,lc,vc,sc,sbc,label,val,sub}, ...]
+async function buildCardsImage(cards){
+  const W=552,N=4,CW=Math.floor(W/N),CH=96,dpr=2;
+  const canvas=document.createElement('canvas');
+  canvas.width=W*dpr; canvas.height=CH*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  // Layout constants (match HTML card padding)
+  const PAD_X=12,PAD_TOP=14;
+  const lY=PAD_TOP+11;        // label baseline
+  const vY=lY+7+26;           // value baseline (label + gap + font)
+  const sepY=vY+6;            // separator y
+  const sY=sepY+1+5+11;       // sub baseline
+
+  cards.forEach((c,i)=>{
+    const x=i*CW, cx=x+CW/2;
+    ctx.fillStyle=c.bg; ctx.fillRect(x,0,CW,CH);
+    ctx.save(); ctx.beginPath(); ctx.rect(x,0,CW,CH); ctx.clip();
+
+    // Label
+    ctx.fillStyle=c.lc;
+    ctx.font='11px Arial,Helvetica,sans-serif';
+    ctx.textAlign='center';
+    try{ctx.letterSpacing='0.5px';}catch(e){}
+    ctx.fillText(c.label,cx,lY);
+    try{ctx.letterSpacing='0px';}catch(e){}
+
+    // Value
+    ctx.fillStyle=c.vc;
+    ctx.font='bold 26px Arial,Helvetica,sans-serif';
+    ctx.fillText(c.val,cx,vY);
+
+    // Sub
+    ctx.fillStyle=c.sc;
+    ctx.font='11px Arial,Helvetica,sans-serif';
+    ctx.fillText(c.sub,cx,sY);
+
+    ctx.restore();
+
+    // Separator line
+    ctx.strokeStyle=c.sbc; ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x+PAD_X,sepY+0.5); ctx.lineTo(x+CW-PAD_X,sepY+0.5);
+    ctx.stroke();
+  });
+
+  // Outer border + internal dividers
+  ctx.strokeStyle='#ddd'; ctx.lineWidth=1;
+  ctx.strokeRect(0.5,0.5,W-1,CH-1);
+  for(let i=1;i<N;i++){
+    ctx.beginPath(); ctx.moveTo(i*CW+0.5,0.5); ctx.lineTo(i*CW+0.5,CH-0.5); ctx.stroke();
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
 // ─── SVG → PNG (canvas render for Outlook image embedding) ───
 async function svgToDataURL(svgStr,w,h){
   return new Promise(resolve=>{
@@ -369,21 +427,7 @@ async function buildEmailHTML(s, commentary, manualNote){
   const base=`${f}font-size:13px;color:#111;line-height:1.6;`;
   const small=`${f}font-size:11px;color:#888;line-height:1.6;`;
 
-  // Card style helpers
-  function cardCell(bg,border,extra=''){
-    return `${f}text-align:center;padding:14px 12px;background:${bg};border:1px solid ${border};${extra}`;
-  }
-  // Outlook-safe card interior: nested table so label/value/sub stack correctly
-  // (Outlook's Word engine ignores display:block on spans, collapsing them inline)
-  function mc(label,val,sub,lc='#999',vc='#111',sc='#aaa',sbc='#e8e8e8'){
-    return `<table cellpadding="0" cellspacing="0" border="0" width="100%">
-      <tr><td align="center" style="${f}font-size:11px;color:${lc};letter-spacing:.05em;white-space:nowrap;padding-bottom:7px;">${label}</td></tr>
-      <tr><td align="center" style="${f}font-size:26px;font-weight:700;line-height:1;color:${vc};padding-bottom:6px;">${val}</td></tr>
-      <tr><td align="center" style="${f}font-size:11px;color:${sc};border-top:1px solid ${sbc};padding-top:5px;">${sub}</td></tr>
-    </table>`;
-  }
-
-  // Cycle time card colors — tgt: green threshold, tgt+2: amber threshold
+  // Cycle time card colors
   function ctColors(v,tgt=3){
     if(v==null)        return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
     if(v<=tgt)         return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
@@ -401,49 +445,29 @@ async function buildEmailHTML(s, commentary, manualNote){
     <span style="${f}font-size:13px;font-weight:700;color:#111;letter-spacing:.02em;">${title}</span>
   </td></tr>`;
 
-  // ── Metric cards ────────────────────────────────────────
-  rows+=`<tr><td style="padding:20px 24px 0;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-      <tr>`;
-
+  // ── Metric cards → canvas PNG ────────────────────────────
+  let cardsData;
   if(s.mode==='monday'){
     const ct=ctColors(s.avgCycle,4);
-    const wipSub=(s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week');
-    rows+=`
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          ${mc('NEW IN',s.newIn,'week started')}
-        </td>
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          ${mc('COMPLETED',s.completedCount,'this week')}
-        </td>
-        <td style="${cardCell(ct.bg,ct.b,'width:25%;border-right:0;')}">
-          ${mc('AVG CYCLE',s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—','target: 4d'+ct.mark+(s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':''),ct.lc,ct.vc,ct.sc,ct.sbc)}
-        </td>
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;')}">
-          ${mc('WIP',s.wip,wipSub)}
-        </td>`;
+    const wipSub=s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week';
+    cardsData=[
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN',val:String(s.newIn),sub:'week started'},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED',val:String(s.completedCount),sub:'this week'},
+      {bg:ct.bg,b:ct.b,lc:ct.lc,vc:ct.vc,sc:ct.sc,sbc:ct.sbc,label:'AVG CYCLE',val:s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—',sub:'target: 4d'+ct.mark+(s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':'')},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'WIP',val:String(s.wip),sub:wipSub},
+    ];
   } else {
     const ctA=ctColors(s.avgCycleWTD,4);
     const ctM=ctColors(s.medCycleWTD,3);
-    rows+=`
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          ${mc('NEW IN WTD',s.newInWTD,s.newInYesterday+' yesterday')}
-        </td>
-        <td style="${cardCell('#f8f8f8','#e8e8e8','width:25%;border-right:0;')}">
-          ${mc('COMPLETED WTD',s.completedWTD,s.completedYesterday+' yesterday')}
-        </td>
-        <td style="${cardCell(ctA.bg,ctA.b,'width:25%;border-right:0;')}">
-          ${mc('WTD AVG CYCLE',s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—','target ≤4d'+ctA.mark,ctA.lc,ctA.vc,ctA.sc,ctA.sbc)}
-        </td>
-        <td style="${cardCell(ctM.bg,ctM.b,'width:25%;')}">
-          ${mc('WTD MED CYCLE',s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—','target ≤3d'+ctM.mark,ctM.lc,ctM.vc,ctM.sc,ctM.sbc)}
-        </td>`;
+    cardsData=[
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN WTD',val:String(s.newInWTD),sub:s.newInYesterday+' yesterday'},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED WTD',val:String(s.completedWTD),sub:s.completedYesterday+' yesterday'},
+      {bg:ctA.bg,b:ctA.b,lc:ctA.lc,vc:ctA.vc,sc:ctA.sc,sbc:ctA.sbc,label:'WTD AVG CYCLE',val:s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—',sub:'target ≤4d'+ctA.mark},
+      {bg:ctM.bg,b:ctM.b,lc:ctM.lc,vc:ctM.vc,sc:ctM.sc,sbc:ctM.sbc,label:'WTD MED CYCLE',val:s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—',sub:'target ≤3d'+ctM.mark},
+    ];
   }
-
-  rows+=`
-      </tr>
-    </table>
-  </td></tr>`;
+  const cardsPng=await buildCardsImage(cardsData);
+  if(cardsPng) rows+=`<tr><td style="padding:20px 24px 0;"><img src="${cardsPng}" width="552" style="display:block;max-width:100%;border:0;" alt=""></td></tr>`;
 
   // ── Weekly trend SVG chart (Monday only) ────────────────
   if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.some(w=>w.med!=null)){
