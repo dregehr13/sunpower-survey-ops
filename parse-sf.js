@@ -55,7 +55,7 @@ const allRows = [...content.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(m => m[
 const rows = [];
 
 allRows.slice(1).forEach((rowHtml, i) => {
-  const cells = [...rowHtml.matchAll(/<td[^>]*>(.*?)<\/td>/gi)].map(m => m[1].trim());
+  const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/\s+/g,' ').trim());
   if (!cells.length) return;
   const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null };
   FIELDS.forEach(f => {

@@ -1527,16 +1527,6 @@ function renderAgingWIP(){
   };
   const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
 
-  const criticalItems=wip.filter(r=>r.daysOpen>7);
-  const banner=criticalItems.length>0
-    ?`<div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;">${criticalItems.length} survey${criticalItems.length!==1?'s':''} critical — open &gt;7 days</div>
-        ${criticalItems.map(r=>`<div style="font-size:11px;color:#991b1b;padding:3px 0;border-top:1px solid #fca5a5;display:flex;gap:8px;align-items:baseline;">
-          <span style="font-weight:600;white-space:nowrap;">${esc(r.project)} <span style="font-weight:400;">(${Math.round(r.daysOpen)}d)</span></span>
-          ${r.last_comment?`<span style="color:#7f1d1d;font-style:italic;">${esc(r.last_comment)}</span>`:'<span style="color:#b91c1c;opacity:.5;">no note on file</span>'}
-        </div>`).join('')}
-      </div>`
-    :'';
 
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
@@ -1550,7 +1540,6 @@ function renderAgingWIP(){
   const pctOnTrack=allAges.length?Math.round(allAges.filter(d=>d<=S.targetAvg).length/allAges.length*100):null;
 
   document.getElementById('ol-content').innerHTML=`
-    ${banner}
     <div class="kg kg5" style="margin-bottom:14px;">
       <div class="kcard">
         <div class="klabel">Open WIP</div>
