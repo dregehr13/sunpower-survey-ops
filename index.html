@@ -315,7 +315,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="overview">Overview</div>
   <div class="ntab" data-page="weekly">Weekly</div>
   <div class="ntab" data-page="regions">Regions</div>
-  <div class="ntab" data-page="outliers">Aging WIP</div>
+  <div class="ntab" data-page="outliers">WIP</div>
   <div class="ntab" data-page="data">Source Data</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
@@ -458,6 +458,7 @@ const FIELDS = [
   // {key:'resurvey_reason',sfCol:'Resurvey Reason Category', label:'Resurvey Reason', type:'category', filterable:true,  editable:true, pending:true},
   // {key:'resurvey_attributed', sfCol:'Resurvey Attributed to', label:'Attributed To', type:'category', filterable:true, editable:true, pending:true},
   //   // ^^ Enables FPY vs Absolute FPY. Values: Sales Rep / SunPower Field / Radicl Agent / Design / Customer
+  {key:'last_comment', sfCol:'Last Reviewed Comments', label:'Last Note', type:'text', filterable:false, editable:false},
   {key:'ct_s2r',  computed:true, label:'Start→Req (d)',  type:'number'},
   {key:'ct_r2s',  computed:true, label:'Req→Sched (d)',  type:'number'},
   {key:'ct_total',computed:true, label:'Total (d)',       type:'number'},
@@ -841,6 +842,16 @@ function clearWipF(){
 function wipSortBy(k){
   if(wipSortKey===k) wipSortAsc=!wipSortAsc; else{wipSortKey=k;wipSortAsc=false;}
   renderAgingWIP();
+}
+function toggleWipNote(el){
+  const full=el.getAttribute('title');
+  if(!full) return;
+  const truncated=full.length>70?full.slice(0,70)+'…':full;
+  const isExpanded=el.dataset.expanded==='1';
+  el.dataset.expanded=isExpanded?'0':'1';
+  el.textContent=isExpanded?truncated:full;
+  el.style.color=isExpanded?'var(--muted)':'var(--text)';
+  el.style.whiteSpace=isExpanded?'':'pre-wrap';
 }
 
 // ═══ NAV ══════════════════════════════════════════════════
@@ -1506,6 +1517,7 @@ function renderAgingWIP(){
 
   // Resource column only once field is live
   const hasResource=rows.some(r=>r.resource);
+  const hasNotes=rows.some(r=>r.last_comment);
 
   const agePill=d=>{
     if(d==null) return '<span class="pna">—</span>';
@@ -1515,38 +1527,61 @@ function renderAgingWIP(){
   };
   const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
 
-  const banner=criticalCount>0
-    ?`<div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:13px;font-weight:700;color:var(--red);">${criticalCount} survey${criticalCount!==1?'s':''} critical</span>
-        <span style="font-size:11px;color:#991b1b;">Open &gt;7 days — action required</span>
+  const criticalItems=wip.filter(r=>r.daysOpen>7);
+  const banner=criticalItems.length>0
+    ?`<div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px;">${criticalItems.length} survey${criticalItems.length!==1?'s':''} critical — open &gt;7 days</div>
+        ${criticalItems.map(r=>`<div style="font-size:11px;color:#991b1b;padding:3px 0;border-top:1px solid #fca5a5;display:flex;gap:8px;align-items:baseline;">
+          <span style="font-weight:600;white-space:nowrap;">${esc(r.project)} <span style="font-weight:400;">(${Math.round(r.daysOpen)}d)</span></span>
+          ${r.last_comment?`<span style="color:#7f1d1d;font-style:italic;">${esc(r.last_comment)}</span>`:'<span style="color:#b91c1c;opacity:.5;">no note on file</span>'}
+        </div>`).join('')}
       </div>`
     :'';
 
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
+  // WIP age stats (all open surveys regardless of current filter)
+  const allWip=rows.filter(r=>r.start&&!r.complete).map(r=>({...r,daysOpen:dDiff(r.start,localISO(new Date()))??0}));
+  const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
+  const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
+  const sortedAges=[...allAges].sort((a,b)=>a-b);
+  const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
+  const maxAge=sortedAges.length?sortedAges[sortedAges.length-1]:null;
+  const pctOnTrack=allAges.length?Math.round(allAges.filter(d=>d<=S.targetAvg).length/allAges.length*100):null;
+
   document.getElementById('ol-content').innerHTML=`
     ${banner}
-    <div class="kg" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+    <div class="kg kg5" style="margin-bottom:14px;">
       <div class="kcard">
         <div class="klabel">Open WIP</div>
         <div class="kval">${totalWip}</div>
         <div class="ksub">All open surveys</div>
       </div>
       <div class="kcard">
-        <div class="klabel">Overdue &gt;${S.targetAvg}d</div>
-        <div class="kval ${overdueCount>0?'ka-c':''}">${overdueCount}</div>
-        <div class="ksub">${totalWip?Math.round(overdueCount/totalWip*100):0}% of open</div>
+        <div class="klabel">Avg age</div>
+        <div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div>
+        <div class="ksub">Mean days in flight</div>
       </div>
       <div class="kcard">
-        <div class="klabel">Critical &gt;7d</div>
-        <div class="kval ${criticalCount>0?'kr-c':''}">${criticalCount}</div>
-        <div class="ksub">${totalWip?Math.round(criticalCount/totalWip*100):0}% of open</div>
+        <div class="klabel">Median age</div>
+        <div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div>
+        <div class="ksub">Target: ${S.targetMedian}d</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">On track &le;${S.targetAvg}d</div>
+        <div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div>
+        <div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">Oldest</div>
+        <div class="kval ${maxAge!=null?(maxAge>7?'kr-c':maxAge>S.targetAvg?'ka-c':'kg-c'):''}">${maxAge!=null?maxAge+'d':'—'}</div>
+        <div class="ksub">Longest open survey</div>
       </div>
     </div>
     <div class="sec">
       <div class="shead">
         <div>
-          <div class="stitle">Aging WIP</div>
+          <div class="stitle">WIP Queue</div>
           <div class="ssub">All open surveys sorted by days in flight · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div>
         </div>
       </div>
@@ -1559,6 +1594,7 @@ function renderAgingWIP(){
           <th class="r" onclick="wipSortBy('start')">Started<span class="sarr ${arr('start')}"></span></th>
           <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           ${hasResource?`<th onclick="wipSortBy('resource')">Resource<span class="sarr ${arr('resource')}"></span></th>`:''}
+          ${hasNotes?`<th onclick="wipSortBy('last_comment')">Last Note<span class="sarr ${arr('last_comment')}"></span></th>`:''}
           <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${wip.map(r=>`<tr style="${ageRowBg(r.daysOpen)}">
@@ -1569,17 +1605,18 @@ function renderAgingWIP(){
           <td class="r">${r.start?fmtDateShort(r.start):'—'}</td>
           <td class="r">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
           ${hasResource?`<td>${esc(r.resource)||'—'}</td>`:''}
+          ${hasNotes?`<td style="max-width:260px;"><span class="wip-note" title="${esc(r.last_comment)}" onclick="toggleWipNote(this)" style="cursor:pointer;color:var(--muted);font-size:11px;">${r.last_comment?(r.last_comment.length>70?esc(r.last_comment.slice(0,70))+'…':esc(r.last_comment)):'<span style="color:var(--faint);">—</span>'}</span></td>`:''}
           <td class="r">${agePill(r.daysOpen)}</td>
         </tr>`).join('')}</tbody>
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div class="note">Cycle target: ${S.targetAvg}d avg (Spec 12744). Days open = Project Start Date to today. Resource and Install Type filters ready — Resource column appears once the SF field is live in the export.</div>
+      <div class="note">Cycle target: ${S.targetAvg}d avg (Spec 12744). Days open = Project Start Date to today. Click a note to expand. Resource filter and column ready — activates once the SF field is live in the export.</div>
     </div>`;
 }
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'Aging WIP'},{v:'data',l:'Source Data'}];
+  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'WIP'},{v:'data',l:'Source Data'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display

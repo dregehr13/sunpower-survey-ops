@@ -344,6 +344,24 @@ function getObservations(s){
     if(s.outlierCount>0) obs.push(`${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence. Longest: ${s.maxOutlier.toFixed(0)}d.`);
     if(s.trend==='Slipping') obs.push('3-week trend is slipping — median cycle time is moving up.');
     if(s.trend==='Improving') obs.push('3-week trend is improving — median cycle time is moving down.');
+    // Overdue WIP — include notes for AI context
+    const today=new Date(); today.setHours(12,0,0,0);
+    const todayISO=today.toISOString().slice(0,10);
+    const overdueWip=RAW.filter(r=>r.start&&!r.complete).map(r=>{
+      const [ay,am,ad]=r.start.split('-').map(Number);
+      const days=Math.round((today-new Date(ay,am-1,ad))/86400000);
+      return {...r,days};
+    }).filter(r=>r.days>4).sort((a,b)=>b.days-a.days);
+    if(overdueWip.length>0){
+      const critical=overdueWip.filter(r=>r.days>7);
+      const withNotes=overdueWip.filter(r=>r.last_comment);
+      if(critical.length>0){
+        const detail=critical.slice(0,3).map(r=>r.last_comment?`${r.project} (${r.days}d): "${r.last_comment}"`:r.project+` (${r.days}d)`).join('; ');
+        obs.push(`${critical.length} survey${critical.length!==1?'s':''} critical (>7d open). ${detail}`);
+      } else if(overdueWip.length>0){
+        obs.push(`${overdueWip.length} survey${overdueWip.length!==1?'s':''} overdue (>${4}d open). Longest: ${overdueWip[0].days}d.${overdueWip[0].last_comment?' Note: "'+overdueWip[0].last_comment+'"':''}`);
+      }
+    }
   } else {
     if(s.completedYesterday===0) obs.push('Zero completions yesterday — confirm this is correct.');
     if(s.medCycleWTD!=null&&s.medCycleWTD>6) obs.push(`WTD median cycle (${s.medCycleWTD.toFixed(1)}d) is significantly above the 3d target.`);
