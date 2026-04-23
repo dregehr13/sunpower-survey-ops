@@ -12,16 +12,24 @@ const content = readFileSync(file, 'latin1');
 
 // Must mirror the FIELDS registry in index.html
 const FIELDS = [
-  { key:'contact',   sfCol:'Primary Contact',           type:'text' },
-  { key:'project',   sfCol:'Project Name',              type:'text' },
-  { key:'region',    sfCol:'Sales Region',              type:'text' },
-  { key:'type',      sfCol:'Project Installation Type', type:'text' },
-  { key:'start',     sfCol:'Project Start Date',        type:'date' },
-  { key:'requested', sfCol:'Site Survey Requested',     type:'date' },
-  { key:'scheduled', sfCol:'Site Survey Scheduled',     type:'date' },
-  { key:'complete',      sfCol:'Site Survey Complete',        type:'date' },
-  { key:'last_comment',  sfCol:'Last Reviewed Comments',      type:'text' },
-  { key:'reviewed_by',   sfCol:'Reviewed By',                 type:'text' },
+  { key:'contact',              sfCol:'Primary Contact',                                         type:'text' },
+  { key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',               type:'text' },
+  { key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',               type:'text' },
+  { key:'project',              sfCol:'Project Name',                                            type:'text' },
+  { key:'address',              sfCol:'Installation Address',                                    type:'text' },
+  { key:'region',               sfCol:'Sales Region',                                            type:'text' },
+  { key:'type',                 sfCol:'Project Installation Type',                               type:'text' },
+  { key:'sales_rep',            sfCol:'Sales Rep Name',                                          type:'text' },
+  { key:'sales_rep_phone',      sfCol:'Project Event : Opportunity : Sales Rep Mobile Number',   type:'text' },
+  { key:'sales_rep_email',      sfCol:'Project Event : Opportunity : Sales Rep Email',           type:'text' },
+  { key:'start',                sfCol:'Project Start Date',                                      type:'date' },
+  { key:'requested',            sfCol:'Site Survey Requested',                                   type:'date' },
+  { key:'scheduled',            sfCol:'Site Survey Scheduled',                                   type:'date' },
+  { key:'complete',             sfCol:'Site Survey Complete',                                    type:'date' },
+  { key:'reviewed_by',          sfCol:'Reviewed By',                                             type:'text' },
+  { key:'last_reviewed_date',   sfCol:'Last Reviewed',                                           type:'text' },
+  { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
+  { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
 ];
 
 // Parse headers

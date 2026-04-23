@@ -156,6 +156,22 @@ tr:hover td{background:#fafaf8;}
 /* OUTLIER TABLE */
 .outlier-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);font-weight:600;margin-left:4px;}
 
+/* WIP EXPANDABLE ROWS */
+.wip-row{cursor:pointer;}
+.wip-row:hover td{background:#f5f5f0!important;}
+.wip-row-open td{background:#f0f0eb!important;}
+.wip-expand{font-size:9px;color:var(--faint);margin-right:6px;display:inline-block;transition:transform .15s;vertical-align:middle;}
+.wip-row-open .wip-expand{transform:rotate(90deg);}
+.wip-detail td{padding:0!important;border-bottom:2px solid var(--border)!important;}
+.wip-detail-inner{padding:14px 18px 16px 28px;background:#fafaf8;}
+.wip-detail-section{font-size:9px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.wip-detail-row{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.wip-detail-row:last-child{margin-bottom:0;}
+.wip-contact-name{font-size:12px;font-weight:600;color:var(--text);}
+.wip-contact-line{font-size:11px;color:var(--muted);}
+.wip-contact-line a{color:var(--blue);text-decoration:none;}
+.wip-contact-line a:hover{text-decoration:underline;}
+
 /* EXEC THEMES */
 .exec-wrap.theme-minimal .exec-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:14px;}
 .exec-wrap.theme-minimal .exec-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:2px;}
@@ -433,18 +449,27 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v6.3 · 2026-04-23';
+const VERSION = 'v6.8 · 2026-04-23';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
-  {key:'contact',       sfCol:'Primary Contact',           label:'Contact',       type:'text',     filterable:false, editable:true},
-  {key:'project',       sfCol:'Project Name',              label:'Project',       type:'text',     filterable:false, editable:true},
-  {key:'region',        sfCol:'Sales Region',              label:'Sales Region',  type:'category', filterable:true,  editable:true},
-  {key:'type',          sfCol:'Project Installation Type', label:'Install Type',  type:'category', filterable:true,  editable:true},
-  {key:'start',         sfCol:'Project Start Date',        label:'Project Start', type:'date',     filterable:true,  editable:true},
-  {key:'requested',     sfCol:'Site Survey Requested',     label:'Requested',     type:'date',     filterable:false, editable:true},
-  {key:'scheduled',     sfCol:'Site Survey Scheduled',     label:'Scheduled',     type:'date',     filterable:false, editable:true},
-  {key:'complete',      sfCol:'Site Survey Complete',      label:'Complete',      type:'date',     filterable:false, editable:true},
+  {key:'contact',              sfCol:'Primary Contact',                                           label:'Contact',          type:'text',     filterable:false, editable:true},
+  {key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',                  label:'Contact Phone',    type:'text',     filterable:false, editable:false},
+  {key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',                  label:'Contact Email',    type:'text',     filterable:false, editable:false},
+  {key:'project',              sfCol:'Project Name',                                               label:'Project',          type:'text',     filterable:false, editable:true},
+  {key:'address',              sfCol:'Installation Address',                                       label:'Address',          type:'text',     filterable:false, editable:false},
+  {key:'region',               sfCol:'Sales Region',                                               label:'Sales Region',     type:'category', filterable:true,  editable:true},
+  {key:'type',                 sfCol:'Project Installation Type',                                  label:'Install Type',     type:'category', filterable:true,  editable:true},
+  {key:'sales_rep',            sfCol:'Sales Rep Name',                                             label:'Sales Rep',        type:'text',     filterable:false, editable:false},
+  {key:'sales_rep_phone',      sfCol:'Project Event : Opportunity : Sales Rep Mobile Number',      label:'Sales Rep Phone',  type:'text',     filterable:false, editable:false},
+  {key:'sales_rep_email',      sfCol:'Project Event : Opportunity : Sales Rep Email',              label:'Sales Rep Email',  type:'text',     filterable:false, editable:false},
+  {key:'start',                sfCol:'Project Start Date',                                         label:'Project Start',    type:'date',     filterable:true,  editable:true},
+  {key:'requested',            sfCol:'Site Survey Requested',                                      label:'Requested',        type:'date',     filterable:false, editable:true},
+  {key:'scheduled',            sfCol:'Site Survey Scheduled',                                      label:'Scheduled',        type:'date',     filterable:false, editable:true},
+  {key:'complete',             sfCol:'Site Survey Complete',                                       label:'Complete',         type:'date',     filterable:false, editable:true},
+  {key:'reviewed_by',          sfCol:'Reviewed By',                                                label:'Reviewed By',      type:'text',     filterable:false, editable:false},
+  {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
+  {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
   // FUTURE — uncomment + set sfCol when active in Salesforce export:
   // {key:'resource',      sfCol:'Resource',          label:'Resource',      type:'category', filterable:true,  editable:true,
   //   pending:true, values:['Sunpower Surveyor','Sales Rep','Radicl']},
@@ -457,8 +482,7 @@ const FIELDS = [
   // {key:'resurvey_reason',sfCol:'Resurvey Reason Category', label:'Resurvey Reason', type:'category', filterable:true,  editable:true, pending:true},
   // {key:'resurvey_attributed', sfCol:'Resurvey Attributed to', label:'Attributed To', type:'category', filterable:true, editable:true, pending:true},
   //   // ^^ Enables FPY vs Absolute FPY. Values: Sales Rep / SunPower Field / Radicl Agent / Design / Customer
-  {key:'last_comment',   sfCol:'Last Reviewed Comments', label:'Last Note',    type:'text', filterable:false, editable:false},
-  {key:'reviewed_by',    sfCol:'Reviewed By',            label:'Reviewed By',  type:'text', filterable:false, editable:false},
+  {key:'last_comment',         sfCol:'Last Reviewed Comments',                                    label:'Last Note',        type:'text',     filterable:false, editable:false},
   {key:'ct_s2r',  computed:true, label:'Start→Req (d)',  type:'number'},
   {key:'ct_r2s',  computed:true, label:'Req→Sched (d)',  type:'number'},
   {key:'ct_total',computed:true, label:'Total (d)',       type:'number'},
@@ -512,7 +536,7 @@ let globalMode = true;
 let globalF = {dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
-let wipF = {region:[], resource:'all', type:'all'};
+let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
 let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 const pageF = {};
@@ -762,6 +786,7 @@ function wipFiltered(){
     if(regArr.length&&!regArr.includes(r.region)) return false;
     if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
+    if(wipF.sales_rep&&wipF.sales_rep!=='all'&&r.sales_rep!==wipF.sales_rep) return false;
     return true;
   });
 }
@@ -771,23 +796,33 @@ function buildWIPFBar(){
   const regArr=Array.isArray(wipF.region)?wipF.region:[];
   const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
 
-  // Resource — show real dropdown if field is live in data, else pending pill
+  // Install Type
+  const types=[...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
+  const typeCtrl=types.length
+    ?`<div class="fsep"></div><span class="flabel">Type</span>
+      <select onchange="onWipF('type',this.value)">
+        <option value="all">All</option>
+        ${types.map(v=>`<option value="${v}"${wipF.type===v?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>`
+    :'';
+
+  // Sales Rep
+  const salesReps=[...new Set(rows.filter(r=>r.start&&!r.complete).map(r=>r.sales_rep).filter(Boolean))].sort();
+  const salesRepCtrl=salesReps.length
+    ?`<div class="fsep"></div><span class="flabel">Sales Rep</span>
+      <select onchange="onWipF('sales_rep',this.value)">
+        <option value="all">All</option>
+        ${salesReps.map(v=>`<option value="${v}"${wipF.sales_rep===v?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>`
+    :'';
+
+  // Resource — pending until SF field is live
   const resources=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
   const resourceCtrl=resources.length
     ?`<div class="fsep"></div><span class="flabel">Resource</span>
       <select onchange="onWipF('resource',this.value)">
         <option value="all">All</option>
         ${resources.map(v=>`<option value="${v}"${wipF.resource===v?' selected':''}>${esc(v)}</option>`).join('')}
-      </select>`
-    :`<div class="fsep"></div><span class="surveyor-coming">Resource: pending export</span>`;
-
-  // Install Type
-  const types=[...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
-  const typeCtrl=types.length
-    ?`<div class="fsep"></div><span class="flabel">Install Type</span>
-      <select onchange="onWipF('type',this.value)">
-        <option value="all">All</option>
-        ${types.map(v=>`<option value="${v}"${wipF.type===v?' selected':''}>${esc(v)}</option>`).join('')}
       </select>`
     :'';
 
@@ -804,8 +839,9 @@ function buildWIPFBar(){
         </div>
       </div>
     </div>
-    ${resourceCtrl}
     ${typeCtrl}
+    ${salesRepCtrl}
+    ${resourceCtrl}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearWipF()">Reset</button>
       <span class="fhint">${wipFiltered().length} of ${totalOpen} open surveys</span>
@@ -836,22 +872,28 @@ function toggleWipRegionDrop(ev){
   if(panel) panel.classList.toggle('open',wipRgDropOpen);
 }
 function clearWipF(){
-  wipF={region:[],resource:'all',type:'all'};
+  wipF={region:[],resource:'all',type:'all',sales_rep:'all'};
   renderAgingWIP();
 }
 function wipSortBy(k){
   if(wipSortKey===k) wipSortAsc=!wipSortAsc; else{wipSortKey=k;wipSortAsc=false;}
   renderAgingWIP();
 }
-function toggleWipNote(el){
-  const full=el.getAttribute('title');
-  if(!full) return;
-  const truncated=full.length>70?full.slice(0,70)+'…':full;
-  const isExpanded=el.dataset.expanded==='1';
-  el.dataset.expanded=isExpanded?'0':'1';
-  el.textContent=isExpanded?truncated:full;
-  el.style.color=isExpanded?'var(--muted)':'var(--text)';
-  el.style.whiteSpace=isExpanded?'':'pre-wrap';
+function fmtPhone(s){
+  if(!s) return '';
+  const d=s.replace(/\D/g,'');
+  return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:s;
+}
+function fmtReviewDate(s){
+  if(!s) return '';
+  try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; }
+}
+function toggleWipRow(rowEl, id){
+  const detail=document.getElementById('wip-detail-'+id);
+  if(!detail) return;
+  const isOpen=detail.style.display!=='none';
+  detail.style.display=isOpen?'none':'';
+  rowEl.classList.toggle('wip-row-open',!isOpen);
 }
 
 // ═══ NAV ══════════════════════════════════════════════════
@@ -1495,30 +1537,29 @@ function renderRegions(){
   }
 }
 
-// ═══ AGING WIP ═══════════════════════════════════════════
+// ═══ WIP HUB ═════════════════════════════════════════════
 function renderAgingWIP(){
-  // Inject WIP-specific filter bar (bypasses global filter system)
   const fbEl=document.getElementById('fb-outliers');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
 
   const today=localISO(new Date());
-  const wip=wipFiltered().map(r=>({...r, daysOpen:dDiff(r.start,today)??0}));
+  const wip=wipFiltered().map(r=>({...r,daysOpen:dDiff(r.start,today)??0}));
 
-  // Sort
   wip.sort((a,b)=>{
     const va=a[wipSortKey]??'', vb=b[wipSortKey]??'';
     const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
     return wipSortAsc?cmp:-cmp;
   });
 
-  const totalWip=rows.filter(r=>r.start&&!r.complete).length;
-  const overdueCount=wip.filter(r=>r.daysOpen>S.targetAvg).length;
-  const criticalCount=wip.filter(r=>r.daysOpen>7).length;
-
-  // Resource column only once field is live
-  const hasResource=rows.some(r=>r.resource);
-  const hasNotes=rows.some(r=>r.last_comment);
-  const hasReviewedBy=rows.some(r=>r.reviewed_by);
+  // Stats from full unfiltered WIP
+  const allWip=rows.filter(r=>r.start&&!r.complete).map(r=>({...r,daysOpen:dDiff(r.start,today)??0}));
+  const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
+  const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
+  const sortedAges=[...allAges].sort((a,b)=>a-b);
+  const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
+  const maxAge=sortedAges.length?sortedAges[sortedAges.length-1]:null;
+  const pctOnTrack=allAges.length?Math.round(allAges.filter(d=>d<=S.targetAvg).length/allAges.length*100):null;
+  const totalWip=allWip.length;
 
   const agePill=d=>{
     if(d==null) return '<span class="pna">—</span>';
@@ -1527,82 +1568,87 @@ function renderAgingWIP(){
     return                     `<span class="pill pr">${Math.round(d)}d</span>`;
   };
   const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
-
-
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
-  // WIP age stats (all open surveys regardless of current filter)
-  const allWip=rows.filter(r=>r.start&&!r.complete).map(r=>({...r,daysOpen:dDiff(r.start,localISO(new Date()))??0}));
-  const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
-  const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
-  const sortedAges=[...allAges].sort((a,b)=>a-b);
-  const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
-  const maxAge=sortedAges.length?sortedAges[sortedAges.length-1]:null;
-  const pctOnTrack=allAges.length?Math.round(allAges.filter(d=>d<=S.targetAvg).length/allAges.length*100):null;
+  function detailCell(r){
+    const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
+    const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
+    const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
+    return `<td colspan="6" style="padding:0;">
+      <div class="wip-detail-inner">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div>
+            <div class="wip-detail-section">Contact</div>
+            <div class="wip-detail-row">
+              <span class="wip-contact-name">${esc(r.contact)||'—'}</span>
+              <span class="wip-contact-line">${ph(r.contact_phone)} &nbsp;&middot;&nbsp; ${em(r.contact_email)}</span>
+            </div>
+            <div class="wip-detail-section" style="margin-top:10px;">Sales Rep</div>
+            <div class="wip-detail-row">
+              <span class="wip-contact-name">${esc(r.sales_rep)||'—'}</span>
+              <span class="wip-contact-line">${ph(r.sales_rep_phone)} &nbsp;&middot;&nbsp; ${em(r.sales_rep_email)}</span>
+            </div>
+            ${r.address?`<div class="wip-detail-section" style="margin-top:10px;">Address</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">${esc(r.address)}</div>`:''}
+            <div style="display:flex;gap:20px;margin-top:2px;">
+              <div><div class="wip-detail-section">Started</div><div style="font-size:11px;color:var(--muted);">${r.start?fmtDate(r.start):'—'}</div></div>
+              <div><div class="wip-detail-section">Requested</div><div style="font-size:11px;color:var(--muted);">${r.requested?fmtDate(r.requested):'—'}</div></div>
+              <div><div class="wip-detail-section">Scheduled</div><div style="font-size:11px;color:var(--muted);">${r.scheduled?fmtDate(r.scheduled):'—'}</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="wip-detail-section">Last Review</div>
+            ${hasReview?`
+              <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">
+                ${r.last_reviewed_date?`<span style="color:var(--text);font-weight:500;">${fmtReviewDate(r.last_reviewed_date)}</span>`:''}
+                ${r.reviewed_by?` &nbsp;&middot;&nbsp; <strong>${esc(r.reviewed_by)}</strong>`:''}
+              </div>
+              ${r.last_reviewed_subject?`<div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:6px;">${esc(r.last_reviewed_subject)}</div>`:''}
+              ${r.last_comment?`<div style="font-size:11px;color:var(--muted);line-height:1.6;white-space:pre-wrap;">${esc(r.last_comment)}</div>`:''}
+            `:`<div style="font-size:11px;color:var(--faint);font-style:italic;">No review on file</div>`}
+          </div>
+        </div>
+      </div>
+    </td>`;
+  }
+
+  const tableRows=wip.map((r,i)=>`
+    <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
+      <td><span class="wip-expand">&#9658;</span><strong>${esc(r.project)}</strong></td>
+      <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
+      <td style="color:var(--muted);">${esc(r.type)}</td>
+      <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
+      <td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
+      <td class="r">${agePill(r.daysOpen)}</td>
+    </tr>
+    <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
+  `).join('');
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard">
-        <div class="klabel">Open WIP</div>
-        <div class="kval">${totalWip}</div>
-        <div class="ksub">All open surveys</div>
-      </div>
-      <div class="kcard">
-        <div class="klabel">Avg age</div>
-        <div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div>
-        <div class="ksub">Mean days in flight</div>
-      </div>
-      <div class="kcard">
-        <div class="klabel">Median age</div>
-        <div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div>
-        <div class="ksub">Target: ${S.targetMedian}d</div>
-      </div>
-      <div class="kcard">
-        <div class="klabel">On track &le;${S.targetAvg}d</div>
-        <div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div>
-        <div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div>
-      </div>
-      <div class="kcard">
-        <div class="klabel">Oldest</div>
-        <div class="kval ${maxAge!=null?(maxAge>7?'kr-c':maxAge>S.targetAvg?'ka-c':'kg-c'):''}">${maxAge!=null?maxAge+'d':'—'}</div>
-        <div class="ksub">Longest open survey</div>
-      </div>
+      <div class="kcard"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
+      <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days in flight</div></div>
+      <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
+      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
+      <div class="kcard"><div class="klabel">Oldest</div><div class="kval ${maxAge!=null?(maxAge>7?'kr-c':maxAge>S.targetAvg?'ka-c':'kg-c'):''}">${maxAge!=null?maxAge+'d':'—'}</div><div class="ksub">Longest open survey</div></div>
     </div>
     <div class="sec">
       <div class="shead">
-        <div>
-          <div class="stitle">WIP Queue</div>
-          <div class="ssub">All open surveys sorted by days in flight · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div>
-        </div>
+        <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div></div>
       </div>
       ${wip.length?`<div style="overflow-x:auto;"><table>
         <thead><tr>
           <th onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
-          <th onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
           <th onclick="wipSortBy('type')">Type<span class="sarr ${arr('type')}"></span></th>
-          <th class="r" onclick="wipSortBy('start')">Started<span class="sarr ${arr('start')}"></span></th>
           <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
-          ${hasResource?`<th onclick="wipSortBy('resource')">Resource<span class="sarr ${arr('resource')}"></span></th>`:''}
-          ${hasNotes?`<th onclick="wipSortBy('last_comment')">Last Note<span class="sarr ${arr('last_comment')}"></span></th>`:''}
-          ${hasReviewedBy?`<th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>`:''}
+          <th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
           <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
-        <tbody>${wip.map(r=>`<tr style="${ageRowBg(r.daysOpen)}">
-          <td><strong>${esc(r.project)}</strong></td>
-          <td>${esc(r.contact)}</td>
-          <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
-          <td>${esc(r.type)}</td>
-          <td class="r">${r.start?fmtDateShort(r.start):'—'}</td>
-          <td class="r">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
-          ${hasResource?`<td>${esc(r.resource)||'—'}</td>`:''}
-          ${hasNotes?`<td style="max-width:260px;"><span class="wip-note" title="${esc(r.last_comment)}" onclick="toggleWipNote(this)" style="cursor:pointer;color:var(--muted);font-size:11px;">${r.last_comment?(r.last_comment.length>70?esc(r.last_comment.slice(0,70))+'…':esc(r.last_comment)):'<span style="color:var(--faint);">—</span>'}</span></td>`:''}
-          ${hasReviewedBy?`<td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>`:''}
-          <td class="r">${agePill(r.daysOpen)}</td>
-        </tr>`).join('')}</tbody>
+        <tbody>${tableRows}</tbody>
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div class="note">Cycle target: ${S.targetAvg}d avg (Spec 12744). Days open = Project Start Date to today. Click a note to expand. Resource filter and column ready — activates once the SF field is live in the export.</div>
+      <div class="note">Days open = Project Start Date to today · Target: ${S.targetAvg}d avg (Spec 12744)</div>
     </div>`;
 }
 
