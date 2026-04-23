@@ -916,6 +916,20 @@ function renderExec(){
 
   const kcls=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
 
+  // Pipeline ratio: current WIP / avg completions last 3 completed weeks
+  const today=new Date(); today.setHours(12,0,0,0);
+  const prWip=rows.filter(r=>r.start&&!r.complete).length;
+  const prWeekCounts=[];
+  for(let i=1;i<=3;i++){
+    const wE=new Date(today); wE.setDate(wE.getDate()-((today.getDay()||7)-1)-7*(i-1));
+    const wS=new Date(wE); wS.setDate(wE.getDate()-6);
+    const wSiso=wS.toISOString().slice(0,10), wEiso=wE.toISOString().slice(0,10);
+    prWeekCounts.push(rows.filter(r=>r.complete>=wSiso&&r.complete<=wEiso).length);
+  }
+  const prAvgW=prWeekCounts.reduce((a,b)=>a+b,0)/3;
+  const pipelineRatio=prAvgW>0?prWip/prAvgW:null;
+  const prCls=pipelineRatio==null?'':(pipelineRatio<=1.0?'eks-good':pipelineRatio<=2.0?'eks-mid':'eks-bad');
+
   const kpis=`
     <div class="ekcard">
       <div class="eklabel">Median total cycle</div>
@@ -934,9 +948,9 @@ function renderExec(){
       <div class="ektgt">${tots.length} projects w/ data</div>
     </div>
     <div class="ekcard">
-      <div class="eklabel">Projects</div>
-      <div class="ekval">${src.length.toLocaleString()}</div>
-      <div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div>
+      <div class="eklabel">Pipeline ratio</div>
+      <div class="ekval ${prCls}">${pipelineRatio!=null?pipelineRatio.toFixed(1)+'×':'—'}</div>
+      <div class="ektgt">${prWip} open · ${prAvgW.toFixed(1)} avg/wk</div>
     </div>
     <div class="ekcard">
       <div class="eklabel">WIP</div>

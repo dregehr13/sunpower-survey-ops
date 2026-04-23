@@ -33,6 +33,7 @@ function buildPrompt(stats, mode, observations, manualNote) {
     if (stats.trend) lines.push(`3-week median trend: ${stats.trend} (rolling median: ${stats.rollingMed != null ? stats.rollingMed.toFixed(1)+'d' : 'n/a'})`);
     if (stats.weeklyTrend) lines.push(`4-week cycle trend: ${stats.weeklyTrend.map(w=>`${w.label}: ${w.med!=null?w.med.toFixed(1)+'d':'no data'} (${w.count} completions)`).join(' → ')}`);
     if (stats.onTargetPct != null) lines.push(`On target (≤4d): ${stats.onTargetPct}%`);
+    if (stats.pipelineRatio != null) lines.push(`Pipeline ratio: ${stats.pipelineRatio.toFixed(2)}× (${stats.wip} open ÷ ${stats.prAvg.toFixed(1)} avg completions/wk last 3 weeks — ratio >2 is a concern)`);
   } else {
     lines.push(`Mode: Daily recap`);
     lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} completed, ${stats.newInYesterday} new in`);

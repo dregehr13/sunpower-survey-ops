@@ -251,9 +251,20 @@ function computeStats(){
 
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
     const newIn=RAW.filter(r=>r.start>=period.from&&r.start<=period.to).length;
+
+    // Pipeline Ratio = WIP / avg completions last 3 completed weeks
+    const prWeeks=[];
+    for(let i=1;i<=3;i++){
+      const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
+      const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
+      prWeeks.push(RAW.filter(r=>r.complete>=wS&&r.complete<=wE).length);
+    }
+    const prAvg=prWeeks.reduce((a,b)=>a+b,0)/3;
+    const pipelineRatio=prAvg>0?wip/prAvg:null;
+
     return {
       mode:'monday', period, periodLabel:`${fmtShort(period.from)} – ${fmtShort(period.to)}`,
-      newIn, wip, wipChange,
+      newIn, wip, wipChange, pipelineRatio, prAvg,
       completedCount:rows.length,
       medCycle:med(cts), avgCycle:avg(cts), onTargetPct,
       outlierCount:outlierRows.length,
@@ -427,6 +438,14 @@ async function buildEmailHTML(s, commentary, manualNote){
   const base=`${f}font-size:13px;color:#111;line-height:1.6;`;
   const small=`${f}font-size:11px;color:#888;line-height:1.6;`;
 
+  // Pipeline ratio card colors (≤1.0 green, ≤2.0 amber, >2.0 red)
+  function prColors(v){
+    if(v==null)  return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8'};
+    if(v<=1.0)   return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8'};
+    if(v<=2.0)   return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
+    return        {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca'};
+  }
+
   // Cycle time card colors
   function ctColors(v,tgt=3){
     if(v==null)        return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
@@ -449,12 +468,13 @@ async function buildEmailHTML(s, commentary, manualNote){
   let cardsData;
   if(s.mode==='monday'){
     const ct=ctColors(s.avgCycle,4);
-    const wipSub=s.wipChange!=null?(s.wipChange>=0?'+':'')+s.wipChange+' vs prior wk':'end of week';
+    const pr=prColors(s.pipelineRatio);
+    const prSub=s.prAvg!=null?s.wip+' open · '+s.prAvg.toFixed(1)+' avg/wk':'';
     cardsData=[
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN',val:String(s.newIn),sub:'week started'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED',val:String(s.completedCount),sub:'this week'},
       {bg:ct.bg,b:ct.b,lc:ct.lc,vc:ct.vc,sc:ct.sc,sbc:ct.sbc,label:'AVG CYCLE',val:s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—',sub:'target: 4d'+ct.mark+(s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':'')},
-      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'WIP',val:String(s.wip),sub:wipSub},
+      {bg:pr.bg,b:pr.b,lc:pr.lc,vc:pr.vc,sc:pr.sc,sbc:pr.sbc,label:'PIPELINE',val:s.pipelineRatio!=null?s.pipelineRatio.toFixed(1)+'×':'—',sub:prSub},
     ];
   } else {
     const ctA=ctColors(s.avgCycleWTD,4);
