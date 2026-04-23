@@ -1543,10 +1543,15 @@ function renderAgingWIP(){
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
 
   const today=localISO(new Date());
-  const wip=wipFiltered().map(r=>({...r,daysOpen:dDiff(r.start,today)??0}));
+  const wip=wipFiltered().map(r=>({
+    ...r,
+    daysOpen:dDiff(r.start,today)??0,
+    last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
+  }));
 
   wip.sort((a,b)=>{
-    const va=a[wipSortKey]??'', vb=b[wipSortKey]??'';
+    const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey;
+    const va=a[sk]??'', vb=b[sk]??'';
     const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
     return wipSortAsc?cmp:-cmp;
   });
@@ -1574,7 +1579,7 @@ function renderAgingWIP(){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
-    return `<td colspan="6" style="padding:0;">
+    return `<td colspan="7" style="padding:0;">
       <div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
           <div>
@@ -1615,9 +1620,10 @@ function renderAgingWIP(){
   const tableRows=wip.map((r,i)=>`
     <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
       <td><span class="wip-expand">&#9658;</span><strong>${esc(r.project)}</strong></td>
+      <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
-      <td style="color:var(--muted);">${esc(r.type)}</td>
       <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
+      <td style="font-size:11px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
       <td class="r">${agePill(r.daysOpen)}</td>
     </tr>
@@ -1639,9 +1645,10 @@ function renderAgingWIP(){
       ${wip.length?`<div style="overflow-x:auto;"><table>
         <thead><tr>
           <th onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
+          <th onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
-          <th onclick="wipSortBy('type')">Type<span class="sarr ${arr('type')}"></span></th>
           <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
+          <th onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
           <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
