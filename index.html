@@ -316,7 +316,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="weekly">Weekly</div>
   <div class="ntab" data-page="regions">Regions</div>
   <div class="ntab" data-page="outliers">WIP</div>
-  <div class="ntab" data-page="data">Source Data</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -1609,7 +1608,7 @@ function renderAgingWIP(){
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'WIP'},{v:'data',l:'Source Data'}];
+  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'WIP'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
@@ -1622,7 +1621,10 @@ function renderSettings(){
       </svg>
       <span style="font-size:16px;font-weight:600;">Settings</span>
       <span style="font-size:11px;color:var(--faint);margin-left:4px;">All settings saved automatically to this browser</span>
-      <span style="margin-left:auto;font-size:10px;color:var(--faint);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:monospace;">${VERSION}</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <button class="fbtn" onclick="nav('data')" style="font-size:11px;">Source Data ↗</button>
+        <span style="font-size:10px;color:var(--faint);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:monospace;">${VERSION}</span>
+      </div>
     </div>
 
     <div class="settings-grid">
