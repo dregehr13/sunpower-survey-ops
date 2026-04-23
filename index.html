@@ -315,7 +315,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="overview">Overview</div>
   <div class="ntab" data-page="weekly">Weekly</div>
   <div class="ntab" data-page="regions">Regions</div>
-  <div class="ntab" data-page="outliers">Outliers</div>
+  <div class="ntab" data-page="outliers">Aging WIP</div>
   <div class="ntab" data-page="data">Source Data</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
@@ -434,7 +434,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v6.2 · 2026-04-16';
+const VERSION = 'v6.3 · 2026-04-23';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -509,6 +509,11 @@ let dataTimestamp = null;
 const PAGES = ['exec','overview','weekly','regions','outliers','data'];
 let globalMode = true;
 let globalF = {dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
+
+// ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
+let wipF = {region:[], resource:'all', type:'all'};
+let wipRgDropOpen = false;
+let wipSortKey = 'daysOpen', wipSortAsc = false;
 const pageF = {};
 PAGES.forEach(p => pageF[p] = {...globalF});
 
@@ -698,6 +703,7 @@ function onRegionClear(page,ev){
 
 function renderFBars(){
   PAGES.forEach(p=>{
+    if(p==='outliers') return; // Aging WIP manages its own filter bar via renderAgingWIP()
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -747,6 +753,96 @@ function clearF(page){
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
+// ═══ AGING WIP FILTER HELPERS ════════════════════════════
+function wipFiltered(){
+  const regArr=Array.isArray(wipF.region)?wipF.region:[];
+  return rows.filter(r=>{
+    if(!r.start||r.complete) return false;
+    if(regArr.length&&!regArr.includes(r.region)) return false;
+    if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
+    if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
+    return true;
+  });
+}
+
+function buildWIPFBar(){
+  const regions=[...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
+  const regArr=Array.isArray(wipF.region)?wipF.region:[];
+  const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
+
+  // Resource — show real dropdown if field is live in data, else pending pill
+  const resources=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
+  const resourceCtrl=resources.length
+    ?`<div class="fsep"></div><span class="flabel">Resource</span>
+      <select onchange="onWipF('resource',this.value)">
+        <option value="all">All</option>
+        ${resources.map(v=>`<option value="${v}"${wipF.resource===v?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>`
+    :`<div class="fsep"></div><span class="surveyor-coming">Resource: pending export</span>`;
+
+  // Install Type
+  const types=[...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
+  const typeCtrl=types.length
+    ?`<div class="fsep"></div><span class="flabel">Install Type</span>
+      <select onchange="onWipF('type',this.value)">
+        <option value="all">All</option>
+        ${types.map(v=>`<option value="${v}"${wipF.type===v?' selected':''}>${esc(v)}</option>`).join('')}
+      </select>`
+    :'';
+
+  const totalOpen=rows.filter(r=>r.start&&!r.complete).length;
+
+  return `<div class="fbar">
+    <div class="fgroup">
+      <span class="flabel">Region</span>
+      <div class="rgdrop">
+        <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleWipRegionDrop(event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
+        <div class="rgdrop-panel${wipRgDropOpen?' open':''}" id="wip-rgpanel">
+          ${regArr.length?`<button class="rgdrop-clear" onclick="clearWipRegion(event)">Clear selection</button>`:''}
+          ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onWipRegion('${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${resourceCtrl}
+    ${typeCtrl}
+    <div class="fgroup" style="margin-left:auto;">
+      <button class="fbtn" onclick="clearWipF()">Reset</button>
+      <span class="fhint">${wipFiltered().length} of ${totalOpen} open surveys</span>
+    </div>
+  </div>`;
+}
+
+function onWipF(key,value){
+  wipF[key]=value;
+  renderAgingWIP();
+}
+function onWipRegion(region,checked,ev){
+  ev&&ev.stopPropagation();
+  let arr=Array.isArray(wipF.region)?[...wipF.region]:[];
+  if(checked){if(!arr.includes(region))arr.push(region);}else arr=arr.filter(r=>r!==region);
+  wipF.region=arr;
+  renderAgingWIP();
+}
+function clearWipRegion(ev){
+  ev&&ev.stopPropagation();
+  wipF.region=[];
+  renderAgingWIP();
+}
+function toggleWipRegionDrop(ev){
+  ev&&ev.stopPropagation();
+  wipRgDropOpen=!wipRgDropOpen;
+  const panel=document.getElementById('wip-rgpanel');
+  if(panel) panel.classList.toggle('open',wipRgDropOpen);
+}
+function clearWipF(){
+  wipF={region:[],resource:'all',type:'all'};
+  renderAgingWIP();
+}
+function wipSortBy(k){
+  if(wipSortKey===k) wipSortAsc=!wipSortAsc; else{wipSortKey=k;wipSortAsc=false;}
+  renderAgingWIP();
+}
+
 // ═══ NAV ══════════════════════════════════════════════════
 let currentPage = 'exec';
 
@@ -772,7 +868,7 @@ function renderPage(p){
   if(p==='overview') renderOverview();
   if(p==='weekly')   renderWeekly();
   if(p==='regions')  renderRegions();
-  if(p==='outliers') renderOutliers();
+  if(p==='outliers') renderAgingWIP();
   if(p==='data')     renderEditor();
   if(p==='settings') renderSettings();
 }
@@ -1388,49 +1484,102 @@ function renderRegions(){
   }
 }
 
-// ═══ OUTLIERS ════════════════════════════════════════════
-function renderOutliers(){
-  const f=getF();
-  const fence=calcFence(f.outlierMult);
-  const outliers=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).sort((a,b)=>b.ct_total-a.ct_total);
-  const allTots=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0).sort((a,b)=>a-b);
-  const n=allTots.length;
-  const q1=allTots[Math.floor(n*.25)],q3=allTots[Math.floor(n*.75)],iqr=q3-q1;
+// ═══ AGING WIP ═══════════════════════════════════════════
+function renderAgingWIP(){
+  // Inject WIP-specific filter bar (bypasses global filter system)
+  const fbEl=document.getElementById('fb-outliers');
+  if(fbEl) fbEl.innerHTML=buildWIPFBar();
+
+  const today=localISO(new Date());
+  const wip=wipFiltered().map(r=>({...r, daysOpen:dDiff(r.start,today)??0}));
+
+  // Sort
+  wip.sort((a,b)=>{
+    const va=a[wipSortKey]??'', vb=b[wipSortKey]??'';
+    const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
+    return wipSortAsc?cmp:-cmp;
+  });
+
+  const totalWip=rows.filter(r=>r.start&&!r.complete).length;
+  const overdueCount=wip.filter(r=>r.daysOpen>S.targetAvg).length;
+  const criticalCount=wip.filter(r=>r.daysOpen>7).length;
+
+  // Resource column only once field is live
+  const hasResource=rows.some(r=>r.resource);
+
+  const agePill=d=>{
+    if(d==null) return '<span class="pna">—</span>';
+    if(d<=S.targetAvg) return `<span class="pill pg">${Math.round(d)}d</span>`;
+    if(d<=7)           return `<span class="pill pam">${Math.round(d)}d</span>`;
+    return                     `<span class="pill pr">${Math.round(d)}d</span>`;
+  };
+  const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
+
+  const banner=criticalCount>0
+    ?`<div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--red);">${criticalCount} survey${criticalCount!==1?'s':''} critical</span>
+        <span style="font-size:11px;color:#991b1b;">Open &gt;7 days — action required</span>
+      </div>`
+    :'';
+
+  const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
   document.getElementById('ol-content').innerHTML=`
-    <div class="kg kg4">
-      <div class="kcard"><div class="klabel">Fence</div><div class="kval">${fence.toFixed(1)}d</div><div class="ksub">Q3 + ${f.outlierMult.toFixed(1)}× IQR</div></div>
-      <div class="kcard"><div class="klabel">Outlier count</div><div class="kval kr-c">${outliers.length}</div><div class="ksub">${n?Math.round(outliers.length/n*100):0}% of all projects</div></div>
-      <div class="kcard"><div class="klabel">IQR</div><div class="kval">${iqr.toFixed(1)}d</div><div class="ksub">Q1=${q1}d · Q3=${q3}d</div></div>
-      <div class="kcard"><div class="klabel">Max observed</div><div class="kval">${allTots.length?allTots[allTots.length-1]+'d':'—'}</div><div class="ksub">Longest project</div></div>
+    ${banner}
+    <div class="kg" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+      <div class="kcard">
+        <div class="klabel">Open WIP</div>
+        <div class="kval">${totalWip}</div>
+        <div class="ksub">All open surveys</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">Overdue &gt;${S.targetAvg}d</div>
+        <div class="kval ${overdueCount>0?'ka-c':''}">${overdueCount}</div>
+        <div class="ksub">${totalWip?Math.round(overdueCount/totalWip*100):0}% of open</div>
+      </div>
+      <div class="kcard">
+        <div class="klabel">Critical &gt;7d</div>
+        <div class="kval ${criticalCount>0?'kr-c':''}">${criticalCount}</div>
+        <div class="ksub">${totalWip?Math.round(criticalCount/totalWip*100):0}% of open</div>
+      </div>
     </div>
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">Outlier projects</div><div class="ssub">All projects exceeding ${fence.toFixed(1)}d (${f.outlierMult.toFixed(1)}×IQR) · Adjust multiplier in filter bar</div></div>
+        <div>
+          <div class="stitle">Aging WIP</div>
+          <div class="ssub">All open surveys sorted by days in flight · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div>
+        </div>
       </div>
-      ${outliers.length?`<div style="overflow-x:auto;"><table>
+      ${wip.length?`<div style="overflow-x:auto;"><table>
         <thead><tr>
-          <th>Project</th><th>Contact</th><th>Region</th><th>Type</th>
-          <th class="r">Start</th><th class="r">Complete</th><th class="r">Total</th>
+          <th onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
+          <th onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
+          <th onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
+          <th onclick="wipSortBy('type')">Type<span class="sarr ${arr('type')}"></span></th>
+          <th class="r" onclick="wipSortBy('start')">Started<span class="sarr ${arr('start')}"></span></th>
+          <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
+          ${hasResource?`<th onclick="wipSortBy('resource')">Resource<span class="sarr ${arr('resource')}"></span></th>`:''}
+          <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
-        <tbody>${outliers.map(r=>`<tr>
-          <td><strong>${esc(r.project)}</strong><span class="outlier-tag">${r.ct_total.toFixed(0)}d</span></td>
+        <tbody>${wip.map(r=>`<tr style="${ageRowBg(r.daysOpen)}">
+          <td><strong>${esc(r.project)}</strong></td>
           <td>${esc(r.contact)}</td>
           <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
           <td>${esc(r.type)}</td>
-          <td class="r">${r.start||'—'}</td>
-          <td class="r">${r.complete||'—'}</td>
-          <td class="r"><span class="pill pr">${r.ct_total.toFixed(1)}d</span></td>
+          <td class="r">${r.start?fmtDateShort(r.start):'—'}</td>
+          <td class="r">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
+          ${hasResource?`<td>${esc(r.resource)||'—'}</td>`:''}
+          <td class="r">${agePill(r.daysOpen)}</td>
         </tr>`).join('')}</tbody>
       </table></div>`
-      :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No outliers at the current fence setting.</div>'}
-      <div class="note">Outlier removal (filter bar checkbox) excludes these projects from all averages and KPIs. IQR = interquartile range. Lower multiplier = more aggressive exclusion.</div>
+      :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
+      <div class="note">Cycle target: ${S.targetAvg}d avg (Spec 12744). Days open = Project Start Date to today. Resource and Install Type filters ready — Resource column appears once the SF field is live in the export.</div>
     </div>`;
 }
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'Outliers'},{v:'data',l:'Source Data'}];
+  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'Aging WIP'},{v:'data',l:'Source Data'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
@@ -1804,8 +1953,11 @@ function goSF(){
 document.addEventListener('click',function(e){
   if(rgDropOpenPage!==null&&!e.target.closest('.rgdrop')){
     rgDropOpenPage=null;
-    // Hide all open panels without full rebuild
     PAGES.forEach(p=>{const el=document.querySelector('#fb-'+p+' .rgdrop-panel');if(el)el.classList.remove('open');});
+  }
+  if(wipRgDropOpen&&!e.target.closest('.rgdrop')){
+    wipRgDropOpen=false;
+    const el=document.getElementById('wip-rgpanel');if(el)el.classList.remove('open');
   }
 });
 
