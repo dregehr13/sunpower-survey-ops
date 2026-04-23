@@ -377,9 +377,9 @@ async function buildEmailHTML(s, commentary, manualNote){
   // (Outlook's Word engine ignores display:block on spans, collapsing them inline)
   function mc(label,val,sub,lc='#999',vc='#111',sc='#aaa',sbc='#e8e8e8'){
     return `<table cellpadding="0" cellspacing="0" border="0" width="100%">
-      <tr><td align="center" style="${f}font-size:10px;color:${lc};letter-spacing:.07em;padding-bottom:6px;">${label}</td></tr>
-      <tr><td align="center" style="${f}font-size:26px;font-weight:700;line-height:1;color:${vc};padding-bottom:5px;">${val}</td></tr>
-      <tr><td align="center" style="${f}font-size:10px;color:${sc};border-top:1px solid ${sbc};padding-top:5px;">${sub}</td></tr>
+      <tr><td align="center" style="${f}font-size:11px;color:${lc};letter-spacing:.05em;white-space:nowrap;padding-bottom:7px;">${label}</td></tr>
+      <tr><td align="center" style="${f}font-size:32px;font-weight:700;line-height:1;color:${vc};padding-bottom:6px;">${val}</td></tr>
+      <tr><td align="center" style="${f}font-size:11px;color:${sc};border-top:1px solid ${sbc};padding-top:5px;">${sub}</td></tr>
     </table>`;
   }
 
@@ -433,10 +433,10 @@ async function buildEmailHTML(s, commentary, manualNote){
           ${mc('COMPLETED WTD',s.completedWTD,s.completedYesterday+' yesterday')}
         </td>
         <td style="${cardCell(ctA.bg,ctA.b,'width:25%;border-right:0;')}">
-          ${mc('WTD AVG CYCLE',s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—','target: 4d'+ctA.mark,ctA.lc,ctA.vc,ctA.sc,ctA.sbc)}
+          ${mc('WTD AVG CYCLE',s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—','target ≤4d'+ctA.mark,ctA.lc,ctA.vc,ctA.sc,ctA.sbc)}
         </td>
         <td style="${cardCell(ctM.bg,ctM.b,'width:25%;')}">
-          ${mc('WTD MEDIAN CYCLE',s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—','target: 3d'+ctM.mark,ctM.lc,ctM.vc,ctM.sc,ctM.sbc)}
+          ${mc('WTD MED CYCLE',s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—','target ≤3d'+ctM.mark,ctM.lc,ctM.vc,ctM.sc,ctM.sbc)}
         </td>`;
   }
 
@@ -545,7 +545,7 @@ async function buildEmailHTML(s, commentary, manualNote){
     const D_W=552,D_H=120,Dml=12,Dmr=54,Dmt=22,Dmb=26;
     const Dcw=D_W-Dml-Dmr, Dch=D_H-Dmt-Dmb;
     const maxCount=Math.max(...s.wtdDays.map(d=>d.count),0);
-    const dYMax=Math.max(Math.ceil(maxCount*1.3/5)*5,10);
+    const dYMax=Math.max(Math.ceil(maxCount*1.3/5)*5,Math.ceil((s.histDailyAvg||0)*1.3/5)*5,10);
     const Dbaseline=Dmt+Dch;
     const DcolW=Dcw/5, DbarW=Math.floor(DcolW*0.54);
     const Dcx=i=>(Dml+(i+0.5)*DcolW).toFixed(1);
@@ -785,7 +785,7 @@ function clearCommentary(){
 }
 
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function escAttr(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
+function escAttr(s){ return s.replace(/\\/g,'\\\\').replace(/"/g,'&quot;').replace(/'/g,"\\'").replace(/\n/g,' '); }
 
 // ─── SEND ACTIONS ─────────────────────────────────────────
 async function copyRenderedHTML(html){
