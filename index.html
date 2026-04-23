@@ -160,17 +160,30 @@ tr:hover td{background:#fafaf8;}
 .wip-row{cursor:pointer;}
 .wip-row:hover td{background:#f5f5f0!important;}
 .wip-row-open td{background:#f0f0eb!important;}
-.wip-expand{font-size:9px;color:var(--faint);margin-right:6px;display:inline-block;transition:transform .15s;vertical-align:middle;}
+.wip-expand{font-size:9px;color:var(--faint);margin-right:7px;display:inline-block;transition:transform .15s;vertical-align:middle;}
 .wip-row-open .wip-expand{transform:rotate(90deg);}
 .wip-detail td{padding:0!important;border-bottom:2px solid var(--border)!important;}
-.wip-detail-inner{padding:14px 18px 16px 28px;background:#fafaf8;}
-.wip-detail-section{font-size:9px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
-.wip-detail-row{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
-.wip-detail-row:last-child{margin-bottom:0;}
-.wip-contact-name{font-size:12px;font-weight:600;color:var(--text);}
-.wip-contact-line{font-size:11px;color:var(--muted);}
-.wip-contact-line a{color:var(--blue);text-decoration:none;}
-.wip-contact-line a:hover{text-decoration:underline;}
+.wip-detail-inner{padding:12px 16px 14px 16px;background:#f5f5f2;}
+.wip-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;gap:0;}
+.wip-panel-label{font-size:9px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;}
+.wip-person-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.wip-person-row{font-size:11px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.wip-person-row:last-child{margin-bottom:0;}
+.wip-person-row a{color:var(--blue);text-decoration:none;}
+.wip-person-row a:hover{text-decoration:underline;}
+.wip-person-icon{font-size:10px;color:var(--faint);flex-shrink:0;width:12px;text-align:center;}
+.wip-address{font-size:10px;color:var(--faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5;}
+.wip-dates{display:flex;gap:0;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
+.wip-date-item{flex:1;text-align:center;}
+.wip-date-item+.wip-date-item{border-left:1px solid var(--border);}
+.wip-date-label{font-size:9px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
+.wip-date-val{font-size:11px;color:var(--muted);font-weight:500;}
+.wip-review-meta{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+.wip-review-date{font-size:12px;font-weight:600;color:var(--text);}
+.wip-review-by{font-size:11px;color:var(--muted);}
+.wip-review-subject{font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.wip-review-note{font-size:11px;color:var(--muted);line-height:1.7;white-space:pre-wrap;margin:0;}
+.wip-no-review{font-size:11px;color:var(--faint);font-style:italic;}
 
 /* EXEC THEMES */
 .exec-wrap.theme-minimal .exec-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:14px;}
@@ -1581,37 +1594,47 @@ function renderAgingWIP(){
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
     return `<td colspan="7" style="padding:0;">
       <div class="wip-detail-inner">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-          <div>
-            <div class="wip-detail-section">Contact</div>
-            <div class="wip-detail-row">
-              <span class="wip-contact-name">${esc(r.contact)||'—'}</span>
-              <span class="wip-contact-line">${ph(r.contact_phone)} &nbsp;&middot;&nbsp; ${em(r.contact_email)}</span>
-            </div>
-            <div class="wip-detail-section" style="margin-top:10px;">Sales Rep</div>
-            <div class="wip-detail-row">
-              <span class="wip-contact-name">${esc(r.sales_rep)||'—'}</span>
-              <span class="wip-contact-line">${ph(r.sales_rep_phone)} &nbsp;&middot;&nbsp; ${em(r.sales_rep_email)}</span>
-            </div>
-            ${r.address?`<div class="wip-detail-section" style="margin-top:10px;">Address</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">${esc(r.address)}</div>`:''}
-            <div style="display:flex;gap:20px;margin-top:2px;">
-              <div><div class="wip-detail-section">Started</div><div style="font-size:11px;color:var(--muted);">${r.start?fmtDate(r.start):'—'}</div></div>
-              <div><div class="wip-detail-section">Requested</div><div style="font-size:11px;color:var(--muted);">${r.requested?fmtDate(r.requested):'—'}</div></div>
-              <div><div class="wip-detail-section">Scheduled</div><div style="font-size:11px;color:var(--muted);">${r.scheduled?fmtDate(r.scheduled):'—'}</div></div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
+
+          <div class="wip-panel">
+            <div class="wip-panel-label">Customer</div>
+            <div class="wip-person-name">${esc(r.contact)||'—'}</div>
+            <div class="wip-person-row"><span class="wip-person-icon">&#9990;</span>${ph(r.contact_phone)}</div>
+            <div class="wip-person-row"><span class="wip-person-icon">&#9993;</span>${em(r.contact_email)}</div>
+            ${r.address?`<div class="wip-address">${esc(r.address)}</div>`:''}
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+              <div class="wip-panel-label" style="margin-bottom:6px;">Sales Rep</div>
+              <div class="wip-person-name">${esc(r.sales_rep)||'—'}</div>
+              <div class="wip-person-row"><span class="wip-person-icon">&#9990;</span>${ph(r.sales_rep_phone)}</div>
+              <div class="wip-person-row"><span class="wip-person-icon">&#9993;</span>${em(r.sales_rep_email)}</div>
             </div>
           </div>
-          <div>
-            <div class="wip-detail-section">Last Review</div>
+
+          <div class="wip-panel">
+            <div class="wip-panel-label">Account</div>
+            <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;">
+              <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">Started</span><span class="wip-date-val">${r.start?fmtDateShort(r.start):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">Requested</span><span class="wip-date-val">${r.requested?fmtDateShort(r.requested):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">Scheduled</span><span class="wip-date-val">${r.scheduled?fmtDateShort(r.scheduled):'—'}</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
+              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:11px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
+              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Type</span><span style="font-size:11px;color:var(--muted);">${esc(r.type)||'—'}</span></div>
+            </div>
+          </div>
+
+          <div class="wip-panel">
+            <div class="wip-panel-label">Last Review</div>
             ${hasReview?`
-              <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">
-                ${r.last_reviewed_date?`<span style="color:var(--text);font-weight:500;">${fmtReviewDate(r.last_reviewed_date)}</span>`:''}
-                ${r.reviewed_by?` &nbsp;&middot;&nbsp; <strong>${esc(r.reviewed_by)}</strong>`:''}
+              <div class="wip-review-meta">
+                ${r.last_reviewed_date?`<span class="wip-review-date">${fmtReviewDate(r.last_reviewed_date)}</span>`:''}
+                ${r.reviewed_by?`<span class="wip-review-by">by ${esc(r.reviewed_by)}</span>`:''}
               </div>
-              ${r.last_reviewed_subject?`<div style="font-size:11px;font-weight:500;color:var(--text);margin-bottom:6px;">${esc(r.last_reviewed_subject)}</div>`:''}
-              ${r.last_comment?`<div style="font-size:11px;color:var(--muted);line-height:1.6;white-space:pre-wrap;">${esc(r.last_comment)}</div>`:''}
-            `:`<div style="font-size:11px;color:var(--faint);font-style:italic;">No review on file</div>`}
+              ${r.last_reviewed_subject?`<div class="wip-review-subject">${esc(r.last_reviewed_subject)}</div>`:''}
+              ${r.last_comment?`<p class="wip-review-note">${esc(r.last_comment)}</p>`:''}
+            `:`<div class="wip-no-review">No review on file</div>`}
           </div>
+
         </div>
       </div>
     </td>`;
