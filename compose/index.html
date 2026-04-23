@@ -438,12 +438,11 @@ async function buildEmailHTML(s, commentary, manualNote){
   const base=`${f}font-size:13px;color:#111;line-height:1.6;`;
   const small=`${f}font-size:11px;color:#888;line-height:1.6;`;
 
-  // Pipeline ratio card colors (≤1.0 green, ≤2.0 amber, >2.0 red)
+  // Pipeline ratio card colors (≤1.0 green, >1.0 amber)
   function prColors(v){
     if(v==null)  return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8'};
     if(v<=1.0)   return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8'};
-    if(v<=2.0)   return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
-    return        {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca'};
+    return        {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
   }
 
   // Cycle time card colors
@@ -716,6 +715,7 @@ function renderStats(){
       <div class="stat-row"><span class="stat-label">New In</span><span class="stat-val">${stats.newIn}</span></div>
       <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-val">${stats.completedCount}</span></div>
       <div class="stat-row"><span class="stat-label">WIP (end of week)</span><span class="stat-val">${stats.wip}${stats.wipChange!=null?' ('+(stats.wipChange>=0?'+':'')+stats.wipChange+' vs prior wk)':''}</span></div>
+      ${stats.pipelineRatio!=null?`<div class="stat-row"><span class="stat-label">Pipeline ratio</span><span class="stat-val ${stats.pipelineRatio<=1?'good':'warn'}">${stats.pipelineRatio.toFixed(2)}× (${stats.prAvg.toFixed(1)} avg/wk)</span></div>`:''}
       <div class="stat-row"><span class="stat-label">Median cycle</span><span class="stat-val ${ctClass}">${ct!=null?ct.toFixed(1)+'d':'—'}</span></div>
       ${stats.outlierCount>0?`<div class="stat-row"><span class="stat-label">Outliers above fence</span><span class="stat-val warn">${stats.outlierCount} (max ${stats.maxOutlier.toFixed(0)}d)</span></div>`:''}
       <div class="stat-row"><span class="stat-label">3-wk trend</span><span class="stat-val ${stats.trend==='Improving'?'good':stats.trend==='Slipping'?'bad':''}">${stats.trend||'—'}</span></div>

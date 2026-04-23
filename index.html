@@ -928,7 +928,7 @@ function renderExec(){
   }
   const prAvgW=prWeekCounts.reduce((a,b)=>a+b,0)/3;
   const pipelineRatio=prAvgW>0?prWip/prAvgW:null;
-  const prCls=pipelineRatio==null?'':(pipelineRatio<=1.0?'eks-good':pipelineRatio<=2.0?'eks-mid':'eks-bad');
+  const prCls=pipelineRatio==null?'':(pipelineRatio<=1.0?'eks-good':'eks-mid');
 
   const kpis=`
     <div class="ekcard">
