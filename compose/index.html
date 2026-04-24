@@ -191,7 +191,7 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Only In Progress projects count in all metrics
-const ROWS = ROWS.filter(r => !r.project_status || r.project_status === 'In Progress');
+const ROWS = RAW.filter(r => !r.project_status || r.project_status === 'In Progress');
 
 // ─── STATS HELPERS ────────────────────────────────────────
 function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
