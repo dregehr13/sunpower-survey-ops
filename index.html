@@ -540,7 +540,7 @@ function setSetting(key, value){
 }
 
 
-let rows = JSON.parse(JSON.stringify(RAW));
+let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>!r.project_status||r.project_status==='In Progress');
 let filtered = [];
 let dataTimestamp = null;
 
@@ -1594,7 +1594,7 @@ function renderAgingWIP(){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
-    return `<td colspan="7" style="padding:0;">
+    return `<td colspan="8" style="padding:0;">
       <div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
 
@@ -1647,6 +1647,7 @@ function renderAgingWIP(){
       <td><span class="wip-expand">&#9658;</span><strong>${esc(r.project)}</strong></td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
+      <td style="font-size:11px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
       <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
       <td style="font-size:11px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
@@ -1672,6 +1673,7 @@ function renderAgingWIP(){
           <th onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
+          <th onclick="wipSortBy('project_status')">Status<span class="sarr ${arr('project_status')}"></span></th>
           <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
