@@ -359,10 +359,13 @@ function getObservations(s){
       const critical=overdueWip.filter(r=>r.days>7);
       const withNotes=overdueWip.filter(r=>r.last_comment);
       if(critical.length>0){
-        const detail=critical.slice(0,3).map(r=>r.last_comment?`${r.project} (${r.days}d): "${r.last_comment}"`:r.project+` (${r.days}d)`).join('; ');
+        const truncNote=n=>n.length>80?n.slice(0,77)+'…':n;
+        const detail=critical.slice(0,3).map(r=>r.last_comment?`${r.project} (${r.days}d): "${truncNote(r.last_comment)}"`:r.project+` (${r.days}d)`).join('; ');
         obs.push(`${critical.length} survey${critical.length!==1?'s':''} critical (>7d open). ${detail}`);
       } else if(overdueWip.length>0){
-        obs.push(`${overdueWip.length} survey${overdueWip.length!==1?'s':''} overdue (>${4}d open). Longest: ${overdueWip[0].days}d.${overdueWip[0].last_comment?' Note: "'+overdueWip[0].last_comment+'"':''}`);
+        const lon=overdueWip[0];
+        const lonNote=lon.last_comment?(lon.last_comment.length>80?lon.last_comment.slice(0,77)+'…':lon.last_comment):'';
+        obs.push(`${overdueWip.length} survey${overdueWip.length!==1?'s':''} overdue (>${4}d open). Longest: ${lon.days}d.${lonNote?' Note: "'+lonNote+'"':''}`);
       }
     }
   } else {
