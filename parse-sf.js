@@ -12,6 +12,7 @@ const content = readFileSync(file, 'latin1');
 
 // Must mirror the FIELDS registry in index.html
 const FIELDS = [
+  { key:'project_status',       sfCol:'Project Status',                                          type:'text' },
   { key:'contact',              sfCol:'Primary Contact',                                         type:'text' },
   { key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',               type:'text' },
   { key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',               type:'text' },

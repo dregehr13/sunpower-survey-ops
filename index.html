@@ -466,6 +466,7 @@ const VERSION = 'v6.8 · 2026-04-23';
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
+  {key:'project_status',       sfCol:'Project Status',                                            label:'Project Status',   type:'text',     filterable:false, editable:false},
   {key:'contact',              sfCol:'Primary Contact',                                           label:'Contact',          type:'text',     filterable:false, editable:true},
   {key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',                  label:'Contact Phone',    type:'text',     filterable:false, editable:false},
   {key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',                  label:'Contact Email',    type:'text',     filterable:false, editable:false},
@@ -796,6 +797,7 @@ function wipFiltered(){
   const regArr=Array.isArray(wipF.region)?wipF.region:[];
   return rows.filter(r=>{
     if(!r.start||r.complete) return false;
+    if(r.project_status&&r.project_status!=='In Progress') return false;
     if(regArr.length&&!regArr.includes(r.region)) return false;
     if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
