@@ -484,10 +484,8 @@ const FIELDS = [
   {key:'reviewed_by',          sfCol:'Reviewed By',                                                label:'Reviewed By',      type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
+  {key:'resource',      sfCol:'Site Survey Resource', label:'Resource',      type:'category', filterable:true,  editable:true},
   // FUTURE — uncomment + set sfCol when active in Salesforce export:
-  // {key:'resource',      sfCol:'Resource',          label:'Resource',      type:'category', filterable:true,  editable:true,
-  //   pending:true, values:['Sunpower Surveyor','Sales Rep','Radicl']},
-  //   // ^^ SF field name is 'Resource'. Values: Sunpower Surveyor / Sales Rep / Radicl (per SF ticket doc).
   //   // David's Albatross report used 'SST' (Site Survey Team) and 'Rep' — these will map to 'Sunpower Surveyor' and 'Sales Rep' once the SF field is live.
   // {key:'surveyor_name', sfCol:'Assigned To',       label:'Assigned To',   type:'text',     filterable:false, editable:true},
   // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true,
@@ -1534,15 +1532,15 @@ function renderRegions(){
   });
 
   if(hasSurveyor){
-    const types=[...new Set(rows.map(r=>r.surveyor_type).filter(Boolean))];
-    const typeColors={'Ambia Solar':'#378ADD','Sales Rep':'#1D9E75','Radicl':'#BA7517','Install Partner':'#8b5cf6'};
+    const types=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
+    const typeColors={'Ambia Solar':'#378ADD','Sales Rep':'#1D9E75','Radicl':'#BA7517','Install Partner':'#8b5cf6','Sunpower Surveyor':'#378ADD'};
     const rStats=regionStats(filtered).slice(0,12);
     dc('rg-sv');
     CH['rg-sv']=new Chart(document.getElementById('rg-sv'),{
       type:'bar',
       data:{labels:rStats.map(r=>r.region),datasets:types.map(t=>({
         label:t,
-        data:rStats.map(rr=>filtered.filter(r=>r.region===rr.region&&r.surveyor_type===t).length),
+        data:rStats.map(rr=>filtered.filter(r=>r.region===rr.region&&r.resource===t).length),
         backgroundColor:typeColors[t]||'#999',borderRadius:3,stack:'s'
       }))},
       options:{responsive:true,maintainAspectRatio:false,
@@ -1693,7 +1691,7 @@ function renderSettings(){
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
-  const pendingList = ['resource','surveyor_name','survey_type','resurvey_reason','resurvey_attributed'];
+  const pendingList = ['surveyor_name','survey_type','resurvey_reason','resurvey_attributed'];
 
   document.getElementById('settings-content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
