@@ -1161,12 +1161,18 @@ function renderThisWeek(){
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
   const dayCounts=dayDates.map(date=>rows.filter(r=>r.complete===date).length);
+  const schedCounts=dayDates.map(date=>rows.filter(r=>r.scheduled===date).length);
   const todayIdx=dayDates.indexOf(today);
 
   document.getElementById('week-inner').innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · past green, today blue, future dim</div></div></div>
-      <div class="cw" style="height:120px;"><canvas id="tw-daily"></canvas></div>
+      <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · past green, today blue, future dim</div></div>
+        <div class="leg" style="margin-top:4px;">
+          <span class="li"><span class="ld" style="background:#1D9E75;"></span>Completed</span>
+          <span class="li"><span class="ldash" style="background:#f59e0b;"></span>Scheduled</span>
+        </div>
+      </div>
+      <div class="cw" style="height:140px;"><canvas id="tw-daily"></canvas></div>
     </div>
     ${atRisk.length?`
     <div class="sec">
@@ -1202,12 +1208,26 @@ function renderThisWeek(){
   dc('tw-daily');
   CH['tw-daily']=new Chart(document.getElementById('tw-daily'),{
     type:'bar',
-    data:{labels:dayNames,datasets:[{
-      data:dayCounts,
-      backgroundColor:dayNames.map((_,i)=>i===todayIdx?'#2563eb':i<todayIdx?'#1D9E75':'rgba(0,0,0,.07)'),
-      borderRadius:4
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    data:{labels:dayNames,datasets:[
+      {label:'Completed',
+       data:dayCounts,
+       backgroundColor:dayNames.map((_,i)=>i===todayIdx?'#2563eb':i<todayIdx?'#1D9E75':'rgba(0,0,0,.07)'),
+       borderRadius:4,
+       order:2},
+      {label:'Scheduled',
+       data:schedCounts,
+       type:'line',
+       borderColor:'#f59e0b',
+       backgroundColor:'transparent',
+       borderWidth:2,
+       borderDash:[4,3],
+       pointRadius:4,
+       pointBackgroundColor:'#f59e0b',
+       tension:.3,
+       order:1},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
       scales:{x:{grid:{display:false},ticks:{color:'#888',font:{size:11}}},
               y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
   });
