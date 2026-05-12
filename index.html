@@ -1395,10 +1395,10 @@ function renderTrends(){
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
         <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div style="position:relative;">
-        <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
+      <div style="display:flex;align-items:stretch;position:relative;">
         <div style="position:absolute;left:0;top:0;width:60px;height:260px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-inout-yL" width="60" height="260"></canvas></div>
-        <div style="position:absolute;right:0;top:0;width:55px;height:260px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-inout-yR" width="55" height="260"></canvas></div>
+        <div id="tr-inout-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
+        <div style="flex-shrink:0;width:55px;height:260px;background:var(--surface,#fff);"><canvas id="tr-inout-yR" width="55" height="260"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1408,10 +1408,10 @@ function renderTrends(){
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
         <span class="li" style="color:#8b5cf6;"><span class="ld" style="background:#8b5cf6;"></span>On target %</span>
       </div>
-      <div style="position:relative;">
-        <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
+      <div style="display:flex;align-items:stretch;position:relative;">
         <div style="position:absolute;left:0;top:0;width:60px;height:290px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-wf-yL" width="60" height="290"></canvas></div>
-        <div style="position:absolute;right:0;top:0;width:55px;height:290px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-wf-yR" width="55" height="290"></canvas></div>
+        <div id="tr-wf-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
+        <div style="flex-shrink:0;width:55px;height:290px;background:var(--surface,#fff);"><canvas id="tr-wf-yR" width="55" height="290"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1422,10 +1422,10 @@ function renderTrends(){
         <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
       </div>
-      <div style="position:relative;">
-        <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
+      <div style="display:flex;align-items:stretch;position:relative;">
         <div style="position:absolute;left:0;top:0;width:60px;height:230px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-vol-yL" width="60" height="230"></canvas></div>
-        <div style="position:absolute;right:0;top:0;width:55px;height:230px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-vol-yR" width="55" height="230"></canvas></div>
+        <div id="tr-vol-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
+        <div style="flex-shrink:0;width:55px;height:230px;background:var(--surface,#fff);"><canvas id="tr-vol-yR" width="55" height="230"></canvas></div>
       </div>
     </div>
     <div class="sec">
