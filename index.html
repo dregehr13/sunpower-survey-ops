@@ -1534,7 +1534,7 @@ function renderRegions(){
 
   if(hasSurveyor){
     const types=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
-    const typeColors={'Ambia Solar':'#378ADD','Sales Rep':'#1D9E75','Radicl':'#BA7517','Install Partner':'#8b5cf6','Sunpower Surveyor':'#378ADD'};
+    const typeColors={'SunPower Surveyor':'#60a5fa','Sales Rep':'#fbbf24','Radicl Services':'#a78bfa','Install Partner':'#34d399'};
     const rStats=regionStats(filtered).slice(0,12);
     dc('rg-sv');
     CH['rg-sv']=new Chart(document.getElementById('rg-sv'),{
@@ -1927,7 +1927,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=parsed; changedIds.clear();
+    rows=parsed; rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
