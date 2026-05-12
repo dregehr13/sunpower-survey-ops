@@ -926,6 +926,7 @@ function nav(page){
   const sb=document.getElementById('settings-btn');
   if(sb) sb.classList.toggle('active', page==='settings');
   window.scrollTo({top:0,behavior:'smooth'});
+  saveFilterState();
   applyFilter();
   renderPage(page);
 }
