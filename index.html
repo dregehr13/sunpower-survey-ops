@@ -1436,21 +1436,33 @@ function renderTrends(){
       </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
 
-  // Helper: create a frozen axis chart for a fixed-width canvas next to a scrollable main chart.
-  // Pass the main chart to read its chartArea for exact vertical alignment.
-  function _axChart(id,mainCh,type,datasets,scaleKey,scaleOpts){
-    dc(id);
-    const tp=mainCh.chartArea.top;
-    const bp=mainCh.height-mainCh.chartArea.bottom;
-    const cfg={};cfg[scaleKey]=Object.assign({grid:{display:false}},scaleOpts);
-    CH[id]=new Chart(document.getElementById(id),{
-      type,
-      data:{labels:type==='bar'?datasets[0].data.map((_,i)=>i):datasets[0].data.map((_,i)=>i),datasets},
-      options:{responsive:false,maintainAspectRatio:false,animation:false,
-        layout:{padding:{top:tp,bottom:bp}},
-        plugins:{legend:{display:false},tooltip:{enabled:false}},
-        scales:Object.assign({x:{display:false}},cfg)}
+  // Draw a frozen y-axis directly on a 2D canvas using pixel positions read from a Chart.js scale.
+  // No second Chart.js instance — tick y-positions come from scale.getPixelForValue(), so alignment is exact.
+  function _drawAxis(id, scale, isLeft, tickColor, fmtFn, titleText, titleColor){
+    const canvas=document.getElementById(id); if(!canvas||!scale) return;
+    const dpr=window.devicePixelRatio||1;
+    const cw=parseInt(canvas.getAttribute('width'))||58;
+    const ch=parseInt(canvas.getAttribute('height'))||260;
+    canvas.width=Math.round(cw*dpr); canvas.height=Math.round(ch*dpr);
+    canvas.style.width=cw+'px'; canvas.style.height=ch+'px';
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save(); ctx.scale(dpr,dpr);
+    ctx.font='10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    ctx.fillStyle=tickColor; ctx.textBaseline='middle';
+    ctx.textAlign=isLeft?'right':'left';
+    const xTick=isLeft?cw-5:5;
+    const fmt=fmtFn||(v=>String(Math.round(v*100)/100));
+    (scale.ticks||[]).forEach(t=>{
+      const y=scale.getPixelForValue(t.value);
+      if(y>=0&&y<=ch) ctx.fillText(fmt(t.value),xTick,y);
     });
+    if(titleText){
+      ctx.save(); ctx.fillStyle=titleColor||tickColor; ctx.textAlign='center';
+      ctx.translate(isLeft?8:cw-8,ch/2); ctx.rotate(isLeft?-Math.PI/2:Math.PI/2);
+      ctx.fillText(titleText,0,0); ctx.restore();
+    }
+    ctx.restore();
   }
 
   // ── tr-inout ──────────────────────────────────────────────
@@ -1474,12 +1486,8 @@ function renderTrends(){
         y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _axChart('tr-inout-yL',CH['tr-inout'],'bar',
-    [{data:inOutNewIn,yAxisID:'y',backgroundColor:'transparent'},{data:inOutCompleted,yAxisID:'y',backgroundColor:'transparent'}],
-    'y',{min:0,position:'left',ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}});
-  _axChart('tr-inout-yR',CH['tr-inout'],'line',
-    [{data:wipLine,yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false}],
-    'y1',{min:0,position:'right',ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}});
+  _drawAxis('tr-inout-yL',CH['tr-inout'].scales.y,true,'#888',null,'Surveys','#bbb');
+  _drawAxis('tr-inout-yR',CH['tr-inout'].scales.y1,false,'#d97706',null,'WIP','#d97706');
 
   // ── tr-wf ─────────────────────────────────────────────────
   dc('tr-wf');
@@ -1506,12 +1514,8 @@ function renderTrends(){
         y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _axChart('tr-wf-yL',CH['tr-wf'],'bar',
-    [{data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',backgroundColor:'transparent'}],
-    'y',{min:0,position:'left',ticks:{color:'#888',callback:v=>v+'d'}});
-  _axChart('tr-wf-yR',CH['tr-wf'],'line',
-    [{data:weeklyC.map(w=>w.pct_on_target),yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false}],
-    'y1',{min:0,max:100,position:'right',ticks:{color:'#8b5cf6',font:{size:10},callback:v=>v+'%'}});
+  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#888',v=>v+'d');
+  _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#8b5cf6',v=>Math.round(v)+'%');
 
   // ── tr-vol ────────────────────────────────────────────────
   dc('tr-vol');
@@ -1532,13 +1536,8 @@ function renderTrends(){
         y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _axChart('tr-vol-yL',CH['tr-vol'],'line',
-    [{data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
-     {data:roll3,yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false}],
-    'y',{position:'left',min:0,ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}});
-  _axChart('tr-vol-yR',CH['tr-vol'],'bar',
-    [{data:weeklyC.map(w=>w.count),yAxisID:'y1',backgroundColor:'transparent'}],
-    'y1',{position:'right',ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}});
+  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#888',v=>v+'d','Days','#bbb');
+  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#bbb',null,'Completions','#bbb');
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
     const ws=wkMap[wk],wc=wkCMap[wk];
