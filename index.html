@@ -695,6 +695,29 @@ function renderFBars(){
 }
 
 function localISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// Seeded LCG — deterministic dummy rows for Jan/Feb Trends demo
+function _rnd(seed){let v=seed;return function(){v=(v*1664525+1013904223)|0;return(v>>>0)/4294967295;};}
+const DUMMY_TRENDS=(()=>{
+  const r=_rnd(42),rows=[];
+  const regs=['West','East','Southwest','Northwest'];
+  let mon=new Date('2026-01-05'); // start Mon Jan 5
+  let id=9000;
+  for(let w=0;w<8;w++){
+    const cnt=8+Math.round(r()*4); // 8–12 per week
+    for(let i=0;i<cnt;i++){
+      const s=new Date(mon); s.setDate(mon.getDate()+Math.floor(r()*5)); // Mon–Fri
+      const ct=2+Math.floor(r()*7); // 2–8 day cycle
+      const c=new Date(s); c.setDate(s.getDate()+ct);
+      rows.push({id:id++,project_status:'In Progress',start:localISO(s),complete:localISO(c),
+        region:regs[Math.floor(r()*regs.length)],ct_total:ct,ct_s2r:null,ct_r2s:null,
+        contact:'',project:'',address:'',type:'',resource:''});
+    }
+    const next=new Date(mon); next.setDate(mon.getDate()+7); mon=next;
+  }
+  return rows;
+})();
+
 function recentRange(n){ return {from:weekRange(-n).from, to:weekRange(-1).to}; }
 function weekRange(offsetWeeks){
   const today=new Date(), dow=today.getDay();
@@ -1134,13 +1157,19 @@ function renderThisWeek(){
   const dayCounts=dayDates.map(date=>rows.filter(r=>r.complete===date).length);
   const schedCounts=dayDates.map(date=>rows.filter(r=>r.scheduled===date).length);
   const todayIdx=dayDates.indexOf(today);
+  // Past days: no scheduled bars. Today: scheduled-but-not-yet-complete stacked on top. Future: all scheduled.
+  const schedExtra=dayDates.map((date,i)=>{
+    if(i<todayIdx) return 0;
+    if(i===todayIdx) return rows.filter(r=>r.scheduled===today&&!r.complete).length;
+    return schedCounts[i];
+  });
 
   document.getElementById('week-inner').innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · past green, today blue, future dim</div></div>
+      <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · past green, today blue · gray = scheduled</div></div>
         <div class="leg" style="margin-top:4px;">
           <span class="li"><span class="ld" style="background:#1D9E75;"></span>Completed</span>
-          <span class="li"><span class="ldash" style="background:#f59e0b;"></span>Scheduled</span>
+          <span class="li"><span class="ld" style="background:rgba(148,163,184,0.5);"></span>Scheduled</span>
         </div>
       </div>
       <div class="cw" style="height:140px;"><canvas id="tw-daily"></canvas></div>
@@ -1182,25 +1211,18 @@ function renderThisWeek(){
     data:{labels:dayNames,datasets:[
       {label:'Completed',
        data:dayCounts,
-       backgroundColor:dayNames.map((_,i)=>i===todayIdx?'#2563eb':i<todayIdx?'#1D9E75':'rgba(0,0,0,.07)'),
-       borderRadius:4,
-       order:2},
+       backgroundColor:dayNames.map((_,i)=>i===todayIdx?'#2563eb':i<todayIdx?'#1D9E75':'rgba(0,0,0,0)'),
+       borderRadius:4},
       {label:'Scheduled',
-       data:schedCounts,
-       type:'line',
-       borderColor:'#f59e0b',
-       backgroundColor:'transparent',
-       borderWidth:2,
-       borderDash:[4,3],
-       pointRadius:4,
-       pointBackgroundColor:'#f59e0b',
-       tension:.3,
-       order:1},
+       data:schedExtra,
+       backgroundColor:'rgba(148,163,184,0.35)',
+       borderRadius:4},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#888',font:{size:11}}},
-              y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
+      scales:{
+        x:{stacked:true,grid:{display:false},ticks:{color:'#888',font:{size:11}}},
+        y:{stacked:true,min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
   });
 }
 
@@ -1342,8 +1364,8 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=rows;
-  const trendDone=rows.filter(r=>r.complete);
+  const trendSrc=[...RAW.filter(r=>!r.project_status||r.project_status==='In Progress'),...DUMMY_TRENDS];
+  const trendDone=trendSrc.filter(r=>r.complete);
   const weekly=weeklyStats(trendSrc);
   const weeklyC=weeklyStatsByComplete(trendDone);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
@@ -1373,16 +1395,24 @@ function renderTrends(){
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
         <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
+      <div style="position:relative;">
+        <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
+        <div style="position:absolute;left:0;top:0;width:60px;height:260px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-inout-yL" width="60" height="260"></canvas></div>
+        <div style="position:absolute;right:0;top:0;width:55px;height:260px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-inout-yR" width="55" height="260"></canvas></div>
+      </div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
-        <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
+        <span class="li" style="color:#8b5cf6;"><span class="ld" style="background:#8b5cf6;"></span>On target %</span>
       </div>
-      <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
+      <div style="position:relative;">
+        <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
+        <div style="position:absolute;left:0;top:0;width:60px;height:290px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-wf-yL" width="60" height="290"></canvas></div>
+        <div style="position:absolute;right:0;top:0;width:55px;height:290px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-wf-yR" width="55" height="290"></canvas></div>
+      </div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = completions · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
@@ -1392,7 +1422,11 @@ function renderTrends(){
         <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
       </div>
-      <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
+      <div style="position:relative;">
+        <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
+        <div style="position:absolute;left:0;top:0;width:60px;height:230px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-vol-yL" width="60" height="230"></canvas></div>
+        <div style="position:absolute;right:0;top:0;width:55px;height:230px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-vol-yR" width="55" height="230"></canvas></div>
+      </div>
     </div>
     <div class="sec">
       <div class="shead"><div class="stitle">Weekly detail</div></div>
@@ -1401,6 +1435,30 @@ function renderTrends(){
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
       </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
+
+  // Shared invisible x-axis config for axis overlay charts — reserves same bottom space as the main chart
+  const _axX={ticks:{color:'transparent',font:{size:10}},grid:{display:false},border:{display:false}};
+
+  dc('tr-inout-yL'); dc('tr-inout-yR');
+  CH['tr-inout-yL']=new Chart(document.getElementById('tr-inout-yL'),{
+    type:'bar',
+    data:{labels:inOutLabels,datasets:[
+      {data:inOutNewIn,yAxisID:'y',backgroundColor:'transparent'},
+      {data:inOutCompleted,yAxisID:'y',backgroundColor:'transparent'},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y:{min:0,position:'left',grid:{display:false},ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}}}}
+  });
+  CH['tr-inout-yR']=new Chart(document.getElementById('tr-inout-yR'),{
+    type:'line',
+    data:{labels:inOutLabels,datasets:[
+      {data:wipLine,yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y1:{min:0,position:'right',grid:{display:false},ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}}}}
+  });
 
   dc('tr-inout');
   CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
@@ -1419,8 +1477,28 @@ function renderTrends(){
         }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}},
-        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',stepSize:1},border:{display:false},title:{display:true,text:'Surveys',color:'rgba(0,0,0,0)',font:{size:10}}},
+        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)'},border:{display:false},title:{display:true,text:'WIP',color:'rgba(0,0,0,0)',font:{size:10}}}}}
+  });
+
+  dc('tr-wf-yL'); dc('tr-wf-yR');
+  CH['tr-wf-yL']=new Chart(document.getElementById('tr-wf-yL'),{
+    type:'bar',
+    data:{labels:labelsC,datasets:[
+      {data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',backgroundColor:'transparent'},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y:{min:0,position:'left',grid:{display:false},ticks:{color:'#888',callback:v=>v+'d'}}}}
+  });
+  CH['tr-wf-yR']=new Chart(document.getElementById('tr-wf-yR'),{
+    type:'line',
+    data:{labels:labelsC,datasets:[
+      {data:weeklyC.map(w=>w.pct_on_target),yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y1:{min:0,max:100,position:'right',grid:{display:false},ticks:{color:'#8b5cf6',font:{size:10},callback:v=>v+'%'}}}}
   });
 
   dc('tr-wf');
@@ -1431,9 +1509,9 @@ function renderTrends(){
        data:weeklyC.map(w=>w.start_to_complete),
        backgroundColor:weeklyC.map((w,i)=>{ const v=w.start_to_complete,a=al[i]; if(v==null) return `rgba(226,232,240,${a})`; if(v<=S.targetAvg) return `rgba(29,158,117,${a})`; if(v<=(S.targetAvg+3)) return `rgba(186,117,23,${a})`; return `rgba(226,75,74,${a})`; }),
        borderRadius:3,yAxisID:'y',order:2},
-      {label:'On target %',data:weeklyC.map(w=>w.pct_on_target),type:'line',borderColor:'#1D9E75',
+      {label:'On target %',data:weeklyC.map(w=>w.pct_on_target),type:'line',borderColor:'#8b5cf6',
        backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
+       pointRadius:3,pointBackgroundColor:'#8b5cf6',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
@@ -1444,9 +1522,30 @@ function renderTrends(){
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'}},
-        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',callback:v=>v+'d'},border:{display:false}},
+        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)',font:{size:10},callback:v=>v+'%'},border:{display:false}}}}}
   );
+
+  dc('tr-vol-yL'); dc('tr-vol-yR');
+  CH['tr-vol-yL']=new Chart(document.getElementById('tr-vol-yL'),{
+    type:'line',
+    data:{labels:labelsC,datasets:[
+      {data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
+      {data:roll3,yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y:{position:'left',min:0,grid:{display:false},ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}}}}
+  });
+  CH['tr-vol-yR']=new Chart(document.getElementById('tr-vol-yR'),{
+    type:'bar',
+    data:{labels:labelsC,datasets:[
+      {data:weeklyC.map(w=>w.count),yAxisID:'y1',backgroundColor:'transparent'},
+    ]},
+    options:{responsive:false,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:_axX,y1:{position:'right',grid:{display:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
+  });
 
   dc('tr-vol');
   CH['tr-vol']=new Chart(document.getElementById('tr-vol'),{
@@ -1463,8 +1562,8 @@ function renderTrends(){
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}},
-        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
+        y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',callback:v=>v+'d'},border:{display:false},title:{display:true,text:'Days',color:'rgba(0,0,0,0)',font:{size:10}}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)'},border:{display:false},title:{display:true,text:'Completions',color:'rgba(0,0,0,0)',font:{size:10}}}}}
   });
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
