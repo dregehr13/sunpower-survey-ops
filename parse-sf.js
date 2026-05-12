@@ -75,6 +75,7 @@ allRows.slice(1).forEach((rowHtml, i) => {
       : '';
   });
   if (!r.region) return;
+  if (!r.resource && r.complete) r.resource = 'Sales Rep';
   r.ct_s2r   = dDiff(r.start, r.requested);
   r.ct_r2s   = dDiff(r.requested, r.scheduled);
   r.ct_total = dDiff(r.start, r.complete);
