@@ -449,35 +449,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   </div>
 </div>
 
-<!-- SF MODAL -->
-<div class="mback hidden" id="sfModal">
-  <div class="modal">
-    <h2>Salesforce report export</h2>
-    <p class="msub">One click opens Salesforce aimed at your report. Set Report ID in Settings to persist it.</p>
-    <div class="msteps"><ol>
-      <li>Open your report in Salesforce</li>
-      <li>Click <strong>Open export link</strong> below</li>
-      <li>Salesforce: <strong>Export → Details Only → Excel Format (.xls)</strong></li>
-      <li>Drop the downloaded file onto <strong>↑ Load file</strong></li>
-    </ol></div>
-    <div class="mfield">
-      <label>Instance URL</label>
-      <input type="text" id="sf-inst" placeholder="https://yourorg.lightning.force.com" oninput="sfPrev()">
-      <div class="mhint">Address bar in Salesforce, up to <code>.com</code></div>
-    </div>
-    <div class="mfield">
-      <label>Report ID</label>
-      <input type="text" id="sf-rid" placeholder="00O5g000005abcDEAQ" oninput="sfPrev()">
-      <div class="mhint">From URL: <code>.../lightning/r/Report/<strong>00O…</strong>/view</code></div>
-    </div>
-    <div class="mprev" id="sf-prev"></div>
-    <div class="macts">
-      <button class="mbtn" onclick="closeSF()">Cancel</button>
-      <button class="mbtn mbtn-sf" id="sf-go" onclick="goSF()" disabled>Open export link ↗</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1402,7 +1373,7 @@ function renderTrends(){
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
         <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-inout" width="${chartW}" height="260" style="display:block;"></canvas></div>
+      <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
@@ -1411,7 +1382,7 @@ function renderTrends(){
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
         <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
       </div>
-      <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-wf" width="${chartWC}" height="290" style="display:block;"></canvas></div>
+      <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = completions · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
@@ -1421,7 +1392,7 @@ function renderTrends(){
         <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
       </div>
-      <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-vol" width="${chartWC}" height="230" style="display:block;"></canvas></div>
+      <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
     </div>
     <div class="sec">
       <div class="shead"><div class="stitle">Weekly detail</div></div>
@@ -1430,11 +1401,6 @@ function renderTrends(){
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
       </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
-
-  // Chart.js reads canvas.offsetWidth (CSS layout size), not the width HTML attribute.
-  // Set style dimensions explicitly so responsive:false sees the full scrollable width.
-  const _szCV=(id,w,h)=>{const c=document.getElementById(id);if(!c)return;c.style.width=w+'px';c.style.height=h+'px';};
-  _szCV('tr-inout',chartW,260); _szCV('tr-wf',chartWC,290); _szCV('tr-vol',chartWC,230);
 
   dc('tr-inout');
   CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
@@ -1445,7 +1411,7 @@ function renderTrends(){
       {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
        tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:false,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -1469,7 +1435,7 @@ function renderTrends(){
        backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:false,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
@@ -1492,7 +1458,7 @@ function renderTrends(){
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'transparent',
        tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
     ]},
-    options:{responsive:false,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
@@ -1776,7 +1742,7 @@ function renderSettings(){
         </div>
         <div class="set-row">
           <div style="font-size:10px;color:var(--faint);">Saved here, these pre-fill the Salesforce modal in the nav bar.</div>
-          <button class="fbtn" onclick="openSF()">Open SF modal ↗</button>
+          <button class="fbtn" onclick="openUpdateModal()">↑ Update data</button>
         </div>
       </div>
 
@@ -2028,29 +1994,6 @@ async function saveToServer(){
   }
 }
 
-// ═══ SALESFORCE ═══════════════════════════════════════════
-function openSF(){
-  document.getElementById('sf-inst').value=S.sfInst||localStorage.getItem('sf_inst')||'';
-  document.getElementById('sf-rid').value=S.sfRid||localStorage.getItem('sf_rid')||'';
-  document.getElementById('sfModal').classList.remove('hidden');
-  sfPrev();
-}
-function closeSF(){ document.getElementById('sfModal').classList.add('hidden'); }
-document.getElementById('sfModal').addEventListener('click',e=>{ if(e.target===document.getElementById('sfModal')) closeSF(); });
-function sfPrev(){
-  let inst=(document.getElementById('sf-inst').value||'').trim().replace(/\/+$/,'');
-  const rid=(document.getElementById('sf-rid').value||'').trim();
-  const prev=document.getElementById('sf-prev'),btn=document.getElementById('sf-go');
-  if(!inst||!rid){prev.classList.remove('on');btn.disabled=true;return;}
-  try{const u=new URL(inst.startsWith('http')?inst:'https://'+inst);inst=u.origin;}catch(e){}
-  const url=inst+'/lightning/r/Report/'+rid+'/view';
-  prev.classList.add('on'); prev.innerHTML='<strong style="font-size:9px;font-family:sans-serif;color:#888;">Link:</strong><br>'+url;
-  btn.disabled=false; btn._url=url;
-}
-function goSF(){
-  const btn=document.getElementById('sf-go');
-  if(btn._url){ window.open(btn._url,'_blank'); closeSF(); toast('Opened Salesforce → Export → Details Only → Excel Format → then load here.'); }
-}
 
 // ═══ INIT ════════════════════════════════════════════════
 document.addEventListener('click',function(e){
