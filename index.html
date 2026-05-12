@@ -2089,11 +2089,10 @@ window.addEventListener('load',()=>{
     globalF.outlierMult=S.defaultOutlierMult;
     globalF.removeOutliers=S.defaultRemoveOutliers;
     PAGES.forEach(p=>{pageF[p].outlierMult=S.defaultOutlierMult; pageF[p].removeOutliers=S.defaultRemoveOutliers;});
+    const lw=weekRange(-1);
+    globalF.dateFrom=lw.from; globalF.dateTo=lw.to;
+    PAGES.forEach(p=>{pageF[p].dateFrom=lw.from; pageF[p].dateTo=lw.to;});
   }
-  // Always default to last full Mon–Sun week on load
-  const lw=weekRange(-1);
-  globalF.dateFrom=lw.from; globalF.dateTo=lw.to;
-  PAGES.forEach(p=>{pageF[p].dateFrom=lw.from; pageF[p].dateTo=lw.to;});
 
   // Set date range — autoDateRange always wins over saved dates
   clearFenceCache();
