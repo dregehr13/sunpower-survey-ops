@@ -1415,17 +1415,16 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = completions · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
+      <div class="shead"><div><div class="stitle">Pipeline health</div><div class="ssub">Completions ÷ starts each week · Above 1× = draining backlog · Below = building it · Area = WIP</div></div></div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#ddd;"></span>Volume</span>
-        <span class="li"><span class="ld" style="background:#94a3b8;"></span>Weekly avg</span>
-        <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
-        <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
+        <span class="li" style="color:#2563eb;"><span class="ld" style="background:#2563eb;"></span>Pipeline ratio</span>
+        <span class="li" style="color:#94a3b8;"><span class="ld" style="background:rgba(148,163,184,0.4);"></span>WIP</span>
+        <span class="li ltgt"><span class="ldash" style="background:#e24b4a;"></span>1× breakeven</span>
       </div>
       <div style="display:flex;align-items:stretch;">
-        <div style="flex:0 0 48px;height:230px;"><canvas id="tr-vol-yL" width="48" height="230"></canvas></div>
-        <div id="tr-vol-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
-        <div style="flex:0 0 64px;height:230px;"><canvas id="tr-vol-yR" width="64" height="230"></canvas></div>
+        <div style="flex:0 0 40px;height:230px;"><canvas id="tr-vol-yL" width="40" height="230"></canvas></div>
+        <div id="tr-vol-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
+        <div style="flex:0 0 52px;height:230px;"><canvas id="tr-vol-yR" width="52" height="230"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1517,27 +1516,33 @@ function renderTrends(){
   _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#888',v=>v+'d');
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#8b5cf6',v=>Math.round(v)+'%');
 
-  // ── tr-vol ────────────────────────────────────────────────
+  // ── tr-vol: pipeline health ───────────────────────────────
+  const pipeRatio=allWks.map((_,i)=>inOutNewIn[i]>0?Math.round(inOutCompleted[i]/inOutNewIn[i]*100)/100:null);
   dc('tr-vol');
   CH['tr-vol']=new Chart(document.getElementById('tr-vol'),{
-    type:'bar',
-    data:{labels:labelsC,datasets:[
-      {label:'Completions',data:weeklyC.map(w=>w.count),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y1',order:3},
-      {label:'Weekly avg',data:weeklyC.map(w=>w.start_to_complete),type:'line',borderColor:'#94a3b8',backgroundColor:'transparent',
-       tension:.3,pointRadius:3,pointBackgroundColor:'#94a3b8',spanGaps:false,yAxisID:'y',order:2},
-      {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'transparent',
-       tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
+    type:'line',
+    data:{labels:inOutLabels,datasets:[
+      {label:'WIP',data:wipLine,type:'bar',backgroundColor:'rgba(148,163,184,0.18)',
+       borderWidth:0,yAxisID:'y1',order:3},
+      {label:'Pipeline ratio',data:pipeRatio,borderColor:'#2563eb',backgroundColor:'transparent',
+       tension:.3,borderWidth:2,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},
-        annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
+        tooltip:{callbacks:{
+          title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
+          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` Ratio: ${ctx.parsed.y}×`
+        }},
+        annotation:{annotations:{
+          ref:{type:'line',yMin:1,yMax:1,yScaleID:'y',borderColor:'#e24b4a',borderWidth:1.5,borderDash:[5,4]}
+        }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
         y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
-        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
+        y1:{position:'right',min:0,grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#888',v=>v+'d','Days','#bbb');
-  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#bbb',null,'Completions','#bbb');
+  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#2563eb',v=>v.toFixed(1)+'×');
+  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#94a3b8',null,'WIP','#94a3b8');
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
     const ws=wkMap[wk],wc=wkCMap[wk];
