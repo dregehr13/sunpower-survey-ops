@@ -539,6 +539,7 @@ function setSetting(key, value){
 
 
 let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>!r.project_status||r.project_status==='In Progress');
+rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; });
 let filtered = [];
 let dataTimestamp = null;
 
