@@ -1395,10 +1395,10 @@ function renderTrends(){
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
         <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div style="display:flex;align-items:stretch;position:relative;">
-        <div style="position:absolute;left:0;top:0;width:60px;height:260px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-inout-yL" width="60" height="260"></canvas></div>
+      <div style="display:flex;align-items:stretch;">
+        <div style="flex:0 0 58px;height:260px;"><canvas id="tr-inout-yL" width="58" height="260"></canvas></div>
         <div id="tr-inout-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
-        <div style="flex-shrink:0;width:55px;height:260px;background:var(--surface,#fff);"><canvas id="tr-inout-yR" width="55" height="260"></canvas></div>
+        <div style="flex:0 0 52px;height:260px;"><canvas id="tr-inout-yR" width="52" height="260"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1408,10 +1408,10 @@ function renderTrends(){
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
         <span class="li" style="color:#8b5cf6;"><span class="ld" style="background:#8b5cf6;"></span>On target %</span>
       </div>
-      <div style="display:flex;align-items:stretch;position:relative;">
-        <div style="position:absolute;left:0;top:0;width:60px;height:290px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-wf-yL" width="60" height="290"></canvas></div>
+      <div style="display:flex;align-items:stretch;">
+        <div style="flex:0 0 48px;height:290px;"><canvas id="tr-wf-yL" width="48" height="290"></canvas></div>
         <div id="tr-wf-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:290px;position:relative;"><canvas id="tr-wf"></canvas></div></div>
-        <div style="flex-shrink:0;width:55px;height:290px;background:var(--surface,#fff);"><canvas id="tr-wf-yR" width="55" height="290"></canvas></div>
+        <div style="flex:0 0 52px;height:290px;"><canvas id="tr-wf-yR" width="52" height="290"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1422,10 +1422,10 @@ function renderTrends(){
         <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
       </div>
-      <div style="display:flex;align-items:stretch;position:relative;">
-        <div style="position:absolute;left:0;top:0;width:60px;height:230px;pointer-events:none;z-index:5;background:var(--surface,#fff);"><canvas id="tr-vol-yL" width="60" height="230"></canvas></div>
+      <div style="display:flex;align-items:stretch;">
+        <div style="flex:0 0 48px;height:230px;"><canvas id="tr-vol-yL" width="48" height="230"></canvas></div>
         <div id="tr-vol-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartWC}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
-        <div style="flex-shrink:0;width:55px;height:230px;background:var(--surface,#fff);"><canvas id="tr-vol-yR" width="55" height="230"></canvas></div>
+        <div style="flex:0 0 64px;height:230px;"><canvas id="tr-vol-yR" width="64" height="230"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -1436,30 +1436,24 @@ function renderTrends(){
       </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
 
-  // Shared invisible x-axis config for axis overlay charts — reserves same bottom space as the main chart
-  const _axX={ticks:{color:'transparent',font:{size:10}},grid:{display:false},border:{display:false}};
+  // Helper: create a frozen axis chart for a fixed-width canvas next to a scrollable main chart.
+  // Pass the main chart to read its chartArea for exact vertical alignment.
+  function _axChart(id,mainCh,type,datasets,scaleKey,scaleOpts){
+    dc(id);
+    const tp=mainCh.chartArea.top;
+    const bp=mainCh.height-mainCh.chartArea.bottom;
+    const cfg={};cfg[scaleKey]=Object.assign({grid:{display:false}},scaleOpts);
+    CH[id]=new Chart(document.getElementById(id),{
+      type,
+      data:{labels:type==='bar'?datasets[0].data.map((_,i)=>i):datasets[0].data.map((_,i)=>i),datasets},
+      options:{responsive:false,maintainAspectRatio:false,animation:false,
+        layout:{padding:{top:tp,bottom:bp}},
+        plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:Object.assign({x:{display:false}},cfg)}
+    });
+  }
 
-  dc('tr-inout-yL'); dc('tr-inout-yR');
-  CH['tr-inout-yL']=new Chart(document.getElementById('tr-inout-yL'),{
-    type:'bar',
-    data:{labels:inOutLabels,datasets:[
-      {data:inOutNewIn,yAxisID:'y',backgroundColor:'transparent'},
-      {data:inOutCompleted,yAxisID:'y',backgroundColor:'transparent'},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y:{min:0,position:'left',grid:{display:false},ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}}}}
-  });
-  CH['tr-inout-yR']=new Chart(document.getElementById('tr-inout-yR'),{
-    type:'line',
-    data:{labels:inOutLabels,datasets:[
-      {data:wipLine,yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y1:{min:0,position:'right',grid:{display:false},ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}}}}
-  });
-
+  // ── tr-inout ──────────────────────────────────────────────
   dc('tr-inout');
   CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
     type:'bar',
@@ -1469,7 +1463,7 @@ function renderTrends(){
       {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
        tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -1477,30 +1471,17 @@ function renderTrends(){
         }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',stepSize:1},border:{display:false},title:{display:true,text:'Surveys',color:'rgba(0,0,0,0)',font:{size:10}}},
-        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)'},border:{display:false},title:{display:true,text:'WIP',color:'rgba(0,0,0,0)',font:{size:10}}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
+  _axChart('tr-inout-yL',CH['tr-inout'],'bar',
+    [{data:inOutNewIn,yAxisID:'y',backgroundColor:'transparent'},{data:inOutCompleted,yAxisID:'y',backgroundColor:'transparent'}],
+    'y',{min:0,position:'left',ticks:{color:'#888',stepSize:1},title:{display:true,text:'Surveys',color:'#bbb',font:{size:10}}});
+  _axChart('tr-inout-yR',CH['tr-inout'],'line',
+    [{data:wipLine,yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false}],
+    'y1',{min:0,position:'right',ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}});
 
-  dc('tr-wf-yL'); dc('tr-wf-yR');
-  CH['tr-wf-yL']=new Chart(document.getElementById('tr-wf-yL'),{
-    type:'bar',
-    data:{labels:labelsC,datasets:[
-      {data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',backgroundColor:'transparent'},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y:{min:0,position:'left',grid:{display:false},ticks:{color:'#888',callback:v=>v+'d'}}}}
-  });
-  CH['tr-wf-yR']=new Chart(document.getElementById('tr-wf-yR'),{
-    type:'line',
-    data:{labels:labelsC,datasets:[
-      {data:weeklyC.map(w=>w.pct_on_target),yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y1:{min:0,max:100,position:'right',grid:{display:false},ticks:{color:'#8b5cf6',font:{size:10},callback:v=>v+'%'}}}}
-  });
-
+  // ── tr-wf ─────────────────────────────────────────────────
   dc('tr-wf');
   CH['tr-wf']=new Chart(document.getElementById('tr-wf'),{
     type:'bar',
@@ -1513,7 +1494,7 @@ function renderTrends(){
        backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#8b5cf6',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
@@ -1522,31 +1503,17 @@ function renderTrends(){
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',callback:v=>v+'d'},border:{display:false}},
-        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)',font:{size:10},callback:v=>v+'%'},border:{display:false}}}}}
-  );
-
-  dc('tr-vol-yL'); dc('tr-vol-yR');
-  CH['tr-vol-yL']=new Chart(document.getElementById('tr-vol-yL'),{
-    type:'line',
-    data:{labels:labelsC,datasets:[
-      {data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
-      {data:roll3,yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y:{position:'left',min:0,grid:{display:false},ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  CH['tr-vol-yR']=new Chart(document.getElementById('tr-vol-yR'),{
-    type:'bar',
-    data:{labels:labelsC,datasets:[
-      {data:weeklyC.map(w=>w.count),yAxisID:'y1',backgroundColor:'transparent'},
-    ]},
-    options:{responsive:false,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:_axX,y1:{position:'right',grid:{display:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
-  });
+  _axChart('tr-wf-yL',CH['tr-wf'],'bar',
+    [{data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',backgroundColor:'transparent'}],
+    'y',{min:0,position:'left',ticks:{color:'#888',callback:v=>v+'d'}});
+  _axChart('tr-wf-yR',CH['tr-wf'],'line',
+    [{data:weeklyC.map(w=>w.pct_on_target),yAxisID:'y1',borderColor:'transparent',pointRadius:0,spanGaps:false}],
+    'y1',{min:0,max:100,position:'right',ticks:{color:'#8b5cf6',font:{size:10},callback:v=>v+'%'}});
 
+  // ── tr-vol ────────────────────────────────────────────────
   dc('tr-vol');
   CH['tr-vol']=new Chart(document.getElementById('tr-vol'),{
     type:'bar',
@@ -1557,14 +1524,21 @@ function renderTrends(){
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'transparent',
        tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
-        y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'rgba(0,0,0,0)',callback:v=>v+'d'},border:{display:false},title:{display:true,text:'Days',color:'rgba(0,0,0,0)',font:{size:10}}},
-        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'rgba(0,0,0,0)'},border:{display:false},title:{display:true,text:'Completions',color:'rgba(0,0,0,0)',font:{size:10}}}}}
+        y:{position:'left',min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
+  _axChart('tr-vol-yL',CH['tr-vol'],'line',
+    [{data:weeklyC.map(w=>w.start_to_complete),yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false},
+     {data:roll3,yAxisID:'y',borderColor:'transparent',pointRadius:0,spanGaps:false}],
+    'y',{position:'left',min:0,ticks:{color:'#888',callback:v=>v+'d'},title:{display:true,text:'Days',color:'#bbb',font:{size:10}}});
+  _axChart('tr-vol-yR',CH['tr-vol'],'bar',
+    [{data:weeklyC.map(w=>w.count),yAxisID:'y1',backgroundColor:'transparent'}],
+    'y1',{position:'right',ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}});
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
     const ws=wkMap[wk],wc=wkCMap[wk];
