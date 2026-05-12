@@ -556,7 +556,7 @@ const pageF = {};
 PAGES.forEach(p => pageF[p] = {...globalF});
 
 function saveFilterState(){
-  try{ localStorage.setItem('ops_filters', JSON.stringify({globalMode, globalF, pageF})); }catch(e){}
+  try{ localStorage.setItem('ops_filters', JSON.stringify({globalMode, globalF, pageF, currentPage})); }catch(e){}
 }
 function migrateRegion(f){
   // Migrate old string-based region ('all' or region name) to array format
@@ -572,6 +572,7 @@ function loadFilterState(){
     globalMode = saved.globalMode ?? true;
     if(saved.globalF){ Object.assign(globalF, saved.globalF); migrateRegion(globalF); }
     if(saved.pageF) PAGES.forEach(p=>{ if(saved.pageF[p]){ pageF[p]={...globalF,...saved.pageF[p]}; migrateRegion(pageF[p]); } });
+    if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
 }
 
@@ -2105,7 +2106,7 @@ window.addEventListener('load',()=>{
   if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS; navTs.style.display=''; }
   applyFilter();
   renderFBars();
-  nav(S.defaultPage||'exec');
+  nav(currentPage||S.defaultPage||'exec');
 });
 </script>
 </body>
