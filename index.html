@@ -328,10 +328,36 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:11px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
 .toast.on{opacity:1;transform:translateY(0);}
 
+/* TOGGLE GROUP */
+.toggle-group{display:flex;}
+.tgl-btn{font-size:11px;padding:5px 14px;border:1px solid var(--border);border-right-width:0;background:var(--surface);color:var(--muted);cursor:pointer;height:30px;white-space:nowrap;}
+.tgl-btn:first-child{border-radius:6px 0 0 6px;}
+.tgl-btn:last-child{border-radius:0 6px 6px 0;border-right-width:1px;}
+.tgl-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
+.tgl-btn:hover:not(.active){background:var(--bg);}
+
+/* RESOURCE SPLIT BAR */
+.res-split-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;margin:8px 0 10px;}
+.res-split-bar>div{min-width:2px;}
+.res-split-legend{display:flex;gap:18px;flex-wrap:wrap;}
+.res-split-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.res-split-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}
+
+/* RESOURCE COMPARISON CARDS */
+.res-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+.res-card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 16px;border-top-width:3px;}
+.res-card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.res-card-count{font-size:10px;color:var(--faint);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.res-stats{display:flex;flex-direction:column;gap:7px;}
+.res-stat-row{display:flex;align-items:center;justify-content:space-between;}
+.rlabel{font-size:10px;color:var(--muted);}
+.rval{font-size:15px;font-weight:600;}
+
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
   .g2,.g3,.settings-grid{grid-template-columns:1fr;}
   .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
+  .res-cards{grid-template-columns:1fr;}
   .page{padding:12px;}
 }
 </style>
@@ -340,10 +366,9 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
-  <div class="ntab active" data-page="exec">Exec Summary</div>
-  <div class="ntab" data-page="overview">Overview</div>
-  <div class="ntab" data-page="weekly">Weekly</div>
-  <div class="ntab" data-page="regions">Regions</div>
+  <div class="ntab active" data-page="week">Current</div>
+  <div class="ntab" data-page="performance">Performance</div>
+  <div class="ntab" data-page="trends">Trends</div>
   <div class="ntab" data-page="outliers">WIP</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
@@ -358,13 +383,12 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   </div>
 </nav>
 
-<div id="page-exec"     class="page active"><div id="fb-exec"></div>     <div id="exec-content"></div></div>
-<div id="page-overview" class="page">       <div id="fb-overview"></div> <div id="ov-content"></div></div>
-<div id="page-weekly"   class="page">       <div id="fb-weekly"></div>   <div id="wk-content"></div></div>
-<div id="page-regions"  class="page">       <div id="fb-regions"></div>  <div id="rg-content"></div></div>
-<div id="page-outliers" class="page">       <div id="fb-outliers"></div> <div id="ol-content"></div></div>
-<div id="page-data"     class="page">       <div id="fb-data"></div>     <div id="dt-content"></div></div>
-<div id="page-settings" class="page">       <div id="settings-content"></div></div>
+<div id="page-week"        class="page active">                              <div id="week-content"></div></div>
+<div id="page-performance" class="page">     <div id="fb-performance"></div> <div id="perf-content"></div></div>
+<div id="page-trends"      class="page">     <div id="fb-trends"></div>      <div id="tr-content"></div></div>
+<div id="page-outliers"    class="page">     <div id="fb-outliers"></div>    <div id="ol-content"></div></div>
+<div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
+<div id="page-settings"    class="page">     <div id="settings-content"></div></div>
 
 
 <!-- UPDATE MODAL -->
@@ -458,7 +482,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
-<script src="/data.js"></script>
+<script src="data.js"></script>
 <script>
 Chart.register(window['chartjs-plugin-annotation']);
 
@@ -503,16 +527,16 @@ const FIELDS = [
 // ═══ SETTINGS ════════════════════════════════════════════
 // All user-configurable settings. Persisted to localStorage.
 const SETTING_DEFAULTS = {
-  execTheme:       'minimal',   // exec summary visual theme
-  defaultPage:     'exec',      // landing page on load
-  targetMedian:    3,           // cycle time median target (days)
-  targetAvg:       4,           // cycle time avg target (days)
-  defaultOutlierMult: 1.5,      // default IQR multiplier
-  defaultRemoveOutliers: false, // default outlier removal state
-  minRegionVolume: 3,           // dim regions with fewer projects
-  autoDateRange:   true,        // auto-set date range from data on load
-  sfInst:          '',          // Salesforce instance URL
-  sfRid:           '',          // Salesforce report ID
+  execTheme:            'minimal', // visual theme for Current tab hero
+  defaultPage:          'week',    // landing page on load
+  targetMedian:         3,         // cycle time median target (days)
+  targetAvg:            4,         // cycle time avg target (days)
+  outlierDays:          10,        // hide surveys with cycle time above this
+  defaultRemoveOutliers:false,     // hide outliers by default on load
+  minRegionVolume:      3,         // dim regions with fewer projects
+  autoDateRange:        true,      // auto-set date range from data on load
+  sfInst:               '',        // Salesforce instance URL
+  sfRid:                '',        // Salesforce report ID
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -530,36 +554,35 @@ function setSetting(key, value){
   S[key] = value;
   saveSettings();
   // Propagate changes that affect live state
-  if(key==='defaultOutlierMult') { globalF.outlierMult=value; PAGES.forEach(p=>pageF[p].outlierMult=value); }
-  if(key==='defaultRemoveOutliers') { globalF.removeOutliers=value; PAGES.forEach(p=>pageF[p].removeOutliers=value); }
+  if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
+  if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
   if(key==='sfRid')  { localStorage.setItem('sf_rid',value); }
   if(currentPage==='settings') renderSettings();
 }
 
 
-let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>!r.project_status||r.project_status==='In Progress');
+const DATA_CUTOFF = '2025-12-29';
+let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(!r.project_status||r.project_status==='In Progress') && r.start >= DATA_CUTOFF);
 rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; });
 let filtered = [];
 let dataTimestamp = null;
 
 // ═══ FILTER STATE ═════════════════════════════════════════
-const PAGES = ['exec','overview','weekly','regions','outliers','data'];
-let globalMode = true;
-let globalF = {dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',outlierMult:1.5,removeOutliers:false};
+const PAGES = ['week','performance','trends','outliers','data'];
+const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false});
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
 let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
 let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 const pageF = {};
-PAGES.forEach(p => pageF[p] = {...globalF});
+PAGES.forEach(p => pageF[p] = defaultF());
 
 function saveFilterState(){
-  try{ localStorage.setItem('ops_filters', JSON.stringify({globalMode, globalF, pageF, currentPage})); }catch(e){}
+  try{ localStorage.setItem('ops_filters', JSON.stringify({pageF, currentPage})); }catch(e){}
 }
 function migrateRegion(f){
-  // Migrate old string-based region ('all' or region name) to array format
   if(typeof f.region === 'string'){
     f.region = (f.region==='all'||!f.region) ? [] : [f.region];
   }
@@ -569,37 +592,31 @@ function loadFilterState(){
   try{
     const saved = JSON.parse(localStorage.getItem('ops_filters')||'null');
     if(!saved) return;
-    globalMode = saved.globalMode ?? true;
-    if(saved.globalF){ Object.assign(globalF, saved.globalF); migrateRegion(globalF); }
-    if(saved.pageF) PAGES.forEach(p=>{ if(saved.pageF[p]){ pageF[p]={...globalF,...saved.pageF[p]}; migrateRegion(pageF[p]); } });
+    const base = saved.globalF || {};
+    PAGES.forEach(p=>{
+      const pf = saved.pageF?.[p] || {};
+      pageF[p] = {...defaultF(), ...base, ...pf};
+      migrateRegion(pageF[p]);
+    });
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
 }
 
-let _fenceCache = {};
-function clearFenceCache(){ _fenceCache = {}; }
-function calcFence(mult){
-  if(_fenceCache[mult] != null) return _fenceCache[mult];
-  const v = rows.filter(r=>r.complete).map(r=>r.ct_total).filter(x=>x!=null&&x>=0).sort((a,b)=>a-b);
-  if(!v.length) return _fenceCache[mult] = Infinity;
-  const q1=v[Math.floor(v.length*.25)], q3=v[Math.floor(v.length*.75)];
-  return _fenceCache[mult] = q3 + mult*(q3-q1);
-}
+function clearFenceCache(){}
 
-function getF(){ return globalMode ? globalF : pageF[currentPage]; }
+function getF(){ return pageF[currentPage]; }
 
 function applyFilter(){
   const f = getF();
-  if(!f) return; // settings page or other non-data page — no filter needed
-  const fence = f.removeOutliers ? calcFence(f.outlierMult) : Infinity;
+  if(!f) return;
   filtered = rows.filter(r=>{
-    if(!r.complete) return false; // in-progress surveys excluded from filtered; WIP always uses rows directly
+    if(!r.complete) return false;
     if(f.dateFrom && r.complete < f.dateFrom) return false;
     if(f.dateTo   && r.complete > f.dateTo)   return false;
     if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
     if(f.type   !== 'all' && r.type   !== f.type)     return false;
     if(f.resource && f.resource !== 'all' && r.resource !== f.resource) return false;
-    if(f.removeOutliers && r.ct_total!=null && r.ct_total > fence) return false;
+    if(f.removeOutliers && r.ct_total!=null && r.ct_total > S.outlierDays) return false;
     return true;
   });
   document.getElementById('navBadge').textContent = rows.length+' projects';
@@ -608,14 +625,11 @@ function applyFilter(){
 
 // ═══ FILTER BAR ═══════════════════════════════════════════
 function buildFBar(page){
-  const f = globalMode ? globalF : pageF[page];
-
-  // Auto-generate category filters from FIELDS registry
-  const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region');
+  const f = pageF[page];
+  const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
   const catDropdowns = catFields.map(fd=>{
     const vals = [...new Set(rows.map(r=>r[fd.key]).filter(Boolean))].sort();
     if(!vals.length){
-      // Field is registered but not in data yet — show pending placeholder
       if(fd.pending !== false) return `<div class="fsep"></div><span class="surveyor-coming">${fd.label}: pending export</span>`;
       return '';
     }
@@ -627,17 +641,18 @@ function buildFBar(page){
   }).join('');
 
   const regions = [...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
-  const fence = calcFence(f.outlierMult);
-  const outlierCount = rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
-
+  const outlierCount = rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length;
   const lw=weekRange(-1), tw=weekRange(0), r4=recentRange(4), r13=recentRange(13);
   const isLW=f.dateFrom===lw.from&&f.dateTo===lw.to;
   const isTW=f.dateFrom===tw.from&&f.dateTo===tw.to;
   const isR4=f.dateFrom===r4.from&&f.dateTo===r4.to;
   const isR13=f.dateFrom===r13.from&&f.dateTo===r13.to;
   const isAll=!f.dateFrom&&!f.dateTo;
+  const regArr=Array.isArray(f.region)?f.region:[];
+  const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
+  const panelOpen=rgDropOpenPage===page;
 
-  return `<div class="fbar">
+  return `<div class="fbar" style="flex-wrap:nowrap;">
     <div class="fgroup">
       <span class="flabel">Completion date</span>
       <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
@@ -652,72 +667,30 @@ function buildFBar(page){
       <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This wk</button>
     </div>
     <div class="fsep"></div>
+    <button class="fbtn${f.removeOutliers?' fbtn-active':''}" onclick="toggleOutliers('${page}')">Hide &gt;${S.outlierDays}d</button>
+    <span class="fhint">${outlierCount}${f.removeOutliers?' hidden':' above'}</span>
+    <div class="fsep"></div>
     <div class="fgroup">
       <span class="flabel">Region</span>
-      ${(()=>{
-        const regArr=Array.isArray(f.region)?f.region:[];
-        const label=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
-        const panelOpen=rgDropOpenPage===page;
-        return `<div class="rgdrop">
-          <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleRegionDrop('${page}',event)">${esc(label)}<span class="rg-caret">&#9660;</span></button>
-          <div class="rgdrop-panel${panelOpen?' open':''}">
-            ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
-            ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
-          </div>
-        </div>`;
-      })()}
+      <div class="rgdrop">
+        <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
+        <div class="rgdrop-panel${panelOpen?' open':''}">
+          ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
+          ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
+        </div>
+      </div>
     </div>
     ${catDropdowns}
-    <div class="fsep"></div>
-    <div class="fgroup">
-      <span class="flabel">Outliers</span>
-      <div class="fbtn-group">
-        <button class="fbtn${!f.removeOutliers?' fbtn-active':''}" onclick="setOutlierPreset('${page}',null)">Show all</button>
-        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-1)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',1)">above ${calcFence(1).toFixed(0)}d</button>
-        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-1.5)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',1.5)">above ${calcFence(1.5).toFixed(0)}d</button>
-        <button class="fbtn${f.removeOutliers&&Math.abs(f.outlierMult-2)<.01?' fbtn-active':''}" onclick="setOutlierPreset('${page}',2)">above ${calcFence(2).toFixed(0)}d</button>
-      </div>
-      ${f.removeOutliers
-        ? `<span class="outlier-badge">${outlierCount} hidden</span>`
-        : `<span class="fhint">${outlierCount} above ${fence.toFixed(0)}d</span>`}
-    </div>
-    <div class="fsep"></div>
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
-      <label class="fglobal">
-        <input type="checkbox" ${globalMode?'checked':''} onchange="toggleGlobal(this.checked,'${page}')">
-        Global
-      </label>
       <span class="fhint" id="fb-hint-${page}">${filtered.length} of ${rows.length} shown</span>
     </div>
   </div>`;
 }
 
-function setOutlierPreset(page, mult){
-  const remove = mult !== null;
-  if(globalMode){
-    globalF.removeOutliers=remove; if(remove) globalF.outlierMult=mult;
-    PAGES.forEach(p=>{ pageF[p].removeOutliers=remove; if(remove) pageF[p].outlierMult=mult; });
-  } else {
-    pageF[page].removeOutliers=remove; if(remove) pageF[page].outlierMult=mult;
-  }
+function toggleOutliers(page){
+  pageF[page].removeOutliers=!pageF[page].removeOutliers;
   saveFilterState(); applyFilter(); renderFBars(); renderPage(currentPage);
-}
-
-// Slider gets special treatment — only update label+badge, never rebuild DOM
-function updateOutlierSlider(page, val){
-  if(globalMode){ globalF.outlierMult=val; PAGES.forEach(p=>pageF[p].outlierMult=val); }
-  else pageF[page].outlierMult=val;
-  saveFilterState();
-  // Update label inline without full rebuild
-  PAGES.forEach(p=>{
-    const fence=calcFence(val);
-    const el=document.getElementById('omult-'+p); if(el) el.textContent=val.toFixed(1)+'×IQR = '+fence.toFixed(1)+'d';
-    const cnt=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence).length;
-    const badge=document.querySelector(`#fb-${p} .outlier-badge`); if(badge) badge.textContent=cnt+' outlier'+(cnt!==1?'s':'');
-  });
-  applyFilter();
-  renderPage(currentPage);
 }
 
 let rgDropOpenPage=null;
@@ -728,21 +701,21 @@ function toggleRegionDrop(page,ev){
 }
 function onRegion(page,region,checked,ev){
   ev&&ev.stopPropagation();
-  const src=globalMode?globalF:pageF[page];
-  let arr=Array.isArray(src.region)?[...src.region]:[];
+  let arr=Array.isArray(pageF[page].region)?[...pageF[page].region]:[];
   if(checked){if(!arr.includes(region))arr.push(region);}else arr=arr.filter(r=>r!==region);
-  if(globalMode){globalF.region=arr;PAGES.forEach(p=>pageF[p].region=[...arr]);}else pageF[page].region=arr;
+  pageF[page].region=arr;
   saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
 }
 function onRegionClear(page,ev){
   ev&&ev.stopPropagation();
-  if(globalMode){globalF.region=[];PAGES.forEach(p=>pageF[p].region=[]);}else pageF[page].region=[];
+  pageF[page].region=[];
   saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
 }
 
 function renderFBars(){
   PAGES.forEach(p=>{
-    if(p==='outliers') return; // Aging WIP manages its own filter bar via renderAgingWIP()
+    if(p==='outliers') return;
+    if(p==='trends'){ const el=document.getElementById('fb-trends'); if(el) el.innerHTML=''; return; }
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -759,35 +732,24 @@ function weekRange(offsetWeeks){
   return {from:localISO(mon), to:localISO(sun)};
 }
 function setDateRange(page,from,to){
-  if(globalMode){globalF.dateFrom=from;globalF.dateTo=to;PAGES.forEach(p=>{pageF[p].dateFrom=from;pageF[p].dateTo=to;});}
-  else{pageF[page].dateFrom=from;pageF[page].dateTo=to;}
+  pageF[page].dateFrom=from; pageF[page].dateTo=to;
   saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
 }
 
 function onF(page,key,value){
   if(typeof value==='string' && value==='true') value=true;
   if(typeof value==='string' && value==='false') value=false;
-  if(globalMode){ globalF[key]=value; PAGES.forEach(p=>pageF[p][key]=value); }
-  else pageF[page][key]=value;
-  saveFilterState();
-  applyFilter(); renderFBars(); renderPage(currentPage);
-}
-
-function toggleGlobal(on, fromPage){
-  globalMode=on;
-  if(on){ globalF={...pageF[fromPage]}; PAGES.forEach(p=>pageF[p]={...globalF}); }
-  else { PAGES.forEach(p=>pageF[p]={...globalF}); }
+  pageF[page][key]=value;
   saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
 
 function clearF(page){
-  const def={dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',
-    outlierMult:S.defaultOutlierMult, removeOutliers:S.defaultRemoveOutliers};
+  const def=defaultF();
+  def.removeOutliers=S.defaultRemoveOutliers;
   const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
-  if(globalMode){ globalF={...def}; PAGES.forEach(p=>pageF[p]={...def}); }
-  else pageF[page]={...def};
+  pageF[page]={...def};
   saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
@@ -843,7 +805,7 @@ function buildWIPFBar(){
 
   const totalOpen=rows.filter(r=>r.start&&!r.complete).length;
 
-  return `<div class="fbar">
+  return `<div class="fbar" style="flex-wrap:nowrap;">
     <div class="fgroup">
       <span class="flabel">Region</span>
       <div class="rgdrop">
@@ -854,7 +816,6 @@ function buildWIPFBar(){
         </div>
       </div>
     </div>
-    ${typeCtrl}
     ${salesRepCtrl}
     ${resourceCtrl}
     <div class="fgroup" style="margin-left:auto;">
@@ -912,7 +873,7 @@ function toggleWipRow(rowEl, id){
 }
 
 // ═══ NAV ══════════════════════════════════════════════════
-let currentPage = 'exec';
+let currentPage = 'week';
 
 function nav(page){
   currentPage=page;
@@ -933,13 +894,12 @@ function nav(page){
 document.querySelectorAll('.ntab').forEach(t=>t.addEventListener('click',()=>nav(t.dataset.page)));
 
 function renderPage(p){
-  if(p==='exec')     renderExec();
-  if(p==='overview') renderOverview();
-  if(p==='weekly')   renderWeekly();
-  if(p==='regions')  renderRegions();
-  if(p==='outliers') renderAgingWIP();
-  if(p==='data')     renderEditor();
-  if(p==='settings') renderSettings();
+  if(p==='week')        renderWeek();
+  if(p==='performance') renderPerformance();
+  if(p==='trends')      renderTrends();
+  if(p==='outliers')    renderAgingWIP();
+  if(p==='data')        renderEditor();
+  if(p==='settings')    renderSettings();
 }
 
 // ═══ UTILS ════════════════════════════════════════════════
@@ -1051,242 +1011,296 @@ function distBuckets(src){
 
 // Sort state
 let sortKey='count', sortAsc=false;
-function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else{sortKey=k;sortAsc=false;} renderRegionTable(); }
+function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else{sortKey=k;sortAsc=false;} renderRegionTablePerf(); }
 function sortArrow(k){ if(sortKey!==k) return 'sarr-no'; return sortAsc?'sarr-up':'sarr-dn'; }
 
-// ═══ EXEC SUMMARY ═════════════════════════════════════════
-function renderExec(){
-  const src=filtered;
-  const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const avgT=avg(tots), medT=med(tots), onTgt=pctTgt(tots);
-
-  // Trend chart: always trailing 10 weeks from all data ending at filter end date
-  const endDate=getF().dateTo||'';
-  const allWeekly=weeklyStatsByComplete(rows);
-  const trendWeekly=(endDate?allWeekly.filter(w=>w.week<=endDate):allWeekly).slice(-10);
-  const roll3=rollingAvg(trendWeekly,'median_total',3);
-  const latest=roll3.filter(x=>x!=null).slice(-1)[0];
-  const prev=roll3.filter(x=>x!=null).slice(-2,-1)[0];
-  // Trend: lower is better (shorter cycle = improvement)
-  const trend=latest!=null&&prev!=null?(latest<prev-0.2?'▼ Improving':latest>prev+0.2?'▲ Slipping':'— Holding'):null;
-  const trendClass=trend?(trend.startsWith('▼')?'roll-up':trend.startsWith('▲')?'roll-dn':'roll-flat'):'roll-flat';
-
-  if(!tots.length){
-    document.getElementById('exec-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
-    return;
-  }
-  const dates=src.map(r=>r.complete).filter(Boolean).sort();
-  const dateRange=dates.length
-    ?`Completed ${fmtDate(dates[0])} — ${fmtDate(dates[dates.length-1])}  ·  ${src.length} projects  ·  ${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions`
-    :'No data';
-
-  const kcls=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
-
-  // Pipeline ratio: current WIP / avg completions last 3 completed weeks
-  const today=new Date(); today.setHours(12,0,0,0);
-  const prWip=rows.filter(r=>r.start&&!r.complete).length;
-  const prWeekCounts=[];
-  for(let i=1;i<=3;i++){
-    const wE=new Date(today); wE.setDate(wE.getDate()-((today.getDay()||7)-1)-7*(i-1));
-    const wS=new Date(wE); wS.setDate(wE.getDate()-6);
-    const wSiso=wS.toISOString().slice(0,10), wEiso=wE.toISOString().slice(0,10);
-    prWeekCounts.push(rows.filter(r=>r.complete>=wSiso&&r.complete<=wEiso).length);
-  }
-  const prAvgW=prWeekCounts.reduce((a,b)=>a+b,0)/3;
-  const pipelineRatio=prAvgW>0?prWip/prAvgW:null;
-  const prCls=pipelineRatio==null?'':(pipelineRatio<=1.0?'eks-good':'eks-mid');
-
-  const kpis=`
-    <div class="ekcard">
-      <div class="eklabel">Median total cycle</div>
-      <div class="ekval ${kcls(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div>
-      ${trend?`<div class="rolling ${trendClass}">${trend} · 3-wk ${latest!=null?latest.toFixed(1)+'d':''}</div>`:''}
-      <div class="ektgt">Target: ${S.targetMedian}d median</div>
-    </div>
-    <div class="ekcard">
-      <div class="eklabel">Avg total cycle</div>
-      <div class="ekval ${kcls(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div>
-      <div class="ektgt">Target: ${S.targetAvg}d avg</div>
-    </div>
-    <div class="ekcard">
-      <div class="eklabel">On target ≤${S.targetAvg}d</div>
-      <div class="ekval ${onTgt!=null?(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad'):''}">${onTgt!=null?onTgt+'%':'—'}</div>
-      <div class="ektgt">${tots.length} projects w/ data</div>
-    </div>
-    <div class="ekcard">
-      <div class="eklabel">Pipeline ratio</div>
-      <div class="ekval ${prCls}">${pipelineRatio!=null?pipelineRatio.toFixed(1)+'×':'—'}</div>
-      <div class="ektgt">${prWip} open · ${prAvgW.toFixed(1)} avg/wk</div>
-    </div>
-    <div class="ekcard">
-      <div class="eklabel">WIP</div>
-      <div class="ekval">${rows.filter(r=>r.start&&!r.complete).length.toLocaleString()}</div>
-      <div class="ektgt">Open surveys</div>
-    </div>`;
-
-  document.getElementById('exec-content').innerHTML=`
+// ═══ CURRENT ═════════════════════════════════════════════
+let weekView='last';
+function renderWeek(){
+  const tgl=(v,l)=>`<button class="tgl-btn${weekView===v?' active':''}" onclick="setWeekView('${v}')">${l}</button>`;
+  document.getElementById('week-content').innerHTML=`
     <div class="exec-wrap theme-${S.execTheme}">
       <div class="exec-hero">
-        <div class="exec-title">Site Survey Performance</div>
-        <div class="exec-sub">${dateRange}</div>
-        <div class="exec-kpis">${kpis}</div>
-      </div>
-    </div>
-    <div class="g2">
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">Weekly trend</div><div class="ssub">Trailing 10 weeks by completion date · unaffected by date filter</div></div></div>
-        <div class="leg">
-          <span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekly median</span>
-          <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
-          <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetMedian}d target</span>
-          <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
+          <div id="cur-hero-hdr"></div>
+          <div class="toggle-group" style="flex-shrink:0;margin-left:16px;">${tgl('last','Last Week')}${tgl('this','This Week')}</div>
         </div>
-        <div class="cw" style="height:195px;"><canvas id="ex-trend"></canvas></div>
+        <div class="exec-kpis" id="cur-kpis"></div>
       </div>
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Projects by total days</div></div></div>
-        <div class="cw" style="height:195px;"><canvas id="ex-dist"></canvas></div>
+      <div id="week-inner"></div>
+    </div>`;
+  weekView==='last' ? renderLastWeek() : renderThisWeek();
+}
+function setWeekView(v){ weekView=v; renderWeek(); }
+
+function trailing4WeekPace(){
+  const today=new Date(); today.setHours(12,0,0,0);
+  const dow=today.getDay()||7;
+  const thisMonday=new Date(today); thisMonday.setDate(today.getDate()-dow+1);
+  const counts=[];
+  for(let i=1;i<=4;i++){
+    const sunEnd=new Date(thisMonday); sunEnd.setDate(thisMonday.getDate()-7*(i-1)-1);
+    const monStart=new Date(sunEnd); monStart.setDate(sunEnd.getDate()-6);
+    const from=localISO(monStart), to=localISO(sunEnd);
+    counts.push(rows.filter(r=>r.complete&&r.complete>=from&&r.complete<=to).length);
+  }
+  const total=counts.reduce((a,b)=>a+b,0);
+  return total>0?Math.round(total/4*10)/10:null;
+}
+
+function renderLastWeek(){
+  const lw=weekRange(-1);
+  const src=rows.filter(r=>r.complete&&r.complete>=lw.from&&r.complete<=lw.to);
+  const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
+  document.getElementById('cur-hero-hdr').innerHTML=`
+    <div class="exec-title">Last Week</div>
+    <div class="exec-sub">${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>`;
+  if(!src.length){
+    document.getElementById('cur-kpis').innerHTML='';
+    document.getElementById('week-inner').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys last week.</div>`;
+    return;
+  }
+  const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
+  const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!r.complete||r.complete>lw.to)).length;
+  document.getElementById('cur-kpis').innerHTML=`
+    <div class="ekcard"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
+    <div class="ekcard"><div class="eklabel">Avg cycle</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
+    <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
+    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">open surveys</div></div>`;
+  const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
+  const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
+    .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
+    .filter(td=>td.n>0).sort((a,b)=>b.n-a.n);
+  const rStats=regionStats(src).sort((a,b)=>b.count-a.count).slice(0,16);
+  const rh=Math.max(180,rStats.length*26+50);
+
+  const shortName=t=>t.replace(' Surveyor','').replace(' Services','');
+  const splitSegs=typeData.map((td,i)=>{
+    const pct=Math.round(td.n/src.length*100);
+    const col=TYPE_COLORS[td.t];
+    const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d avg':'—';
+    const rad=typeData.length===1?'6px':(i===0?'6px 0 0 6px':i===typeData.length-1?'0 6px 6px 0':'0');
+    return `<div style="flex:${td.n};display:flex;flex-direction:column;gap:4px;min-width:0;">
+      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:500">${shortName(td.t)}</span> <span style="font-weight:700">${pct}%</span></div>
+      <div style="background:${col};border-radius:${rad};height:52px;padding:9px 10px;color:#fff;overflow:hidden;box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);" title="${td.t}: ${td.n} surveys · ${avgStr}">
+        <div style="font-size:10px;font-weight:600;white-space:nowrap;">${td.n} surveys</div>
+        <div style="font-size:10px;opacity:.82;white-space:nowrap;margin-top:3px;">${avgStr}</div>
       </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('week-inner').innerHTML=`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
+      <div style="display:flex;gap:4px;">${splitSegs}</div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Regional performance</div><div class="ssub">Avg total cycle — top regions by volume</div></div></div>
-      <div class="cw" id="ex-rg-wrap"><canvas id="ex-rg"></canvas></div>
-      <div class="note">Surveyor type context (Ambia Solar / Sales Rep / Radicl / Install Partner) will layer here once the Assigned To field is active in the export.</div>
+      <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Cycle days</div></div></div>
+      <div class="cw" style="height:150px;"><canvas id="lw-dist"></canvas></div>
+    </div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Regional</div><div class="ssub">Avg cycle by region</div></div></div>
+      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
+      <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
     </div>`;
 
-  dc('ex-trend');
-  CH['ex-trend']=new Chart(document.getElementById('ex-trend'),{
-    type:'bar',
-    data:{labels:trendWeekly.map(fmtWeekLabel),datasets:[
-      {label:'Weekly median',data:trendWeekly.map(w=>w.median_total),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y',order:3},
-      {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',
-       tension:.4,fill:true,pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:2},
-      {label:'On target %',data:trendWeekly.map(w=>w.pct_on_target),type:'line',borderColor:'#1D9E75',
-       backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='On target %'?` ${ctx.parsed.y}% on target`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'}`}},
-        annotation:{annotations:{t:{type:'line',yMin:S.targetMedian,yMax:S.targetMedian,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{
-        x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},
-        y:{min:0,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
-        y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
-  );
-
   const dist=distBuckets(src);
-  dc('ex-dist');
-  CH['ex-dist']=new Chart(document.getElementById('ex-dist'),{
+  dc('lw-dist');
+  CH['lw-dist']=new Chart(document.getElementById('lw-dist'),{
     type:'bar',
     data:{labels:dist.map((_,i)=>i===15?'15+':i+'d'),
-      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#1D9E75':i<=S.targetAvg+2?'#BA7517':'#e24b4a'),borderRadius:3}]},
+      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#1D9E75':i<=(S.targetAvg+2)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999'}}}}
   });
 
-  const stats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).sort((a,b)=>b.count-a.count).slice(0,16);
-  const rh=Math.max(220,stats.length*26+50);
-  document.getElementById('ex-rg-wrap').style.height=rh+'px';
-  dc('ex-rg');
-  CH['ex-rg']=new Chart(document.getElementById('ex-rg'),{
+  document.getElementById('lw-rg-wrap').style.height=rh+'px';
+  dc('lw-rg');
+  CH['lw-rg']=new Chart(document.getElementById('lw-rg'),{
     type:'bar',
-    data:{labels:stats.map(r=>r.region),datasets:[{
-      data:stats.map(r=>r.start_to_complete),
-      backgroundColor:stats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),
-      borderRadius:3}]},
+    data:{labels:rStats.map(r=>r.region),datasets:[{
+      data:rStats.map(r=>r.start_to_complete),
+      backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${stats[ctx.dataIndex].count} projects)`}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
               y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
   });
 }
 
-// ═══ OVERVIEW ════════════════════════════════════════════
-function renderOverview(){
+function renderThisWeek(){
+  const tw=weekRange(0);
+  const today=localISO(new Date());
+  const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=today);
+  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>today&&r.scheduled<=tw.to&&!r.complete);
+  const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!r.complete);
+  const t4Pace=trailing4WeekPace();
+  const dow=new Date().getDay()||7;
+  const daysIn=dow, daysLeft=7-daysIn;
+  const projTotal=t4Pace!=null?Math.round((completedTW.length+(t4Pace*daysLeft/7))*10)/10:null;
+  const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const medT=med(tots);
+  const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
+  const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  document.getElementById('cur-hero-hdr').innerHTML=`
+    <div class="exec-title">This Week</div>
+    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[daysIn-1]||'today'}</div>`;
+  const wip=rows.filter(r=>r.start&&!r.complete).length;
+  document.getElementById('cur-kpis').innerHTML=`
+    <div class="ekcard"><div class="eklabel">Completed so far</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
+    <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${projTotal!=null?'~'+projTotal:'—'}</div><div class="ektgt">4-wk pace: ${t4Pace!=null?t4Pace.toFixed(1):'—'}/wk</div></div>
+    <div class="ekcard"><div class="eklabel">Scheduled remaining</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
+    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">open surveys</div></div>`;
+
+  // Day-by-day breakdown
+  const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
+  const dayCounts=dayDates.map(date=>rows.filter(r=>r.complete===date).length);
+  const todayIdx=dayDates.indexOf(today);
+
+  document.getElementById('week-inner').innerHTML=`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · past green, today blue, future dim</div></div></div>
+      <div class="cw" style="height:120px;"><canvas id="tw-daily"></canvas></div>
+    </div>
+    ${atRisk.length?`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRisk.length} pending</div></div></div>
+      <div style="overflow-x:auto;"><table><thead><tr>
+        <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
+      </tr></thead><tbody>
+        ${atRisk.sort((a,b)=>a.scheduled.localeCompare(b.scheduled)).map(r=>`<tr>
+          <td style="font-size:11px;">${esc(r.project||r.contact||'—')}</td>
+          <td style="font-size:11px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
+          <td style="font-size:11px;">${esc(r.sales_rep||'—')}</td>
+          <td class="r" style="font-size:11px;">${fmtDateShort(r.scheduled)}</td>
+          <td class="r">${pillV(dDiff(r.start,today))}</td>
+        </tr>`).join('')}
+      </tbody></table></div>
+    </div>`:''}
+    ${completedTW.length?`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} surveys closed this week</div></div></div>
+      <div style="overflow-x:auto;"><table><thead><tr>
+        <th>Project</th><th>Region</th><th>Surveyor</th><th class="r">Complete</th><th class="r">Cycle</th>
+      </tr></thead><tbody>
+        ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
+          <td style="font-size:11px;">${esc(r.project||r.contact||'—')}</td>
+          <td style="font-size:11px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
+          <td style="font-size:11px;">${esc(r.resource||'—')}</td>
+          <td class="r" style="font-size:11px;">${fmtDateShort(r.complete)}</td>
+          <td class="r">${pillV(r.ct_total)}</td>
+        </tr>`).join('')}
+      </tbody></table></div>
+    </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}`;
+
+  dc('tw-daily');
+  CH['tw-daily']=new Chart(document.getElementById('tw-daily'),{
+    type:'bar',
+    data:{labels:dayNames,datasets:[{
+      data:dayCounts,
+      backgroundColor:dayNames.map((_,i)=>i===todayIdx?'#2563eb':i<todayIdx?'#1D9E75':'rgba(0,0,0,.07)'),
+      borderRadius:4
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#888',font:{size:11}}},
+              y:{min:0,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',stepSize:1}}}}
+  });
+}
+
+// ═══ PERFORMANCE ═════════════════════════════════════════
+let repView='self';
+function renderPerformance(){
   const src=filtered;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   if(!tots.length){
-    document.getElementById('ov-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
+    document.getElementById('perf-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
     return;
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
-  const cls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
+  const kcls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
+  const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
+  const resCard=rt=>{
+    const rsrc=src.filter(r=>r.resource===rt);
+    const rTots=rsrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+    const rMed=med(rTots),rAvg=avg(rTots),rOnTgt=pctTgt(rTots);
+    return `<div class="res-card" style="border-top-color:${typeColors[rt]||'#999'};">
+      <div class="res-card-title">${rt}</div>
+      <div class="res-card-count">${rsrc.length} surveys</div>
+      <div class="res-stats">
+        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${rMed!=null?(rMed<=S.targetMedian?'kg-c':rMed<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
+        <div class="res-stat-row"><span class="rlabel">Avg</span><span class="rval ${rAvg!=null?(rAvg<=S.targetAvg?'kg-c':rAvg<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rAvg!=null?rAvg.toFixed(1)+'d':'—'}</span></div>
+        <div class="res-stat-row"><span class="rlabel">On target</span><span class="rval">${rOnTgt!=null?rOnTgt+'%':'—'}</span></div>
+      </div>
+    </div>`;
+  };
+  const rStats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).sort((a,b)=>b.count-a.count).slice(0,16);
+  const rh=Math.max(220,rStats.length*26+50);
+  const tgl=(v,l)=>`<button class="tgl-btn${repView===v?' active':''}" onclick="setRepView('${v}')">${l}</button>`;
 
-  document.getElementById('ov-content').innerHTML=`
+  document.getElementById('perf-content').innerHTML=`
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Projects</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-      <div class="kcard"><div class="klabel">Median total</div><div class="kval ${cls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${cls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
+      <div class="kcard"><div class="klabel">Median total</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
+      <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">${tots.length} w/ data</div></div>
       <div class="kcard"><div class="klabel">WIP</div><div class="kval">${rows.filter(r=>r.start&&!r.complete).length.toLocaleString()}</div><div class="ksub">Open surveys</div></div>
     </div>
-    <div class="g2">
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">Avg cycle by region — top 12</div><div class="ssub">Project start → survey complete</div></div></div>
-        <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-        <div class="cw" id="ov-stage-wrap"><canvas id="ov-stage"></canvas></div>
-      </div>
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Total days, all projects</div></div></div>
-        <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-        <div class="cw" style="height:230px;"><canvas id="ov-dist"></canvas></div>
-      </div>
+    <div class="res-cards">${['SunPower Surveyor','Sales Rep','Radicl Services'].map(resCard).join('')}</div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
+      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
+      <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="ov-rc"></div></div></div>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead><tr>
-            <th onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
-            <th class="r" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
-            <th class="r" onclick="sortBy('start_to_complete')">Avg total<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
-            <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
-            <th class="r" onclick="sortBy('pct_on_target')">On tgt<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
-          </tr></thead>
-          <tbody id="ov-tbody"></tbody>
-        </table>
+      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr>
+          <th onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
+          <th class="r" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
+          <th class="r" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
+          <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
+          <th class="r" onclick="sortBy('pct_on_target')">On tgt<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
+        </tr></thead>
+        <tbody id="pf-tbody"></tbody>
+      </table></div>
+      <div class="note">Green ≤${S.targetMedian}d · Amber ≤${S.targetAvg+2}d · Red >${S.targetAvg+2}d. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
+    </div>
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Min 3 completions · Sorted by median</div></div>
+        <div class="toggle-group">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
       </div>
-      <div class="note">Green ≤${S.targetMedian}d · Amber ≤${S.targetAvg+2}d · Red >${S.targetAvg+2}d. Target: ${S.targetMedian}d median / ${S.targetAvg}d avg (Spec 12744). Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
+      <div id="rep-table-wrap"></div>
     </div>`;
 
-  const stats=regionStats(src).slice(0,12);
-  const h=Math.max(250,stats.length*32+50);
-  document.getElementById('ov-stage-wrap').style.height=h+'px';
-  dc('ov-stage');
-  CH['ov-stage']=new Chart(document.getElementById('ov-stage'),{
+  document.getElementById('pf-rg-wrap').style.height=rh+'px';
+  dc('pf-rg');
+  CH['pf-rg']=new Chart(document.getElementById('pf-rg'),{
     type:'bar',
-    data:{labels:stats.map(r=>r.region),datasets:[{
-      data:stats.map(r=>r.start_to_complete),
-      backgroundColor:stats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),
-      borderRadius:3}]},
+    data:{labels:rStats.map(r=>r.region),datasets:[{
+      data:rStats.map(r=>r.start_to_complete),
+      backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${stats[ctx.dataIndex].count} projects)`}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},y:{grid:{display:false},ticks:{color:'#555',font:{size:11}}}}}
+      scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
+              y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
   });
 
-  const dist=distBuckets(src);
-  dc('ov-dist');
-  CH['ov-dist']=new Chart(document.getElementById('ov-dist'),{
-    type:'bar',
-    data:{labels:dist.map((_,i)=>i===15?'15+':i+'d'),
-      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#1D9E75':i<=(S.targetAvg+2)?'#BA7517':'#e24b4a'),borderRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},
-        annotation:{annotations:{t:{type:'line',xMin:S.targetAvg-.5,xMax:S.targetAvg-.5,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999'}}}}
-  });
-
-  renderRegionTable();
+  renderRegionTablePerf();
+  renderRepTable();
 }
 
-function renderRegionTable(){
+function renderRegionTablePerf(){
   const stats=regionStats(filtered);
-  const el=document.getElementById('ov-rc'); if(el) el.textContent=stats.length+' regions · '+filtered.length+' projects';
+  const el=document.getElementById('pf-rc'); if(el) el.textContent=stats.length+' regions · '+filtered.length+' projects';
   const sorted=[...stats].sort((a,b)=>{
     let av=a[sortKey],bv=b[sortKey];
     if(av==null) av=sortAsc?Infinity:-Infinity;
@@ -1294,7 +1308,7 @@ function renderRegionTable(){
     if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
     return sortAsc?av-bv:bv-av;
   });
-  const tbody=document.getElementById('ov-tbody'); if(!tbody) return;
+  const tbody=document.getElementById('pf-tbody'); if(!tbody) return;
   tbody.innerHTML=sorted.map(r=>{
     const state=getState(r.region),city=r.region.split(' ').slice(1).join(' ');
     const dim=r.count<S.minRegionVolume?' class="dim-row"':'';
@@ -1308,46 +1322,76 @@ function renderRegionTable(){
   }).join('');
 }
 
-// ═══ WEEKLY ══════════════════════════════════════════════
-function renderWeekly(){
-  const weekly=weeklyStats(rows);           // start-date bucketed (for New In) — uses full dataset like exec trend
-  const weeklyC=weeklyStatsByComplete(rows); // completion-date bucketed (for cycle time)
-  const roll3=rollingAvg(weeklyC,'start_to_complete',3);
-  const labelsC=weeklyC.map(fmtWeekLabel); // for cycle time charts
-  const al=weeklyC.map(w=>w.count<5?.4:1);
+function setRepView(v){ repView=v; renderRepTable(); }
+function renderRepTable(){
+  const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
+  const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
+  const resLabel=resMap[repView];
+  const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
+  const repMap={};
+  src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
+  const repRows=Object.values(repMap).filter(r=>r.tots.length>=3)
+    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
+    .sort((a,b)=>(a.median??99)-(b.median??99));
+  if(!repRows.length){
+    wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No reps with ≥3 completions for ${resLabel} in this range.</div>`;
+    return;
+  }
+  wrap.innerHTML=`<div style="overflow-x:auto;"><table>
+    <thead><tr><th>Sales Rep</th><th class="r">Completions</th><th class="r">Median</th><th class="r">Avg</th><th class="r">On target</th></tr></thead>
+    <tbody>${repRows.map(r=>`<tr>
+      <td>${esc(r.name)}</td>
+      <td class="r">${r.count}</td>
+      <td class="r">${pillV(r.median)}</td>
+      <td class="r">${r.average!=null?r.average.toFixed(1)+'d':'—'}</td>
+      <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
 
-  // Unified week list + lookup maps (used by In/Out chart, WIP line, and detail table)
+// ═══ TRENDS ══════════════════════════════════════════════
+function renderTrends(){
+  const trendSrc=rows;
+  const trendDone=rows.filter(r=>r.complete);
+  const weekly=weeklyStats(trendSrc);
+  const weeklyC=weeklyStatsByComplete(trendDone);
+  const roll3=rollingAvg(weeklyC,'start_to_complete',3);
   const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
   const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
   const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort();
   const wkEndMap={}; [...weekly,...weeklyC].forEach(w=>{wkEndMap[w.week]=w.weekEnd;});
-
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
   const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
-  const wipLine=allWks.map(wk=>{
-    const we=wkEndMap[wk]; if(!we) return null;
-    return rows.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length;
-  });
+  const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length; });
+  const labelsC=weeklyC.map(fmtWeekLabel);
+  const al=weeklyC.map(w=>w.count<5?.4:1);
 
-  document.getElementById('wk-content').innerHTML=`
+  // Scrollable chart sizing: ~12 weeks visible, scroll for the rest
+  const WEEK_W=62;
+  const containerEl=document.getElementById('tr-content');
+  const containerW=containerEl?Math.max(300,containerEl.offsetWidth-32):700;
+  const chartW=Math.max(containerW, allWks.length*WEEK_W);
+  const chartWC=Math.max(containerW, weeklyC.length*WEEK_W);
+
+  document.getElementById('tr-content').innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys in (by start date) vs completions out (by complete date) · Line = WIP balance</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>New In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
         <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
       </div>
-      <div class="cw" style="height:260px;"><canvas id="wk-inout"></canvas></div>
+      <div id="tr-inout-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-inout" width="${chartW}" height="260" style="display:block;"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Cycle time for surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
         <span class="li"><span class="ld" style="background:#1D9E75;"></span>On target %</span>
       </div>
-      <div class="cw" style="height:290px;"><canvas id="wk-wf"></canvas></div>
+      <div id="tr-wf-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-wf" width="${chartWC}" height="290" style="display:block;"></canvas></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Volume &amp; cycle time</div><div class="ssub">Bars = completions · Grey line = weekly avg · Blue line = 3-wk rolling avg</div></div></div>
@@ -1357,18 +1401,23 @@ function renderWeekly(){
         <span class="li lroll"><span class="ld" style="background:var(--blue);"></span>3-wk rolling</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
       </div>
-      <div class="cw" style="height:230px;"><canvas id="wk-vol"></canvas></div>
+      <div id="tr-vol-wrap" style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><canvas id="tr-vol" width="${chartWC}" height="230" style="display:block;"></canvas></div>
     </div>
     <div class="sec">
       <div class="shead"><div class="stitle">Weekly detail</div></div>
       <table><thead><tr>
         <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
-      </tr></thead><tbody id="wk-tbody"></tbody></table>
+      </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
 
-  dc('wk-inout');
-  CH['wk-inout']=new Chart(document.getElementById('wk-inout'),{
+  // Chart.js reads canvas.offsetWidth (CSS layout size), not the width HTML attribute.
+  // Set style dimensions explicitly so responsive:false sees the full scrollable width.
+  const _szCV=(id,w,h)=>{const c=document.getElementById(id);if(!c)return;c.style.width=w+'px';c.style.height=h+'px';};
+  _szCV('tr-inout',chartW,260); _szCV('tr-wf',chartWC,290); _szCV('tr-vol',chartWC,230);
+
+  dc('tr-inout');
+  CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
     type:'bar',
     data:{labels:inOutLabels,datasets:[
       {label:'New In',data:inOutNewIn,backgroundColor:'rgba(96,165,250,.75)',borderRadius:3,yAxisID:'y',order:2},
@@ -1376,12 +1425,11 @@ function renderWeekly(){
       {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
        tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:false,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
-          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`
-            :` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#888',font:{size:10}}},
@@ -1389,25 +1437,19 @@ function renderWeekly(){
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#d97706'},title:{display:true,text:'WIP',color:'#d97706',font:{size:10}}}}}
   });
 
-  dc('wk-wf');
-  CH['wk-wf']=new Chart(document.getElementById('wk-wf'),{
+  dc('tr-wf');
+  CH['tr-wf']=new Chart(document.getElementById('tr-wf'),{
     type:'bar',
     data:{labels:labelsC,datasets:[
       {label:'Avg total',
        data:weeklyC.map(w=>w.start_to_complete),
-       backgroundColor:weeklyC.map((w,i)=>{
-         const v=w.start_to_complete,a=al[i];
-         if(v==null) return `rgba(226,232,240,${a})`;
-         if(v<=S.targetAvg) return `rgba(29,158,117,${a})`;
-         if(v<=(S.targetAvg+3)) return `rgba(186,117,23,${a})`;
-         return `rgba(226,75,74,${a})`;
-       }),
+       backgroundColor:weeklyC.map((w,i)=>{ const v=w.start_to_complete,a=al[i]; if(v==null) return `rgba(226,232,240,${a})`; if(v<=S.targetAvg) return `rgba(29,158,117,${a})`; if(v<=(S.targetAvg+3)) return `rgba(186,117,23,${a})`; return `rgba(226,75,74,${a})`; }),
        borderRadius:3,yAxisID:'y',order:2},
       {label:'On target %',data:weeklyC.map(w=>w.pct_on_target),type:'line',borderColor:'#1D9E75',
        backgroundColor:'transparent',tension:.4,borderDash:[5,3],borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#1D9E75',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:false,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
@@ -1420,8 +1462,8 @@ function renderWeekly(){
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#1D9E75',font:{size:10},callback:v=>v+'%'}}}}}
   );
 
-  dc('wk-vol');
-  CH['wk-vol']=new Chart(document.getElementById('wk-vol'),{
+  dc('tr-vol');
+  CH['tr-vol']=new Chart(document.getElementById('tr-vol'),{
     type:'bar',
     data:{labels:labelsC,datasets:[
       {label:'Completions',data:weeklyC.map(w=>w.count),backgroundColor:'#e2e8f0',borderRadius:3,yAxisID:'y1',order:3},
@@ -1430,7 +1472,7 @@ function renderWeekly(){
       {label:'3-wk rolling',data:roll3,type:'line',borderColor:'#2563eb',backgroundColor:'transparent',
        tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{responsive:false,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         annotation:{annotations:{t:{type:'line',yMin:S.targetAvg,yMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{
@@ -1439,17 +1481,15 @@ function renderWeekly(){
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#bbb'},title:{display:true,text:'Completions',color:'#bbb',font:{size:10}}}}}
   });
 
-  document.getElementById('wk-tbody').innerHTML=[...allWks].reverse().map(wk=>{
-    const ws=wkMap[wk], wc=wkCMap[wk];
+  document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
+    const ws=wkMap[wk],wc=wkCMap[wk];
     const wkEnd=ws?.weekEnd||wc?.weekEnd||'';
     const newIn=ws?.count??0;
     const compl=wc?.count??0;
     const diff=compl-newIn;
     const diffStr=diff===0?'—':(diff>0?`<span style="color:var(--green);">+${diff}</span>`:`<span style="color:var(--red);">${diff}</span>`);
     const t=wc?.start_to_complete;
-    const vs=t!=null?(t<=S.targetMedian?`<span class="pill pg">✓ ${t.toFixed(1)}d</span>`
-      :(t<=S.targetAvg?`<span class="pill pam">${t.toFixed(1)}d</span>`
-      :`<span class="pill pr">${t.toFixed(1)}d</span>`)):'<span class="pna">—</span>';
+    const vs=t!=null?(t<=S.targetMedian?`<span class="pill pg">✓ ${t.toFixed(1)}d</span>`:(t<=S.targetAvg?`<span class="pill pam">${t.toFixed(1)}d</span>`:`<span class="pill pr">${t.toFixed(1)}d</span>`)):'<span class="pna">—</span>';
     const r3=wc?.r3;
     const onTgtVal=wc?.pct_on_target;
     const wipSnap=wipLine[allWks.indexOf(wk)];
@@ -1464,94 +1504,23 @@ function renderWeekly(){
       <td class="r">${onTgtVal!=null?onTgtVal+'%':'—'}</td>
     </tr>`;
   }).join('');
-}
 
-// ═══ REGIONS ══════════════════════════════════════════════
-function renderRegions(){
-  if(!filtered.length){
-    document.getElementById('rg-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
-    return;
-  }
-  const stats=regionStats(filtered);
-  const byTotal=[...stats].filter(r=>r.start_to_complete!=null).sort((a,b)=>(b.start_to_complete||0)-(a.start_to_complete||0)).slice(0,22);
-  const top12=stats.slice(0,12);
-  const hasSurveyor=rows.some(r=>r.resource);
-
-  document.getElementById('rg-content').innerHTML=`
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Project start → survey complete</div></div></div>
-      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-      <div class="cw" id="rg-r2s-wrap"><canvas id="rg-r2s"></canvas></div>
-    </div>
-    <div class="g2">
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Projects by total days (filtered view)</div></div></div>
-        <div class="cw" style="height:210px;"><canvas id="rg-rate"></canvas></div>
-      </div>
-      <div class="sec">
-        <div class="shead"><div><div class="stitle">On-target rate by region</div><div class="ssub">% completing ≤${S.targetAvg}d — top 12</div></div></div>
-        <div class="cw" style="height:210px;"><canvas id="rg-ontgt"></canvas></div>
-      </div>
-    </div>
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Surveyor type breakdown</div><div class="ssub">${hasSurveyor?'Who is completing surveys in each region':'Pending Salesforce field — will populate automatically once Surveyor Type is in the export'}</div></div></div>
-      ${hasSurveyor?'<div class="cw" style="height:250px;"><canvas id="rg-sv"></canvas></div>'
-        :'<div style="padding:24px 0;text-align:center;color:var(--faint);font-size:12px;">Activate by uncommenting <code>resource</code> in FIELDS once the Resource field is available in the Salesforce export.</div>'}
-    </div>`;
-
-  const rh=Math.max(260,byTotal.length*28+50);
-  document.getElementById('rg-r2s-wrap').style.height=rh+'px';
-  dc('rg-r2s');
-  CH['rg-r2s']=new Chart(document.getElementById('rg-r2s'),{
-    type:'bar',
-    data:{labels:byTotal.map(r=>r.region),datasets:[{
-      data:byTotal.map(r=>r.start_to_complete),
-      backgroundColor:byTotal.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(1)}d avg (${byTotal[ctx.dataIndex].count} projects)`}},
-        annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
-  });
-
-  const dist=distBuckets(filtered);
-  dc('rg-rate');
-  CH['rg-rate']=new Chart(document.getElementById('rg-rate'),{
-    type:'bar',
-    data:{labels:dist.map((_,i)=>i===15?'15+':i+'d'),
-      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#1D9E75':i<=(S.targetAvg+2)?'#BA7517':'#e24b4a'),borderRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:{color:'#999',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999'}}}}
-  });
-
-  dc('rg-ontgt');
-  CH['rg-ontgt']=new Chart(document.getElementById('rg-ontgt'),{
-    type:'bar',
-    data:{labels:top12.map(r=>r.region),datasets:[{
-      data:top12.map(r=>r.pct_on_target),
-      backgroundColor:top12.map(r=>(r.pct_on_target||0)>=75?'#1D9E75':(r.pct_on_target||0)>=50?'#BA7517':'#e24b4a'),borderRadius:3}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y}% on target`}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#888',maxRotation:45,font:{size:10}}},y:{max:100,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888',callback:v=>v+'%'}}}}
-  });
-
-  if(hasSurveyor){
-    const types=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
-    const typeColors={'SunPower Surveyor':'#60a5fa','Sales Rep':'#fbbf24','Radicl Services':'#a78bfa','Install Partner':'#34d399'};
-    const rStats=regionStats(filtered).slice(0,12);
-    dc('rg-sv');
-    CH['rg-sv']=new Chart(document.getElementById('rg-sv'),{
-      type:'bar',
-      data:{labels:rStats.map(r=>r.region),datasets:types.map(t=>({
-        label:t,
-        data:rStats.map(rr=>filtered.filter(r=>r.region===rr.region&&r.resource===t).length),
-        backgroundColor:typeColors[t]||'#999',borderRadius:3,stack:'s'
-      }))},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10}}},
-        scales:{x:{grid:{display:false},ticks:{color:'#888',maxRotation:45,font:{size:10}},stacked:true},
-                y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#888'},stacked:true}}}
+  // Scroll all charts to most recent (right end) and keep them in sync
+  const wrapIds=['tr-inout-wrap','tr-wf-wrap','tr-vol-wrap'];
+  requestAnimationFrame(()=>{
+    wrapIds.forEach(id=>{const el=document.getElementById(id);if(el) el.scrollLeft=el.scrollWidth;});
+    let _trSync=false;
+    wrapIds.forEach(id=>{
+      const el=document.getElementById(id); if(!el) return;
+      el.addEventListener('scroll',function(){
+        if(_trSync) return;
+        _trSync=true;
+        const sl=this.scrollLeft;
+        wrapIds.forEach(oid=>{if(oid===id) return; const oel=document.getElementById(oid); if(oel) oel.scrollLeft=sl;});
+        _trSync=false;
+      });
     });
-  }
+  });
 }
 
 // ═══ WIP HUB ═════════════════════════════════════════════
@@ -1690,7 +1659,7 @@ function renderAgingWIP(){
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'exec',l:'Exec Summary'},{v:'overview',l:'Overview'},{v:'weekly',l:'Weekly'},{v:'regions',l:'Regions'},{v:'outliers',l:'WIP'}];
+  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'outliers',l:'WIP'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
@@ -1714,7 +1683,7 @@ function renderSettings(){
       <div class="set-sec">
         <div class="set-title">Display</div>
         <div class="set-row">
-          <div><div class="set-label">Exec summary theme</div><div class="set-desc">Visual style for the Exec Summary page</div></div>
+          <div><div class="set-label">Dashboard theme</div><div class="set-desc">Visual style for the Current tab hero</div></div>
           <div class="set-control">
             <div class="theme-btns">
               <button class="tbtn ${S.execTheme==='minimal'?'active':''}" onclick="setSetting('execTheme','minimal');renderSettings()">Minimal</button>
@@ -1758,13 +1727,13 @@ function renderSettings(){
       </div>
 
       <div class="set-sec">
-        <div class="set-title">Outlier Defaults</div>
+        <div class="set-title">Outliers</div>
         <div class="set-row">
-          <div><div class="set-label">Default IQR multiplier</div><div class="set-desc">Starting value for outlier fence on load (${calcFence(S.defaultOutlierMult).toFixed(1)}d at current data)</div></div>
-          <div class="set-control"><input type="number" min="0.5" max="5" step="0.1" value="${S.defaultOutlierMult}" onchange="setSetting('defaultOutlierMult',parseFloat(this.value))"></div>
+          <div><div class="set-label">Outlier threshold (days)</div><div class="set-desc">Surveys with a cycle time above this are counted as outliers · filter bar "Hide &gt;Nd" uses this value</div></div>
+          <div class="set-control"><input type="number" min="1" max="60" value="${S.outlierDays}" onchange="setSetting('outlierDays',parseInt(this.value))"></div>
         </div>
         <div class="set-row">
-          <div><div class="set-label">Remove outliers by default</div><div class="set-desc">Start with outlier removal active on every load</div></div>
+          <div><div class="set-label">Hide outliers by default</div><div class="set-desc">Start with outliers hidden on every load</div></div>
           <div class="set-control"><input type="checkbox" ${S.defaultRemoveOutliers?'checked':''} onchange="setSetting('defaultRemoveOutliers',this.checked)"></div>
         </div>
       </div>
@@ -1803,7 +1772,7 @@ function renderSettings(){
           <div>
             <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;">Pending fields <span style="font-weight:400;color:var(--faint);">— uncomment in FIELD_REGISTRY when available in export</span></div>
             <div class="field-status">
-              ${['Surveyor Type','Assigned To','Is Resurvey','Resurvey Reason','Attempt Number'].map(l=>`<div class="fs-row"><span>${l}</span><span class="fs-pending">Pending</span></div>`).join('')}
+              ${[{l:'Assigned To',h:'surveyor_name'},{l:'Type of Survey',h:'survey_type'},{l:'Resurvey Reason',h:'resurvey_reason'},{l:'Resurvey Attributed',h:'resurvey_attributed'}].map(f=>`<div class="fs-row"><span>${f.l}<span style="color:var(--faint);margin-left:6px;font-size:10px;">${f.h}</span></span><span class="fs-pending">Pending SF field</span></div>`).join('')}
             </div>
           </div>
         </div>
@@ -1913,7 +1882,7 @@ function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.i
 function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
 function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(!r.project_status||r.project_status==='In Progress')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -1929,7 +1898,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=parsed; rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
+    rows=parsed.filter(r=>r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
@@ -2084,21 +2053,15 @@ window.addEventListener('load',()=>{
   // Restore saved filter state (region, type, dates, outlier settings, global mode)
   loadFilterState();
 
-  // Apply default outlier settings from saved prefs (only if no saved state existed)
+  // Apply default outlier toggle if no saved state
   if(!localStorage.getItem('ops_filters')){
-    globalF.outlierMult=S.defaultOutlierMult;
-    globalF.removeOutliers=S.defaultRemoveOutliers;
-    PAGES.forEach(p=>{pageF[p].outlierMult=S.defaultOutlierMult; pageF[p].removeOutliers=S.defaultRemoveOutliers;});
-    const lw=weekRange(-1);
-    globalF.dateFrom=lw.from; globalF.dateTo=lw.to;
-    PAGES.forEach(p=>{pageF[p].dateFrom=lw.from; pageF[p].dateTo=lw.to;});
+    PAGES.forEach(p=>pageF[p].removeOutliers=S.defaultRemoveOutliers);
   }
 
   // Set date range — autoDateRange always wins over saved dates
   clearFenceCache();
-  const dates=RAW.filter(r=>r.complete).map(r=>r.complete).sort();
+  const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){
-    globalF.dateFrom=dates[0]; globalF.dateTo=dates[dates.length-1];
     PAGES.forEach(p=>{pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];});
   }
   // Show data freshness in nav
@@ -2106,7 +2069,7 @@ window.addEventListener('load',()=>{
   if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS; navTs.style.display=''; }
   applyFilter();
   renderFBars();
-  nav(currentPage||S.defaultPage||'exec');
+  nav(currentPage||S.defaultPage||'week');
 });
 </script>
 </body>
