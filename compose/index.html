@@ -552,7 +552,7 @@ async function buildEmailHTML(s, commentary, manualNote){
 
     // Right axis labels (pipeline ratio ×)
     [0,1,yMaxD].forEach(v=>{
-      svgBody+=`<text x="${SVG_W-mr+4}" y="${(parseFloat(cyD(v))+4).toFixed(1)}" text-anchor="start" fill="#8a8fbe" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}×</text>`;
+      svgBody+=`<text x="${SVG_W-mr+4}" y="${(parseFloat(cyD(v))+4).toFixed(1)}" text-anchor="start" fill="#7e5cd6" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}×</text>`;
     });
 
     // Stacked bars: Complete (green, bottom) + Active (blue, top)
@@ -568,10 +568,10 @@ async function buildEmailHTML(s, commentary, manualNote){
         const h=baseY-topY;
         if(active===0){
           // Complete is the top bar — round its top corners
-          svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(105,158,110,0.80)"/>`;
+          svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(60,185,100,0.83)"/>`;
         } else {
           // Active sits above — flat top on Complete
-          svgBody+=`<rect x="${x0}" y="${topY}" width="${barW}" height="${h}" fill="rgba(105,158,110,0.80)"/>`;
+          svgBody+=`<rect x="${x0}" y="${topY}" width="${barW}" height="${h}" fill="rgba(60,185,100,0.83)"/>`;
         }
       }
 
@@ -580,7 +580,7 @@ async function buildEmailHTML(s, commentary, manualNote){
         const topY=parseFloat(cyC(complete+active));
         const h=stackBaseY-topY;
         // Rounded top corners only
-        svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(110,148,188,0.80)"/>`;
+        svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(98,155,230,0.83)"/>`;
       }
     });
 
@@ -590,8 +590,8 @@ async function buildEmailHTML(s, commentary, manualNote){
       if(w.pipeRatio!=null){ pathD+=inSeg?`L ${cx(i)} ${cyD(w.pipeRatio)} `:`M ${cx(i)} ${cyD(w.pipeRatio)} `; inSeg=true; }
       else { inSeg=false; }
     });
-    if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#8a8fbe" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-    s.weeklyTrend.forEach((w,i)=>{ if(w.pipeRatio!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyD(w.pipeRatio)}" r="3.5" fill="#8a8fbe"/>`; });
+    if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#7e5cd6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.weeklyTrend.forEach((w,i)=>{ if(w.pipeRatio!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyD(w.pipeRatio)}" r="3.5" fill="#7e5cd6"/>`; });
 
     // X-axis labels
     s.weeklyTrend.forEach((w,i)=>{
@@ -600,12 +600,12 @@ async function buildEmailHTML(s, commentary, manualNote){
     });
 
     // Legend
-    svgBody+=`<rect x="${ml}" y="5" width="12" height="10" rx="1" fill="rgba(105,158,110,0.80)"/>`;
+    svgBody+=`<rect x="${ml}" y="5" width="12" height="10" rx="1" fill="rgba(60,185,100,0.83)"/>`;
     svgBody+=`<text x="${ml+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Complete</text>`;
-    svgBody+=`<rect x="${ml+90}" y="5" width="12" height="10" rx="1" fill="rgba(110,148,188,0.80)"/>`;
+    svgBody+=`<rect x="${ml+90}" y="5" width="12" height="10" rx="1" fill="rgba(98,155,230,0.83)"/>`;
     svgBody+=`<text x="${ml+106}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Active</text>`;
-    svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#8a8fbe" stroke-width="2"/>`;
-    svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#8a8fbe"/>`;
+    svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#7e5cd6" stroke-width="2"/>`;
+    svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#7e5cd6"/>`;
     svgBody+=`<text x="${ml+176}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Pipeline ratio</text>`;
 
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}">${svgBody}</svg>`;
