@@ -1359,7 +1359,7 @@ function renderTrends(){
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
   const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!r.complete||r.complete>we)).length; });
   const labelsC=weeklyC.map(fmtWeekLabel);
-  const al=weeklyC.map(w=>w.count<5?.4:1);
+  const al=weeklyC.map(()=>1);
 
   // Scrollable chart sizing: ~12 weeks visible, scroll for the rest
   const WEEK_W=62;
@@ -1383,7 +1383,7 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · Faded = &lt;5 completions</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span>
@@ -1399,10 +1399,10 @@ function renderTrends(){
       <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · stacked by List status · smallest category on top</div></div></div>
       <div class="leg">
         <span class="li" style="color:#16a34a;"><span class="ld" style="background:rgba(34,197,94,0.8);"></span>Complete</span>
-        <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Open</span>
         <span class="li" style="color:#d97706;"><span class="ld" style="background:rgba(245,158,11,0.8);"></span>Holding</span>
-        <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.65);"></span>Not Required</span>
+        <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Open</span>
         <span class="li" style="color:#dc2626;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Reopened</span>
+        <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.65);"></span>Not Required</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 40px;height:230px;"><canvas id="tr-vol-yL" width="40" height="230"></canvas></div>
@@ -1499,9 +1499,9 @@ function renderTrends(){
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#8b5cf6',v=>Math.round(v)+'%');
 
   // ── tr-vol: list cohorts stacked by start week ───────────────
-  const LIST_CATS=['Complete','Open','Holding','Not Required','Reopened'];
-  const LIST_COLORS={'Complete':'rgba(34,197,94,0.8)','Open':'rgba(59,130,246,0.8)',
-    'Holding':'rgba(245,158,11,0.8)','Not Required':'rgba(148,163,184,0.65)','Reopened':'rgba(226,75,74,0.8)'};
+  const LIST_CATS=['Complete','Holding','Open','Reopened','Not Required'];
+  const LIST_COLORS={'Complete':'rgba(34,197,94,0.8)','Holding':'rgba(245,158,11,0.8)',
+    'Open':'rgba(59,130,246,0.8)','Reopened':'rgba(226,75,74,0.8)','Not Required':'rgba(148,163,184,0.65)'};
   const cohortMap={};
   trendSrc.filter(r=>r.start&&r.list).forEach(r=>{
     const [y,mo,d]=r.start.split('-').map(Number);
