@@ -1524,7 +1524,10 @@ function renderTrends(){
     'Holding':'rgba(245,158,11,0.8)','Not Required':'rgba(148,163,184,0.65)','Reopened':'rgba(226,75,74,0.8)'};
   const cohortMap={};
   trendSrc.filter(r=>r.start&&r.list).forEach(r=>{
-    const wk=wkKey(r.start);
+    const [y,mo,d]=r.start.split('-').map(Number);
+    const dt=new Date(y,mo-1,d);
+    const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1));
+    const wk=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
     if(!cohortMap[wk]) cohortMap[wk]={};
     cohortMap[wk][r.list]=(cohortMap[wk][r.list]||0)+1;
   });
