@@ -32,6 +32,7 @@ const FIELDS = [
   { key:'last_reviewed_date',   sfCol:'Last Reviewed',                                           type:'text' },
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
   { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
+  { key:'list',                 sfCol:'List',                                                    type:'text' },
 ];
 
 // Parse headers
