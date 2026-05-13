@@ -515,7 +515,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN WTD',val:String(s.newInWTD),sub:s.newInYesterday+' yesterday'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED WTD',val:String(s.completedWTD),sub:s.completedYesterday+' yesterday'},
       {bg:ctA.bg,b:ctA.b,lc:ctA.lc,vc:ctA.vc,sc:ctA.sc,sbc:ctA.sbc,label:'WTD AVG CYCLE',val:s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—',sub:'target ≤4d'+ctA.mark},
-      {bg:ctM.bg,b:ctM.b,lc:ctM.lc,vc:ctM.vc,sc:ctM.sc,sbc:ctM.sbc,label:'WTD MED CYCLE',val:s.medCycleWTD!=null?s.medCycleWTD.toFixed(1)+'d':'—',sub:'target ≤3d'+ctM.mark},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?String(s.projectedWeek):'—',sub:s.daysRemaining>0?(s.daysRemaining+'d left · '+s.histAvg+' avg'):(s.histAvg+' 4-wk avg')},
     ];
   }
   const cardsPng=await buildCardsImage(cardsData);
