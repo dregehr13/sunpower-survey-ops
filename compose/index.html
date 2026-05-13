@@ -221,7 +221,7 @@ function computeStats(){
 
   if(mode==='monday'){
     const period=getLastWeekRange();
-    const rows=ROWS.filter(r=>r.complete>=period.from&&r.complete<=period.to);
+    const rows=ROWS.filter(r=>r.complete>=period.from&&r.complete<=period.to&&!(r.start&&r.complete<r.start));
     const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const allCtsM=ROWS.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const fence=iqrFence(allCtsM);
@@ -238,7 +238,10 @@ function computeStats(){
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
       const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
       const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
-      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:ROWS.filter(r=>r.complete>=wS&&r.complete<=wE).length,cohortComplete,cohortActive});
+      const weekCompl=ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length;
+      const weekStarts=ROWS.filter(r=>r.start>=wS&&r.start<=wE).length;
+      const pipeRatio=weekStarts>0?Math.round(weekCompl/weekStarts*100)/100:null;
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,pipeRatio});
     }
     for(let i=0;i<allTrend.length;i++){
       const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
@@ -262,7 +265,7 @@ function computeStats(){
     for(let i=1;i<=3;i++){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      prWeeks.push(ROWS.filter(r=>r.complete>=wS&&r.complete<=wE).length);
+      prWeeks.push(ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length);
     }
     const prAvg=prWeeks.reduce((a,b)=>a+b,0)/3;
     const pipelineRatio=prAvg>0?wip/prAvg:null;
@@ -529,9 +532,9 @@ async function buildEmailHTML(s, commentary, manualNote){
     const yMaxC=Math.ceil(maxCount/10)*10;
     const cyC=v=>(mt+ch-(v/yMaxC)*ch).toFixed(1);
 
-    // Right axis: rolling avg days
-    const maxDays=Math.max(...s.weeklyTrend.map(w=>w.roll3||0).filter(x=>x!=null),4);
-    const yMaxD=Math.max(Math.ceil(maxDays/2)*2,6);
+    // Right axis: pipeline ratio
+    const maxRatio=Math.max(...s.weeklyTrend.map(w=>w.pipeRatio||0).filter(x=>x!=null),1);
+    const yMaxD=Math.max(Math.ceil(maxRatio*2)/2,2);
     const cyD=v=>(mt+ch-(v/yMaxD)*ch).toFixed(1);
 
     let svgBody='';
@@ -543,9 +546,9 @@ async function buildEmailHTML(s, commentary, manualNote){
       svgBody+=`<text x="${ml-4}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" fill="#bbb" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}</text>`;
     });
 
-    // Right axis labels (days)
-    [0,yMaxD].forEach(v=>{
-      svgBody+=`<text x="${SVG_W-mr+4}" y="${(parseFloat(cyD(v))+4).toFixed(1)}" text-anchor="start" fill="#93c5fd" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}d</text>`;
+    // Right axis labels (pipeline ratio ×)
+    [0,1,yMaxD].forEach(v=>{
+      svgBody+=`<text x="${SVG_W-mr+4}" y="${(parseFloat(cyD(v))+4).toFixed(1)}" text-anchor="start" fill="#7c3aed" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}×</text>`;
     });
 
     // Stacked bars: Complete (green, bottom) + Active (blue, top)
@@ -577,14 +580,18 @@ async function buildEmailHTML(s, commentary, manualNote){
       }
     });
 
-    // Rolling avg line + dots (right axis, days)
+    // 1× breakeven reference line
+    const refY=cyD(1);
+    svgBody+=`<line x1="${ml}" y1="${refY}" x2="${SVG_W-mr}" y2="${refY}" stroke="#e24b4a" stroke-width="1.5" stroke-dasharray="5,4"/>`;
+
+    // Pipeline ratio line + dots (right axis)
     let pathD='',inSeg=false;
     s.weeklyTrend.forEach((w,i)=>{
-      if(w.roll3!=null){ pathD+=inSeg?`L ${cx(i)} ${cyD(w.roll3)} `:`M ${cx(i)} ${cyD(w.roll3)} `; inSeg=true; }
+      if(w.pipeRatio!=null){ pathD+=inSeg?`L ${cx(i)} ${cyD(w.pipeRatio)} `:`M ${cx(i)} ${cyD(w.pipeRatio)} `; inSeg=true; }
       else { inSeg=false; }
     });
-    if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-    s.weeklyTrend.forEach((w,i)=>{ if(w.roll3!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyD(w.roll3)}" r="3.5" fill="#2563eb"/>`; });
+    if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.weeklyTrend.forEach((w,i)=>{ if(w.pipeRatio!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyD(w.pipeRatio)}" r="3.5" fill="#7c3aed"/>`; });
 
     // X-axis labels
     s.weeklyTrend.forEach((w,i)=>{
@@ -597,9 +604,11 @@ async function buildEmailHTML(s, commentary, manualNote){
     svgBody+=`<text x="${ml+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Complete</text>`;
     svgBody+=`<rect x="${ml+90}" y="5" width="12" height="10" rx="1" fill="rgba(96,165,250,0.85)"/>`;
     svgBody+=`<text x="${ml+106}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Active</text>`;
-    svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#2563eb" stroke-width="2"/>`;
-    svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#2563eb"/>`;
-    svgBody+=`<text x="${ml+176}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">3-wk rolling avg (days)</text>`;
+    svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#7c3aed" stroke-width="2"/>`;
+    svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#7c3aed"/>`;
+    svgBody+=`<text x="${ml+176}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Pipeline ratio</text>`;
+    svgBody+=`<line x1="${ml+282}" y1="10" x2="${ml+296}" y2="10" stroke="#e24b4a" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+    svgBody+=`<text x="${ml+300}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">1× breakeven</text>`;
 
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}">${svgBody}</svg>`;
     const svgPng=await svgToDataURL(svg,SVG_W,SVG_H);
