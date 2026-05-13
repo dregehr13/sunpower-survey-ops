@@ -236,7 +236,9 @@ function computeStats(){
     for(let i=6;i>=0;i--){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:ROWS.filter(r=>r.complete>=wS&&r.complete<=wE).length});
+      const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
+      const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:ROWS.filter(r=>r.complete>=wS&&r.complete<=wE).length,cohortComplete,cohortActive});
     }
     for(let i=0;i<allTrend.length;i++){
       const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
@@ -513,94 +515,91 @@ async function buildEmailHTML(s, commentary, manualNote){
   if(cardsPng) rows+=`<tr><td style="padding:20px 24px 0;"><img src="${cardsPng}" width="552" style="display:block;max-width:100%;border:0;" alt=""></td></tr>`;
 
   // ── Weekly trend SVG chart (Monday only) ────────────────
-  if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.some(w=>w.med!=null)){
+  if(s.mode==='monday'&&s.weeklyTrend&&s.weeklyTrend.length){
     const SVG_W=552,SVG_H=175;
-    const ml=30,mr=32,mt=30,mb=42;
+    const ml=32,mr=36,mt=26,mb=42;
     const cw=SVG_W-ml-mr,ch=SVG_H-mt-mb;
-    const yMax=5;
     const n=s.weeklyTrend.length;
     const colW=cw/n;
-    const barW=Math.floor(colW*0.52);
+    const barW=Math.floor(colW*0.55);
     const cx=i=>(ml+(i+0.5)*colW).toFixed(1);
-    const cy=v=>(mt+ch-(v/yMax)*ch).toFixed(1);
-    const cyP=v=>(mt+ch*(1-v/100)).toFixed(1);
+
+    // Left axis: cohort count
+    const maxCount=Math.max(...s.weeklyTrend.map(w=>(w.cohortComplete||0)+(w.cohortActive||0)),10);
+    const yMaxC=Math.ceil(maxCount/10)*10;
+    const cyC=v=>(mt+ch-(v/yMaxC)*ch).toFixed(1);
+
+    // Right axis: rolling avg days
+    const maxDays=Math.max(...s.weeklyTrend.map(w=>w.roll3||0).filter(x=>x!=null),4);
+    const yMaxD=Math.max(Math.ceil(maxDays/2)*2,6);
+    const cyD=v=>(mt+ch-(v/yMaxD)*ch).toFixed(1);
 
     let svgBody='';
-    // Grid lines + left y-axis labels (days)
-    for(let v=0;v<=yMax;v++){
-      const y=cy(v);
+
+    // Grid lines + left axis labels (count)
+    [0,Math.round(yMaxC/2),yMaxC].forEach(v=>{
+      const y=cyC(v);
       svgBody+=`<line x1="${ml}" y1="${y}" x2="${SVG_W-mr}" y2="${y}" stroke="#ebebeb" stroke-width="1"/>`;
-      svgBody+=`<text x="${ml-5}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" fill="#bbb" font-size="10" font-family="Arial,Helvetica,sans-serif">${v}d</text>`;
-    }
-    // Right y-axis labels (on-target %)
-    [0,50,100].forEach(v=>{
-      svgBody+=`<text x="${SVG_W-mr+5}" y="${(parseFloat(cyP(v))+4).toFixed(1)}" text-anchor="start" fill="#1D9E75" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}%</text>`;
+      svgBody+=`<text x="${ml-4}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" fill="#bbb" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}</text>`;
     });
-    // Target line (3d, red dashed)
-    const ty=cy(3);
-    svgBody+=`<line x1="${ml}" y1="${ty}" x2="${SVG_W-mr}" y2="${ty}" stroke="#e24b4a" stroke-width="2" stroke-dasharray="5,4"/>`;
-    // Bars
+
+    // Right axis labels (days)
+    [0,yMaxD].forEach(v=>{
+      svgBody+=`<text x="${SVG_W-mr+4}" y="${(parseFloat(cyD(v))+4).toFixed(1)}" text-anchor="start" fill="#93c5fd" font-size="9" font-family="Arial,Helvetica,sans-serif">${v}d</text>`;
+    });
+
+    // Stacked bars: Complete (green, bottom) + Active (blue, top)
+    const R=2;
     s.weeklyTrend.forEach((w,i)=>{
-      if(w.med!=null){
-        const bh=((w.med/yMax)*ch).toFixed(1);
-        svgBody+=`<rect x="${(parseFloat(cx(i))-barW/2).toFixed(1)}" y="${cy(w.med)}" width="${barW}" height="${bh}" rx="2" fill="#e2e8f0"/>`;
+      const complete=w.cohortComplete||0,active=w.cohortActive||0;
+      if(complete+active===0) return;
+      const xi=parseFloat(cx(i)),x0=xi-barW/2;
+      const baseY=parseFloat(cyC(0));
+
+      if(complete>0){
+        const topY=parseFloat(cyC(complete));
+        const h=baseY-topY;
+        if(active===0){
+          // Complete is the top bar — round its top corners
+          svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(34,197,94,0.85)"/>`;
+        } else {
+          // Active sits above — flat top on Complete
+          svgBody+=`<rect x="${x0}" y="${topY}" width="${barW}" height="${h}" fill="rgba(34,197,94,0.85)"/>`;
+        }
+      }
+
+      if(active>0){
+        const stackBaseY=parseFloat(cyC(complete));
+        const topY=parseFloat(cyC(complete+active));
+        const h=stackBaseY-topY;
+        // Rounded top corners only
+        svgBody+=`<path d="M ${x0+R} ${topY} L ${x0+barW-R} ${topY} Q ${x0+barW} ${topY} ${x0+barW} ${topY+R} L ${x0+barW} ${topY+h} L ${x0} ${topY+h} L ${x0} ${topY+R} Q ${x0} ${topY} ${x0+R} ${topY} Z" fill="rgba(96,165,250,0.85)"/>`;
       }
     });
-    // Rolling average line
-    let pathD='';let inSeg=false;
+
+    // Rolling avg line + dots (right axis, days)
+    let pathD='',inSeg=false;
     s.weeklyTrend.forEach((w,i)=>{
-      if(w.roll3!=null){
-        pathD+=inSeg?`L ${cx(i)} ${cy(w.roll3)} `:`M ${cx(i)} ${cy(w.roll3)} `;
-        inSeg=true;
-      } else { inSeg=false; }
+      if(w.roll3!=null){ pathD+=inSeg?`L ${cx(i)} ${cyD(w.roll3)} `:`M ${cx(i)} ${cyD(w.roll3)} `; inSeg=true; }
+      else { inSeg=false; }
     });
     if(pathD) svgBody+=`<path d="${pathD.trim()}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-    // Dots on rolling line
-    s.weeklyTrend.forEach((w,i)=>{
-      if(w.roll3!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cy(w.roll3)}" r="3.5" fill="#2563eb"/>`;
-    });
-    // On-target % line (right axis)
-    let pathP='';let inSegP=false;
-    s.weeklyTrend.forEach((w,i)=>{
-      if(w.onTgt!=null){
-        pathP+=inSegP?`L ${cx(i)} ${cyP(w.onTgt)} `:`M ${cx(i)} ${cyP(w.onTgt)} `;
-        inSegP=true;
-      } else { inSegP=false; }
-    });
-    if(pathP) svgBody+=`<path d="${pathP.trim()}" fill="none" stroke="#1D9E75" stroke-width="2" stroke-dasharray="5,3" stroke-linejoin="round" stroke-linecap="round"/>`;
-    // Dots on on-target line
-    s.weeklyTrend.forEach((w,i)=>{
-      if(w.onTgt!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyP(w.onTgt)}" r="3" fill="#1D9E75"/>`;
-    });
+    s.weeklyTrend.forEach((w,i)=>{ if(w.roll3!=null) svgBody+=`<circle cx="${cx(i)}" cy="${cyD(w.roll3)}" r="3.5" fill="#2563eb"/>`; });
+
     // X-axis labels
     s.weeklyTrend.forEach((w,i)=>{
       const isLast=i===n-1;
       svgBody+=`<text x="${cx(i)}" y="${SVG_H-26}" text-anchor="middle" fill="${isLast?'#555':'#bbb'}" font-size="9" font-family="Arial,Helvetica,sans-serif">${w.label}</text>`;
     });
+
     // Legend
-    const legItems=[
-      {x:ml,    type:'bar',    label:'Weekly median'},
-      {x:ml+118,type:'line',   label:'3-wk rolling'},
-      {x:ml+232,type:'target', label:'3d target'},
-      {x:ml+326,type:'onTgt',  label:'On target %'},
-    ];
-    legItems.forEach(({x,type,label})=>{
-      if(type==='bar'){
-        svgBody+=`<rect x="${x}" y="5" width="12" height="10" rx="1" fill="#e2e8f0"/>`;
-        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
-      } else if(type==='line'){
-        svgBody+=`<line x1="${x}" y1="10" x2="${x+12}" y2="10" stroke="#2563eb" stroke-width="2"/>`;
-        svgBody+=`<circle cx="${x+6}" cy="10" r="3" fill="#2563eb"/>`;
-        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
-      } else if(type==='onTgt'){
-        svgBody+=`<line x1="${x}" y1="10" x2="${x+12}" y2="10" stroke="#1D9E75" stroke-width="2" stroke-dasharray="4,3"/>`;
-        svgBody+=`<circle cx="${x+6}" cy="10" r="3" fill="#1D9E75"/>`;
-        svgBody+=`<text x="${x+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
-      } else {
-        svgBody+=`<line x1="${x}" y1="10" x2="${x+14}" y2="10" stroke="#e24b4a" stroke-width="2" stroke-dasharray="4,3"/>`;
-        svgBody+=`<text x="${x+18}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">${label}</text>`;
-      }
-    });
+    svgBody+=`<rect x="${ml}" y="5" width="12" height="10" rx="1" fill="rgba(34,197,94,0.85)"/>`;
+    svgBody+=`<text x="${ml+16}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Complete</text>`;
+    svgBody+=`<rect x="${ml+90}" y="5" width="12" height="10" rx="1" fill="rgba(96,165,250,0.85)"/>`;
+    svgBody+=`<text x="${ml+106}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Active</text>`;
+    svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#2563eb" stroke-width="2"/>`;
+    svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#2563eb"/>`;
+    svgBody+=`<text x="${ml+176}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">3-wk rolling avg (days)</text>`;
 
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}">${svgBody}</svg>`;
     const svgPng=await svgToDataURL(svg,SVG_W,SVG_H);
