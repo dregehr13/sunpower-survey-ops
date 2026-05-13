@@ -1401,7 +1401,6 @@ function renderTrends(){
         <span class="li" style="color:#d97706;"><span class="ld" style="background:rgba(245,158,11,0.8);"></span>Holding</span>
         <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Open</span>
         <span class="li" style="color:#dc2626;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Reopened</span>
-        <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.65);"></span>Not Required</span>
         <span class="li" style="color:#16a34a;"><span class="ldash" style="background:#16a34a;"></span>Complete %</span>
       </div>
       <div style="display:flex;align-items:stretch;">
@@ -1503,9 +1502,9 @@ function renderTrends(){
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#2563eb',v=>v.toFixed(1)+'×');
 
   // ── tr-vol: list cohorts stacked by start week ───────────────
-  const LIST_CATS=['Complete','Holding','Open','Reopened','Not Required'];
+  const LIST_CATS=['Complete','Holding','Open','Reopened'];
   const LIST_COLORS={'Complete':'rgba(34,197,94,0.8)','Holding':'rgba(245,158,11,0.8)',
-    'Open':'rgba(59,130,246,0.8)','Reopened':'rgba(226,75,74,0.8)','Not Required':'rgba(148,163,184,0.65)'};
+    'Open':'rgba(59,130,246,0.8)','Reopened':'rgba(226,75,74,0.8)'};
   const cohortMap={};
   trendSrc.filter(r=>r.start&&r.list).forEach(r=>{
     const [y,mo,d]=r.start.split('-').map(Number);
