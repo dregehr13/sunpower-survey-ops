@@ -698,26 +698,6 @@ function renderFBars(){
 function localISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
 // Seeded LCG — deterministic dummy rows for Jan/Feb Trends demo
-function _rnd(seed){let v=seed;return function(){v=(v*1664525+1013904223)|0;return(v>>>0)/4294967295;};}
-const DUMMY_TRENDS=(()=>{
-  const r=_rnd(42),rows=[];
-  const regs=['West','East','Southwest','Northwest'];
-  let mon=new Date('2026-01-05'); // start Mon Jan 5
-  let id=9000;
-  for(let w=0;w<8;w++){
-    const cnt=8+Math.round(r()*4); // 8–12 per week
-    for(let i=0;i<cnt;i++){
-      const s=new Date(mon); s.setDate(mon.getDate()+Math.floor(r()*5)); // Mon–Fri
-      const ct=2+Math.floor(r()*7); // 2–8 day cycle
-      const c=new Date(s); c.setDate(s.getDate()+ct);
-      rows.push({id:id++,project_status:'In Progress',start:localISO(s),complete:localISO(c),
-        region:regs[Math.floor(r()*regs.length)],ct_total:ct,ct_s2r:null,ct_r2s:null,
-        contact:'',project:'',address:'',type:'',resource:''});
-    }
-    const next=new Date(mon); next.setDate(mon.getDate()+7); mon=next;
-  }
-  return rows;
-})();
 
 function recentRange(n){ return {from:weekRange(-n).from, to:weekRange(-1).to}; }
 function weekRange(offsetWeeks){
@@ -1365,7 +1345,7 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=[...RAW.filter(r=>!r.project_status||r.project_status==='In Progress'),...DUMMY_TRENDS];
+  const trendSrc=RAW.filter(r=>!r.project_status||r.project_status==='In Progress');
   const trendDone=trendSrc.filter(r=>r.complete);
   const weekly=weeklyStats(trendSrc);
   const weeklyC=weeklyStatsByComplete(trendDone);
@@ -1539,6 +1519,7 @@ function renderTrends(){
       data:allWks.map(wk=>cohortMap[wk]?.[s]||0),
       backgroundColor:LIST_COLORS[s],
       borderWidth:0,
+      borderRadius:3,
       stack:'cohort',
     }))},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
