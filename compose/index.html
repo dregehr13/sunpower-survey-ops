@@ -239,13 +239,17 @@ function computeStats(){
       const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
       const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
       const weekCompl=ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length;
-      const weekStarts=ROWS.filter(r=>r.start>=wS&&r.start<=wE).length;
-      const pipeRatio=weekStarts>0?Math.round(weekCompl/weekStarts*100)/100:null;
-      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,pipeRatio});
+      const wipEow=ROWS.filter(r=>r.start&&r.start<=wE&&(!r.complete||r.complete>wE)).length;
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,wipEow});
     }
     for(let i=0;i<allTrend.length;i++){
       const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
       allTrend[i].roll3=ms.length===3?ms.reduce((a,b)=>a+b,0)/3:null;
+      // Spencer formula: EOW WIP ÷ avg completions (this week + 2 prior)
+      if(i>=2){
+        const avgC=(allTrend[i].count+allTrend[i-1].count+allTrend[i-2].count)/3;
+        allTrend[i].pipeRatio=avgC>0?Math.round(allTrend[i].wipEow/avgC*100)/100:null;
+      }
     }
     const weeklyTrend=allTrend.slice(-5);
     const medW1=allTrend[4].med,medW2=allTrend[5].med,medW3=med(cts);
@@ -260,9 +264,9 @@ function computeStats(){
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
     const newIn=ROWS.filter(r=>r.start>=period.from&&r.start<=period.to).length;
 
-    // Pipeline Ratio = WIP / avg completions last 3 completed weeks
+    // Pipeline Ratio = EOW WIP ÷ avg completions (reporting week + 2 prior) — Spencer's model
     const prWeeks=[];
-    for(let i=1;i<=3;i++){
+    for(let i=0;i<=2;i++){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
       prWeeks.push(ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length);
@@ -580,10 +584,6 @@ async function buildEmailHTML(s, commentary, manualNote){
       }
     });
 
-    // 1× breakeven reference line
-    const refY=cyD(1);
-    svgBody+=`<line x1="${ml}" y1="${refY}" x2="${SVG_W-mr}" y2="${refY}" stroke="#e24b4a" stroke-width="1.5" stroke-dasharray="5,4"/>`;
-
     // Pipeline ratio line + dots (right axis)
     let pathD='',inSeg=false;
     s.weeklyTrend.forEach((w,i)=>{
@@ -607,8 +607,6 @@ async function buildEmailHTML(s, commentary, manualNote){
     svgBody+=`<line x1="${ml+160}" y1="10" x2="${ml+172}" y2="10" stroke="#7c3aed" stroke-width="2"/>`;
     svgBody+=`<circle cx="${ml+166}" cy="10" r="3" fill="#7c3aed"/>`;
     svgBody+=`<text x="${ml+176}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">Pipeline ratio</text>`;
-    svgBody+=`<line x1="${ml+282}" y1="10" x2="${ml+296}" y2="10" stroke="#e24b4a" stroke-width="1.5" stroke-dasharray="4,3"/>`;
-    svgBody+=`<text x="${ml+300}" y="14" fill="#666" font-size="10" font-family="Arial,Helvetica,sans-serif">1× breakeven</text>`;
 
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}">${svgBody}</svg>`;
     const svgPng=await svgToDataURL(svg,SVG_W,SVG_H);

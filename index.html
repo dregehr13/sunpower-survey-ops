@@ -1471,9 +1471,12 @@ function renderTrends(){
   _drawAxis('tr-inout-yR',CH['tr-inout'].scales.y1,false,'#d97706',null,'WIP','#d97706');
 
   // ── tr-wf ─────────────────────────────────────────────────
-  const pipeRatioWf=weeklyC.map(w=>{
-    const starts=wkMap[w.week]?.count||0;
-    return starts>0?Math.round(w.count/starts*100)/100:null;
+  const pipeRatioWf=weeklyC.map((w,i)=>{
+    if(i<2) return null;
+    const wE=w.weekEnd;
+    const wipEow=trendSrc.filter(r=>r.start&&r.start<=wE&&(!r.complete||r.complete>wE)).length;
+    const avgC=(w.count+(weeklyC[i-1]?.count||0)+(weeklyC[i-2]?.count||0))/3;
+    return avgC>0?Math.round(wipEow/avgC*100)/100:null;
   });
   dc('tr-wf');
   CH['tr-wf']=new Chart(document.getElementById('tr-wf'),{
