@@ -1112,11 +1112,12 @@ function renderLastWeek(){
 function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
+  const yesterday=localISO(new Date(Date.now()-86400000));
   const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=today);
-  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>today&&r.scheduled<=tw.to&&!r.complete);
+  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to&&!r.complete);
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!r.complete);
-  const todayDow=new Date().getDay();
-  const bDaysElapsed=todayDow===0||todayDow===6?5:todayDow;
+  const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
+  const bDaysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow;
   const bDaysRemaining=Math.max(5-bDaysElapsed,0);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>r.complete&&r.complete>=sixWksAgo&&r.ct_total!=null&&r.ct_total>=1);
@@ -1137,7 +1138,7 @@ function renderThisWeek(){
 
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title">This Week</div>
-    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[todayDow===0||todayDow===6?4:todayDow-1]||'today'}</div>`;
+    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[yesterdayDow===0||yesterdayDow===6?4:yesterdayDow-1]||'today'}</div>`;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard"><div class="eklabel">Completed so far</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
     <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
