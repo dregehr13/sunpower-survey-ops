@@ -515,7 +515,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN WTD',val:String(s.newInWTD),sub:s.newInYesterday+' yesterday'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED WTD',val:String(s.completedWTD),sub:s.completedYesterday+' yesterday'},
       {bg:ctA.bg,b:ctA.b,lc:ctA.lc,vc:ctA.vc,sc:ctA.sc,sbc:ctA.sbc,label:'WTD AVG CYCLE',val:s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—',sub:'target ≤4d'+ctA.mark},
-      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?String(s.projectedWeek):'—',sub:s.daysRemaining>0?(s.daysRemaining+'d left · '+s.histAvg+' avg'):(s.histAvg+' 4-wk avg')},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?(s.daysRemaining>0?'~'+s.projectedWeek:String(s.projectedWeek)):'—',sub:s.daysRemaining>0?(s.wip+' open · '+s.recentAvgCt.toFixed(1)+'d avg cycle'):(s.histAvg+' 4-wk avg')},
     ];
   }
   const cardsPng=await buildCardsImage(cardsData);
@@ -649,12 +649,9 @@ async function buildEmailHTML(s, commentary, manualNote){
     const dailySvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${D_W}" height="${D_H}">${dBody}</svg>`;
     const dailyPng=await svgToDataURL(dailySvg,D_W,D_H);
 
-    const paceText=s.daysRemaining>0?`~${s.projectedWeek} projected this week &middot; ${s.wip} open surveys &divide; ${s.recentAvgCt.toFixed(1)}d avg cycle &middot; based on current pipeline composition`:(s.projectedWeek!=null?`${s.projectedWeek} completed this week`:'');
-
     rows+=`<tr><td style="padding:16px 24px 0;">
       <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:8px;">COMPLETIONS THIS WEEK</div>
       ${dailyPng?`<img src="${dailyPng}" width="${D_W}" height="${D_H}" style="display:block;max-width:100%;border:0;" alt="">`:''}
-      ${paceText?`<div style="${f}font-size:10px;color:#aaa;margin-top:8px;">${paceText}</div>`:''}
     </td></tr>`;
   }
 
