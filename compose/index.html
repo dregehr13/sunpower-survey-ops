@@ -131,9 +131,7 @@ const DASHBOARD_URL = 'https://sunpower-survey-ops.vercel.app';
 // Fields used to segment cycle time estimates for WIP projection.
 // Order matters for fallback: most specific first. When a combo has
 // no recent completions, it drops the last dim and retries.
-// To add surveyor type once the SF field is live:
-//   const PROJECTION_DIMS = ['region', 'surveyor_type'];
-const PROJECTION_DIMS = ['region'];
+const PROJECTION_DIMS = ['region', 'resource'];
 
 // Build a map of segment key → avg cycle time from a set of completions.
 function buildSegmentAvgs(completions, dims){
