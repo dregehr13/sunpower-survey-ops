@@ -506,7 +506,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN',val:String(s.newIn),sub:'week started'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED',val:String(s.completedCount),sub:'this week'},
       {bg:ct.bg,b:ct.b,lc:ct.lc,vc:ct.vc,sc:ct.sc,sbc:ct.sbc,label:'AVG CYCLE',val:s.avgCycle!=null?s.avgCycle.toFixed(1)+'d':'—',sub:'target: 4d'+ct.mark+(s.onTargetPct!=null?' · '+s.onTargetPct+'% ≤4d':'')},
-      {bg:pr.bg,b:pr.b,lc:pr.lc,vc:pr.vc,sc:pr.sc,sbc:pr.sbc,label:'PIPELINE',val:s.pipelineRatio!=null?s.pipelineRatio.toFixed(1)+'×':'—',sub:prSub},
+      {bg:pr.bg,b:pr.b,lc:pr.lc,vc:pr.vc,sc:pr.sc,sbc:pr.sbc,label:'SS RATIO',val:s.pipelineRatio!=null?s.pipelineRatio.toFixed(1)+'×':'—',sub:prSub},
     ];
   } else {
     const ctA=ctColors(s.avgCycleWTD,4);
