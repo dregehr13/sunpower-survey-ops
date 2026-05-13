@@ -1113,14 +1113,14 @@ function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
   const yesterday=localISO(new Date(Date.now()-86400000));
-  const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=today);
+  const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=yesterday);
   const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to&&!r.complete);
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!r.complete);
   const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
   const bDaysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow;
   const bDaysRemaining=Math.max(5-bDaysElapsed,0);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
-  const recentComps=rows.filter(r=>r.complete&&r.complete>=sixWksAgo&&r.ct_total!=null&&r.ct_total>=1);
+  const recentComps=rows.filter(r=>r.complete&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
   const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
   const segAvgs=buildSegmentAvgs(recentComps,['region','resource']);
   const wipProjects=rows.filter(r=>r.start&&!r.complete);
