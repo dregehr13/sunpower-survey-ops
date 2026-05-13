@@ -886,6 +886,8 @@ function dDiff(a,b){
 function recalc(r){ r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled); r.ct_total=dDiff(r.start,r.complete); }
 function avg(a){ const v=a.filter(x=>x!=null&&x>=0&&!isNaN(x)); return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*100)/100:null; }
 function med(a){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; const m=Math.floor(v.length/2); return v.length%2?v[m]:Math.round((v[m-1]+v[m])/2*100)/100; }
+function buildSegmentAvgs(src,dims){ const m={}; src.forEach(r=>{ const k=dims.map(d=>r[d]||'').join('|'); if(!m[k]) m[k]=[]; m[k].push(r.ct_total); }); const out={}; Object.entries(m).forEach(([k,v])=>{ const a=avg(v); if(a!=null) out[k]=a; }); return out; }
+function lookupSegmentAvg(r,dims,segs,fallback){ for(let l=dims.length;l>=1;l--){ const k=dims.slice(0,l).map(d=>r[d]||'').join('|'); if(segs[k]!=null) return segs[k]; } return fallback; }
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
 function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
@@ -1113,10 +1115,19 @@ function renderThisWeek(){
   const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=today);
   const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>today&&r.scheduled<=tw.to&&!r.complete);
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!r.complete);
-  const t4Pace=trailing4WeekPace();
-  const dow=new Date().getDay()||7;
-  const daysIn=dow, daysLeft=7-daysIn;
-  const projTotal=t4Pace!=null?Math.round((completedTW.length+(t4Pace*daysLeft/7))*10)/10:null;
+  const todayDow=new Date().getDay();
+  const bDaysElapsed=todayDow===0||todayDow===6?5:todayDow;
+  const bDaysRemaining=Math.max(5-bDaysElapsed,0);
+  const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
+  const recentComps=rows.filter(r=>r.complete&&r.complete>=sixWksAgo&&r.ct_total!=null&&r.ct_total>=1);
+  const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
+  const segAvgs=buildSegmentAvgs(recentComps,['region','resource']);
+  const wipProjects=rows.filter(r=>r.start&&!r.complete);
+  const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
+  const wip=wipProjects.length;
+  const projTotal=bDaysRemaining>0
+    ?completedTW.length+Math.round(wip/recentAvgCt*bDaysRemaining)
+    :completedTW.length;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const medT=med(tots);
   const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
@@ -1124,11 +1135,10 @@ function renderThisWeek(){
 
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title">This Week</div>
-    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[daysIn-1]||'today'}</div>`;
-  const wip=rows.filter(r=>r.start&&!r.complete).length;
+    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[todayDow===0||todayDow===6?4:todayDow-1]||'today'}</div>`;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard"><div class="eklabel">Completed so far</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
-    <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${projTotal!=null?'~'+projTotal:'—'}</div><div class="ektgt">4-wk pace: ${t4Pace!=null?t4Pace.toFixed(1):'—'}/wk</div></div>
+    <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
     <div class="ekcard"><div class="eklabel">Scheduled remaining</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
     <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
     <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">open surveys</div></div>`;
