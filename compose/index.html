@@ -295,17 +295,18 @@ function computeStats(){
     const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
     const daysElapsed=yesterdayDow===0?5:yesterdayDow; // Mon=1…Fri=5, Sun=5
     const daysRemaining=Math.max(5-daysElapsed,0);
-    const wip=ROWS.filter(r=>r.start&&!r.complete).length;
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
     const recentCompletions=ROWS.filter(r=>r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
     const globalAvgCt=avg(recentCompletions.map(r=>r.ct_total))||4;
     const segAvgs=buildSegmentAvgs(recentCompletions,PROJECTION_DIMS);
     const wipProjects=ROWS.filter(r=>r.start&&!r.complete);
-    const wipEstimates=wipProjects.map(r=>lookupSegmentAvg(r,PROJECTION_DIMS,segAvgs,globalAvgCt));
-    const recentAvgCt=avg(wipEstimates)||globalAvgCt;
-    const dailyThroughput=recentAvgCt>0?wip/recentAvgCt:0;
+    const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,PROJECTION_DIMS,segAvgs,globalAvgCt)))||globalAvgCt;
+    const wkEnd=toISO(addDays(new Date(wtdFrom+'T12:00:00'),6));
+    const scheduledRem=wipProjects.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=wkEnd).length;
+    const unscheduledWip=Math.max(wipProjects.length-scheduledRem,0);
+    const wip=wipProjects.length;
     const projectedWeek=daysRemaining>0
-      ?wtdRows.length+Math.round(dailyThroughput*daysRemaining)
+      ?wtdRows.length+Math.round(scheduledRem*0.9+unscheduledWip/recentAvgCt*daysRemaining)
       :wtdRows.length;
 
     // 4-week historical weekly completion avg

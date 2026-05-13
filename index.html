@@ -1125,8 +1125,10 @@ function renderThisWeek(){
   const wipProjects=rows.filter(r=>r.start&&!r.complete);
   const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
   const wip=wipProjects.length;
+  const scheduledRemCount=scheduledRem.length;
+  const unscheduledWip=Math.max(wip-scheduledRemCount,0);
   const projTotal=bDaysRemaining>0
-    ?completedTW.length+Math.round(wip/recentAvgCt*bDaysRemaining)
+    ?completedTW.length+Math.round(scheduledRemCount*0.9+unscheduledWip/recentAvgCt*bDaysRemaining)
     :completedTW.length;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const medT=med(tots);
