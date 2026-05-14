@@ -1284,7 +1284,7 @@ function renderPerformance(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Min 3 completions · Sorted by median</div></div>
-        <div class="toggle-group">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
+        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
       </div>
       <div id="rep-table-wrap"></div>
     </div>`;
@@ -1332,7 +1332,7 @@ function renderRegionTablePerf(){
   }).join('');
 }
 
-function setRepView(v){ repView=v; renderRepTable(); }
+function setRepView(v){ repView=v; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
 function renderRepTable(){
   const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
   const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
