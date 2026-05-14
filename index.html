@@ -1343,12 +1343,10 @@ function renderRepTable(){
   const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
   const resLabel=resMap[repView];
   const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
-  const wipByRep={};
-  rows.filter(r=>r.resource===resLabel&&r.sales_rep&&!r.complete).forEach(r=>{ wipByRep[r.sales_rep]=(wipByRep[r.sales_rep]||0)+1; });
   const repMap={};
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
   const repRows=Object.values(repMap).filter(r=>r.tots.length>=1)
-    .map(r=>({name:r.name,count:r.tots.length,wip:wipByRep[r.name]||0,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
+    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
     .sort((a,b)=>{
       let av=a[repSortKey],bv=b[repSortKey];
       if(av==null) av=repSortAsc?Infinity:-Infinity;
@@ -1365,11 +1363,10 @@ function renderRepTable(){
   const hasMore=repRows.length>LIMIT;
   const th=(k,l,cls='r')=>`<th class="${cls}" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
-    <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('wip','WIP')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
+    <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
     <tbody>${displayRows.map(r=>`<tr>
       <td>${esc(r.name)}</td>
       <td class="r">${r.count}</td>
-      <td class="r">${r.wip||'—'}</td>
       <td class="r">${pillV(r.average)}</td>
       <td class="r">${r.count>1&&r.median!=null?r.median.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
