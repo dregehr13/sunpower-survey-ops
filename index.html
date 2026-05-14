@@ -1263,6 +1263,13 @@ function renderPerformance(){
     </div>
     <div class="res-cards">${['SunPower Surveyor','Sales Rep','Radicl Services'].map(resCard).join('')}</div>
     <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Min 3 completions · Slowest first</div></div>
+        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
+      </div>
+      <div id="rep-table-wrap"></div>
+    </div>
+    <div class="sec">
       <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
@@ -1273,20 +1280,13 @@ function renderPerformance(){
         <thead><tr>
           <th onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
           <th class="r" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
-          <th class="r" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
           <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
+          <th class="r" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
           <th class="r" onclick="sortBy('pct_on_target')">On tgt<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
         </tr></thead>
         <tbody id="pf-tbody"></tbody>
       </table></div>
       <div class="note">Green ≤${S.targetMedian}d · Amber ≤${S.targetAvg+2}d · Red >${S.targetAvg+2}d. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
-    </div>
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Min 3 completions · Sorted by median</div></div>
-        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
-      </div>
-      <div id="rep-table-wrap"></div>
     </div>`;
 
   document.getElementById('pf-rg-wrap').style.height=rh+'px';
@@ -1325,14 +1325,16 @@ function renderRegionTablePerf(){
     return `<tr${dim}>
       <td><span class="sbadge">${state}</span>${city}${r.count<S.minRegionVolume?'<span style="font-size:9px;color:var(--faint);margin-left:4px;">(low vol)</span>':''}</td>
       <td class="r">${r.count}</td>
-      <td class="r">${pillV(r.start_to_complete)}</td>
-      <td class="r">${r.median_total!=null?r.median_total.toFixed(1)+'d':'—'}</td>
+      <td class="r">${pillV(r.median_total)}</td>
+      <td class="r">${r.start_to_complete!=null?r.start_to_complete.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pct_on_target!=null?r.pct_on_target+'%':'—'}</td>
     </tr>`;
   }).join('');
 }
 
-function setRepView(v){ repView=v; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
+let repExpanded=false;
+function setRepView(v){ repView=v; repExpanded=false; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
+function toggleRepExpand(){ repExpanded=!repExpanded; renderRepTable(); }
 function renderRepTable(){
   const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
   const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
@@ -1342,21 +1344,25 @@ function renderRepTable(){
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
   const repRows=Object.values(repMap).filter(r=>r.tots.length>=3)
     .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
-    .sort((a,b)=>(a.median??99)-(b.median??99));
+    .sort((a,b)=>(b.median??-1)-(a.median??-1));
   if(!repRows.length){
     wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No reps with ≥3 completions for ${resLabel} in this range.</div>`;
     return;
   }
+  const LIMIT=10;
+  const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
+  const hasMore=repRows.length>LIMIT;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
     <thead><tr><th>Sales Rep</th><th class="r">Completions</th><th class="r">Median</th><th class="r">Avg</th><th class="r">On target</th></tr></thead>
-    <tbody>${repRows.map(r=>`<tr>
+    <tbody>${displayRows.map(r=>`<tr>
       <td>${esc(r.name)}</td>
       <td class="r">${r.count}</td>
       <td class="r">${pillV(r.median)}</td>
       <td class="r">${r.average!=null?r.average.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
     </tr>`).join('')}</tbody>
-  </table></div>`;
+  </table></div>
+  ${hasMore?`<div style="padding:10px 0 4px;text-align:center;"><button onclick="toggleRepExpand()" style="font-size:11px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repExpanded?'Show fewer':'Show all '+repRows.length+' reps'}</button></div>`:''}`;
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
