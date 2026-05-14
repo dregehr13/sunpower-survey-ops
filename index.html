@@ -889,6 +889,7 @@ function dDiff(a,b){
 function recalc(r){ r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled); r.ct_total=dDiff(r.start,r.complete); }
 function avg(a){ const v=a.filter(x=>x!=null&&x>=0&&!isNaN(x)); return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*100)/100:null; }
 function med(a){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; const m=Math.floor(v.length/2); return v.length%2?v[m]:Math.round((v[m-1]+v[m])/2*100)/100; }
+function pct(a,p){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; return v[Math.min(v.length-1,Math.ceil(v.length*p/100)-1)]; }
 function buildSegmentAvgs(src,dims){ const m={}; src.forEach(r=>{ const k=dims.map(d=>r[d]||'').join('|'); if(!m[k]) m[k]=[]; m[k].push(r.ct_total); }); const out={}; Object.entries(m).forEach(([k,v])=>{ const a=avg(v); if(a!=null) out[k]=a; }); return out; }
 function lookupSegmentAvg(r,dims,segs,fallback){ for(let l=dims.length;l>=1;l--){ const k=dims.slice(0,l).map(d=>r[d]||'').join('|'); if(segs[k]!=null) return segs[k]; } return fallback; }
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
@@ -1235,9 +1236,13 @@ function renderPerformance(){
     document.getElementById('perf-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
     return;
   }
-  const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots),onTgt3=pctTgt(tots,S.targetMedian);
+  const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
   const kcls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
   const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
+  const spCount=src.filter(r=>r.resource==='SunPower Surveyor').length;
+  const srCount=src.filter(r=>r.resource==='Sales Rep').length;
+  const rdCount=src.filter(r=>r.resource==='Radicl Services').length;
+  const resTotal=spCount+srCount+rdCount;
   const resCard=rt=>{
     const rsrc=src.filter(r=>r.resource===rt);
     const rTots=rsrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
@@ -1261,8 +1266,8 @@ function renderPerformance(){
       <div class="kcard"><div class="klabel">Projects</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
       <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">Median total</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">${tots.length} w/ data</div></div>
-      <div class="kcard"><div class="klabel">On target ≤${S.targetMedian}d</div><div class="kval ${onTgt3!=null?(onTgt3>=75?'kg-c':onTgt3>=50?'ka-c':'kr-c'):''}">${onTgt3!=null?onTgt3+'%':'—'}</div><div class="ksub">median target</div></div>
+      <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
+      <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''} ${srCount>0?`<div style="flex:${srCount};background:#0ea5e9;"></div>`:''} ${rdCount>0?`<div style="flex:${rdCount};background:#8b5cf6;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:9px;color:#64748b;">${spCount} SP</span><span style="font-size:9px;color:#0ea5e9;">${srCount} Sales</span><span style="font-size:9px;color:#8b5cf6;">${rdCount} Radicl</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
     <div class="res-cards">${['SunPower Surveyor','Sales Rep','Radicl Services'].map(resCard).join('')}</div>
     <div class="sec">
@@ -1396,6 +1401,19 @@ function renderTrends(){
   const labelsC=weeklyC.map(fmtWeekLabel);
   const al=weeklyC.map(()=>1);
 
+  // All-time hero metrics
+  const allTots=trendDone.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const p75=pct(allTots,75),p90=pct(allTots,90);
+  const wkCounts=weeklyC.map(w=>w.count);
+  const avgWkPace=avg(wkCounts),bestWk=wkCounts.length?Math.max(...wkCounts):null;
+  const recentWks=weeklyC.slice(-3).map(w=>w.start_to_complete).filter(x=>x!=null);
+  const prevWks=weeklyC.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
+  const recentAvgCycle=avg(recentWks),prevAvgCycle=avg(prevWks);
+  const trendDelta=(recentAvgCycle!=null&&prevAvgCycle!=null)?Math.round((recentAvgCycle-prevAvgCycle)*10)/10:null;
+  const trendLabel=trendDelta==null?'—':(trendDelta<-0.1?'Improving':trendDelta>0.1?'Slowing':'Stable');
+  const trendCls=trendDelta==null?'':(trendDelta<-0.1?'kg-c':trendDelta>0.1?'kr-c':'');
+  const trendSub=trendDelta==null?'not enough data':(Math.abs(trendDelta).toFixed(1)+'d '+(trendDelta<0?'faster':'slower')+' (3wk vs prior 3wk)');
+
   // Scrollable chart sizing: ~12 weeks visible, scroll for the rest
   const WEEK_W=62;
   const containerEl=document.getElementById('tr-content');
@@ -1404,6 +1422,13 @@ function renderTrends(){
   const chartWC=Math.max(containerW, weeklyC.length*WEEK_W);
 
   document.getElementById('tr-content').innerHTML=`
+    <div class="kg kg5">
+      <div class="kcard"><div class="klabel">Trend (3wk)</div><div class="kval ${trendCls}">${trendLabel}</div><div class="ksub">${trendSub}</div></div>
+      <div class="kcard"><div class="klabel">Avg weekly pace</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week</div></div>
+      <div class="kcard"><div class="klabel">Best week</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
+      <div class="kcard"><div class="klabel">P75 cycle</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
+      <div class="kcard"><div class="klabel">P90 cycle</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
+    </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance</div></div></div>
       <div class="leg">
