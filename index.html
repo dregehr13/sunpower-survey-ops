@@ -209,7 +209,7 @@ tr:hover td{background:#fafaf8;}
 .exec-wrap.theme-dark .eks-mid{color:#fbbf24;}
 .exec-wrap.theme-dark .eks-bad{color:#f87171;}
 .exec-wrap.theme-bold .exec-hero{background:linear-gradient(135deg,#1e3a5f 0%,#0f2440 100%);border-radius:var(--radius-lg);padding:26px 28px;margin-bottom:14px;position:relative;overflow:hidden;}
-.exec-wrap.theme-bold .exec-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,255,255,.03);border-radius:50%;}
+.exec-wrap.theme-bold .exec-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,255,255,.03);border-radius:50%;pointer-events:none;}
 .exec-wrap.theme-bold .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
 .exec-wrap.theme-bold .exec-sub{font-size:11px;color:#7eb3e0;margin-bottom:20px;}
 .exec-wrap.theme-bold .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
@@ -531,6 +531,7 @@ function setSetting(key, value){
   // Propagate changes that affect live state
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
+  if(key==='execTheme' && currentPage==='week') renderWeek();
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
   if(key==='sfRid')  { localStorage.setItem('sf_rid',value); }
   if(currentPage==='settings') renderSettings();
