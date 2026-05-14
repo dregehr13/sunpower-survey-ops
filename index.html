@@ -628,17 +628,16 @@ function buildFBar(page){
   const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
   const panelOpen=rgDropOpenPage===page;
 
-  return `<div class="fbar" style="flex-wrap:nowrap;">
+  return `<div class="fbar">
     <div class="fgroup">
-      <span class="flabel">Completion date</span>
       <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
       <span style="color:var(--faint);font-size:10px;">–</span>
       <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
     </div>
     <div class="fbtn-group">
-      <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All time</button>
-      <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">13 wks</button>
-      <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">4 wks</button>
+      <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All</button>
+      <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">13w</button>
+      <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">4w</button>
       <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last wk</button>
       <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This wk</button>
     </div>
@@ -1044,12 +1043,14 @@ function renderLastWeek(){
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
   const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!r.complete||r.complete>lw.to)).length;
+  const curWipProjects=rows.filter(r=>r.start&&!r.complete);
+  const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
     <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
-    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">open surveys</div></div>`;
+    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
@@ -1130,6 +1131,7 @@ function renderThisWeek(){
   const wipProjects=rows.filter(r=>r.start&&!r.complete);
   const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
   const wip=wipProjects.length;
+  const avgWipAge=avg(wipProjects.map(r=>dDiff(r.start,yesterday)));
   const scheduledRemCount=scheduledRem.length;
   const unscheduledWip=Math.max(wip-scheduledRemCount,0);
   const projTotal=bDaysRemaining>0
@@ -1148,7 +1150,7 @@ function renderThisWeek(){
     <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
     <div class="ekcard"><div class="eklabel">Scheduled remaining</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
     <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
-    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">open surveys</div></div>`;
+    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
@@ -1233,7 +1235,7 @@ function renderPerformance(){
     document.getElementById('perf-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys in this date range.</div>`;
     return;
   }
-  const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
+  const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots),onTgt3=pctTgt(tots,S.targetMedian);
   const kcls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
   const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
   const resCard=rt=>{
@@ -1244,8 +1246,8 @@ function renderPerformance(){
       <div class="res-card-title">${rt}</div>
       <div class="res-card-count">${rsrc.length} surveys</div>
       <div class="res-stats">
-        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${rMed!=null?(rMed<=S.targetMedian?'kg-c':rMed<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
         <div class="res-stat-row"><span class="rlabel">Avg</span><span class="rval ${rAvg!=null?(rAvg<=S.targetAvg?'kg-c':rAvg<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rAvg!=null?rAvg.toFixed(1)+'d':'—'}</span></div>
+        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${rMed!=null?(rMed<=S.targetMedian?'kg-c':rMed<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
         <div class="res-stat-row"><span class="rlabel">On target</span><span class="rval">${rOnTgt!=null?rOnTgt+'%':'—'}</span></div>
       </div>
     </div>`;
@@ -1257,10 +1259,10 @@ function renderPerformance(){
   document.getElementById('perf-content').innerHTML=`
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Projects</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-      <div class="kcard"><div class="klabel">Median total</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
+      <div class="kcard"><div class="klabel">Median total</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">${tots.length} w/ data</div></div>
-      <div class="kcard"><div class="klabel">WIP</div><div class="kval">${rows.filter(r=>r.start&&!r.complete).length.toLocaleString()}</div><div class="ksub">Open surveys</div></div>
+      <div class="kcard"><div class="klabel">On target ≤${S.targetMedian}d</div><div class="kval ${onTgt3!=null?(onTgt3>=75?'kg-c':onTgt3>=50?'ka-c':'kr-c'):''}">${onTgt3!=null?onTgt3+'%':'—'}</div><div class="ksub">median target</div></div>
     </div>
     <div class="res-cards">${['SunPower Surveyor','Sales Rep','Radicl Services'].map(resCard).join('')}</div>
     <div class="sec">
