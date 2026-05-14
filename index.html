@@ -1264,7 +1264,7 @@ function renderPerformance(){
     <div class="res-cards">${['SunPower Surveyor','Sales Rep','Radicl Services'].map(resCard).join('')}</div>
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Min 3 completions · Slowest first</div></div>
+        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Slowest first</div></div>
         <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
       </div>
       <div id="rep-table-wrap"></div>
@@ -1342,11 +1342,11 @@ function renderRepTable(){
   const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
   const repMap={};
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
-  const repRows=Object.values(repMap).filter(r=>r.tots.length>=3)
+  const repRows=Object.values(repMap).filter(r=>r.tots.length>=1)
     .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
     .sort((a,b)=>(b.median??-1)-(a.median??-1));
   if(!repRows.length){
-    wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No reps with ≥3 completions for ${resLabel} in this range.</div>`;
+    wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
     return;
   }
   const LIMIT=10;
