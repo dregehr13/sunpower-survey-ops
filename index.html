@@ -1280,9 +1280,9 @@ function renderPerformance(){
         <thead><tr>
           <th onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
           <th class="r" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
-          <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
           <th class="r" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
-          <th class="r" onclick="sortBy('pct_on_target')">On tgt<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
+          <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
+          <th class="r" onclick="sortBy('pct_on_target')">On target<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
         </tr></thead>
         <tbody id="pf-tbody"></tbody>
       </table></div>
@@ -1325,8 +1325,8 @@ function renderRegionTablePerf(){
     return `<tr${dim}>
       <td><span class="sbadge">${state}</span>${city}${r.count<S.minRegionVolume?'<span style="font-size:9px;color:var(--faint);margin-left:4px;">(low vol)</span>':''}</td>
       <td class="r">${r.count}</td>
-      <td class="r">${pillV(r.median_total)}</td>
-      <td class="r">${r.start_to_complete!=null?r.start_to_complete.toFixed(1)+'d':'—'}</td>
+      <td class="r">${pillV(r.start_to_complete)}</td>
+      <td class="r">${r.count>1&&r.median_total!=null?r.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pct_on_target!=null?r.pct_on_target+'%':'—'}</td>
     </tr>`;
   }).join('');
@@ -1344,7 +1344,7 @@ function renderRepTable(){
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
   const repRows=Object.values(repMap).filter(r=>r.tots.length>=1)
     .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
-    .sort((a,b)=>(b.median??-1)-(a.median??-1));
+    .sort((a,b)=>(b.average??-1)-(a.average??-1));
   if(!repRows.length){
     wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
     return;
@@ -1353,12 +1353,12 @@ function renderRepTable(){
   const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
   const hasMore=repRows.length>LIMIT;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
-    <thead><tr><th>Sales Rep</th><th class="r">Completions</th><th class="r">Median</th><th class="r">Avg</th><th class="r">On target</th></tr></thead>
+    <thead><tr><th>Sales Rep</th><th class="r">Completions</th><th class="r">Avg</th><th class="r">Median</th><th class="r">On target</th></tr></thead>
     <tbody>${displayRows.map(r=>`<tr>
       <td>${esc(r.name)}</td>
       <td class="r">${r.count}</td>
-      <td class="r">${pillV(r.median)}</td>
-      <td class="r">${r.average!=null?r.average.toFixed(1)+'d':'—'}</td>
+      <td class="r">${pillV(r.average)}</td>
+      <td class="r">${r.count>1&&r.median!=null?r.median.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
