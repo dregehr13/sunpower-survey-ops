@@ -1333,18 +1333,29 @@ function renderRegionTablePerf(){
 }
 
 let repExpanded=false;
-function setRepView(v){ repView=v; repExpanded=false; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
+let repSortKey='average', repSortAsc=false;
+function setRepView(v){ repView=v; repExpanded=false; repSortKey='average'; repSortAsc=false; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
 function toggleRepExpand(){ repExpanded=!repExpanded; renderRepTable(); }
+function repSortBy(k){ if(repSortKey===k) repSortAsc=!repSortAsc; else{repSortKey=k;repSortAsc=false;} renderRepTable(); }
+function repSortArrow(k){ if(repSortKey!==k) return 'sarr-no'; return repSortAsc?'sarr-up':'sarr-dn'; }
 function renderRepTable(){
   const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
   const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
   const resLabel=resMap[repView];
   const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
+  const wipByRep={};
+  rows.filter(r=>r.resource===resLabel&&r.sales_rep&&!r.complete).forEach(r=>{ wipByRep[r.sales_rep]=(wipByRep[r.sales_rep]||0)+1; });
   const repMap={};
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
   const repRows=Object.values(repMap).filter(r=>r.tots.length>=1)
-    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
-    .sort((a,b)=>(b.average??-1)-(a.average??-1));
+    .map(r=>({name:r.name,count:r.tots.length,wip:wipByRep[r.name]||0,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
+    .sort((a,b)=>{
+      let av=a[repSortKey],bv=b[repSortKey];
+      if(av==null) av=repSortAsc?Infinity:-Infinity;
+      if(bv==null) bv=repSortAsc?Infinity:-Infinity;
+      if(typeof av==='string') return repSortAsc?av.localeCompare(bv):bv.localeCompare(av);
+      return repSortAsc?av-bv:bv-av;
+    });
   if(!repRows.length){
     wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
     return;
@@ -1352,11 +1363,13 @@ function renderRepTable(){
   const LIMIT=10;
   const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
   const hasMore=repRows.length>LIMIT;
+  const th=(k,l,cls='r')=>`<th class="${cls}" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
-    <thead><tr><th>Sales Rep</th><th class="r">Completions</th><th class="r">Avg</th><th class="r">Median</th><th class="r">On target</th></tr></thead>
+    <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('wip','WIP')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
     <tbody>${displayRows.map(r=>`<tr>
       <td>${esc(r.name)}</td>
       <td class="r">${r.count}</td>
+      <td class="r">${r.wip||'—'}</td>
       <td class="r">${pillV(r.average)}</td>
       <td class="r">${r.count>1&&r.median!=null?r.median.toFixed(1)+'d':'—'}</td>
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
