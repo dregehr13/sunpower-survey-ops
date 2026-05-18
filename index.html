@@ -1259,6 +1259,11 @@ function renderPerformance(){
   };
   const rStats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).sort((a,b)=>b.count-a.count).slice(0,16);
   const rh=Math.max(220,rStats.length*26+50);
+  const volSP=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='SunPower Surveyor').length);
+  const volSR=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='Sales Rep').length);
+  const volRD=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='Radicl Services').length);
+  const volNone=rStats.map(r=>src.filter(s=>s.region===r.region&&!s.resource).length);
+  const hasNone=volNone.some(x=>x>0);
   const tgl=(v,l)=>`<button class="tgl-btn${repView===v?' active':''}" onclick="setRepView('${v}')">${l}</button>`;
 
   document.getElementById('perf-content').innerHTML=`
@@ -1281,6 +1286,16 @@ function renderPerformance(){
       <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
+    </div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Volume by region</div><div class="ssub">All surveys · by resource type · ${rStats.length} regions</div></div></div>
+      <div class="leg">
+        <span class="li"><span class="ld" style="background:#64748b;"></span>SunPower Surveyor</span>
+        <span class="li"><span class="ld" style="background:#0ea5e9;"></span>Sales Rep</span>
+        <span class="li"><span class="ld" style="background:#8b5cf6;"></span>Radicl Services</span>
+        ${hasNone?'<span class="li"><span class="ld" style="background:#e2e8f0;border:1px solid #ddd;box-sizing:border-box;"></span>Unassigned</span>':''}
+      </div>
+      <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
@@ -1310,6 +1325,28 @@ function renderPerformance(){
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
       scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',callback:v=>v+'d'}},
               y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
+  });
+
+  document.getElementById('pf-vol-wrap').style.height=rh+'px';
+  dc('pf-vol');
+  CH['pf-vol']=new Chart(document.getElementById('pf-vol'),{
+    type:'bar',
+    data:{labels:rStats.map(r=>r.region),datasets:[
+      {label:'SunPower Surveyor',data:volSP,backgroundColor:'#64748b',borderRadius:0},
+      {label:'Sales Rep',data:volSR,backgroundColor:'#0ea5e9',borderRadius:0},
+      {label:'Radicl Services',data:volRD,backgroundColor:'#8b5cf6',borderRadius:0},
+      ...(hasNone?[{label:'Unassigned',data:volNone,backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
+    ]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{mode:'index',callbacks:{
+          title:ctx=>rStats[ctx[0].dataIndex].region,
+          footer:ctx=>'Total: '+ctx.reduce((s,i)=>s+i.parsed.x,0)
+        }}},
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#999',stepSize:1}},
+        y:{stacked:true,grid:{display:false},ticks:{color:'#444',font:{size:11}}}
+      }}
   });
 
   renderRegionTablePerf();
