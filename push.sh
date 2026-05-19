@@ -8,8 +8,8 @@
 # For code-only deploys (no data update): git push
 
 set -e
-export PROJ=~/Projects/survey-ops
-export DATA_DATE=$(date +%Y-%m-%d)
+PROJ=~/Projects/survey-ops
+DATA_DATE=$(date +%Y-%m-%d)
 
 # --- Find the SF export ---
 if [ -n "$1" ]; then
@@ -25,17 +25,14 @@ if [ -z "$SF_FILE" ] || [ ! -f "$SF_FILE" ]; then
 fi
 
 echo "Parsing $SF_FILE..."
-export RAW_JSON=$(node "$PROJ/parse-sf.js" "$SF_FILE")
+TMP_JSON="$PROJ/.data.tmp"
+node "$PROJ/parse-sf.js" "$SF_FILE" > "$TMP_JSON"
 
 echo "Writing data.js..."
-node --input-type=module << 'EOF'
-import { writeFileSync } from 'fs';
-const raw = process.env.RAW_JSON;
-const proj = process.env.PROJ;
-const date = process.env.DATA_DATE;
-writeFileSync(`${proj}/data.js`, `const RAW = ${raw};\nconst DATA_TS = '${date}';\n`);
-console.log('Done.');
-EOF
+{ printf 'const RAW = '; cat "$TMP_JSON"; printf ";\nconst DATA_TS = '%s';\n" "$DATA_DATE"; } > "$PROJ/data.js"
+echo "Done."
+
+rm "$TMP_JSON"
 
 echo "Cleaning up..."
 rm "$SF_FILE"
