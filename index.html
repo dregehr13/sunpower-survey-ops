@@ -1999,7 +1999,7 @@ function renderResurvey(){
         ${regionData.map(d=>`<tr>
           <td>
             <div style="font-weight:500;font-size:12px;">${d.reg}</div>
-            <div class="rs-region-bar" style="width:${Math.round(d.count/maxRegCount*80)+20}px;">
+            <div class="rs-region-bar" style="width:80px;">
               <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
             </div>
           </td>
