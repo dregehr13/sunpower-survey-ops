@@ -44,15 +44,10 @@ export default async function handler(req, res) {
     if (!commitRes.ok) throw new Error(`GET commit → ${commitRes.status}`);
     const { tree: { sha: baseTreeSha } } = await commitRes.json();
 
-    // 3. Fetch and update each file, create blobs
+    // 3. Build data.js content directly — no regex on large file
     const treeEntries = [];
     for (const file of FILES) {
-      const fileRes = await gh(`/contents/${file}`, token);
-      if (!fileRes.ok) throw new Error(`GET ${file} → ${fileRes.status}`);
-      const { content: b64 } = await fileRes.json();
-      let content = Buffer.from(b64.replace(/\n/g, ''), 'base64').toString('utf8');
-      content = content.replace(/const RAW = \[[\s\S]*?\];/, rawJS);
-      content = content.replace(/const DATA_TS = '[^']*';/, `const DATA_TS = '${date}';`);
+      const content = `const RAW = ${JSON.stringify(rows)};\nconst DATA_TS = '${date}';\n`;
 
       const blobRes = await gh('/git/blobs', token, {
         method: 'POST',
