@@ -1290,9 +1290,9 @@ function renderPerformance(){
     <div class="sec">
       <div class="shead"><div><div class="stitle">Volume by region</div><div class="ssub">All surveys · by resource type · ${rStats.length} regions</div></div></div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#64748b;"></span>SunPower Surveyor</span>
         <span class="li"><span class="ld" style="background:#0ea5e9;"></span>Sales Rep</span>
         <span class="li"><span class="ld" style="background:#8b5cf6;"></span>Radicl Services</span>
+        <span class="li"><span class="ld" style="background:#64748b;"></span>SunPower Surveyor</span>
         ${hasNone?'<span class="li"><span class="ld" style="background:#e2e8f0;border:1px solid #ddd;box-sizing:border-box;"></span>Unassigned</span>':''}
       </div>
       <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
@@ -1332,9 +1332,9 @@ function renderPerformance(){
   CH['pf-vol']=new Chart(document.getElementById('pf-vol'),{
     type:'bar',
     data:{labels:rStats.map(r=>r.region),datasets:[
-      {label:'SunPower Surveyor',data:volSP,backgroundColor:'#64748b',borderRadius:0},
       {label:'Sales Rep',data:volSR,backgroundColor:'#0ea5e9',borderRadius:0},
       {label:'Radicl Services',data:volRD,backgroundColor:'#8b5cf6',borderRadius:0},
+      {label:'SunPower Surveyor',data:volSP,backgroundColor:'#64748b',borderRadius:0},
       ...(hasNone?[{label:'Unassigned',data:volNone,backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
     ]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
