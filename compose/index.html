@@ -302,7 +302,10 @@ function computeStats(){
     const wipProjects=ROWS.filter(r=>r.start&&!r.complete);
     const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,PROJECTION_DIMS,segAvgs,globalAvgCt)))||globalAvgCt;
     const wkEnd=toISO(addDays(new Date(wtdFrom+'T12:00:00'),6));
-    const scheduledRem=wipProjects.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=wkEnd).length;
+    const scheduledRem=wipProjects.filter(r=>
+      (r.scheduled&&r.scheduled>yesterday&&r.scheduled<=wkEnd)||
+      (r.resurvey_scheduled&&r.resurvey_scheduled>yesterday&&r.resurvey_scheduled<=wkEnd)
+    ).length;
     const unscheduledWip=Math.max(wipProjects.length-scheduledRem,0);
     const wip=wipProjects.length;
     const projectedWeek=daysRemaining>0

@@ -41,6 +41,8 @@ const FIELDS = [
   { key:'resurvey_scheduled',  sfCol:'Resurvey Scheduled',                                       type:'date' },
   { key:'resurvey_complete',   sfCol:'Resurvey Complete Date',                                   type:'date' },
   { key:'resurvey_details',    sfCol:'Resurvey Request Details',                                 type:'text' },
+  { key:'field_survey_scheduled', sfCol:'Field Site Survey Scheduled',                           type:'date' },
+  { key:'field_survey_complete',  sfCol:'Field Site Survey Complete',                            type:'date' },
 ];
 
 // Parse headers
@@ -62,6 +64,13 @@ function cleanDate(s) {
   const m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return '';
   return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+}
+
+function subtractDays(dateStr, n) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d - n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
 
 function dDiff(a, b) {
@@ -88,8 +97,10 @@ allRows.slice(1).forEach((rowHtml, i) => {
   r.ct_s2r      = dDiff(r.start, r.requested);
   r.ct_r2s      = dDiff(r.requested, r.scheduled);
   r.ct_total    = dDiff(r.start, r.complete);
+  if (r.ct_total === null && !r.requested && r.field_survey_complete)
+    r.ct_total  = dDiff(r.start, subtractDays(r.field_survey_complete, 2));
   r.ct_resurvey = dDiff(r.resurvey_requested, r.resurvey_complete);
-  r.ct_full     = r.resurvey_complete ? dDiff(r.start, r.resurvey_complete) : null;
+  r.ct_full     = (r.ct_total != null && r.ct_resurvey != null) ? Math.round((r.ct_total + r.ct_resurvey) * 10) / 10 : null;
   rows.push(r);
 });
 

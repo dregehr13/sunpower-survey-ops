@@ -373,6 +373,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="ntab" data-page="performance">Performance</div>
   <div class="ntab" data-page="trends">Trends</div>
   <div class="ntab" data-page="outliers">WIP</div>
+  <div class="ntab" data-page="resurvey">Resurveys</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -390,6 +391,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 <div id="page-performance" class="page">     <div id="fb-performance"></div> <div id="perf-content"></div></div>
 <div id="page-trends"      class="page">     <div id="fb-trends"></div>      <div id="tr-content"></div></div>
 <div id="page-outliers"    class="page">     <div id="fb-outliers"></div>    <div id="ol-content"></div></div>
+<div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
 
@@ -496,6 +498,8 @@ const FIELDS = [
   {key:'resurvey_scheduled',   sfCol:'Resurvey Scheduled',                                        label:'Resurvey Scheduled',type:'date',    filterable:false, editable:false},
   {key:'resurvey_complete',    sfCol:'Resurvey Complete Date',                                    label:'Resurvey Complete', type:'date',    filterable:false, editable:false},
   {key:'resurvey_details',     sfCol:'Resurvey Request Details',                                  label:'Resurvey Details',  type:'text',    filterable:false, editable:false},
+  {key:'field_survey_scheduled', sfCol:'Field Site Survey Scheduled',                             label:'FSS Scheduled',     type:'date',    filterable:false, editable:false},
+  {key:'field_survey_complete',  sfCol:'Field Site Survey Complete',                              label:'FSS Complete',      type:'date',    filterable:false, editable:false},
   {key:'ct_s2r',     computed:true, label:'Start→Req (d)',      type:'number'},
   {key:'ct_r2s',     computed:true, label:'Req→Sched (d)',      type:'number'},
   {key:'ct_total',   computed:true, label:'Total (d)',           type:'number'},
@@ -880,6 +884,7 @@ function renderPage(p){
   if(p==='performance') renderPerformance();
   if(p==='trends')      renderTrends();
   if(p==='outliers')    renderAgingWIP();
+  if(p==='resurvey')    renderResurvey();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
 }
@@ -890,7 +895,20 @@ function dDiff(a,b){
   const [ay,am,ad]=a.split('-').map(Number),[by,bm,bd]=b.split('-').map(Number);
   return Math.round((new Date(by,bm-1,bd)-new Date(ay,am-1,ad))/86400000*10)/10;
 }
-function recalc(r){ r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled); r.ct_total=dDiff(r.start,r.complete); r.ct_resurvey=dDiff(r.resurvey_requested,r.resurvey_complete); r.ct_full=r.resurvey_complete?dDiff(r.start,r.resurvey_complete):null; }
+function subtractDays(dateStr,n){
+  if(!dateStr) return '';
+  const [y,m,d]=dateStr.split('-').map(Number);
+  const dt=new Date(y,m-1,d-n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function recalc(r){
+  r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled);
+  r.ct_total=dDiff(r.start,r.complete);
+  if(r.ct_total===null&&!r.requested&&r.field_survey_complete)
+    r.ct_total=dDiff(r.start,subtractDays(r.field_survey_complete,2));
+  r.ct_resurvey=dDiff(r.resurvey_requested,r.resurvey_complete);
+  r.ct_full=(r.ct_total!=null&&r.ct_resurvey!=null)?Math.round((r.ct_total+r.ct_resurvey)*10)/10:null;
+}
 function isComplete(r){ return !!(r.complete && r.list==='Complete'); }
 function isWIP(r){ return !!(r.start && !isComplete(r)); }
 function wipAgeFrom(r){
@@ -1131,7 +1149,10 @@ function renderThisWeek(){
   const today=localISO(new Date());
   const yesterday=localISO(new Date(Date.now()-86400000));
   const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=yesterday);
-  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to&&!isComplete(r));
+  const scheduledRem=rows.filter(r=>!isComplete(r)&&(
+    (r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to)||
+    (r.resurvey_scheduled&&r.resurvey_scheduled>yesterday&&r.resurvey_scheduled<=tw.to)
+  ));
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r));
   const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
   const bDaysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow;
@@ -1840,9 +1861,119 @@ function renderAgingWIP(){
     </div>`;
 }
 
+// ═══ RESURVEY TAB ════════════════════════════════════════
+function renderResurvey(){
+  const el=document.getElementById('rs-content'); if(!el) return;
+
+  // All rows that have ever had a resurvey initiated
+  const hasResurvey=rows.filter(r=>r.resurvey_requested);
+  const openResurvey=hasResurvey.filter(r=>!r.resurvey_complete);
+  const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete);
+  const ctResurveyVals=closedResurvey.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
+  const avgRsCt=avg(ctResurveyVals);
+  const medRsCt=med(ctResurveyVals);
+
+  // FPY: among all completions, how many had a surveyor-attributed resurvey?
+  const completions=rows.filter(r=>isComplete(r));
+  const internalDefects=completions.filter(r=>r.resurvey_attributed==='Surveyor');
+  const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
+
+  // Attribution breakdown across all resurveys that have attribution
+  const attributed=hasResurvey.filter(r=>r.resurvey_attributed);
+  const attrGroups={};
+  attributed.forEach(r=>{ attrGroups[r.resurvey_attributed]=(attrGroups[r.resurvey_attributed]||0)+1; });
+
+  // By region
+  const regions=[...new Set(hasResurvey.map(r=>r.region))].filter(Boolean).sort();
+  const regionData=regions.map(reg=>{
+    const rr=hasResurvey.filter(r=>r.region===reg);
+    const comps=completions.filter(r=>r.region===reg);
+    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
+    const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
+    return {reg, count:rr.length, open:rr.filter(r=>!r.resurvey_complete).length, avgCt:avg(cts), fpy:rfpy};
+  });
+
+  // By resource
+  const resOrder=['Sales Rep','Radicl','SunPower Surveyor'];
+  const allRes=[...new Set(hasResurvey.map(r=>r.resource||'Unknown'))].sort((a,b)=>{
+    const ia=resOrder.indexOf(a),ib=resOrder.indexOf(b);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
+  const resData=allRes.map(res=>{
+    const rr=hasResurvey.filter(r=>(r.resource||'Unknown')===res);
+    const comps=completions.filter(r=>(r.resource||'Unknown')===res);
+    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
+    const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
+    return {res, count:rr.length, open:rr.filter(r=>!r.resurvey_complete).length, avgCt:avg(cts), fpy:rfpy};
+  });
+
+  const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
+  const fmtPct=v=>v!=null?v.toFixed(1)+'%':'—';
+  const fpyClass=v=>v==null?'':(v>=95?'eks-good':v>=85?'eks-mid':'eks-bad');
+
+  el.innerHTML=`
+  <div class="section">
+    <div class="shead"><div><div class="stitle">Resurvey Overview</div><div class="ssub">Across all active projects · ${hasResurvey.length} with resurvey</div></div></div>
+    <div class="exec-heroes" style="margin:16px 0;">
+      <div class="ekcard ${fpyClass(fpy)}"><div class="eklabel">FPY</div><div class="ekval">${fmtPct(fpy)}</div><div class="ektgt">${completions.length} completions · ${internalDefects.length} surveyor defect${internalDefects.length!==1?'s':''}</div></div>
+      <div class="ekcard"><div class="eklabel">Total resurveys</div><div class="ekval">${hasResurvey.length}</div><div class="ektgt">${openResurvey.length} open · ${closedResurvey.length} complete</div></div>
+      <div class="ekcard"><div class="eklabel">Avg resurvey cycle</div><div class="ekval">${fmtCt(avgRsCt)}</div><div class="ektgt">Med ${fmtCt(medRsCt)} · resurvey requested → complete</div></div>
+    </div>
+
+    ${Object.keys(attrGroups).length?`
+    <div class="shead" style="margin-top:20px;"><div><div class="stitle">Attribution</div><div class="ssub">Who is responsible for the resurvey</div></div></div>
+    <div style="overflow-x:auto;"><table><thead><tr>
+      <th>Attributed To</th><th>Resurveys</th><th>%</th>
+    </tr></thead><tbody>
+      ${Object.entries(attrGroups).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <tr><td>${k}</td><td>${v}</td><td>${(v/attributed.length*100).toFixed(0)}%</td></tr>`).join('')}
+      ${attributed.length<hasResurvey.length?`<tr style="color:#999"><td>No attribution</td><td>${hasResurvey.length-attributed.length}</td><td>${((hasResurvey.length-attributed.length)/hasResurvey.length*100).toFixed(0)}%</td></tr>`:''}
+    </tbody></table></div>`:''}
+
+    <div class="shead" style="margin-top:20px;"><div><div class="stitle">By Region</div><div class="ssub">FPY and resurvey cycle by region</div></div></div>
+    <div style="overflow-x:auto;"><table><thead><tr>
+      <th>Region</th><th>Resurveys</th><th>Open</th><th>Avg Cycle</th><th>Region FPY</th>
+    </tr></thead><tbody>
+      ${regionData.map(d=>`<tr>
+        <td>${d.reg}</td><td>${d.count}</td><td>${d.open||0}</td><td>${fmtCt(d.avgCt)}</td>
+        <td class="${fpyClass(d.fpy)}">${fmtPct(d.fpy)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+
+    <div class="shead" style="margin-top:20px;"><div><div class="stitle">By Resource</div><div class="ssub">Resurvey rate by surveyor type</div></div></div>
+    <div style="overflow-x:auto;"><table><thead><tr>
+      <th>Resource</th><th>Resurveys</th><th>Open</th><th>Avg Cycle</th><th>Resource FPY</th>
+    </tr></thead><tbody>
+      ${resData.map(d=>`<tr>
+        <td>${d.res}</td><td>${d.count}</td><td>${d.open||0}</td><td>${fmtCt(d.avgCt)}</td>
+        <td class="${fpyClass(d.fpy)}">${fmtPct(d.fpy)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+
+    ${openResurvey.length?`
+    <div class="shead" style="margin-top:20px;"><div><div class="stitle">Open Resurveys</div><div class="ssub">${openResurvey.length} resurveys in progress</div></div></div>
+    <div style="overflow-x:auto;"><table class="etable"><thead><tr>
+      <th>Project</th><th>Region</th><th>Resource</th><th>Attributed To</th><th>Resurvey Requested</th><th>Resurvey Scheduled</th><th>Reason</th><th>Details</th>
+    </tr></thead><tbody>
+      ${openResurvey.sort((a,b)=>a.resurvey_requested.localeCompare(b.resurvey_requested)).map(r=>`<tr>
+        <td>${r.project||r.address||'—'}</td>
+        <td>${r.region||'—'}</td>
+        <td>${r.resource||'—'}</td>
+        <td>${r.resurvey_attributed||'—'}</td>
+        <td>${fmtDate(r.resurvey_requested)}</td>
+        <td>${r.resurvey_scheduled?fmtDate(r.resurvey_scheduled):'—'}</td>
+        <td>${r.resurvey_reason||'—'}</td>
+        <td style="max-width:220px;white-space:normal;font-size:10px;">${r.resurvey_details||'—'}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`:''}
+  </div>`;
+}
+
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'outliers',l:'WIP'}];
+  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'outliers',l:'WIP'},{v:'resurvey',l:'Resurveys'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
