@@ -1283,11 +1283,6 @@ function renderPerformance(){
       <div id="rep-table-wrap"></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
-      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-      <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
-    </div>
-    <div class="sec">
       <div class="shead"><div><div class="stitle">Volume by region</div><div class="ssub">All surveys · by resource type · ${rStats.length} regions</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#0ea5e9;"></span>Sales Rep</span>
@@ -1296,6 +1291,11 @@ function renderPerformance(){
         ${hasNone?'<span class="li"><span class="ld" style="background:#e2e8f0;border:1px solid #ddd;box-sizing:border-box;"></span>Unassigned</span>':''}
       </div>
       <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
+    </div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
+      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
+      <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
