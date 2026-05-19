@@ -483,20 +483,24 @@ const FIELDS = [
   {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
   {key:'resource',      sfCol:'Site Survey Resource', label:'Resource',      type:'category', filterable:true,  editable:true},
-  // FUTURE — uncomment + set sfCol when active in Salesforce export:
-  //   // David's Albatross report used 'SST' (Site Survey Team) and 'Rep' — these will map to 'Sunpower Surveyor' and 'Sales Rep' once the SF field is live.
+  // surveyor_name and survey_type pending future SF export fields
   // {key:'surveyor_name', sfCol:'Assigned To',       label:'Assigned To',   type:'text',     filterable:false, editable:true},
-  // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true,
-  //   pending:true, values:['Site Survey','Site Survey + Battery','Battery Only Survey','Resurvey']},
-  //   // ^^ SF field name is 'Type of Survey'. NOT the same as 'Project Installation Type' (which is the install project type: Ambia / Battery Only).
-  // {key:'resurvey_reason',sfCol:'Resurvey Reason Category', label:'Resurvey Reason', type:'category', filterable:true,  editable:true, pending:true},
-  // {key:'resurvey_attributed', sfCol:'Resurvey Attributed to', label:'Attributed To', type:'category', filterable:true, editable:true, pending:true},
-  //   // ^^ Enables FPY vs Absolute FPY. Values: Sales Rep / SunPower Field / Radicl Agent / Design / Customer
+  // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true},
   {key:'last_comment',         sfCol:'Last Reviewed Comments',                                    label:'Last Note',        type:'text',     filterable:false, editable:false},
   {key:'list',                 sfCol:'List',                                                      label:'List',             type:'category', filterable:true,  editable:false},
-  {key:'ct_s2r',  computed:true, label:'Start→Req (d)',  type:'number'},
-  {key:'ct_r2s',  computed:true, label:'Req→Sched (d)',  type:'number'},
-  {key:'ct_total',computed:true, label:'Total (d)',       type:'number'},
+  {key:'owner',                sfCol:'Owner: Full Name',                                          label:'Owner',            type:'text',     filterable:false, editable:false},
+  {key:'reopened_by_design',   sfCol:'Reopened by Design',                                        label:'Reopened by Design',type:'text',    filterable:false, editable:false},
+  {key:'resurvey_reason',      sfCol:'Resurvey Reason',                                           label:'Resurvey Reason',  type:'text',     filterable:false, editable:false},
+  {key:'resurvey_attributed',  sfCol:'Resurvey Attributed To',                                    label:'Attributed To',    type:'category', filterable:false, editable:false},
+  {key:'resurvey_requested',   sfCol:'Resurvey Requested Date',                                   label:'Resurvey Requested',type:'date',    filterable:false, editable:false},
+  {key:'resurvey_scheduled',   sfCol:'Resurvey Scheduled',                                        label:'Resurvey Scheduled',type:'date',    filterable:false, editable:false},
+  {key:'resurvey_complete',    sfCol:'Resurvey Complete Date',                                    label:'Resurvey Complete', type:'date',    filterable:false, editable:false},
+  {key:'resurvey_details',     sfCol:'Resurvey Request Details',                                  label:'Resurvey Details',  type:'text',    filterable:false, editable:false},
+  {key:'ct_s2r',     computed:true, label:'Start→Req (d)',      type:'number'},
+  {key:'ct_r2s',     computed:true, label:'Req→Sched (d)',      type:'number'},
+  {key:'ct_total',   computed:true, label:'Total (d)',           type:'number'},
+  {key:'ct_resurvey',computed:true, label:'Resurvey Cycle (d)',  type:'number'},
+  {key:'ct_full',    computed:true, label:'Full Cycle (d)',      type:'number'},
 ];
 
 // ═══ SETTINGS ════════════════════════════════════════════
@@ -539,7 +543,7 @@ function setSetting(key, value){
 
 
 const DATA_CUTOFF = '2025-12-29';
-let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(!r.project_status||r.project_status==='In Progress') && r.start >= DATA_CUTOFF);
+let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
 rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; });
 let filtered = [];
 let dataTimestamp = null;
@@ -586,7 +590,7 @@ function applyFilter(){
   const f = getF();
   if(!f) return;
   filtered = rows.filter(r=>{
-    if(!r.complete) return false;
+    if(!isComplete(r)) return false;
     if(f.dateFrom && r.complete < f.dateFrom) return false;
     if(f.dateTo   && r.complete > f.dateTo)   return false;
     if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
@@ -725,7 +729,7 @@ function onF(page,key,value){
 function clearF(page){
   const def=defaultF();
   def.removeOutliers=S.defaultRemoveOutliers;
-  const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
+  const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
   pageF[page]={...def};
   saveFilterState();
@@ -736,8 +740,8 @@ function clearF(page){
 function wipFiltered(){
   const regArr=Array.isArray(wipF.region)?wipF.region:[];
   return rows.filter(r=>{
-    if(!r.start||r.complete) return false;
-    if(r.project_status&&r.project_status!=='In Progress') return false;
+    if(!r.start||isComplete(r)) return false;
+    if(r.project_status!=='In Progress'&&r.project_status!=='Change Order') return false;
     if(regArr.length&&!regArr.includes(r.region)) return false;
     if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
@@ -762,7 +766,7 @@ function buildWIPFBar(){
     :'';
 
   // Sales Rep
-  const salesReps=[...new Set(rows.filter(r=>r.start&&!r.complete).map(r=>r.sales_rep).filter(Boolean))].sort();
+  const salesReps=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
   const salesRepCtrl=salesReps.length
     ?`<div class="fsep"></div><span class="flabel">Sales Rep</span>
       <select onchange="onWipF('sales_rep',this.value)">
@@ -781,7 +785,7 @@ function buildWIPFBar(){
       </select>`
     :'';
 
-  const totalOpen=rows.filter(r=>r.start&&!r.complete).length;
+  const totalOpen=rows.filter(r=>isWIP(r)).length;
 
   return `<div class="fbar" style="flex-wrap:nowrap;">
     <div class="fgroup">
@@ -886,7 +890,14 @@ function dDiff(a,b){
   const [ay,am,ad]=a.split('-').map(Number),[by,bm,bd]=b.split('-').map(Number);
   return Math.round((new Date(by,bm-1,bd)-new Date(ay,am-1,ad))/86400000*10)/10;
 }
-function recalc(r){ r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled); r.ct_total=dDiff(r.start,r.complete); }
+function recalc(r){ r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled); r.ct_total=dDiff(r.start,r.complete); r.ct_resurvey=dDiff(r.resurvey_requested,r.resurvey_complete); r.ct_full=r.resurvey_complete?dDiff(r.start,r.resurvey_complete):null; }
+function isComplete(r){ return !!(r.complete && r.list==='Complete'); }
+function isWIP(r){ return !!(r.start && !isComplete(r)); }
+function wipAgeFrom(r){
+  if(r.resurvey_requested) return r.resurvey_requested;
+  if(r.complete){ const [y,m,d]=r.complete.split('-').map(Number); const dt=new Date(y,m-1,d+2); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+  return r.start;
+}
 function avg(a){ const v=a.filter(x=>x!=null&&x>=0&&!isNaN(x)); return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*100)/100:null; }
 function med(a){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; const m=Math.floor(v.length/2); return v.length%2?v[m]:Math.round((v[m-1]+v[m])/2*100)/100; }
 function pct(a,p){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; return v[Math.min(v.length-1,Math.ceil(v.length*p/100)-1)]; }
@@ -1023,7 +1034,7 @@ function trailing4WeekPace(){
     const sunEnd=new Date(thisMonday); sunEnd.setDate(thisMonday.getDate()-7*(i-1)-1);
     const monStart=new Date(sunEnd); monStart.setDate(sunEnd.getDate()-6);
     const from=localISO(monStart), to=localISO(sunEnd);
-    counts.push(rows.filter(r=>r.complete&&r.complete>=from&&r.complete<=to).length);
+    counts.push(rows.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=to).length);
   }
   const total=counts.reduce((a,b)=>a+b,0);
   return total>0?Math.round(total/4*10)/10:null;
@@ -1031,7 +1042,7 @@ function trailing4WeekPace(){
 
 function renderLastWeek(){
   const lw=weekRange(-1);
-  const src=rows.filter(r=>r.complete&&r.complete>=lw.from&&r.complete<=lw.to);
+  const src=rows.filter(r=>isComplete(r)&&r.complete>=lw.from&&r.complete<=lw.to);
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
   document.getElementById('cur-hero-hdr').innerHTML=`
@@ -1043,8 +1054,8 @@ function renderLastWeek(){
     return;
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
-  const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!r.complete||r.complete>lw.to)).length;
-  const curWipProjects=rows.filter(r=>r.start&&!r.complete);
+  const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to)).length;
+  const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
@@ -1119,20 +1130,20 @@ function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
   const yesterday=localISO(new Date(Date.now()-86400000));
-  const completedTW=rows.filter(r=>r.complete&&r.complete>=tw.from&&r.complete<=yesterday);
-  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to&&!r.complete);
-  const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!r.complete);
+  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=yesterday);
+  const scheduledRem=rows.filter(r=>r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to&&!isComplete(r));
+  const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r));
   const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
   const bDaysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow;
   const bDaysRemaining=Math.max(5-bDaysElapsed,0);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
-  const recentComps=rows.filter(r=>r.complete&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
+  const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
   const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
   const segAvgs=buildSegmentAvgs(recentComps,['region','resource']);
-  const wipProjects=rows.filter(r=>r.start&&!r.complete);
+  const wipProjects=rows.filter(r=>isWIP(r));
   const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
   const wip=wipProjects.length;
-  const avgWipAge=avg(wipProjects.map(r=>dDiff(r.start,yesterday)));
+  const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),yesterday)));
   const scheduledRemCount=scheduledRem.length;
   const unscheduledWip=Math.max(wip-scheduledRemCount,0);
   const projTotal=bDaysRemaining>0
@@ -1155,13 +1166,13 @@ function renderThisWeek(){
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
-  const dayCounts=dayDates.map(date=>rows.filter(r=>r.complete===date).length);
+  const dayCounts=dayDates.map(date=>rows.filter(r=>isComplete(r)&&r.complete===date).length);
   const schedCounts=dayDates.map(date=>rows.filter(r=>r.scheduled===date).length);
   const todayIdx=dayDates.indexOf(today);
   // Past days: no scheduled bars. Today: scheduled-but-not-yet-complete stacked on top. Future: all scheduled.
   const schedExtra=dayDates.map((date,i)=>{
     if(i<todayIdx) return 0;
-    if(i===todayIdx) return rows.filter(r=>r.scheduled===today&&!r.complete).length;
+    if(i===todayIdx) return rows.filter(r=>r.scheduled===today&&!isComplete(r)).length;
     return schedCounts[i];
   });
 
@@ -1422,7 +1433,7 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=RAW.filter(r=>!r.project_status||r.project_status==='In Progress');
+  const trendSrc=RAW.filter(r=>r.project_status==='In Progress'||r.project_status==='Change Order');
   const trendDone=trendSrc.filter(r=>r.complete);
   const weekly=weeklyStats(trendSrc);
   const weeklyC=weeklyStatsByComplete(trendDone);
@@ -1703,7 +1714,7 @@ function renderAgingWIP(){
   const today=localISO(new Date());
   const wip=wipFiltered().map(r=>({
     ...r,
-    daysOpen:dDiff(r.start,today)??0,
+    daysOpen:dDiff(wipAgeFrom(r),today)??0,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
 
@@ -1715,7 +1726,7 @@ function renderAgingWIP(){
   });
 
   // Stats from full unfiltered WIP
-  const allWip=rows.filter(r=>r.start&&!r.complete).map(r=>({...r,daysOpen:dDiff(r.start,today)??0}));
+  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0}));
   const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
@@ -2054,7 +2065,7 @@ function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.i
 function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
 function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(!r.project_status||r.project_status==='In Progress')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -2070,7 +2081,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=parsed.filter(r=>r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
+    rows=parsed.filter(r=>r.start>=DATA_CUTOFF&&(r.project_status==='In Progress'||r.project_status==='Change Order')); rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
@@ -2209,7 +2220,7 @@ window.addEventListener('load',()=>{
 
   // Set date range — autoDateRange always wins over saved dates
   clearFenceCache();
-  const dates=rows.filter(r=>r.complete).map(r=>r.complete).sort();
+  const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){
     PAGES.forEach(p=>{pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];});
   }

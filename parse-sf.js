@@ -33,6 +33,14 @@ const FIELDS = [
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
   { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
   { key:'list',                 sfCol:'List',                                                    type:'text' },
+  { key:'owner',               sfCol:'Owner: Full Name',                                         type:'text' },
+  { key:'reopened_by_design',  sfCol:'Reopened by Design',                                       type:'text' },
+  { key:'resurvey_reason',     sfCol:'Resurvey Reason',                                          type:'text' },
+  { key:'resurvey_attributed', sfCol:'Resurvey Attributed To',                                   type:'text' },
+  { key:'resurvey_requested',  sfCol:'Resurvey Requested Date',                                  type:'date' },
+  { key:'resurvey_scheduled',  sfCol:'Resurvey Scheduled',                                       type:'date' },
+  { key:'resurvey_complete',   sfCol:'Resurvey Complete Date',                                   type:'date' },
+  { key:'resurvey_details',    sfCol:'Resurvey Request Details',                                 type:'text' },
 ];
 
 // Parse headers
@@ -69,7 +77,7 @@ const rows = [];
 allRows.slice(1).forEach((rowHtml, i) => {
   const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/\s+/g,' ').trim());
   if (!cells.length) return;
-  const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null };
+  const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null, ct_resurvey: null, ct_full: null };
   FIELDS.forEach(f => {
     r[f.key] = colIdx[f.key] !== undefined
       ? (f.type === 'date' ? cleanDate(cells[colIdx[f.key]] || '') : (cells[colIdx[f.key]] || ''))
@@ -77,9 +85,11 @@ allRows.slice(1).forEach((rowHtml, i) => {
   });
   if (!r.region) return;
   if (!r.resource && r.complete) r.resource = 'Sales Rep';
-  r.ct_s2r   = dDiff(r.start, r.requested);
-  r.ct_r2s   = dDiff(r.requested, r.scheduled);
-  r.ct_total = dDiff(r.start, r.complete);
+  r.ct_s2r      = dDiff(r.start, r.requested);
+  r.ct_r2s      = dDiff(r.requested, r.scheduled);
+  r.ct_total    = dDiff(r.start, r.complete);
+  r.ct_resurvey = dDiff(r.resurvey_requested, r.resurvey_complete);
+  r.ct_full     = r.resurvey_complete ? dDiff(r.start, r.resurvey_complete) : null;
   rows.push(r);
 });
 
