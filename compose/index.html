@@ -191,6 +191,11 @@ function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 const DATA_CUTOFF = '2025-12-29';
 const ROWS = RAW.filter(r => (r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
 const isComplete = r => !!(r.complete && r.list==='Complete');
+function wipAgeFrom(r){
+  if(r.resurvey_requested) return r.resurvey_requested;
+  if(r.complete){ const [y,m,d]=r.complete.split('-').map(Number); const dt=new Date(y,m-1,d+2); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+  return r.start;
+}
 
 // ─── STATS HELPERS ────────────────────────────────────────
 function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
@@ -294,7 +299,7 @@ function computeStats(){
 
     // Pipeline-based projection (Little's Law: throughput = WIP / avg cycle)
     const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-    const daysElapsed=yesterdayDow===0?5:yesterdayDow; // Mon=1…Fri=5, Sun=5
+    const daysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow; // Mon=1…Fri=5, Sat/Sun=5
     const daysRemaining=Math.max(5-daysElapsed,0);
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
     const recentCompletions=ROWS.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
@@ -363,7 +368,8 @@ function getObservations(s){
     const today=new Date(); today.setHours(12,0,0,0);
     const todayISO=today.toISOString().slice(0,10);
     const overdueWip=ROWS.filter(r=>r.start&&!isComplete(r)).map(r=>{
-      const [ay,am,ad]=r.start.split('-').map(Number);
+      const ageFrom=wipAgeFrom(r);
+      const [ay,am,ad]=ageFrom.split('-').map(Number);
       const days=Math.round((today-new Date(ay,am-1,ad))/86400000);
       return {...r,days};
     }).filter(r=>r.days>4).sort((a,b)=>b.days-a.days);
