@@ -1543,9 +1543,9 @@ function renderTrends(){
       <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · current state: Complete · Resurvey pending · Scheduled · Unscheduled</div></div></div>
       <div class="leg">
         <span class="li" style="color:#16a34a;"><span class="ld" style="background:rgba(34,197,94,0.8);"></span>Complete</span>
-        <span class="li" style="color:#dc2626;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Resurvey pending</span>
         <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Scheduled</span>
         <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.8);"></span>Unscheduled</span>
+        <span class="li" style="color:#dc2626;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Resurvey pending</span>
         <span class="li" style="color:#16a34a;"><span class="ldash" style="background:#16a34a;"></span>Complete %</span>
       </div>
       <div style="display:flex;align-items:stretch;">
@@ -1650,7 +1650,7 @@ function renderTrends(){
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#2563eb',v=>v.toFixed(1)+'×');
 
   // ── tr-vol: state cohorts stacked by start week ───────────────
-  const COHORT_CATS=['Complete','Resurvey pending','Scheduled','Unscheduled'];
+  const COHORT_CATS=['Complete','Scheduled','Unscheduled','Resurvey pending'];
   const COHORT_COLORS={'Complete':'rgba(34,197,94,0.8)','Resurvey pending':'rgba(226,75,74,0.8)',
     'Scheduled':'rgba(59,130,246,0.8)','Unscheduled':'rgba(148,163,184,0.8)'};
   const hasResurveySig=r=>!!(r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
