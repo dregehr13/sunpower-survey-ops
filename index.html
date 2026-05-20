@@ -993,6 +993,8 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 
 // ═══ DRILL DRAWER ════════════════════════════════════════
 let _drillRows=[];
+let _rsDefects=[];
+function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys · sorted by resource',_rsDefects.slice().sort((a,b)=>(a.resource||'').localeCompare(b.resource||''))); }
 let rsTimeFilter='all'; // 'all' | '13wk' | '4wk' | 'open'
 function openDrill(title,subtitle,drillRows){
   _drillRows=drillRows;
@@ -1978,11 +1980,20 @@ function renderResurvey(){
   const avgRsCt=avg(ctVals);
   const medRsCt=med(ctVals);
 
-  const completions=rows.filter(r=>isComplete(r));
+  const RES_COLOR={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
+  const RES_LABEL={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
+  const allCompletions=rows.filter(r=>isComplete(r));
+  const completions=rsTimeFilter==='open'?[]:rsTimeFilter==='4wk'?allCompletions.filter(r=>r.complete>=subtractDays(today,28)):rsTimeFilter==='13wk'?allCompletions.filter(r=>r.complete>=subtractDays(today,91)):allCompletions;
   const internalDefects=completions.filter(r=>r.resurvey_attributed==='Surveyor');
+  _rsDefects=internalDefects;
   const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
+  const resFPY=['Sales Rep','Radicl Services','SunPower Surveyor'].map(res=>{
+    const comps=completions.filter(r=>r.resource===res);
+    const defs=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    return {res,comps:comps.length,defs:defs.length,fpy:comps.length?((comps.length-defs.length)/comps.length*100):null};
+  }).filter(r=>r.comps>0);
 
   // Attribution
   const ATTR_ORDER=['Surveyor','Customer','Design'];
@@ -2018,7 +2029,6 @@ function renderResurvey(){
 
   // By resource
   const RES_ORDER=['Sales Rep','Radicl Services','SunPower Surveyor'];
-  const RES_COLOR={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
   const resData=[...new Set(hasResurvey.map(r=>r.resource).filter(Boolean))].sort((a,b)=>{
     const ia=RES_ORDER.indexOf(a),ib=RES_ORDER.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib);
   }).map(res=>{
@@ -2043,11 +2053,19 @@ function renderResurvey(){
     <div class="toggle-group">${rsTgl('all','All Time')}${rsTgl('13wk','13 Weeks')}${rsTgl('4wk','4 Weeks')}${rsTgl('open','Currently Open')}</div>
   </div>
   <div class="kg kg4">
-    <div class="kcard">
-      <div class="klabel">FPY</div>
-      <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
-      <div class="ksub">${internalDefects.length} surveyor defect${internalDefects.length!==1?'s':''}</div>
-      <div class="ktgt">${completions.length} completions · target 95%</div>
+    <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
+      <div class="klabel">FPY <span style="font-size:9px;color:var(--faint);font-weight:400;">click to see defects</span></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:1px;">
+        <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--muted);">${completions.length?`${internalDefects.length} / ${completions.length}`:'—'}</div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:8px;">defects · target 95%</div>
+      ${resFPY.length?`<div style="display:flex;flex-direction:column;gap:5px;padding-top:8px;border-top:1px solid var(--border);">
+        ${resFPY.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:10px;font-weight:600;color:${RES_COLOR[r.res]};">${RES_LABEL[r.res]||r.res}</span>
+          <span style="font-size:10px;color:var(--muted);">${r.defs}/${r.comps} <span style="font-weight:600;color:${r.fpy!=null&&r.fpy<95?'var(--red)':'var(--faint)'};">${r.fpy!=null?r.fpy.toFixed(0)+'%':'—'}</span></span>
+        </div>`).join('')}
+      </div>`:''}
     </div>
     <div class="kcard">
       <div class="klabel">Total Resurveys</div>
