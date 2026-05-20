@@ -372,6 +372,29 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 .rs-sched-pill{font-size:9px;padding:1px 6px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;}
 .rs-unsched-pill{font-size:9px;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--faint);border:1px solid var(--border);}
 
+/* DRILL DRAWER */
+.drill-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1100;display:none;}
+.drill-overlay.open{display:block;}
+.drill-panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--surface);border-left:1px solid var(--border);z-index:1101;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 28px rgba(0,0,0,.12);}
+.drill-panel.open{transform:translateX(0);}
+.drill-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);gap:12px;}
+.drill-title{font-size:14px;font-weight:600;color:var(--text);}
+.drill-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.drill-count{font-size:11px;color:var(--faint);padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--border);}
+.drill-copy-btn{font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap;}
+.drill-copy-btn:hover{background:var(--text);color:#fff;border-color:var(--text);}
+.drill-close{width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.drill-close:hover{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+.drill-table-wrap{flex:1;overflow:auto;}
+.drill-table{width:100%;border-collapse:collapse;font-size:11px;}
+.drill-table th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-weight:500;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;z-index:1;}
+.drill-table th.r,.drill-table td.r{text-align:right;}
+.drill-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+.drill-table tr:last-child td{border-bottom:none;}
+.drill-table tr:hover td{background:var(--bg);}
+.drill-proj{font-weight:500;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.drill-tgt{cursor:pointer;}
+
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
   .g2,.g3,.settings-grid{grid-template-columns:1fr;}
@@ -471,6 +494,27 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="drill-overlay" class="drill-overlay" onclick="closeDrill()"></div>
+<div id="drill-panel" class="drill-panel">
+  <div class="drill-hd">
+    <div style="min-width:0;">
+      <div class="drill-title" id="drill-title"></div>
+      <div class="drill-sub" id="drill-sub"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button class="drill-copy-btn" onclick="copyDrill()">Copy list</button>
+      <button class="drill-close" onclick="closeDrill()">×</button>
+    </div>
+  </div>
+  <div class="drill-count" id="drill-count"></div>
+  <div class="drill-table-wrap">
+    <table class="drill-table">
+      <thead><tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr></thead>
+      <tbody id="drill-tbody"></tbody>
+    </table>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
@@ -943,7 +987,40 @@ function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&q
 function fmtDate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}, ${y}`; }
 function fmtDateShort(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}`; }
 function fmtWeekLabel(w){ return fmtDateShort(w.week)+' – '+fmtDateShort(w.weekEnd); }
+function weekOf(ds){ if(!ds) return ''; const [y,mo,d]=ds.split('-').map(Number); const dt=new Date(y,mo-1,d); const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1)); return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; }
+const hasResurveySig=r=>!!(r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
 function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),3400); }
+
+// ═══ DRILL DRAWER ════════════════════════════════════════
+let _drillRows=[];
+let rsRegView='all';
+function openDrill(title,subtitle,drillRows){
+  _drillRows=drillRows;
+  const today=localISO(new Date());
+  document.getElementById('drill-title').textContent=title;
+  document.getElementById('drill-sub').textContent=subtitle;
+  document.getElementById('drill-count').textContent=drillRows.length+' account'+(drillRows.length!==1?'s':'');
+  document.getElementById('drill-tbody').innerHTML=drillRows.map(r=>{
+    const name=r.project||r.address||'—';
+    const days=r.ct_total!=null?r.ct_total+'d':(r.start?(dDiff(r.start,today)||0)+'d open':'—');
+    return `<tr><td><div class="drill-proj" title="${esc(name)}">${esc(name)}</div></td><td style="white-space:nowrap;">${esc(r.region||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${esc(r.resource||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${days}</td></tr>`;
+  }).join('');
+  document.getElementById('drill-panel').classList.add('open');
+  document.getElementById('drill-overlay').classList.add('open');
+}
+function closeDrill(){
+  document.getElementById('drill-panel').classList.remove('open');
+  document.getElementById('drill-overlay').classList.remove('open');
+}
+function copyDrill(){
+  const text=_drillRows.map(r=>r.project||r.address||'').filter(Boolean).join('\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Copied '+_drillRows.length+' accounts to clipboard'));
+}
+function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
+function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
+function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsRegView==='open'?src.filter(r=>!r.resurvey_complete&&r.list!=='Complete'):src; openDrill((rsRegView==='open'?'Open Resurveys':'All Resurveys')+' · '+reg,view.length+' resurveys',view); }
+function setRsRegView(v){ rsRegView=v; renderResurvey(); }
+
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
 const CH={};
@@ -1368,6 +1445,7 @@ function renderPerformance(){
       data:rStats.map(r=>r.start_to_complete),
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; openDrill('Avg Cycle · '+reg,'All surveys · current filter',filtered.filter(r=>r.region===reg)); },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#e24b4a',borderWidth:2,borderDash:[5,4]}}}},
@@ -1386,6 +1464,7 @@ function renderPerformance(){
       ...(hasNone?[{label:'Unassigned',data:volNone,backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
     ]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; const rls=['Sales Rep','Radicl Services','SunPower Surveyor',null]; const res=rls[els[0].datasetIndex]; const dr=filtered.filter(r=>r.region===reg&&(res===null?!r.resource:r.resource===res)); openDrill((res||'Unassigned')+' · '+reg,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',callbacks:{
           title:ctx=>rStats[ctx[0].dataIndex].region,
@@ -1415,7 +1494,7 @@ function renderRegionTablePerf(){
   tbody.innerHTML=sorted.map(r=>{
     const state=getState(r.region),city=r.region.split(' ').slice(1).join(' ');
     const dim=r.count<S.minRegionVolume?' class="dim-row"':'';
-    return `<tr${dim}>
+    return `<tr${dim} class="drill-tgt" data-region="${esc(r.region)}" onclick="drillRegion(this)">
       <td><span class="sbadge">${state}</span>${city}${r.count<S.minRegionVolume?'<span style="font-size:9px;color:var(--faint);margin-left:4px;">(low vol)</span>':''}</td>
       <td class="r">${r.count}</td>
       <td class="r">${pillV(r.start_to_complete)}</td>
@@ -1457,7 +1536,7 @@ function renderRepTable(){
   const th=(k,l,cls='r')=>`<th class="${cls}" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
     <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
-    <tbody>${displayRows.map(r=>`<tr>
+    <tbody>${displayRows.map(r=>`<tr class="drill-tgt" data-rep="${esc(r.name)}" data-res="${esc(resLabel)}" onclick="drillRep(this)">
       <td>${esc(r.name)}</td>
       <td class="r">${r.count}</td>
       <td class="r">${pillV(r.average)}</td>
@@ -1602,6 +1681,7 @@ function renderTrends(){
        tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -1636,6 +1716,7 @@ function renderTrends(){
        pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onClick:(evt,els)=>{ if(!els.length) return; const w=weeklyC[els[0].index]; const dr=trendDone.filter(r=>weekOf(r.complete)===w.week); openDrill('Completions · Week of '+fmtWeekLabel(w),dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
@@ -1653,7 +1734,6 @@ function renderTrends(){
   const COHORT_CATS=['Complete','Scheduled','Unscheduled','Resurvey pending'];
   const COHORT_COLORS={'Complete':'rgba(34,197,94,0.8)','Resurvey pending':'rgba(226,75,74,0.8)',
     'Scheduled':'rgba(59,130,246,0.8)','Unscheduled':'rgba(148,163,184,0.8)'};
-  const hasResurveySig=r=>!!(r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
   const cohortMap={};
   trendSrc.filter(r=>r.start).forEach(r=>{
     const [y,mo,d]=r.start.split('-').map(Number);
@@ -1692,6 +1772,7 @@ function renderTrends(){
        pointRadius:3,pointBackgroundColor:'#16a34a',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isComplete(r)) return state==='Complete'; if(hasResurveySig(r)) return state==='Resurvey pending'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',intersect:false,callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -1932,6 +2013,8 @@ function renderResurvey(){
     };
   }).sort((a,b)=>b.count-a.count);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
+  const viewData=rsRegView==='open'?regionData.filter(d=>d.open>0).sort((a,b)=>b.open-a.open):regionData;
+  const maxViewCount=Math.max(...viewData.map(d=>rsRegView==='open'?d.open:d.count),1);
 
   // By resource
   const RES_ORDER=['Sales Rep','Radicl Services','SunPower Surveyor'];
@@ -1944,7 +2027,7 @@ function renderResurvey(){
     const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
     const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
     const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
-    return {res,count:rr.length,open:rr.filter(r=>!r.resurvey_complete).length,avgCt:avg(cts),fpy:rfpy};
+    return {res,count:rr.length,open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length,avgCt:avg(cts),fpy:rfpy};
   });
 
   const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
@@ -2018,7 +2101,7 @@ function renderResurvey(){
   </div>
 
   <div class="sec">
-    <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys and FPY per resource type per region · sorted by volume</div></div></div>
+    <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys per region · sorted by volume</div></div><div class="toggle-group"><button class="tgl-btn${rsRegView==='all'?' active':''}" onclick="setRsRegView('all')">All Time</button><button class="tgl-btn${rsRegView==='open'?' active':''}" onclick="setRsRegView('open')">Open Only</button></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
       <th>Region</th>
       <th class="r">Resurveys</th>
@@ -2028,14 +2111,14 @@ function renderResurvey(){
       <th class="r" style="color:#8b5cf6;">Radicl FPY</th>
       <th class="r" style="color:#64748b;">SPWR FPY</th>
     </tr></thead><tbody>
-      ${regionData.map(d=>`<tr>
+      ${viewData.map(d=>`<tr class="drill-tgt" onclick="drillResRegion('${esc(d.reg)}')">
         <td>
           <div style="font-weight:500;font-size:12px;">${d.reg}</div>
           <div class="rs-region-bar" style="width:80px;">
-            <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
+            <div class="rs-region-fill" style="width:${Math.round((rsRegView==='open'?d.open:d.count)/maxViewCount*100)}%;"></div>
           </div>
         </td>
-        <td class="r">${d.count}</td>
+        <td class="r">${rsRegView==='open'?d.open:d.count}</td>
         <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
         <td class="r">${fmtCt(d.avgCt)}</td>
         <td class="r">${fpyPill(d.fpySR)}</td>
