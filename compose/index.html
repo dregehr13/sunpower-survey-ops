@@ -188,8 +188,9 @@ function getThisWeekMon(){
 }
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
-// Only In Progress projects count in all metrics
-const ROWS = RAW.filter(r => !r.project_status || r.project_status === 'In Progress');
+const DATA_CUTOFF = '2025-12-29';
+const ROWS = RAW.filter(r => (r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
+const isComplete = r => !!(r.complete && r.list==='Complete');
 
 // ─── STATS HELPERS ────────────────────────────────────────
 function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
@@ -205,11 +206,11 @@ function iqrFence(arr,mult=1.5){
   return q3+mult*(q3-q1);
 }
 function weekMedCycle(from,to){
-  const cts=ROWS.filter(r=>r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const cts=ROWS.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   return med(cts);
 }
 function weekOnTargetPct(from,to){
-  const cts=ROWS.filter(r=>r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const cts=ROWS.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=to).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   return cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
 }
 
@@ -219,14 +220,14 @@ function computeStats(){
 
   if(mode==='monday'){
     const period=getLastWeekRange();
-    const rows=ROWS.filter(r=>r.complete>=period.from&&r.complete<=period.to&&!(r.start&&r.complete<r.start));
+    const rows=ROWS.filter(r=>isComplete(r)&&r.complete>=period.from&&r.complete<=period.to);
     const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-    const allCtsM=ROWS.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
+    const allCtsM=ROWS.filter(r=>isComplete(r)&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const fence=iqrFence(allCtsM);
     const outlierRows=rows.filter(r=>r.ct_total!=null&&r.ct_total>fence);
 
-    const wip=ROWS.filter(r=>r.start&&r.start<=period.to&&(!r.complete||r.complete>period.to)).length;
-    const wipPrior=ROWS.filter(r=>r.start&&r.start<period.from&&(!r.complete||r.complete>=period.from)).length;
+    const wip=ROWS.filter(r=>r.start&&r.start<=period.to&&(!isComplete(r)||r.complete>period.to)).length;
+    const wipPrior=ROWS.filter(r=>r.start&&r.start<period.from&&(!isComplete(r)||r.complete>=period.from)).length;
     const wipChange=wip-wipPrior;
 
     // Fetch 7 weeks of medians (last 5 displayed, first 2 provide rolling context)
@@ -236,8 +237,8 @@ function computeStats(){
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
       const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
       const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
-      const weekCompl=ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length;
-      const wipEow=ROWS.filter(r=>r.start&&r.start<=wE&&(!r.complete||r.complete>wE)).length;
+      const weekCompl=ROWS.filter(r=>isComplete(r)&&r.complete>=wS&&r.complete<=wE).length;
+      const wipEow=ROWS.filter(r=>r.start&&r.start<=wE&&(!isComplete(r)||r.complete>wE)).length;
       allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,wipEow});
     }
     for(let i=0;i<allTrend.length;i++){
@@ -267,7 +268,7 @@ function computeStats(){
     for(let i=0;i<=2;i++){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      prWeeks.push(ROWS.filter(r=>r.complete>=wS&&r.complete<=wE&&!(r.start&&r.complete<r.start)).length);
+      prWeeks.push(ROWS.filter(r=>isComplete(r)&&r.complete>=wS&&r.complete<=wE).length);
     }
     const prAvg=prWeeks.reduce((a,b)=>a+b,0)/3;
     const pipelineRatio=prAvg>0?wip/prAvg:null;
@@ -285,9 +286,9 @@ function computeStats(){
   } else {
     const yesterday=getYesterday();
     const wtdFrom=getThisWeekMon();
-    const completedYesterday=ROWS.filter(r=>r.complete===yesterday).length;
+    const completedYesterday=ROWS.filter(r=>isComplete(r)&&r.complete===yesterday).length;
     const newInYesterday=ROWS.filter(r=>r.start===yesterday).length;
-    const wtdRows=ROWS.filter(r=>r.complete>=wtdFrom&&r.complete<=yesterday);
+    const wtdRows=ROWS.filter(r=>isComplete(r)&&r.complete>=wtdFrom&&r.complete<=yesterday);
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const newInWTD=ROWS.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
 
@@ -296,10 +297,10 @@ function computeStats(){
     const daysElapsed=yesterdayDow===0?5:yesterdayDow; // Mon=1…Fri=5, Sun=5
     const daysRemaining=Math.max(5-daysElapsed,0);
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
-    const recentCompletions=ROWS.filter(r=>r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
+    const recentCompletions=ROWS.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
     const globalAvgCt=avg(recentCompletions.map(r=>r.ct_total))||4;
     const segAvgs=buildSegmentAvgs(recentCompletions,PROJECTION_DIMS);
-    const wipProjects=ROWS.filter(r=>r.start&&!r.complete);
+    const wipProjects=ROWS.filter(r=>r.start&&!isComplete(r));
     const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,PROJECTION_DIMS,segAvgs,globalAvgCt)))||globalAvgCt;
     const wkEnd=toISO(addDays(new Date(wtdFrom+'T12:00:00'),6));
     const scheduledRem=wipProjects.filter(r=>
@@ -317,7 +318,7 @@ function computeStats(){
     const fourWkComps=[1,2,3,4].map(i=>{
       const wk=toISO(addDays(wtdMonday,-7*i));
       const wkEnd=toISO(addDays(new Date(wk+'T12:00:00'),6));
-      return ROWS.filter(r=>r.complete>=wk&&r.complete<=wkEnd).length;
+      return ROWS.filter(r=>isComplete(r)&&r.complete>=wk&&r.complete<=wkEnd).length;
     });
     const histAvg=Math.round(fourWkComps.reduce((a,b)=>a+b,0)/4);
 
@@ -327,14 +328,14 @@ function computeStats(){
     for(let i=0;i<5;i++){
       const d=toISO(addDays(wtdMonday,i));
       if(d>yesterday) break;
-      wtdDays.push({label:DAY_LABELS[i],date:d,count:ROWS.filter(r=>r.complete===d).length});
+      wtdDays.push({label:DAY_LABELS[i],date:d,count:ROWS.filter(r=>isComplete(r)&&r.complete===d).length});
     }
     const histDailyAvg=histAvg/5;
 
     // Slow account detection
-    const allCts=ROWS.filter(r=>r.complete&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
+    const allCts=ROWS.filter(r=>isComplete(r)&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const globalFence=iqrFence(allCts);
-    const slowYesterday=ROWS.filter(r=>r.complete===yesterday&&r.ct_total!=null&&r.ct_total>globalFence);
+    const slowYesterday=ROWS.filter(r=>isComplete(r)&&r.complete===yesterday&&r.ct_total!=null&&r.ct_total>globalFence);
 
     return {
       mode:'daily', yesterday, wtdFrom, wtdTo:yesterday,
@@ -361,7 +362,7 @@ function getObservations(s){
     // Overdue WIP — include notes for AI context
     const today=new Date(); today.setHours(12,0,0,0);
     const todayISO=today.toISOString().slice(0,10);
-    const overdueWip=ROWS.filter(r=>r.start&&!r.complete).map(r=>{
+    const overdueWip=ROWS.filter(r=>r.start&&!isComplete(r)).map(r=>{
       const [ay,am,ad]=r.start.split('-').map(Number);
       const days=Math.round((today-new Date(ay,am-1,ad))/86400000);
       return {...r,days};
