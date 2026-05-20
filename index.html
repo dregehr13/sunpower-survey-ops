@@ -1883,8 +1883,8 @@ function renderResurvey(){
   const today=localISO(new Date());
 
   const hasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
-  const openResurvey=hasResurvey.filter(r=>!r.resurvey_complete);
-  const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete);
+  const openResurvey=hasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
+  const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete||r.list==='Complete');
   const ctVals=closedResurvey.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
   const avgRsCt=avg(ctVals);
   const medRsCt=med(ctVals);
