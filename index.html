@@ -1909,14 +1909,21 @@ function renderResurvey(){
 
   const attrPill=k=>{ const c=ATTR_PILL[k]; return c?`<span class="pill ${c}">${k}</span>`:`<span class="pna">${k||'—'}</span>`; };
 
-  // By region — sorted by resurvey count desc
+  // By region — sorted by resurvey count desc, FPY split by resource
+  const fpyForSegment=(reg,res)=>{
+    const comps=completions.filter(r=>r.region===reg&&r.resource===res);
+    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    return comps.length?((comps.length-defects.length)/comps.length*100):null;
+  };
   const regionData=[...new Set(hasResurvey.map(r=>r.region))].filter(Boolean).map(reg=>{
     const rr=hasResurvey.filter(r=>r.region===reg);
-    const comps=completions.filter(r=>r.region===reg);
-    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
-    const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
     const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
-    return {reg,count:rr.length,open:rr.filter(r=>!r.resurvey_complete).length,avgCt:avg(cts),fpy:rfpy};
+    return {
+      reg, count:rr.length, open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length, avgCt:avg(cts),
+      fpySR:fpyForSegment(reg,'Sales Rep'),
+      fpyRD:fpyForSegment(reg,'Radicl Services'),
+      fpySP:fpyForSegment(reg,'SunPower Surveyor'),
+    };
   }).sort((a,b)=>b.count-a.count);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
 
@@ -1986,48 +1993,50 @@ function renderResurvey(){
     </div>
   </div>`:''}
 
-  <div class="g2">
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys and FPY per region · sorted by volume</div></div></div>
-      <table><thead><tr>
-        <th>Region</th>
-        <th class="r">Resurveys</th>
-        <th class="r">Open</th>
-        <th class="r">Avg Cycle</th>
-        <th class="r">FPY</th>
-      </tr></thead><tbody>
-        ${regionData.map(d=>`<tr>
-          <td>
-            <div style="font-weight:500;font-size:12px;">${d.reg}</div>
-            <div class="rs-region-bar" style="width:80px;">
-              <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
-            </div>
-          </td>
-          <td class="r">${d.count}</td>
-          <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
-          <td class="r">${fmtCt(d.avgCt)}</td>
-          <td class="r">${fpyPill(d.fpy)}</td>
-        </tr>`).join('')}
-      </tbody></table>
+  <div class="sec">
+    <div class="shead"><div><div class="stitle">By Resource</div><div class="ssub">Resurvey quality by surveyor type</div></div></div>
+    <div class="res-cards" style="margin-bottom:0;gap:12px;">
+      ${resData.map(d=>`
+      <div class="res-card" style="border-top-color:${RES_COLOR[d.res]||'#ccc'};">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+          <div class="res-card-title">${d.res}</div>
+          ${d.open?`<span class="rs-open-badge">${d.open} open</span>`:''}
+        </div>
+        <div class="res-card-count">${d.count} resurvey${d.count!==1?'s':''}</div>
+        <div class="res-stats">
+          <div class="res-stat-row"><span class="rlabel">FPY</span><span class="rval ${fpyKCls(d.fpy)}">${d.fpy!=null?d.fpy.toFixed(1)+'%':'—'}</span></div>
+          <div class="res-stat-row"><span class="rlabel">Avg cycle</span><span class="rval">${fmtCt(d.avgCt)}</span></div>
+        </div>
+      </div>`).join('')}
     </div>
+  </div>
 
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">By Resource</div><div class="ssub">Resurvey quality by surveyor type</div></div></div>
-      <div class="res-cards" style="grid-template-columns:1fr;margin-bottom:0;gap:10px;">
-        ${resData.map(d=>`
-        <div class="res-card" style="border-top-color:${RES_COLOR[d.res]||'#ccc'};">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-            <div class="res-card-title">${d.res}</div>
-            ${d.open?`<span class="rs-open-badge">${d.open} open</span>`:''}
+  <div class="sec">
+    <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys and FPY per resource type per region · sorted by volume</div></div></div>
+    <div style="overflow-x:auto;"><table><thead><tr>
+      <th>Region</th>
+      <th class="r">Resurveys</th>
+      <th class="r">Open</th>
+      <th class="r">Avg Cycle</th>
+      <th class="r" style="color:#0ea5e9;">Sales Rep FPY</th>
+      <th class="r" style="color:#8b5cf6;">Radicl FPY</th>
+      <th class="r" style="color:#64748b;">SPWR FPY</th>
+    </tr></thead><tbody>
+      ${regionData.map(d=>`<tr>
+        <td>
+          <div style="font-weight:500;font-size:12px;">${d.reg}</div>
+          <div class="rs-region-bar" style="width:80px;">
+            <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
           </div>
-          <div class="res-card-count">${d.count} resurvey${d.count!==1?'s':''}</div>
-          <div class="res-stats">
-            <div class="res-stat-row"><span class="rlabel">FPY</span><span class="rval ${fpyKCls(d.fpy)}">${d.fpy!=null?d.fpy.toFixed(1)+'%':'—'}</span></div>
-            <div class="res-stat-row"><span class="rlabel">Avg cycle</span><span class="rval">${fmtCt(d.avgCt)}</span></div>
-          </div>
-        </div>`).join('')}
-      </div>
-    </div>
+        </td>
+        <td class="r">${d.count}</td>
+        <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
+        <td class="r">${fmtCt(d.avgCt)}</td>
+        <td class="r">${fpyPill(d.fpySR)}</td>
+        <td class="r">${fpyPill(d.fpyRD)}</td>
+        <td class="r">${fpyPill(d.fpySP)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
   </div>
 
   ${openResurvey.length?`
