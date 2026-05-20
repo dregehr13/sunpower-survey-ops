@@ -99,7 +99,9 @@ allRows.slice(1).forEach((rowHtml, i) => {
   r.ct_total    = dDiff(r.start, r.complete);
   if (r.ct_total === null && !r.requested && r.field_survey_complete)
     r.ct_total  = dDiff(r.start, subtractDays(r.field_survey_complete, 2));
+  if (r.ct_total != null && r.ct_total < 0) r.ct_total = 0;
   r.ct_resurvey = dDiff(r.resurvey_requested, r.resurvey_complete);
+  if (r.ct_resurvey != null && r.ct_resurvey < 0) r.ct_resurvey = 0;
   r.ct_full     = (r.ct_total != null && r.ct_resurvey != null) ? Math.round((r.ct_total + r.ct_resurvey) * 10) / 10 : null;
   rows.push(r);
 });

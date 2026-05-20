@@ -608,7 +608,7 @@ function setSetting(key, value){
 
 const DATA_CUTOFF = '2025-12-29';
 let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
-rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; });
+rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
 let filtered = [];
 let dataTimestamp = null;
 
@@ -966,7 +966,9 @@ function recalc(r){
   r.ct_total=dDiff(r.start,r.complete);
   if(r.ct_total===null&&!r.requested&&r.field_survey_complete)
     r.ct_total=dDiff(r.start,subtractDays(r.field_survey_complete,2));
+  if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0;
   r.ct_resurvey=dDiff(r.resurvey_requested,r.resurvey_complete);
+  if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0;
   r.ct_full=(r.ct_total!=null&&r.ct_resurvey!=null)?Math.round((r.ct_total+r.ct_resurvey)*10)/10:null;
 }
 function isComplete(r){ return !!(r.complete && r.list==='Complete'); }
@@ -2422,7 +2424,7 @@ function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.i
 function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
 function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -2438,7 +2440,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=parsed.filter(r=>r.start>=DATA_CUTOFF&&(r.project_status==='In Progress'||r.project_status==='Change Order')); rows.forEach(r=>{ if(!r.resource && r.complete) r.resource='Sales Rep'; }); changedIds.clear();
+    rows=parsed.filter(r=>r.start>=DATA_CUTOFF&&(r.project_status==='In Progress'||r.project_status==='Change Order')); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
