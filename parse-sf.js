@@ -33,6 +33,7 @@ const FIELDS = [
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
   { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
   { key:'list',                 sfCol:'List',                                                    type:'text' },
+  { key:'task_id',             sfCol:'TaskRay Task ID',                                          type:'text' },
   { key:'owner',               sfCol:'Owner: Full Name',                                         type:'text' },
   { key:'reopened_by_design',  sfCol:'Reopened by Design',                                       type:'text' },
   { key:'resurvey_reason',     sfCol:'Resurvey Reason',                                          type:'text' },

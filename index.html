@@ -328,6 +328,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 .upd-drophere.drag-over{border-color:#2563eb;background:#eff6ff;color:#2563eb;}
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
 .upd-or{font-size:10px;color:var(--faint);text-align:center;margin:6px 0;}
+.sf-link{color:inherit;text-decoration:none;}.sf-link:hover{text-decoration:underline;color:var(--c1);}
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:11px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
 .toast.on{opacity:1;transform:translateY(0);}
 
@@ -550,6 +551,7 @@ const FIELDS = [
   // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true},
   {key:'last_comment',         sfCol:'Last Reviewed Comments',                                    label:'Last Note',        type:'text',     filterable:false, editable:false},
   {key:'list',                 sfCol:'List',                                                      label:'List',             type:'category', filterable:true,  editable:false},
+  {key:'task_id',              sfCol:'TaskRay Task ID',                                           label:'Task ID',          type:'text',     filterable:false, editable:false},
   {key:'owner',                sfCol:'Owner: Full Name',                                          label:'Owner',            type:'text',     filterable:false, editable:false},
   {key:'reopened_by_design',   sfCol:'Reopened by Design',                                        label:'Reopened by Design',type:'text',    filterable:false, editable:false},
   {key:'resurvey_reason',      sfCol:'Resurvey Reason',                                           label:'Resurvey Reason',  type:'text',     filterable:false, editable:false},
@@ -986,6 +988,9 @@ function lookupSegmentAvg(r,dims,segs,fallback){ for(let l=dims.length;l>=1;l--)
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
 function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
+function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
+function projLink(r,cls=''){const name=esc(r.project||r.address||'—');const url=sfUrl(r);return url?`<a href="${url}" target="_blank" rel="noopener" class="sf-link${cls?' '+cls:''}">${name}</a>`:name;}
 function fmtDate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}, ${y}`; }
 function fmtDateShort(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}`; }
 function fmtWeekLabel(w){ return fmtDateShort(w.week)+' – '+fmtDateShort(w.weekEnd); }
@@ -1018,11 +1023,11 @@ function openDrill(title,subtitle,drillRows,opts={}){
     tbody.innerHTML=order.map(k=>{
       const c=_DRILL_RES_COL[k]||'#888',lbl=_DRILL_RES_SHORT[k]||k,gr=groups[k];
       return `<tr><td colspan="5" style="background:${c}18;color:${c};font-weight:700;font-size:11px;padding:7px 10px;border-bottom:2px solid ${c}40;">${lbl} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`+
-        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${esc(nm)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="max-width:160px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="max-width:160px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
     }).join('');
   } else {
     thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr>`;
-    tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${esc(nm)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+    tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
   }
   document.getElementById('drill-panel').classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
@@ -1327,7 +1332,7 @@ function renderThisWeek(){
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
         ${atRisk.sort((a,b)=>a.scheduled.localeCompare(b.scheduled)).map(r=>`<tr>
-          <td style="font-size:11px;">${esc(r.project||r.contact||'—')}</td>
+          <td style="font-size:11px;">${projLink(r)}</td>
           <td style="font-size:11px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
           <td style="font-size:11px;">${esc(r.sales_rep||'—')}</td>
           <td class="r" style="font-size:11px;">${fmtDateShort(r.scheduled)}</td>
@@ -1342,7 +1347,7 @@ function renderThisWeek(){
         <th>Project</th><th>Region</th><th>Surveyor</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
         ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
-          <td style="font-size:11px;">${esc(r.project||r.contact||'—')}</td>
+          <td style="font-size:11px;">${projLink(r)}</td>
           <td style="font-size:11px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
           <td style="font-size:11px;">${esc(r.resource||'—')}</td>
           <td class="r" style="font-size:11px;">${fmtDateShort(r.complete)}</td>
@@ -1942,7 +1947,7 @@ function renderAgingWIP(){
 
   const tableRows=wip.map((r,i)=>`
     <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
-      <td><span class="wip-expand">&#9658;</span><strong>${esc(r.project)}</strong></td>
+      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong></td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
       <td style="font-size:11px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
@@ -2184,7 +2189,7 @@ function renderResurvey(){
         const daysOpen=dDiff(r.resurvey_requested,today);
         const ageCls=daysOpen==null?'':(daysOpen>=14?'kr-c':daysOpen>=7?'ka-c':'');
         return `<tr>
-          <td style="font-weight:500;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.project||r.address||''}">${r.project||r.address||'—'}</td>
+          <td style="font-weight:500;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.project||r.address||''}">${projLink(r)}</td>
           <td>${r.region||'—'}</td>
           <td>${r.resource||'—'}</td>
           <td>${attrPill(r.resurvey_attributed)}</td>
