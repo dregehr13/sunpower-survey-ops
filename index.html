@@ -1477,7 +1477,7 @@ function renderTrends(){
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
   const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
   const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
-  const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort();
+  const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort().filter(wk=>wk>=DATA_CUTOFF);
   const wkEndMap={}; [...weekly,...weeklyC].forEach(w=>{wkEndMap[w.week]=w.weekEnd;});
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
   const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
