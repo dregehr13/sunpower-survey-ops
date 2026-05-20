@@ -1882,7 +1882,7 @@ function renderResurvey(){
   const el=document.getElementById('rs-content'); if(!el) return;
   const today=localISO(new Date());
 
-  const hasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason);
+  const hasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
   const openResurvey=hasResurvey.filter(r=>!r.resurvey_complete);
   const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete);
   const ctVals=closedResurvey.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
