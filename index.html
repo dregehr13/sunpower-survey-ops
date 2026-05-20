@@ -993,7 +993,7 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 
 // ═══ DRILL DRAWER ════════════════════════════════════════
 let _drillRows=[];
-let rsRegView='all';
+let rsTimeFilter='all'; // 'all' | '13wk' | '4wk' | 'open'
 function openDrill(title,subtitle,drillRows){
   _drillRows=drillRows;
   const today=localISO(new Date());
@@ -1018,8 +1018,9 @@ function copyDrill(){
 }
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
-function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsRegView==='open'?src.filter(r=>!r.resurvey_complete&&r.list!=='Complete'):src; openDrill((rsRegView==='open'?'Open Resurveys':'All Resurveys')+' · '+reg,view.length+' resurveys',view); }
-function setRsRegView(v){ rsRegView=v; renderResurvey(); }
+function rsFilterApply(arr){ const today=localISO(new Date()); if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete'); if(rsTimeFilter==='13wk'){ const cut=subtractDays(today,91); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } if(rsTimeFilter==='4wk'){ const cut=subtractDays(today,28); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } return arr; }
+function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
+function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
@@ -1969,8 +1970,9 @@ function renderResurvey(){
   const el=document.getElementById('rs-content'); if(!el) return;
   const today=localISO(new Date());
 
-  const hasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
-  const openResurvey=hasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
+  const allHasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
+  const hasResurvey=rsFilterApply(allHasResurvey);
+  const openResurvey=allHasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
   const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete||r.list==='Complete');
   const ctVals=closedResurvey.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
   const avgRsCt=avg(ctVals);
@@ -2013,8 +2015,6 @@ function renderResurvey(){
     };
   }).sort((a,b)=>b.count-a.count);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
-  const viewData=rsRegView==='open'?regionData.filter(d=>d.open>0).sort((a,b)=>b.open-a.open):regionData;
-  const maxViewCount=Math.max(...viewData.map(d=>rsRegView==='open'?d.open:d.count),1);
 
   // By resource
   const RES_ORDER=['Sales Rep','Radicl Services','SunPower Surveyor'];
@@ -2037,7 +2037,11 @@ function renderResurvey(){
     return;
   }
 
+  const rsTgl=(v,l)=>`<button class="tgl-btn${rsTimeFilter===v?' active':''}" onclick="setRsTimeFilter('${v}')">${l}</button>`;
   el.innerHTML=`
+  <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+    <div class="toggle-group">${rsTgl('all','All Time')}${rsTgl('13wk','13 Weeks')}${rsTgl('4wk','4 Weeks')}${rsTgl('open','Currently Open')}</div>
+  </div>
   <div class="kg kg4">
     <div class="kcard">
       <div class="klabel">FPY</div>
@@ -2067,7 +2071,7 @@ function renderResurvey(){
 
   ${attrEntries.length?`
   <div class="sec">
-    <div class="shead"><div><div class="stitle">Attribution</div><div class="ssub">Who is responsible for each resurvey · ${hasResurvey.length} total</div></div></div>
+    <div class="shead"><div><div class="stitle">Attribution</div><div class="ssub">Who is at fault · ${hasResurvey.length} resurveys in view</div></div></div>
     <div class="attr-bar">
       ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}"></div>`).join('')}
     </div>
@@ -2101,7 +2105,7 @@ function renderResurvey(){
   </div>
 
   <div class="sec">
-    <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys per region · sorted by volume</div></div><div class="toggle-group"><button class="tgl-btn${rsRegView==='all'?' active':''}" onclick="setRsRegView('all')">All Time</button><button class="tgl-btn${rsRegView==='open'?' active':''}" onclick="setRsRegView('open')">Open Only</button></div></div>
+    <div class="shead"><div><div class="stitle">By Region</div><div class="ssub">Resurveys per region · sorted by volume</div></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
       <th>Region</th>
       <th class="r">Resurveys</th>
@@ -2111,14 +2115,14 @@ function renderResurvey(){
       <th class="r" style="color:#8b5cf6;">Radicl FPY</th>
       <th class="r" style="color:#64748b;">SPWR FPY</th>
     </tr></thead><tbody>
-      ${viewData.map(d=>`<tr class="drill-tgt" onclick="drillResRegion('${esc(d.reg)}')">
+      ${regionData.map(d=>`<tr class="drill-tgt" onclick="drillResRegion('${esc(d.reg)}')">
         <td>
           <div style="font-weight:500;font-size:12px;">${d.reg}</div>
           <div class="rs-region-bar" style="width:80px;">
-            <div class="rs-region-fill" style="width:${Math.round((rsRegView==='open'?d.open:d.count)/maxViewCount*100)}%;"></div>
+            <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
           </div>
         </td>
-        <td class="r">${rsRegView==='open'?d.open:d.count}</td>
+        <td class="r">${d.count}</td>
         <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
         <td class="r">${fmtCt(d.avgCt)}</td>
         <td class="r">${fpyPill(d.fpySR)}</td>
