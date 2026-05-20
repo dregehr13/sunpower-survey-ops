@@ -1201,7 +1201,7 @@ function renderLastWeek(){
   const rStats=regionStats(src).sort((a,b)=>b.count-a.count).slice(0,16);
   const rh=Math.max(180,rStats.length*26+50);
 
-  const shortName=t=>t.replace(' Surveyor','').replace(' Services','');
+  const shortName=t=>t==='SunPower Surveyor'?'SPWR':t.replace(' Services','');
   const splitSegs=typeData.map((td,i)=>{
     const pct=Math.round(td.n/src.length*100);
     const col=TYPE_COLORS[td.t];
