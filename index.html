@@ -1470,10 +1470,10 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=RAW.filter(r=>r.project_status==='In Progress'||r.project_status==='Change Order');
+  const trendSrc=RAW.filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF);
   const trendDone=trendSrc.filter(r=>r.complete);
   const weekly=weeklyStats(trendSrc);
-  const weeklyC=weeklyStatsByComplete(trendDone);
+  const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
   const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
   const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
