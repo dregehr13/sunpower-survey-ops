@@ -510,7 +510,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   <div class="drill-count" id="drill-count"></div>
   <div class="drill-table-wrap">
     <table class="drill-table">
-      <thead><tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr></thead>
+      <thead id="drill-thead"><tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr></thead>
       <tbody id="drill-tbody"></tbody>
     </table>
   </div>
@@ -994,19 +994,34 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 // ═══ DRILL DRAWER ════════════════════════════════════════
 let _drillRows=[];
 let _rsDefects=[];
-function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys · sorted by resource',_rsDefects.slice().sort((a,b)=>(a.resource||'').localeCompare(b.resource||''))); }
+function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys',_rsDefects,{groupBy:'resource'}); }
 let rsTimeFilter='all'; // 'all' | '13wk' | '4wk' | 'open'
-function openDrill(title,subtitle,drillRows){
+const _DRILL_RES_COL={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
+const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
+function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
+function _drillDaysSpan(r,today){ const d=r.ct_total!=null?r.ct_total:(r.start?dDiff(r.start,today):null); if(d==null) return '<span style="color:var(--faint);">—</span>'; const wip=!r.complete; const c=d<=S.targetMedian?'#16a34a':d<=(S.targetAvg+1)?'#d97706':'#dc2626'; return `<span style="color:${c};font-weight:600;">${d}d${wip?' open':''}</span>`; }
+function openDrill(title,subtitle,drillRows,opts={}){
   _drillRows=drillRows;
   const today=localISO(new Date());
   document.getElementById('drill-title').textContent=title;
   document.getElementById('drill-sub').textContent=subtitle;
   document.getElementById('drill-count').textContent=drillRows.length+' account'+(drillRows.length!==1?'s':'');
-  document.getElementById('drill-tbody').innerHTML=drillRows.map(r=>{
-    const name=r.project||r.address||'—';
-    const days=r.ct_total!=null?r.ct_total+'d':(r.start?(dDiff(r.start,today)||0)+'d open':'—');
-    return `<tr><td><div class="drill-proj" title="${esc(name)}">${esc(name)}</div></td><td style="white-space:nowrap;">${esc(r.region||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${esc(r.resource||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${days}</td></tr>`;
-  }).join('');
+  const thead=document.getElementById('drill-thead');
+  const tbody=document.getElementById('drill-tbody');
+  if(opts.groupBy){
+    const key=opts.groupBy;
+    const groups={},order=[];
+    drillRows.forEach(r=>{ const k=r[key]||'—'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
+    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Reason</th><th>Complete</th><th class="r">Cycle</th></tr>`;
+    tbody.innerHTML=order.map(k=>{
+      const c=_DRILL_RES_COL[k]||'#888',lbl=_DRILL_RES_SHORT[k]||k,gr=groups[k];
+      return `<tr><td colspan="5" style="background:${c}18;color:${c};font-weight:700;font-size:11px;padding:7px 10px;border-bottom:2px solid ${c}40;">${lbl} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`+
+        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${esc(nm)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="max-width:160px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+    }).join('');
+  } else {
+    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr>`;
+    tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${esc(nm)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+  }
   document.getElementById('drill-panel').classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
 }
@@ -2054,7 +2069,7 @@ function renderResurvey(){
   </div>
   <div class="kg kg4">
     <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
-      <div class="klabel">FPY <span style="font-size:9px;color:var(--faint);font-weight:400;">click to see defects</span></div>
+      <div class="klabel">FPY</div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:1px;">
         <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--muted);">${completions.length?`${internalDefects.length} / ${completions.length}`:'—'}</div>
