@@ -2066,7 +2066,7 @@ function renderResurvey(){
   // By sales rep — resurvey rate per rep, min 3 completions
   const MIN_REP_COMPS=3;
   const salesRepData=[...new Set(completions.map(r=>r.sales_rep).filter(Boolean))].map(name=>{
-    const comps=completions.filter(r=>r.sales_rep===name);
+    const comps=completions.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep');
     const resur=comps.filter(r=>hasResurveySig(r));
     const rate=comps.length?resur.length/comps.length*100:null;
     const regCounts={};comps.forEach(r=>{if(r.region)regCounts[r.region]=(regCounts[r.region]||0)+1;});
@@ -2187,7 +2187,7 @@ function renderResurvey(){
 
   ${salesRepData.length?`
   <div class="sec">
-    <div class="shead"><div><div class="stitle">By Sales Rep</div><div class="ssub">Resurvey rate per rep · min ${MIN_REP_COMPS} completions · highest first</div></div></div>
+    <div class="shead"><div><div class="stitle">By Sales Rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions · highest first</div></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
       <th>Sales Rep</th>
       <th>Region</th>
