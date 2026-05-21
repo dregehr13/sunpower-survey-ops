@@ -1044,6 +1044,7 @@ function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+re
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
 function rsFilterApply(arr){ const today=localISO(new Date()); if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete'); if(rsTimeFilter==='13wk'){ const cut=subtractDays(today,91); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } if(rsTimeFilter==='4wk'){ const cut=subtractDays(today,28); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } return arr; }
 function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
+function drillSalesRepRs(name){ const src=rows.filter(r=>r.sales_rep===name&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view); }
 function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
@@ -2062,6 +2063,16 @@ function renderResurvey(){
     return {res,count:rr.length,open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length,avgCt:avg(cts),fpy:rfpy};
   });
 
+  // By sales rep — resurvey rate per rep, min 3 completions
+  const MIN_REP_COMPS=3;
+  const salesRepData=[...new Set(completions.map(r=>r.sales_rep).filter(Boolean))].map(name=>{
+    const comps=completions.filter(r=>r.sales_rep===name);
+    const resur=comps.filter(r=>hasResurveySig(r));
+    const rate=comps.length?resur.length/comps.length*100:null;
+    return {name,comps:comps.length,resurveys:resur.length,rate};
+  }).filter(d=>d.comps>=MIN_REP_COMPS).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
+  const repRatePill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=20?'pr':v>=10?'pam':'pg'}">${v.toFixed(0)}%</span>`;
+
   const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
 
   if(!hasResurvey.length){
@@ -2171,6 +2182,26 @@ function renderResurvey(){
       </tr>`).join('')}
     </tbody></table></div>
   </div>
+
+  ${salesRepData.length?`
+  <div class="sec">
+    <div class="shead"><div><div class="stitle">By Sales Rep</div><div class="ssub">Resurvey rate per rep · min ${MIN_REP_COMPS} completions · highest first</div></div></div>
+    <div style="overflow-x:auto;"><table><thead><tr>
+      <th>Sales Rep</th>
+      <th class="r">Completions</th>
+      <th class="r">Resurveys</th>
+      <th class="r">Rate</th>
+      <th style="width:120px;"></th>
+    </tr></thead><tbody>
+      ${salesRepData.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${esc(d.name)}')">
+        <td style="font-weight:500;">${esc(d.name)}</td>
+        <td class="r">${d.comps}</td>
+        <td class="r">${d.resurveys}</td>
+        <td class="r">${repRatePill(d.rate)}</td>
+        <td><div style="background:var(--border);border-radius:2px;height:6px;width:100%;"><div style="background:${d.rate>=20?'var(--red)':d.rate>=10?'var(--amber)':'var(--green)'};border-radius:2px;height:6px;width:${Math.min(Math.round((d.rate??0)/Math.max(...salesRepData.map(x=>x.rate??0),1)*100),100)}%;"></div></div></td>
+      </tr>`).join('')}
+    </tbody></table></div>
+  </div>`:''}
 
   ${openResurvey.length?`
   <div class="sec">
