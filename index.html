@@ -2069,7 +2069,9 @@ function renderResurvey(){
     const comps=completions.filter(r=>r.sales_rep===name);
     const resur=comps.filter(r=>hasResurveySig(r));
     const rate=comps.length?resur.length/comps.length*100:null;
-    return {name,comps:comps.length,resurveys:resur.length,rate};
+    const regCounts={};comps.forEach(r=>{if(r.region)regCounts[r.region]=(regCounts[r.region]||0)+1;});
+    const primaryRegion=Object.entries(regCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+    return {name,comps:comps.length,resurveys:resur.length,rate,primaryRegion};
   }).filter(d=>d.comps>=MIN_REP_COMPS).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
   const repRatePill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=20?'pr':v>=10?'pam':'pg'}">${v.toFixed(0)}%</span>`;
 
@@ -2188,6 +2190,7 @@ function renderResurvey(){
     <div class="shead"><div><div class="stitle">By Sales Rep</div><div class="ssub">Resurvey rate per rep · min ${MIN_REP_COMPS} completions · highest first</div></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
       <th>Sales Rep</th>
+      <th>Region</th>
       <th class="r">Completions</th>
       <th class="r">Resurveys</th>
       <th class="r">Rate</th>
@@ -2195,6 +2198,7 @@ function renderResurvey(){
     </tr></thead><tbody>
       ${salesRepData.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${esc(d.name)}')">
         <td style="font-weight:500;">${esc(d.name)}</td>
+        <td style="color:var(--muted);font-size:11px;">${esc(d.primaryRegion)}</td>
         <td class="r">${d.comps}</td>
         <td class="r">${d.resurveys}</td>
         <td class="r">${repRatePill(d.rate)}</td>
