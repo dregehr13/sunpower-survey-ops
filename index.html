@@ -580,6 +580,7 @@ const SETTING_DEFAULTS = {
   autoDateRange:        true,      // auto-set date range from data on load
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
+  dataCutoff:           '2025-12-29', // earliest start date included in all metrics
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -597,6 +598,7 @@ function setSetting(key, value){
   S[key] = value;
   saveSettings();
   // Propagate changes that affect live state
+  if(key==='dataCutoff'){ DATA_CUTOFF=value; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='execTheme' && currentPage==='week') renderWeek();
@@ -606,7 +608,7 @@ function setSetting(key, value){
 }
 
 
-const DATA_CUTOFF = '2025-12-29';
+let DATA_CUTOFF = '2025-12-29';
 let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
 rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
 let filtered = [];
@@ -1591,7 +1593,8 @@ function renderTrends(){
   const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort().filter(wk=>wk>=DATA_CUTOFF);
   const wkEndMap={}; [...weekly,...weeklyC].forEach(w=>{wkEndMap[w.week]=w.weekEnd;});
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
-  const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
+  const rsInMap={}; rows.filter(r=>r.resurvey_requested>=DATA_CUTOFF).forEach(r=>{ const wk=weekOf(r.resurvey_requested); rsInMap[wk]=(rsInMap[wk]||0)+1; });
+  const inOutNewIn=allWks.map(wk=>(wkMap[wk]?.count||0)+(rsInMap[wk]||0));
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
   const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!isComplete(r)||r.complete>we)).length; });
   const labelsC=weeklyC.map(fmtWeekLabel);
@@ -2348,21 +2351,19 @@ function renderSettings(){
         </div>
       </div>
 
+      <div class="set-sec">
+        <div class="set-title">Data</div>
+        <div class="set-row">
+          <div><div class="set-label">Data cutoff date</div><div class="set-desc">Earliest project start included in all metrics and charts — currently ${DATA_CUTOFF}</div></div>
+          <div class="set-control"><input type="date" value="${S.dataCutoff}" onchange="setSetting('dataCutoff',this.value)"></div>
+        </div>
+      </div>
+
       <div class="set-sec" style="grid-column:1/-1;">
         <div class="set-title">Field Registry Status</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;">Active fields</div>
-            <div class="field-status">
-              ${activeFields.map(f=>`<div class="fs-row"><span>${f.label}<span style="color:var(--faint);margin-left:6px;font-size:10px;">${f.sfCol}</span></span><span class="fs-active">Active</span></div>`).join('')}
-            </div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;">Pending fields</div>
-            <div class="field-status">
-              <div class="fs-row"><span style="color:var(--faint);font-size:11px;">No pending fields — all SF fields active</span></div>
-            </div>
-          </div>
+        <div style="margin-bottom:8px;font-size:10px;color:var(--muted);font-weight:600;">${activeFields.length} active · no pending fields</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${activeFields.map(f=>`<div style="display:flex;align-items:center;gap:5px;background:var(--surface-2,var(--border));border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;"><span style="font-weight:500;">${f.label}</span><span style="color:var(--faint);font-size:10px;">${f.sfCol}</span></div>`).join('')}
         </div>
       </div>
 
@@ -2611,6 +2612,7 @@ document.addEventListener('click',function(e){
 
 window.addEventListener('load',()=>{
   loadSettings();
+  if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); }
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';
