@@ -360,7 +360,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 /* RESURVEY TAB */
 .attr-bar{height:12px;border-radius:6px;overflow:hidden;display:flex;gap:2px;margin-bottom:14px;}
 .attr-bar-seg{min-width:2px;transition:opacity .15s;}
-.attr-bar-seg:hover{opacity:.75;cursor:default;}
+.attr-bar-seg:hover{opacity:.75;cursor:pointer;}
 .attr-legend{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
 .attr-legend-item{display:flex;align-items:center;gap:8px;}
 .attr-legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
@@ -1049,6 +1049,7 @@ function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; open
 function rsFilterApply(arr){ const today=localISO(new Date()); if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete'); if(rsTimeFilter==='13wk'){ const cut=subtractDays(today,91); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } if(rsTimeFilter==='4wk'){ const cut=subtractDays(today,28); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } return arr; }
 function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
 function drillSalesRepRs(name){ const src=rows.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillAttribution(attr){ const src=rows.filter(r=>hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
@@ -2130,11 +2131,11 @@ function renderResurvey(){
   <div class="sec">
     <div class="shead"><div><div class="stitle">Attribution</div><div class="ssub">Who is at fault · ${hasResurvey.length} resurveys in view</div></div></div>
     <div class="attr-bar">
-      ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}"></div>`).join('')}
+      ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg drill-tgt" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}" onclick="drillAttribution('${esc(k)}')"></div>`).join('')}
     </div>
     <div class="attr-legend">
       ${attrEntries.map(([k,v])=>`
-      <div class="attr-legend-item">
+      <div class="attr-legend-item drill-tgt" onclick="drillAttribution('${esc(k)}')">
         <div class="attr-legend-dot" style="background:${ATTR_COLOR[k]||'#e2e8f0'};"></div>
         <span class="attr-legend-name">${k==='—'?'No attribution':k}</span>
         <span class="attr-legend-count">${v}</span>
