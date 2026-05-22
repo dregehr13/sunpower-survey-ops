@@ -546,9 +546,7 @@ const FIELDS = [
   {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
   {key:'resource',      sfCol:'Site Survey Resource', label:'Resource',      type:'category', filterable:true,  editable:true},
-  // surveyor_name and survey_type pending future SF export fields
-  // {key:'surveyor_name', sfCol:'Assigned To',       label:'Assigned To',   type:'text',     filterable:false, editable:true},
-  // {key:'survey_type',   sfCol:'Type of Survey',    label:'Survey Type',   type:'category', filterable:true,  editable:true},
+  {key:'survey_type',   sfCol:'Site Survey Type',    label:'Survey Type',   type:'category', filterable:true,  editable:true},
   {key:'last_comment',         sfCol:'Last Reviewed Comments',                                    label:'Last Note',        type:'text',     filterable:false, editable:false},
   {key:'list',                 sfCol:'List',                                                      label:'List',             type:'category', filterable:true,  editable:false},
   {key:'task_id',              sfCol:'TaskRay Task ID',                                           label:'Task ID',          type:'text',     filterable:false, editable:false},
@@ -2360,9 +2358,9 @@ function renderSettings(){
             </div>
           </div>
           <div>
-            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;">Pending fields <span style="font-weight:400;color:var(--faint);">— uncomment in FIELD_REGISTRY when available in export</span></div>
+            <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:8px;">Pending fields</div>
             <div class="field-status">
-              ${[{l:'Assigned To',h:'surveyor_name'},{l:'Type of Survey',h:'survey_type'},{l:'Resurvey Reason',h:'resurvey_reason'},{l:'Resurvey Attributed',h:'resurvey_attributed'}].map(f=>`<div class="fs-row"><span>${f.l}<span style="color:var(--faint);margin-left:6px;font-size:10px;">${f.h}</span></span><span class="fs-pending">Pending SF field</span></div>`).join('')}
+              <div class="fs-row"><span style="color:var(--faint);font-size:11px;">No pending fields — all SF fields active</span></div>
             </div>
           </div>
         </div>

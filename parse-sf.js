@@ -28,6 +28,7 @@ const FIELDS = [
   { key:'scheduled',            sfCol:'Site Survey Scheduled',                                   type:'date' },
   { key:'complete',             sfCol:'Site Survey Complete',                                    type:'date' },
   { key:'resource',             sfCol:'Site Survey Resource',                                    type:'text' },
+  { key:'survey_type',         sfCol:'Site Survey Type',                                         type:'text' },
   { key:'reviewed_by',          sfCol:'Reviewed By',                                             type:'text' },
   { key:'last_reviewed_date',   sfCol:'Last Reviewed',                                           type:'text' },
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
