@@ -1041,8 +1041,11 @@ function closeDrill(){
   document.getElementById('drill-overlay').classList.remove('open');
 }
 function copyDrill(){
-  const text=_drillRows.map(r=>r.project||r.address||'').filter(Boolean).join('\n');
-  navigator.clipboard.writeText(text).then(()=>toast('Copied '+_drillRows.length+' accounts to clipboard'));
+  const rs=_drillRows.filter(r=>r.project||r.address);
+  const html=rs.map(r=>{const nm=esc(r.project||r.address||'');const url=sfUrl(r);return url?`<a href="${url}">${nm}</a>`:nm;}).join('<br>');
+  const plain=rs.map(r=>{const nm=r.project||r.address||'';const url=sfUrl(r);return url?`${nm} — ${url}`:nm;}).join('\n');
+  const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})});
+  navigator.clipboard.write([item]).then(()=>toast('Copied '+rs.length+' accounts to clipboard'));
 }
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
