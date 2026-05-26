@@ -1950,7 +1950,7 @@ function renderAgingWIP(){
             </div>
             ${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?`
             <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;opacity:.8;">
-              <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}</span></div>
+              <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:9px;font-weight:700;color:#d97706;margin-left:5px;">${dDiff(r.resurvey_requested,today)??'?'}d open</span>`:''}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):'—'}</span></div>
             </div>`:''}
@@ -1987,7 +1987,7 @@ function renderAgingWIP(){
       <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
       <td style="font-size:11px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:11px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
-      <td class="r">${agePill(r.daysOpen)}</td>
+      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:9px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `).join('');
@@ -2143,8 +2143,8 @@ function renderResurvey(){
     <div class="kcard">
       <div class="klabel">Open Now</div>
       <div class="kval ${openResurvey.length>0?'kr-c':''}">${openResurvey.length}</div>
-      <div class="ksub">${openResurvey.filter(r=>r.resurvey_scheduled).length} scheduled</div>
-      <div class="ktgt">${openResurvey.filter(r=>!r.resurvey_scheduled).length} awaiting schedule</div>
+      <div class="ksub">${openResurvey.filter(r=>r.resurvey_scheduled).length} scheduled · ${openResurvey.filter(r=>!r.resurvey_scheduled).length} awaiting</div>
+      <div class="ktgt">${(()=>{const ages=openResurvey.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0);const a=avg(ages);return a!=null?'Avg '+a.toFixed(1)+'d open':'—';})()}</div>
     </div>
     <div class="kcard">
       <div class="klabel">Avg Resurvey Cycle</div>
