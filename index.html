@@ -1970,7 +1970,7 @@ function renderAgingWIP(){
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
+      <div class="kcard drill-tgt" onclick="openDrill('Open WIP','All open surveys',rows.filter(r=>isWIP(r)))"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
       <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days in flight</div></div>
       <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
