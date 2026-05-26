@@ -1001,6 +1001,7 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 // ═══ DRILL DRAWER ════════════════════════════════════════
 let _drillRows=[];
 let _rsDefects=[];
+let _lastWeekSrc=[];
 function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys',_rsDefects,{groupBy:'resource'}); }
 let rsTimeFilter='all'; // 'all' | '13wk' | '4wk' | 'open'
 const _DRILL_RES_COL={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
@@ -1024,6 +1025,21 @@ function openDrill(title,subtitle,drillRows,opts={}){
       const c=_DRILL_RES_COL[k]||'#888',lbl=_DRILL_RES_SHORT[k]||k,gr=groups[k];
       return `<tr><td colspan="5" style="background:${c}18;color:${c};font-weight:700;font-size:11px;padding:7px 10px;border-bottom:2px solid ${c}40;">${lbl} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`+
         gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="max-width:160px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+    }).join('');
+  } else if(opts.mode==='byDate'){
+    const groups={},order=[];
+    [...drillRows].sort((a,b)=>(a.complete||'').localeCompare(b.complete||'')).forEach(r=>{
+      const k=r.complete||'—';
+      if(!groups[k]){groups[k]=[];order.push(k);}
+      groups[k].push(r);
+    });
+    const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th class="r">Days</th></tr>`;
+    tbody.innerHTML=order.map(k=>{
+      const gr=groups[k];
+      const dayLbl=k!=='—'?DAY[new Date(k+'T12:00:00').getDay()]+' '+fmtDateShort(k):k;
+      return `<tr><td colspan="4" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${dayLbl} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`+
+        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
     }).join('');
   } else if(opts.mode==='resurvey'){
     const ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
@@ -1188,6 +1204,7 @@ function trailing4WeekPace(){
 function renderLastWeek(){
   const lw=weekRange(-1);
   const src=rows.filter(r=>isComplete(r)&&r.complete>=lw.from&&r.complete<=lw.to);
+  _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
   document.getElementById('cur-hero-hdr').innerHTML=`
@@ -1203,7 +1220,7 @@ function renderLastWeek(){
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
     <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
