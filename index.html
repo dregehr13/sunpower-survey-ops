@@ -1593,8 +1593,7 @@ function renderTrends(){
   const allWks=[...new Set([...weekly.map(w=>w.week),...weeklyC.map(w=>w.week)])].sort().filter(wk=>wk>=DATA_CUTOFF);
   const wkEndMap={}; [...weekly,...weeklyC].forEach(w=>{wkEndMap[w.week]=w.weekEnd;});
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
-  const rsInMap={}; rows.filter(r=>r.resurvey_requested>=DATA_CUTOFF).forEach(r=>{ const wk=weekOf(r.resurvey_requested); rsInMap[wk]=(rsInMap[wk]||0)+1; });
-  const inOutNewIn=allWks.map(wk=>(wkMap[wk]?.count||0)+(rsInMap[wk]||0));
+  const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
   const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!isComplete(r)||r.complete>we)).length; });
   const labelsC=weeklyC.map(fmtWeekLabel);
