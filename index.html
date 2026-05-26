@@ -1926,14 +1926,21 @@ function renderAgingWIP(){
 
           <div class="wip-panel">
             <div class="wip-panel-label">Account</div>
-            <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;">
+            <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?'6px':'10px'};">
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">Started</span><span class="wip-date-val">${r.start?fmtDateShort(r.start):'—'}</span></div>
-              <div class="wip-date-item"><span class="wip-date-label">Requested</span><span class="wip-date-val">${r.requested?fmtDateShort(r.requested):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">Scheduled</span><span class="wip-date-val">${r.scheduled?fmtDateShort(r.scheduled):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">Completed</span><span class="wip-date-val">${r.complete?fmtDateShort(r.complete):'—'}</span></div>
             </div>
+            ${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?`
+            <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;opacity:.8;">
+              <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):'—'}</span></div>
+            </div>`:''}
             <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:11px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
-              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Type</span><span style="font-size:11px;color:var(--muted);">${esc(r.type)||'—'}</span></div>
+              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Survey Type</span><span style="font-size:11px;color:var(--muted);">${esc(r.survey_type)||'—'}</span></div>
+              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Resource</span><span style="font-size:11px;color:var(--muted);">${esc(r.resource)||'—'}</span></div>
             </div>
           </div>
 
