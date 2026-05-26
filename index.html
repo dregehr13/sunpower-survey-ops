@@ -1601,7 +1601,7 @@ function renderRepTable(){
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
   const trendSrc=RAW.filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF);
-  const trendDone=trendSrc.filter(r=>r.complete);
+  const trendDone=trendSrc.filter(r=>isComplete(r));
   const weekly=weeklyStats(trendSrc);
   const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
