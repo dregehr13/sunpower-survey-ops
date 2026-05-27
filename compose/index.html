@@ -147,8 +147,11 @@ textarea:focus{border-color:#999;}
     <div class="panel section-gap">
       <div class="ptitle">Opener</div>
       <div id="team-opener-body">
+        <textarea id="opener-ta" rows="4" placeholder="Type your own, or click Generate…"
+          oninput="teamOpener=this.value;renderTCPreview();"
+          style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;"></textarea>
         <div class="btn-row">
-          <button class="btn btn-primary" onclick="generateOpener()">Generate opener</button>
+          <button class="btn btn-primary" id="opener-btn" onclick="generateOpener()">Generate opener</button>
         </div>
       </div>
     </div>
@@ -158,6 +161,7 @@ textarea:focus{border-color:#999;}
       <div class="preview-bar">
         <span class="preview-label">Teams card preview</span>
         <div class="preview-actions">
+          <button class="btn" onclick="copyTeamsText()">Copy rich text</button>
           <button class="btn btn-primary" id="send-btn" onclick="sendToTeams()">Send to Teams</button>
         </div>
       </div>
@@ -1047,30 +1051,31 @@ function buildAdaptiveCard(){
   };
 }
 
-function renderOpenerEditor(){
-  document.getElementById('team-opener-body').innerHTML=`
-    <textarea id="opener-ta" rows="4" oninput="teamOpener=this.value;renderTCPreview();"
-      style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;">${esc(teamOpener)}</textarea>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="generateOpener()">Regenerate</button>
-      <button class="btn" onclick="teamOpener='';renderTCPreview();renderOpenerEditor();">Clear</button>
-    </div>`;
-}
-
 async function generateOpener(){
-  const body=document.getElementById('team-opener-body');
-  body.innerHTML='<div class="loading">Calling Claude…</div>';
+  const btn=document.getElementById('opener-btn');
+  btn.disabled=true; btn.textContent='Generating…';
   try{
     const res=await fetch('/api/team-opener',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stats:teamStats})});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'API error');
     teamOpener=data.opener;
-    renderOpenerEditor();
+    const ta=document.getElementById('opener-ta');
+    if(ta){ta.value=teamOpener;}
     renderTCPreview();
   }catch(err){
-    body.innerHTML=`<div style="font-size:11px;color:#991b1b;padding:8px 0;">Error: ${err.message}</div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="generateOpener()">Retry</button></div>`;
+    flash('Error: '+err.message);
+  }finally{
+    btn.disabled=false; btn.textContent='Generate opener';
   }
+}
+
+async function copyTeamsText(){
+  const today=new Date();
+  const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const ref=teamStats?.refLabel??'Yesterday';
+  const html=`<p><b>☀️ Good morning, Site Survey Team</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p>${teamOpener?`<p>${teamOpener}</p>`:''}<p><b>${ref}:</b> ${teamStats?.completed??'—'} &nbsp;&nbsp; <b>Open WIP:</b> ${teamStats?.wip??'—'} &nbsp;&nbsp; <b>Unscheduled:</b> ${teamStats?.unscheduled??'—'}</p>`;
+  await copyRenderedHTML(html);
+  flash('Rich text copied — paste into Teams');
 }
 
 async function sendToTeams(){
