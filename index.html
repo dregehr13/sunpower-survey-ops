@@ -504,7 +504,8 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
       <div class="drill-sub" id="drill-sub"></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button class="drill-copy-btn" onclick="copyDrill()">Copy list</button>
+      <button class="drill-copy-btn" onclick="copyDrill()">Copy projects</button>
+      <button class="drill-copy-btn" onclick="copyDrillTable()">Copy table</button>
       <button class="drill-close" onclick="closeDrill()">×</button>
     </div>
   </div>
@@ -1034,12 +1035,12 @@ function openDrill(title,subtitle,drillRows,opts={}){
       groups[k].push(r);
     });
     const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th class="r">Days</th></tr>`;
+    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Complete</th><th class="r">Days</th></tr>`;
     tbody.innerHTML=order.map(k=>{
       const gr=groups[k];
       const dayLbl=k!=='—'?DAY[new Date(k+'T12:00:00').getDay()]+' '+fmtDateShort(k):k;
-      return `<tr><td colspan="4" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${dayLbl} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`+
-        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+      return `<tr><td colspan="5" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${dayLbl} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`+
+        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${k!=='—'?fmtDateShort(k):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
     }).join('');
   } else if(opts.mode==='resurvey'){
     const ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
@@ -1062,6 +1063,15 @@ function copyDrill(){
   const plain=rs.map(r=>{const nm=r.project||r.address||'';const url=sfUrl(r);return url?`${nm} — ${url}`:nm;}).join('\n');
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})});
   navigator.clipboard.write([item]).then(()=>toast('Copied '+rs.length+' accounts to clipboard'));
+}
+function copyDrillTable(){
+  const table=document.querySelector('#drill-panel .drill-table');
+  if(!table) return;
+  const htmlStr='<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">'+table.innerHTML+'</table>';
+  const trs=Array.from(table.querySelectorAll('tr'));
+  const tsv=trs.map(tr=>Array.from(tr.querySelectorAll('th,td')).map(c=>(c.innerText||'').trim().replace(/\t/g,' ')).join('\t')).filter(r=>r.trim()).join('\n');
+  const item=new ClipboardItem({'text/html':new Blob([htmlStr],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
+  navigator.clipboard.write([item]).then(()=>toast('Copied table to clipboard'));
 }
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
