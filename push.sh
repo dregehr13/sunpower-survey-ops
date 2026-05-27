@@ -28,25 +28,26 @@ echo "Parsing $SF_FILE..."
 TMP_JSON="$PROJ/.data.tmp"
 node "$PROJ/parse-sf.js" "$SF_FILE" > "$TMP_JSON"
 
+echo "Cleaning up..."
+rm "$SF_FILE"
+
+# Skip commit if raw data is unchanged
+if [ -f "$PROJ/data.json" ] && diff -q "$TMP_JSON" "$PROJ/data.json" > /dev/null 2>&1; then
+  echo "No data changes — skipping commit."
+  rm "$TMP_JSON"
+  exit 0
+fi
+
 echo "Writing data.js and data.json..."
 { printf 'const RAW = '; cat "$TMP_JSON"; printf ";\nconst DATA_TS = '%s';\n" "$DATA_DATE"; } > "$PROJ/data.js"
 cp "$TMP_JSON" "$PROJ/data.json"
-echo "Done."
-
 rm "$TMP_JSON"
-
-echo "Cleaning up..."
-rm "$SF_FILE"
+echo "Done."
 
 echo "Committing and pushing..."
 cd "$PROJ"
 git pull --rebase --autostash
 git add data.js data.json
-# Commit only if something actually changed
-if git diff --cached --quiet; then
-  echo "No changes to commit (data identical to last push)."
-else
-  git commit -m "Data update $DATA_DATE"
-  git push
-  echo "Done — live in ~30 seconds."
-fi
+git commit -m "Data update $DATA_DATE"
+git push
+echo "Done — live in ~30 seconds."
