@@ -1,14 +1,12 @@
 #!/usr/bin/env node
-// parse-sf.js — Parse Salesforce XLS export → RAW data array
+// parse-sf.js — Parse Salesforce XLS/XLSX export → RAW data array
 // Usage: node parse-sf.js <path-to-report.xls>
 // Outputs: JSON array to stdout
 
-import { readFileSync } from 'fs';
+import XLSX from 'xlsx';
 
 const file = process.argv[2];
 if (!file) { console.error('Usage: node parse-sf.js <report.xls>'); process.exit(1); }
-
-const content = readFileSync(file, 'latin1');
 
 // Must mirror the FIELDS registry in index.html
 const FIELDS = [
@@ -47,10 +45,18 @@ const FIELDS = [
   { key:'field_survey_complete',  sfCol:'Field Site Survey Complete',                            type:'date' },
 ];
 
-// Parse headers
-const headerRowMatch = content.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
-if (!headerRowMatch) { console.error('ERROR: No header row found in file.'); process.exit(1); }
-const headers = [...headerRowMatch[1].matchAll(/<t[hd][^>]*>(.*?)<\/t[hd]>/gi)].map(m => m[1].trim());
+const workbook = XLSX.readFile(file);
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const allData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+
+// Find the header row — first row with 3+ matching SF column names
+const FIELD_COLS = new Set(FIELDS.map(f => f.sfCol));
+const headerRowIdx = allData.findIndex(row =>
+  row.filter(cell => FIELD_COLS.has(String(cell).trim())).length >= 3
+);
+if (headerRowIdx === -1) { console.error('ERROR: No header row found in file.'); process.exit(1); }
+
+const headers = allData[headerRowIdx].map(h => String(h).trim());
 
 const colIdx = {};
 FIELDS.forEach(f => { const i = headers.indexOf(f.sfCol); if (i >= 0) colIdx[f.key] = i; });
@@ -62,7 +68,7 @@ if (!Object.keys(colIdx).length) {
 // "2/4/2026, 3:30 PM" or "2/4/2026" → "2026-02-04"
 function cleanDate(s) {
   if (!s) return '';
-  const datePart = s.split(',')[0].trim();
+  const datePart = String(s).split(',')[0].trim();
   const m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return '';
   return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
@@ -82,12 +88,17 @@ function dDiff(a, b) {
   return Math.round((new Date(by, bm-1, bd) - new Date(ay, am-1, ad)) / 86400000 * 10) / 10;
 }
 
-const allRows = [...content.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(m => m[1]);
-const rows = [];
+function normalizeCell(val) {
+  // Excel exports booleans as TRUE/FALSE strings; normalize to 1/0
+  if (val === true  || val === 'TRUE'  || val === 'True')  return '1';
+  if (val === false || val === 'FALSE' || val === 'False') return '0';
+  return String(val || '').replace(/\s+/g, ' ').trim();
+}
 
-allRows.slice(1).forEach((rowHtml, i) => {
-  const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/\s+/g,' ').trim());
-  if (!cells.length) return;
+const rows = [];
+allData.slice(headerRowIdx + 1).forEach((row, i) => {
+  const cells = row.map(normalizeCell);
+  if (cells.every(c => c === '')) return; // skip blank rows
   const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null, ct_resurvey: null, ct_full: null };
   FIELDS.forEach(f => {
     r[f.key] = colIdx[f.key] !== undefined
