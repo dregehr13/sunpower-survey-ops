@@ -24,6 +24,14 @@ if [ -z "$SF_FILE" ] || [ ! -f "$SF_FILE" ]; then
   exit 1
 fi
 
+# Sanity check: Details Only exports are 2-4MB; reject small files (wrong format)
+FILE_SIZE=$(wc -c < "$SF_FILE" | tr -d ' ')
+if [ "$FILE_SIZE" -lt 1000000 ]; then
+  echo "ERROR: Export too small (${FILE_SIZE} bytes) — wrong format, expected Details Only. Deleting and aborting."
+  rm "$SF_FILE"
+  exit 1
+fi
+
 echo "Parsing $SF_FILE..."
 TMP_JSON="$PROJ/.data.tmp"
 node "$PROJ/parse-sf.js" "$SF_FILE" > "$TMP_JSON"

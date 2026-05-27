@@ -63,12 +63,11 @@ try {
   await exportItem.click();
 
   // Export modal renders in the main page (not the iframe)
-  // "Details Only" is a clickable card, not a radio button
+  // "Details Only" is a clickable card, not a radio button — must click it explicitly
+  if (SETUP) console.log('Waiting for Details Only card...');
   const detailsCard = page.getByText('Details Only', { exact: true }).first();
-  if (await detailsCard.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    if (SETUP) console.log('Selecting Details Only...');
-    await detailsCard.click();
-  }
+  await detailsCard.waitFor({ state: 'visible', timeout: 10_000 });
+  await detailsCard.click();
   if (SETUP) console.log('Clicking Export in modal...');
   await page.getByRole('button', { name: /^export$/i }).click();
 
