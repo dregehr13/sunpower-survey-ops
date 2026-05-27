@@ -28,8 +28,9 @@ echo "Parsing $SF_FILE..."
 TMP_JSON="$PROJ/.data.tmp"
 node "$PROJ/parse-sf.js" "$SF_FILE" > "$TMP_JSON"
 
-echo "Writing data.js..."
+echo "Writing data.js and data.json..."
 { printf 'const RAW = '; cat "$TMP_JSON"; printf ";\nconst DATA_TS = '%s';\n" "$DATA_DATE"; } > "$PROJ/data.js"
+cp "$TMP_JSON" "$PROJ/data.json"
 echo "Done."
 
 rm "$TMP_JSON"
@@ -40,7 +41,7 @@ rm "$SF_FILE"
 echo "Committing and pushing..."
 cd "$PROJ"
 git pull --rebase --autostash
-git add data.js
+git add data.js data.json
 # Commit only if something actually changed
 if git diff --cached --quiet; then
   echo "No changes to commit (data identical to last push)."
