@@ -39,6 +39,7 @@ rm "$SF_FILE"
 
 echo "Committing and pushing..."
 cd "$PROJ"
+git pull --rebase --autostash
 git add data.js
 # Commit only if something actually changed
 if git diff --cached --quiet; then
