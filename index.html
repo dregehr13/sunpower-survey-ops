@@ -2656,7 +2656,7 @@ window.addEventListener('load',()=>{
   }
   // Show data freshness in nav
   const navTs = document.getElementById('nav-ts');
-  if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS; navTs.style.display=''; }
+  if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS+' MT'; navTs.style.display=''; }
   applyFilter();
   renderFBars();
   nav(currentPage||S.defaultPage||'week');

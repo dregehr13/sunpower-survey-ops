@@ -9,7 +9,7 @@
 
 set -e
 PROJ=~/Projects/survey-ops
-DATA_DATE=$(date +%Y-%m-%d)
+DATA_DATE=$(date '+%Y-%m-%d %H:%M')
 
 # --- Find the SF export ---
 if [ -n "$1" ]; then
