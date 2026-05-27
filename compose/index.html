@@ -58,6 +58,22 @@ textarea:focus{border-color:#999;}
 .empty-state{padding:48px;text-align:center;color:var(--faint);font-size:12px;line-height:1.8;}
 .section-gap{margin-top:12px;}
 @media(max-width:860px){.wrap{grid-template-columns:1fr;}}
+/* ── Team card ──────────────────────────────────────── */
+.team-wrap{max-width:1100px;margin:0 auto;padding:18px 22px;display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
+@media(max-width:860px){.team-wrap{grid-template-columns:1fr;}}
+.tc{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.13);font-family:'Segoe UI',system-ui,sans-serif;width:100%;max-width:480px;border:1px solid #d8d8d8;}
+.tc-header{background:#2b579a;padding:16px 20px;}
+.tc-title{color:#fff;font-size:16px;font-weight:600;line-height:1.35;}
+.tc-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:3px;}
+.tc-body{padding:16px 20px;}
+.tc-opener{font-size:13px;line-height:1.7;color:#292929;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #efefef;min-height:44px;}
+.tc-opener-ph{color:#bbb;font-style:italic;}
+.tc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #efefef;}
+.tc-stat{padding:14px 8px;text-align:center;border-right:1px solid #efefef;}
+.tc-stat:last-child{border-right:none;}
+.tc-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:6px;}
+.tc-stat-val{font-size:30px;font-weight:700;line-height:1;}
+.tc-val-good{color:#107C10;}.tc-val-neutral{color:#292929;}.tc-val-warn{color:#D83B01;}
 </style>
 </head>
 <body>
@@ -66,10 +82,11 @@ textarea:focus{border-color:#999;}
   <div class="brand">Site Survey <span>Email</span></div>
   <button class="nav-mode" id="btn-monday" onclick="setMode('monday')">Monday recap</button>
   <button class="nav-mode" id="btn-daily" onclick="setMode('daily')">Daily (Tue–Fri)</button>
+  <button class="nav-mode" id="btn-team" onclick="setMode('team')">Team card</button>
   <span class="nav-date" id="nav-date"></span>
 </nav>
 
-<div class="wrap">
+<div class="wrap" id="email-wrap">
   <div>
     <div class="panel" id="stats-panel">
       <div class="ptitle" id="stats-period">Stats</div>
@@ -116,6 +133,36 @@ textarea:focus{border-color:#999;}
       </div>
       <div style="padding:16px;background:#eee;">
         <iframe id="preview-frame" class="preview-frame" style="min-height:500px;"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="team-wrap" id="team-wrap" style="display:none;">
+  <div>
+    <div class="panel">
+      <div class="ptitle">Stats</div>
+      <div id="team-stats-body"></div>
+    </div>
+    <div class="panel section-gap">
+      <div class="ptitle">Opener</div>
+      <div id="team-opener-body">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateOpener()">Generate opener</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="preview-wrap">
+      <div class="preview-bar">
+        <span class="preview-label">Teams card preview</span>
+        <div class="preview-actions">
+          <button class="btn btn-primary" id="send-btn" onclick="sendToTeams()">Send to Teams</button>
+        </div>
+      </div>
+      <div style="padding:28px;background:#f0f0f0;display:flex;justify-content:center;">
+        <div id="tc-preview" style="width:100%;max-width:480px;"></div>
       </div>
     </div>
   </div>
@@ -724,8 +771,12 @@ function setMode(m){
   mode=m;
   document.getElementById('btn-monday').classList.toggle('active',m==='monday');
   document.getElementById('btn-daily').classList.toggle('active',m==='daily');
+  document.getElementById('btn-team').classList.toggle('active',m==='team');
+  document.getElementById('email-wrap').style.display=m==='team'?'none':'';
+  document.getElementById('team-wrap').style.display=m==='team'?'':'none';
   selectedCommentary='';
-  render();
+  if(m==='team'){ teamStats=computeTeamStats(); renderTeamStats(); renderTCPreview(); }
+  else render();
 }
 
 function render(){
@@ -911,6 +962,130 @@ function flash(msg){
     document.body.appendChild(t); }
   t.textContent=msg; t.style.opacity='1';
   clearTimeout(t._t); t._t=setTimeout(()=>t.style.opacity='0',2500);
+}
+
+// ─── TEAM CARD ────────────────────────────────────────────
+let teamStats=null, teamOpener='';
+
+function computeTeamStats(){
+  if(!ROWS.length) return null;
+  const today=new Date(), dow=today.getDay();
+  // Monday → show Friday; otherwise show yesterday
+  const daysBack=dow===1?3:1;
+  const refDate=toISO(addDays(today,-daysBack));
+  const refLabel=dow===1?'Friday':'Yesterday';
+  const wip=ROWS.filter(r=>r.start&&!isComplete(r));
+  return{
+    refDate, refLabel,
+    completed: ROWS.filter(r=>isComplete(r)&&r.complete===refDate).length,
+    wip: wip.length,
+    unscheduled: wip.filter(r=>!r.scheduled).length,
+  };
+}
+
+function renderTeamStats(){
+  const el=document.getElementById('team-stats-body');
+  if(!teamStats){el.innerHTML='<div class="empty-state">No data.</div>';return;}
+  el.innerHTML=`
+    <div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.completed}</span></div>
+    <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
+    <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>`;
+}
+
+function renderTCPreview(){
+  const el=document.getElementById('tc-preview');
+  if(!el) return;
+  const today=new Date();
+  const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const goodCls=teamStats&&teamStats.completed>=10?'tc-val-good':'tc-val-neutral';
+  const warnCls=teamStats&&teamStats.unscheduled>20?'tc-val-warn':'tc-val-neutral';
+  el.innerHTML=`
+    <div class="tc">
+      <div class="tc-header">
+        <div class="tc-title">☀️ Good morning, Site Survey Team</div>
+        <div class="tc-sub">${esc(dayStr)} · from Doug</div>
+      </div>
+      <div class="tc-body">
+        <div class="tc-opener">${teamOpener?esc(teamOpener):'<span class="tc-opener-ph">Generate an opener to preview it here…</span>'}</div>
+        <div class="tc-stats">
+          <div class="tc-stat"><div class="tc-stat-lbl">${teamStats?teamStats.refLabel.toUpperCase():'YESTERDAY'}</div><div class="tc-stat-val ${goodCls}">${teamStats?teamStats.completed:'—'}</div></div>
+          <div class="tc-stat"><div class="tc-stat-lbl">OPEN WIP</div><div class="tc-stat-val tc-val-neutral">${teamStats?teamStats.wip:'—'}</div></div>
+          <div class="tc-stat"><div class="tc-stat-lbl">UNSCHEDULED</div><div class="tc-stat-val ${warnCls}">${teamStats?teamStats.unscheduled:'—'}</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildAdaptiveCard(){
+  const today=new Date();
+  const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const warnColor=teamStats&&teamStats.unscheduled>20?'Attention':'Default';
+  return{
+    '$schema':'http://adaptivecards.io/schemas/adaptive-card.json',
+    type:'AdaptiveCard', version:'1.4',
+    body:[
+      {type:'Container',style:'emphasis',bleed:true,items:[
+        {type:'TextBlock',text:'☀️ Good morning, Site Survey Team',weight:'Bolder',size:'Large',wrap:true},
+        {type:'TextBlock',text:`${dayStr} · from Doug`,spacing:'None',isSubtle:true,size:'Small'},
+      ]},
+      ...(teamOpener?[{type:'TextBlock',text:teamOpener,wrap:true,spacing:'Medium'}]:[]),
+      {type:'ColumnSet',separator:true,spacing:'Medium',columns:[
+        {type:'Column',width:'stretch',items:[
+          {type:'TextBlock',text:teamStats?teamStats.refLabel.toUpperCase():'YESTERDAY',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
+          {type:'TextBlock',text:String(teamStats?teamStats.completed:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:'Good',spacing:'Small'},
+        ]},
+        {type:'Column',width:'stretch',separator:true,items:[
+          {type:'TextBlock',text:'OPEN WIP',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
+          {type:'TextBlock',text:String(teamStats?teamStats.wip:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',spacing:'Small'},
+        ]},
+        {type:'Column',width:'stretch',separator:true,items:[
+          {type:'TextBlock',text:'UNSCHEDULED',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
+          {type:'TextBlock',text:String(teamStats?teamStats.unscheduled:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:warnColor,spacing:'Small'},
+        ]},
+      ]},
+    ],
+  };
+}
+
+function renderOpenerEditor(){
+  document.getElementById('team-opener-body').innerHTML=`
+    <textarea id="opener-ta" rows="4" oninput="teamOpener=this.value;renderTCPreview();"
+      style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;">${esc(teamOpener)}</textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="generateOpener()">Regenerate</button>
+      <button class="btn" onclick="teamOpener='';renderTCPreview();renderOpenerEditor();">Clear</button>
+    </div>`;
+}
+
+async function generateOpener(){
+  const body=document.getElementById('team-opener-body');
+  body.innerHTML='<div class="loading">Calling Claude…</div>';
+  try{
+    const res=await fetch('/api/team-opener',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stats:teamStats})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'API error');
+    teamOpener=data.opener;
+    renderOpenerEditor();
+    renderTCPreview();
+  }catch(err){
+    body.innerHTML=`<div style="font-size:11px;color:#991b1b;padding:8px 0;">Error: ${err.message}</div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="generateOpener()">Retry</button></div>`;
+  }
+}
+
+async function sendToTeams(){
+  const btn=document.getElementById('send-btn');
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    const res=await fetch('/api/send-teams',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card:buildAdaptiveCard()})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Send failed');
+    flash('Sent to Teams!');
+  }catch(err){
+    flash('Error: '+err.message);
+  }finally{
+    btn.disabled=false; btn.textContent='Send to Teams';
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────
