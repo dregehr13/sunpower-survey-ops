@@ -1,10 +1,11 @@
 import { chromium } from 'playwright';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
 const PROFILE_DIR = join(homedir(), '.survey-ops-browser');
-const DOWNLOADS_DIR = join(homedir(), 'Downloads');
+const DOWNLOADS_DIR = join(import.meta.dirname, '.downloads');
+mkdirSync(DOWNLOADS_DIR, { recursive: true });
 const CONFIG_PATH = join(import.meta.dirname, '.sfconfig.json');
 const SETUP = process.argv.includes('--setup');
 
@@ -79,8 +80,8 @@ try {
 } catch (e) {
   if (SETUP) {
     console.error('Error:', e.message);
-    await page.screenshot({ path: join(homedir(), 'Downloads', 'sf-debug.png') });
-    console.error('Screenshot saved to ~/Downloads/sf-debug.png');
+    await page.screenshot({ path: join(import.meta.dirname, 'sf-debug.png') });
+    console.error('Screenshot saved to sf-debug.png in project dir');
   }
   process.exit(1);
 } finally {
