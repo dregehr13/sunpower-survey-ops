@@ -69,9 +69,10 @@ if (!Object.keys(colIdx).length) {
 function cleanDate(s) {
   if (!s) return '';
   const datePart = String(s).split(',')[0].trim();
-  const m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (!m) return '';
-  return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  const yr = m[3].length === 2 ? '20' + m[3] : m[3];
+  return `${yr}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
 }
 
 function subtractDays(dateStr, n) {
