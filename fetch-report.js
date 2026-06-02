@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { readFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -7,6 +7,7 @@ const PROFILE_DIR = join(homedir(), '.survey-ops-browser');
 const DOWNLOADS_DIR = join(import.meta.dirname, '.downloads');
 mkdirSync(DOWNLOADS_DIR, { recursive: true });
 const CONFIG_PATH = join(import.meta.dirname, '.sfconfig.json');
+const SETUP = process.argv.includes('--setup');
 
 if (!existsSync(CONFIG_PATH)) {
   console.error('Missing .sfconfig.json');
@@ -20,29 +21,54 @@ if (!sfInst || !sfRid) {
 }
 
 const REPORT_URL = `${sfInst}/lightning/r/Report/${sfRid}/view`;
-const SETUP = process.argv.includes('--setup');
 
 // Remove stale singleton lock if present
-import { rmSync } from 'fs';
 for (const f of ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
   try { rmSync(join(PROFILE_DIR, f)); } catch {}
 }
 
-const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-  channel: 'chrome',
-  headless: !SETUP,
-  acceptDownloads: true,
-  downloadsPath: DOWNLOADS_DIR,
-  args: ['--disable-blink-features=AutomationControlled'],
-});
+// Try to connect to the user's always-open Chrome via CDP (no login/MFA needed).
+// Falls back to launching a headless persistent context if Chrome isn't available.
+let browser = null;
+let context = null;
+let usingCDP = false;
+
+if (!SETUP) {
+  try {
+    browser = await chromium.connectOverCDP('http://localhost:9222', { timeout: 3000 });
+    context = browser.contexts()[0];
+    usingCDP = true;
+    console.log('Connected to Chrome via CDP');
+  } catch {
+    // Chrome not running with debug port — use persistent headless context
+  }
+}
+
+if (!context) {
+  context = await chromium.launchPersistentContext(PROFILE_DIR, {
+    channel: 'chrome',
+    headless: !SETUP,
+    acceptDownloads: true,
+    downloadsPath: DOWNLOADS_DIR,
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+}
+
+// For CDP context, downloads go to Chrome's default download folder.
+// Override via page.on('download') below.
 
 const page = await context.newPage();
+
+// Route downloads to our .downloads folder when using CDP
+if (usingCDP) {
+  await context.setDefaultTimeout(60000);
+}
 
 try {
   await page.goto(REPORT_URL, { waitUntil: 'load', timeout: 60_000 });
 
-  // Auto-login if redirected to the login page
-  if (page.url().includes('/login') || await page.locator('#username').isVisible({ timeout: 3_000 }).catch(() => false)) {
+  // Auto-login if redirected to the login page (persistent context only — CDP is already logged in)
+  if (!usingCDP && (page.url().includes('/login') || await page.locator('#username').isVisible({ timeout: 3_000 }).catch(() => false))) {
     console.log('Session expired — logging in automatically...');
     if (!sfUser || !sfPass) {
       console.error('Add sfUser and sfPass to .sfconfig.json to enable auto-login');
@@ -53,14 +79,12 @@ try {
     await page.locator('#Login').click();
 
     if (SETUP) {
-      // In setup mode: pause so the user can complete MFA manually
       console.log('If an MFA prompt appeared, complete it in the browser window.');
       console.log('Check "Remember this device" if given the option, then press Enter here...');
       process.stdin.resume();
       await new Promise(r => process.stdin.once('data', r));
       process.stdin.pause();
     } else {
-      // Headless: wait for post-login load (trusted device — no MFA expected)
       await page.waitForLoadState('networkidle', { timeout: 45_000 });
     }
 
@@ -96,5 +120,7 @@ try {
   console.error('Screenshot saved to sf-debug.png');
   process.exit(1);
 } finally {
-  await context.close();
+  await page.close();
+  if (!usingCDP) await context.close();
+  else await browser.disconnect();
 }
