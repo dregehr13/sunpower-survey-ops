@@ -54,7 +54,11 @@ echo "Done."
 
 echo "Committing and pushing..."
 cd "$PROJ"
-git pull --rebase --autostash
+git pull --rebase --autostash || true
+# If autostash left conflict markers, regenerate data.js cleanly from data.json
+if grep -q "<<<<<<" "$PROJ/data.js" 2>/dev/null; then
+  { printf 'const RAW = '; cat "$PROJ/data.json"; printf ";\nconst DATA_TS = '%s';\n" "$DATA_DATE"; } > "$PROJ/data.js"
+fi
 git add data.js data.json
 git commit -m "Data update $DATA_DATE"
 git push
