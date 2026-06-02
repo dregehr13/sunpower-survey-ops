@@ -1302,7 +1302,7 @@ function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
   const yesterday=localISO(new Date(Date.now()-86400000));
-  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=yesterday);
+  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=today);
   const scheduledRem=rows.filter(r=>!isComplete(r)&&(
     (r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to)||
     (r.resurvey_scheduled&&r.resurvey_scheduled>yesterday&&r.resurvey_scheduled<=tw.to)
