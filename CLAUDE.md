@@ -28,9 +28,14 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
 2. Terminal: `~/Projects/survey-ops/push.sh`
    - Finds the latest `report*.xls` in Downloads automatically
-   - Parses it via `parse-sf.js`, splices RAW data into index.html + compose/index.html
-   - Commits and pushes → Vercel auto-deploys
+   - Parses it via `parse-sf.js`, writes data.js + data.json
+   - Commits and pushes → Vercel auto-deploys in ~30s
 3. For code-only deploys (no data update): `git push`
+
+Note: Fully automated fetching was attempted but abandoned — Salesforce MFA
+triggers on every untrusted session and Chrome 134+ blocks CDP on the default
+profile. Manual export + push.sh is the reliable workflow until the SF API
+ticket is resolved.
 
 ## Pending Salesforce fields (IT ticket in progress)
 When these arrive, uncomment them in FIELDS registry in index.html:

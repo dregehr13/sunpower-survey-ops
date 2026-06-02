@@ -1,121 +1,137 @@
-import { chromium } from 'playwright';
-import { readFileSync, existsSync, mkdirSync } from 'fs';
-import { execSync } from 'child_process';
+// Exports the SF report by automating the user's real Chrome via AppleScript.
+// No separate profile = no MFA, since Chrome is already trusted by Salesforce.
+import { spawnSync } from 'child_process';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, unlinkSync, renameSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, tmpdir } from 'os';
 
-const CHROME_DIR  = join(homedir(), '.survey-ops-chrome');
 const DOWNLOADS_DIR = join(import.meta.dirname, '.downloads');
 mkdirSync(DOWNLOADS_DIR, { recursive: true });
-mkdirSync(CHROME_DIR, { recursive: true });
 const CONFIG_PATH = join(import.meta.dirname, '.sfconfig.json');
-const SETUP = process.argv.includes('--setup');
 
-if (!existsSync(CONFIG_PATH)) {
-  console.error('Missing .sfconfig.json');
-  process.exit(1);
-}
-
-const { sfInst, sfRid, sfUser, sfPass } = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
-if (!sfInst || !sfRid) {
-  console.error('.sfconfig.json missing sfInst or sfRid');
-  process.exit(1);
-}
-
+if (!existsSync(CONFIG_PATH)) { console.error('Missing .sfconfig.json'); process.exit(1); }
+const { sfInst, sfRid } = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
 const REPORT_URL = `${sfInst}/lightning/r/Report/${sfRid}/view`;
-const CHROME_AGENT = 'com.surveyops.chrome';
 
-// ── SETUP MODE ────────────────────────────────────────────────────────────────
-// Stop the headless agent, open a headed Chrome for login/MFA, then restart.
-if (SETUP) {
-  console.log('Stopping headless Chrome agent...');
-  execSync(`launchctl unload ~/Library/LaunchAgents/com.surveyops.chrome.plist 2>/dev/null || true`, { shell: true });
-  execSync(`killall "Google Chrome" 2>/dev/null || true`, { shell: true });
-  await new Promise(r => setTimeout(r, 2000));
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  console.log('Opening Chrome for login — sign in to Salesforce, complete MFA,');
-  console.log('check "Remember this device" if offered, then press Enter here...');
-
-  const ctx = await chromium.launchPersistentContext(CHROME_DIR, {
-    channel: 'chrome',
-    headless: false,
-    acceptDownloads: true,
-    downloadsPath: DOWNLOADS_DIR,
-    args: ['--no-first-run', '--disable-blink-features=AutomationControlled'],
-  });
-  const page = await ctx.newPage();
-  await page.goto(sfInst);
-
-  if (sfUser && sfPass) {
-    const usernameField = page.locator('#username');
-    if (await usernameField.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await usernameField.fill(sfUser);
-      await page.locator('#password').fill(sfPass);
-      await page.locator('#Login').click();
-    }
-  }
-
-  process.stdin.resume();
-  await new Promise(r => process.stdin.once('data', r));
-  process.stdin.pause();
-
-  await ctx.close();
-
-  console.log('Restarting headless Chrome agent...');
-  execSync(`launchctl load ~/Library/LaunchAgents/com.surveyops.chrome.plist`, { shell: true });
-  await new Promise(r => setTimeout(r, 3000));
-  console.log('Setup complete. Headless Chrome is running with your session.');
-  process.exit(0);
+// Run AppleScript from a temp file (avoids escaping hell)
+function osa(script, timeoutMs = 15000) {
+  const f = join(tmpdir(), `sop-${Date.now()}.applescript`);
+  writeFileSync(f, script);
+  try {
+    const r = spawnSync('osascript', [f], { encoding: 'utf8', timeout: timeoutMs });
+    if (r.status !== 0) throw new Error((r.stderr || r.stdout || 'osascript error').trim());
+    return r.stdout.trim();
+  } finally { try { unlinkSync(f); } catch {} }
 }
 
-// ── NORMAL RUN: connect via CDP ───────────────────────────────────────────────
-const browser = await chromium.connectOverCDP('http://localhost:9222');
-const context = browser.contexts()[0] || await browser.newContext({ acceptDownloads: true });
+// Execute JS in a specific Chrome tab (returns string result)
+function chromeJS(winIdx, tabIdx, js) {
+  return osa(`tell application "Google Chrome"\n  execute javascript ${JSON.stringify(js)} in tab ${tabIdx} of window ${winIdx}\nend tell`);
+}
 
-const page = await context.newPage();
+// ── 1. Open report in a new Chrome tab ──────────────────────────────────────
+const tabInfo = osa(`
+tell application "Google Chrome"
+  set w to first window
+  set t to make new tab at end of tabs of w
+  set URL of t to "${REPORT_URL}"
+  return (index of w) & "," & (count of tabs of w)
+end tell`);
 
-try {
-  await page.goto(REPORT_URL, { waitUntil: 'load', timeout: 60_000 });
+const [winIdx, tabIdx] = tabInfo.split(',').map(Number);
 
-  // If session expired, auto-login (rare once the headless Chrome is established)
-  if (page.url().includes('/login') || await page.locator('#username').isVisible({ timeout: 3_000 }).catch(() => false)) {
-    if (!sfUser || !sfPass) {
-      console.error('Session expired and no credentials in .sfconfig.json — run --setup');
-      process.exit(1);
-    }
-    await page.locator('#username').fill(sfUser);
-    await page.locator('#password').fill(sfPass);
-    await page.locator('#Login').click();
-    await page.waitForLoadState('networkidle', { timeout: 45_000 });
-    await page.goto(REPORT_URL, { waitUntil: 'load', timeout: 60_000 });
-  }
-
-  const frame = page.frameLocator('iframe[title="Report Viewer"]');
-  const moreBtn = frame.locator('.more-actions-button');
-  await moreBtn.waitFor({ state: 'visible', timeout: 30_000 });
-
-  const downloadPromise = page.waitForEvent('download', { timeout: 60_000 });
-  await moreBtn.click();
-
-  const exportItem = frame.getByRole('menuitem', { name: /export/i }).first();
-  await exportItem.waitFor({ state: 'visible', timeout: 5_000 });
-  await exportItem.click();
-
-  const detailsCard = page.getByText('Details Only', { exact: true }).first();
-  await detailsCard.waitFor({ state: 'visible', timeout: 10_000 });
-  await detailsCard.click();
-  await page.getByRole('button', { name: /^export$/i }).click();
-
-  const download = await downloadPromise;
-  const filename = `report_${Date.now()}.xls`;
-  await download.saveAs(join(DOWNLOADS_DIR, filename));
-  console.log(`Downloaded: ${filename}`);
-} catch (e) {
-  console.error('Error:', e.message);
-  await page.screenshot({ path: join(import.meta.dirname, 'sf-debug.png') });
-  console.error('Screenshot saved to sf-debug.png');
+// ── 2. Wait for the report iframe to render ──────────────────────────────────
+let ready = false;
+for (let i = 0; i < 60; i++) {
+  await sleep(1500);
+  try {
+    const r = chromeJS(winIdx, tabIdx, `
+      (function(){
+        var f = document.querySelector('iframe[title="Report Viewer"]');
+        return String(!!(f && f.contentDocument && f.contentDocument.querySelector('.more-actions-button')));
+      })()`);
+    if (r === 'true') { ready = true; break; }
+  } catch {}
+}
+if (!ready) {
+  // Close the tab we opened before exiting
+  osa(`tell application "Google Chrome" to close tab ${tabIdx} of window ${winIdx}`);
+  console.error('Error: Report iframe did not load');
   process.exit(1);
-} finally {
-  await page.close();
-  await browser.close();
 }
+
+// ── 3. Snapshot Downloads so we can detect the new file ─────────────────────
+const beforeFiles = new Set(
+  osa(`tell application "Finder" to return name of every file of (path to downloads folder) whose name ends with ".xls" or name ends with ".xlsx"`)
+    .split(', ').map(s => s.trim()).filter(Boolean)
+);
+
+// ── 4. Click through the export flow ────────────────────────────────────────
+// Click more-actions button inside the iframe
+chromeJS(winIdx, tabIdx, `
+  document.querySelector('iframe[title="Report Viewer"]')
+    .contentDocument.querySelector('.more-actions-button').click();`);
+await sleep(1000);
+
+// Click Export menu item
+chromeJS(winIdx, tabIdx, `
+  (function(){
+    var f = document.querySelector('iframe[title="Report Viewer"]').contentDocument;
+    var items = Array.from(f.querySelectorAll('[role="menuitem"]'));
+    var exp = items.find(i => /export/i.test(i.textContent));
+    if (exp) exp.click();
+  })()`);
+await sleep(2000);
+
+// Click Details Only card (renders in main page, not iframe)
+chromeJS(winIdx, tabIdx, `
+  (function(){
+    var all = Array.from(document.querySelectorAll('*'));
+    var card = all.find(el => el.childElementCount === 0 && el.textContent.trim() === 'Details Only');
+    if (card) card.click();
+  })()`);
+await sleep(500);
+
+// Click the Export button in the modal
+chromeJS(winIdx, tabIdx, `
+  (function(){
+    var btns = Array.from(document.querySelectorAll('button'));
+    var btn = btns.find(b => /^export$/i.test(b.textContent.trim()));
+    if (btn) btn.click();
+  })()`);
+
+// ── 5. Wait for file to appear in Downloads ──────────────────────────────────
+let newFile = null;
+for (let i = 0; i < 60; i++) {
+  await sleep(1000);
+  try {
+    const allFiles = osa(`tell application "Finder" to return name of every file of (path to downloads folder) whose name ends with ".xls" or name ends with ".xlsx"`)
+      .split(', ').map(s => s.trim()).filter(Boolean);
+    const added = allFiles.filter(f => !beforeFiles.has(f));
+    if (added.length > 0) {
+      // Pick newest if multiple appeared
+      newFile = added[added.length - 1];
+      break;
+    }
+  } catch {}
+}
+
+// ── 6. Close the tab we opened ───────────────────────────────────────────────
+try { osa(`tell application "Google Chrome" to close tab ${tabIdx} of window ${winIdx}`); } catch {}
+
+if (!newFile) { console.error('Error: Download timed out'); process.exit(1); }
+
+// ── 7. Move file to .downloads/ via Finder ───────────────────────────────────
+const destName = `report_${Date.now()}.xls`;
+osa(`
+tell application "Finder"
+  set src to file "${newFile}" of (path to downloads folder)
+  set dst to POSIX file "${DOWNLOADS_DIR}" as alias
+  move src to dst
+end tell`);
+
+// Rename to our standard timestamped name
+renameSync(join(DOWNLOADS_DIR, newFile), join(DOWNLOADS_DIR, destName));
+console.log(`Downloaded: ${destName}`);
