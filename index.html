@@ -437,7 +437,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="outliers" role="button" tabindex="0">WIP</div>
+  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
@@ -455,7 +455,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 <div id="page-week"        class="page active">                              <div id="week-content"></div></div>
 <div id="page-performance" class="page">     <div id="fb-performance"></div> <div id="perf-content"></div></div>
 <div id="page-trends"      class="page">     <div id="fb-trends"></div>      <div id="tr-content"></div></div>
-<div id="page-outliers"    class="page">     <div id="fb-outliers"></div>    <div id="ol-content"></div></div>
+<div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
@@ -634,6 +634,7 @@ function loadSettings(){
   try{
     const saved = JSON.parse(localStorage.getItem('ops_settings')||'{}');
     S = {...SETTING_DEFAULTS,...saved};
+    if(S.defaultPage==='outliers') S.defaultPage='wip'; // legacy page key
   } catch(e){ S = {...SETTING_DEFAULTS}; }
 }
 function saveSettings(){
@@ -666,7 +667,7 @@ let filtered = [];
 let dataTimestamp = null;
 
 // ═══ FILTER STATE ═════════════════════════════════════════
-const PAGES = ['week','performance','trends','outliers','data'];
+const PAGES = ['week','performance','trends','wip','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false});
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
@@ -682,7 +683,7 @@ function saveFilterState(){
 }
 
 // ═══ URL STATE — filters reflected in the hash so views are shareable ═══
-const URL_PAGES=['week','performance','trends','outliers','resurvey','data','settings'];
+const URL_PAGES=['week','performance','trends','wip','resurvey','data','settings'];
 function syncURL(){
   const f=pageF[currentPage];
   const q=new URLSearchParams();
@@ -701,7 +702,8 @@ function syncURL(){
 function applyURLState(){
   const h=location.hash.replace(/^#/,'');
   if(!h) return null;
-  const [page,qs]=h.split('?');
+  let [page,qs]=h.split('?');
+  if(page==='outliers') page='wip'; // legacy hash
   if(!URL_PAGES.includes(page)) return null;
   currentPage=page;
   let hadDates=false;
@@ -727,6 +729,9 @@ function loadFilterState(){
   try{
     const saved = JSON.parse(localStorage.getItem('ops_filters')||'null');
     if(!saved) return;
+    // Migrate legacy page key 'outliers' → 'wip'
+    if(saved.pageF?.outliers && !saved.pageF.wip) saved.pageF.wip = saved.pageF.outliers;
+    if(saved.currentPage === 'outliers') saved.currentPage = 'wip';
     const base = saved.globalF || {};
     PAGES.forEach(p=>{
       const pf = saved.pageF?.[p] || {};
@@ -848,7 +853,7 @@ function onRegionClear(page,ev){
 
 function renderFBars(){
   PAGES.forEach(p=>{
-    if(p==='outliers') return;
+    if(p==='wip') return;
     if(p==='trends'){ const el=document.getElementById('fb-trends'); if(el) el.innerHTML=''; return; }
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
@@ -1051,7 +1056,7 @@ function renderPage(p){
   if(p==='week')        renderWeek();
   if(p==='performance') renderPerformance();
   if(p==='trends')      renderTrends();
-  if(p==='outliers')    renderAgingWIP();
+  if(p==='wip')         renderAgingWIP();
   if(p==='resurvey')    renderResurvey();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
@@ -2006,7 +2011,7 @@ function renderTrends(){
 
 // ═══ WIP HUB ═════════════════════════════════════════════
 function renderAgingWIP(){
-  const fbEl=document.getElementById('fb-outliers');
+  const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
 
   const today=localISO(new Date());
@@ -2396,7 +2401,7 @@ function renderResurvey(){
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'outliers',l:'WIP'},{v:'resurvey',l:'Resurveys'}];
+  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display

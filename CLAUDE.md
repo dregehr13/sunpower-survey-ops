@@ -46,6 +46,7 @@ When these arrive, uncomment them in FIELDS registry in index.html:
 
 ## Targets (Spec 12744)
 - Median: 3 days | Avg: 4 days
+- Cycle times are **calendar days**, not business days (confirmed by Doug 2026-06-10)
 - FPY = (Completions – Internal Defects) / Completions
 - Internal defects = Resurvey Attributed to SunPower Field or Radicl Agent
 
