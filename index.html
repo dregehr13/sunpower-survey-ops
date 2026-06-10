@@ -207,6 +207,26 @@ tr:hover td{background:#fafaf8;}
 .wip-review-note{font-size:11px;color:var(--muted);line-height:1.7;white-space:pre-wrap;margin:0;}
 .wip-no-review{font-size:11px;color:var(--faint);font-style:italic;}
 
+/* NEEDS ATTENTION */
+.attn-sec{background:var(--surface);border:1px solid #f0d9a8;border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:13px 17px;margin-bottom:14px;}
+.attn-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;}
+.attn-title{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
+.attn-count{font-size:10px;color:var(--faint);}
+.attn-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #faf3e3;font-size:12px;}
+.attn-row:last-of-type{border-bottom:none;}
+.attn-proj{font-weight:600;flex-shrink:0;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attn-region{color:var(--faint);font-size:10px;flex-shrink:0;width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attn-text{color:var(--muted);flex:1;min-width:0;}
+.attn-dismiss{font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
+.attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.attn-more{padding-top:8px;font-size:11px;}
+.attn-more a{color:var(--amber);text-decoration:none;}
+.attn-more a:hover{text-decoration:underline;}
+
+/* STALE DATA BANNER */
+.stale-banner{display:none;background:var(--amber-bg);color:var(--amber);font-size:11px;padding:7px 22px;border-bottom:1px solid #f0d9a8;text-align:center;}
+.stale-banner.on{display:block;}
+
 /* EXEC THEMES */
 .exec-wrap.theme-minimal .exec-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:14px;}
 .exec-wrap.theme-minimal .exec-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:2px;}
@@ -456,6 +476,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
     </button>
   </div>
 </nav>
+
+<div class="stale-banner" id="staleBanner"></div>
 
 <div id="page-week"        class="page active">                              <div id="week-content"></div></div>
 <div id="page-performance" class="page">     <div id="fb-performance"></div> <div id="perf-content"></div></div>
@@ -879,7 +901,6 @@ function onRegionClear(page,ev){
 function renderFBars(){
   PAGES.forEach(p=>{
     if(p==='wip'||p==='week') return; // WIP has its own bar; Current is fixed-week
-    if(p==='trends'){ const el=document.getElementById('fb-trends'); if(el) el.innerHTML=''; return; }
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -1326,6 +1347,7 @@ let weekView='last';
 function renderWeek(){
   const tgl=(v,l)=>`<button class="tgl-btn${weekView===v?' active':''}" onclick="setWeekView('${v}')">${l}</button>`;
   document.getElementById('week-content').innerHTML=`
+    <div id="needs-attn"></div>
     <div class="exec-wrap theme-${S.execTheme}">
       <div class="exec-hero">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
@@ -1336,9 +1358,57 @@ function renderWeek(){
       </div>
       <div id="week-inner"></div>
     </div>`;
+  renderNeedsAttn();
   weekView==='last' ? renderLastWeek() : renderThisWeek();
 }
 function setWeekView(v){ weekView=v; renderWeek(); }
+
+// ═══ NEEDS ATTENTION — exceptions surfaced on the daily view ════════
+// Dismissals persist in localStorage keyed by project+rule+severity band,
+// so an item stays hidden across data uploads until its condition escalates.
+function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('ops_dismissed')||'[]')); }catch(e){ return new Set(); } }
+function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
+function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderNeedsAttn(); }
+function attnItems(){
+  const today=localISO(new Date());
+  const items=[];
+  rows.filter(r=>isWIP(r)).forEach(r=>{
+    const d=dDiff(wipAgeFrom(r),today)??0;
+    if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:`open ${Math.round(d)}d`});
+    if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
+    if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
+  });
+  rows.filter(r=>r.resurvey_requested&&!r.resurvey_complete&&r.list!=='Complete'&&!r.resurvey_scheduled).forEach(r=>{
+    const d=dDiff(r.resurvey_requested,today)??0;
+    if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:`resurvey requested ${Math.round(d)}d ago, unscheduled`});
+  });
+  const dis=getDismissed();
+  return items.filter(it=>!dis.has(attnKey(it)));
+}
+function renderNeedsAttn(){
+  const el=document.getElementById('needs-attn'); if(!el) return;
+  const items=attnItems();
+  if(!items.length){ el.innerHTML=''; return; }
+  // One row per project — combine its triggered rules, dismiss clears them all
+  const byProj={};
+  items.forEach(it=>{ const k=it.r.task_id||it.r.id; if(!byProj[k]) byProj[k]={r:it.r,rules:[],keys:[],sev:0}; const g=byProj[k]; g.rules.push(it.text); g.keys.push(attnKey(it)); g.sev=Math.max(g.sev,it.sev); });
+  const groups=Object.values(byProj).sort((a,b)=>b.sev-a.sev);
+  const LIMIT=8;
+  const shown=groups.slice(0,LIMIT);
+  el.innerHTML=`<div class="attn-sec">
+    <div class="attn-hd">
+      <span class="attn-title">Needs attention</span>
+      <span class="attn-count">${groups.length} project${groups.length!==1?'s':''}</span>
+    </div>
+    ${shown.map(g=>`<div class="attn-row">
+      <span class="attn-proj">${projLink(g.r)}</span>
+      <span class="attn-region">${esc(g.r.region)||'—'}</span>
+      <span class="attn-text">${g.rules.join(' · ')}</span>
+      <button class="attn-dismiss" title="Mark reviewed — hides until it gets worse" onclick="dismissAttn('${g.keys.join(',')}')">Reviewed ✓</button>
+    </div>`).join('')}
+    ${groups.length>LIMIT?`<div class="attn-more"><a href="#wip" onclick="nav('wip');return false;">+${groups.length-LIMIT} more on the WIP page →</a></div>`:''}
+  </div>`;
+}
 
 function trailing4WeekPace(){
   const today=new Date(); today.setHours(12,0,0,0);
@@ -1755,14 +1825,16 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=OpsMetrics.filterRows(RAW, DATA_CUTOFF);
+  const trendSrc=rows.filter(gfDim); // global region/resource/type filters apply
   if(!trendSrc.length){
-    document.getElementById('tr-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No survey data after ${fmtDate(DATA_CUTOFF)}.</div>`;
+    document.getElementById('tr-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No surveys match the current filters.</div>`;
     return;
   }
-  const trendDone=trendSrc.filter(r=>isComplete(r));
-  const weekly=weeklyStats(trendSrc);
-  const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF);
+  const trendDone=trendSrc.filter(r=>isComplete(r)&&gfDateIn(r.complete));
+  // Restrict the weekly series to weeks overlapping the global date range
+  const wkInRange=w=>(!GF.dateFrom||w.weekEnd>=GF.dateFrom)&&(!GF.dateTo||w.week<=GF.dateTo);
+  const weekly=weeklyStats(trendSrc).filter(wkInRange);
+  const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF).filter(wkInRange);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
   const wkMap=Object.fromEntries(weekly.map(w=>[w.week,w]));
   const wkCMap=Object.fromEntries(weeklyC.map((w,i)=>[w.week,{...w,r3:roll3[i]}]));
@@ -2820,6 +2892,18 @@ window.addEventListener('load',()=>{
   // Show data freshness in nav
   const navTs = document.getElementById('nav-ts');
   if(DATA_TS) { navTs.textContent = 'data as of '+DATA_TS+' MT'; navTs.style.display=''; }
+  // Stale-data banner: warn when the export is more than one business day old
+  if(DATA_TS){
+    const dataDay=DATA_TS.slice(0,10);
+    const ageDays=dDiff(dataDay,localISO(new Date()));
+    const dow=new Date().getDay();
+    const allowance=dow===1?4:dow===0?3:2; // Friday's export is still fresh through Monday
+    if(ageDays!=null&&ageDays>=allowance){
+      const b=document.getElementById('staleBanner');
+      b.innerHTML=`Data is <strong>${Math.round(ageDays)} days old</strong> (last updated ${esc(DATA_TS)} MT) — ages and WIP counts are inflated. Run push.sh or use ↑ Update data.`;
+      b.classList.add('on');
+    }
+  }
   applyFilter();
   renderFBars();
   nav(currentPage||S.defaultPage||'week');
