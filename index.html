@@ -77,6 +77,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .rgdrop-item input[type=checkbox]{accent-color:var(--blue);width:13px;height:13px;flex-shrink:0;cursor:pointer;}
 .rgdrop-clear{display:block;font-size:10px;color:var(--faint);padding:5px 12px 6px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-top:none;border-right:none;width:100%;text-align:left;}
 .rgdrop-clear:hover{color:var(--muted);}
+.fsel-on{border-color:var(--text)!important;background:var(--surface)!important;font-weight:600;}
 .fchips{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
 .fchip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 4px 2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-weight:500;white-space:nowrap;}
 .fchip-amber{background:var(--amber-bg);border-color:#f0d9a8;color:var(--amber);}
@@ -808,7 +809,7 @@ function buildFBar(page){
       return '';
     }
     return `<div class="fsep"></div><span class="flabel">${fd.label}</span>
-    <select aria-label="Filter by ${esc(fd.label)}" onchange="onF('${page}','${fd.key}',this.value)">
+    <select class="${f[fd.key]&&f[fd.key]!=='all'?'fsel-on':''}" aria-label="Filter by ${esc(fd.label)}" onchange="onF('${page}','${fd.key}',this.value)">
       <option value="all">All</option>
       ${vals.map(v=>`<option value="${v}"${f[fd.key]===v?' selected':''}>${v}</option>`).join('')}
     </select>`;
@@ -829,12 +830,10 @@ function buildFBar(page){
   const regLabel='Region'+(regArr.length?' · '+regArr.length:''); // chips show the actual selection
   const panelOpen=rgDropOpenPage===page;
 
-  // Active-filter chips — every non-default filter visible and removable in place
+  // Chips only for state the bar doesn't already show: region picks
+  // (hidden inside the dropdown) and the outlier setting (lives in Settings)
   const chips=[];
   regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
-  if(f.resource&&f.resource!=='all') chips.push(`<span class="fchip">${esc(f.resource)}<button class="fchip-x" aria-label="Remove resource filter" onclick="onF('${page}','resource','all')">×</button></span>`);
-  if(f.type&&f.type!=='all') chips.push(`<span class="fchip">${esc(f.type)}<button class="fchip-x" aria-label="Remove type filter" onclick="onF('${page}','type','all')">×</button></span>`);
-  if(isCustom) chips.push(`<span class="fchip">${f.dateFrom?fmtDateShort(f.dateFrom):'…'} – ${f.dateTo?fmtDateShort(f.dateTo):'…'}<button class="fchip-x" aria-label="Clear custom dates" onclick="setDateRange('${page}','','')">×</button></span>`);
   if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
 
   return `<div class="fbar">
