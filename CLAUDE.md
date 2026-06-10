@@ -18,6 +18,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
+- Metric definitions (DATA_CUTOFF, isComplete, isWIP, wipAgeFrom, avg/med/pct, hasResurveySig) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
 - Main cycle metric: **Project Start Date → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export

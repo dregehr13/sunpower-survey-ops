@@ -1,9 +1,9 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
+import OpsMetrics from '../lib/metrics.cjs';
 
 const client = new Anthropic();
-const DATA_CUTOFF = '2025-12-29';
 
 function toDateStr(d) {
   return d.toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -28,13 +28,9 @@ function computeStats(rows) {
     refLabel = 'Yesterday';
   }
 
-  const filtered = rows.filter(r =>
-    (r.project_status === 'In Progress' || r.project_status === 'Change Order') &&
-    r.start >= DATA_CUTOFF
-  );
-
-  const isComplete = r => !!(r.complete && r.list === 'Complete');
-  const wip = filtered.filter(r => r.start && !isComplete(r));
+  const filtered = OpsMetrics.filterRows(rows);
+  const isComplete = OpsMetrics.isComplete;
+  const wip = filtered.filter(OpsMetrics.isWIP);
 
   return {
     refLabel,

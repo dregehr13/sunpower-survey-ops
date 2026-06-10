@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Daily and weekly email generator for SunPower Site Survey reporting.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#111111">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Site Survey — Email Generator</title>
 <style>
 :root{
@@ -124,7 +128,7 @@ textarea:focus{border-color:#999;}
       <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
         <div class="subject-row">
           <label>To</label>
-          <input type="text" id="to-field" value="allie.morais@sunpower.com; spencer.jensen@sunpower.com; Kody.Wilde@sunpower.com" readonly>
+          <input type="text" id="to-field" value="allie.morais@sunpower.com; spencer.jensen@sunpower.com; robert.barker@sunpower.com" readonly>
         </div>
         <div class="subject-row" style="margin-bottom:0;">
           <label>Subject</label>
@@ -171,8 +175,19 @@ textarea:focus{border-color:#999;}
   </div>
 </div>
 
+<script src="/lib/metrics.cjs"></script>
 <script src="/data.js"></script>
 <script>
+// Guard: if data.js failed to load, show a recoverable error instead of a blank page
+if(typeof RAW === 'undefined' || typeof OpsMetrics === 'undefined'){
+  document.body.innerHTML =
+    '<div style="max-width:420px;margin:80px auto;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a;">'
+    + '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">Couldn\'t load the data file (data.js)</div>'
+    + '<div style="font-size:12px;color:#6b6b6b;margin-bottom:16px;line-height:1.6;">This is usually a network hiccup or a deploy in progress. Try again in a few seconds.</div>'
+    + '<button onclick="location.reload()" style="font-size:12px;padding:7px 18px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">Reload</button>'
+    + '</div>';
+  throw new Error('Failed to load data.js');
+}
 // ─── CONFIG ───────────────────────────────────────────────
 const PASSWORD      = 'sunpower';
 const DASHBOARD_URL = 'https://sunpower-survey-ops.vercel.app';
@@ -238,22 +253,11 @@ function getThisWeekMon(){
 }
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
-const DATA_CUTOFF = '2025-12-29';
-const ROWS = RAW.filter(r => (r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
-const isComplete = r => !!(r.complete && r.list==='Complete');
-function wipAgeFrom(r){
-  if(r.resurvey_requested) return r.resurvey_requested;
-  if(r.complete){ const [y,m,d]=r.complete.split('-').map(Number); const dt=new Date(y,m-1,d+2); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
-  return r.start;
-}
+// Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
+const {DATA_CUTOFF, isComplete, wipAgeFrom, avg, med} = OpsMetrics;
+const ROWS = OpsMetrics.filterRows(RAW);
 
 // ─── STATS HELPERS ────────────────────────────────────────
-function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null; }
-function med(arr){
-  if(!arr.length) return null;
-  const s=[...arr].sort((a,b)=>a-b), m=Math.floor(s.length/2);
-  return s.length%2?s[m]:(s[m-1]+s[m])/2;
-}
 function iqrFence(arr,mult=1.5){
   if(arr.length<4) return Infinity;
   const s=[...arr].sort((a,b)=>a-b);

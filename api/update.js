@@ -9,7 +9,6 @@ export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
 const OWNER = 'dregehr13';
 const REPO  = 'sunpower-survey-ops';
-const FILES = ['data.js'];
 
 const gh = (path, token, opts = {}) =>
   fetch(`https://api.github.com/repos/${OWNER}/${REPO}${path}`, {
@@ -31,7 +30,14 @@ export default async function handler(req, res) {
   if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN env var not set' });
 
   const date = new Date().toISOString().slice(0, 10);
-  const rawJS = `const RAW = ${JSON.stringify(rows)};`;
+  // Match push.sh's DATA_TS format: 'YYYY-MM-DD HH:MM' in Mountain Time
+  const ts = new Date().toLocaleString('sv-SE', { timeZone: 'America/Denver' }).slice(0, 16);
+  const json = JSON.stringify(rows);
+  // data.json must stay in sync — /api/morning-card computes its stats from it
+  const FILE_CONTENT = {
+    'data.js': `const RAW = ${json};\nconst DATA_TS = '${ts}';\n`,
+    'data.json': json,
+  };
 
   try {
     // 1. Get latest commit SHA on main
@@ -44,11 +50,9 @@ export default async function handler(req, res) {
     if (!commitRes.ok) throw new Error(`GET commit → ${commitRes.status}`);
     const { tree: { sha: baseTreeSha } } = await commitRes.json();
 
-    // 3. Build data.js content directly — no regex on large file
+    // 3. Build data.js + data.json content directly — no regex on large file
     const treeEntries = [];
-    for (const file of FILES) {
-      const content = `const RAW = ${JSON.stringify(rows)};\nconst DATA_TS = '${date}';\n`;
-
+    for (const [file, content] of Object.entries(FILE_CONTENT)) {
       const blobRes = await gh('/git/blobs', token, {
         method: 'POST',
         body: JSON.stringify({ content, encoding: 'utf-8' })

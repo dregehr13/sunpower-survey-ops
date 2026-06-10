@@ -3,10 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SunPower Site Survey operations dashboard — pipeline, cycle times, and resurvey tracking.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#111111">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Site Survey Ops</title>
 <style>
 :root{
-  --bg:#f2f2ef;--surface:#fff;--border:#e0e0db;--border-lt:#ebebе7;
+  --bg:#f2f2ef;--surface:#fff;--border:#e0e0db;--border-lt:#ebebe7;
   --text:#1a1a1a;--muted:#6b6b6b;--faint:#aaa;
   --green-bg:#e6f4d7;--green:#2d6a0a;
   --amber-bg:#fef3c7;--amber:#92400e;
@@ -89,6 +93,16 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .roll-dn{background:var(--red-bg);color:var(--red);}
 .roll-flat{background:#f0f0ec;color:var(--muted);}
 .kg-c{color:var(--green);} .ka-c{color:var(--amber);} .kr-c{color:var(--red);}
+
+/* METRIC INFO TOOLTIP */
+.kinfo{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;opacity:.4;font-size:8px;font-weight:600;font-style:normal;cursor:help;margin-left:5px;vertical-align:-1px;position:relative;text-transform:lowercase;letter-spacing:0;}
+.kinfo:hover,.kinfo:focus-visible{opacity:.85;outline:none;}
+.kinfo::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(2px);width:max-content;max-width:240px;background:#1a1a1a;color:#fff;font-size:10px;font-weight:400;line-height:1.55;padding:7px 10px;border-radius:6px;white-space:normal;text-align:left;text-transform:none;opacity:0;visibility:hidden;transition:opacity .12s,transform .12s;z-index:600;pointer-events:none;}
+.kinfo:hover::after,.kinfo:focus-visible::after{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+.kg .kcard:first-child .kinfo::after,.exec-kpis .ekcard:first-child .kinfo::after{left:0;transform:translateX(0) translateY(2px);}
+.kg .kcard:first-child .kinfo:hover::after,.exec-kpis .ekcard:first-child .kinfo:hover::after,.kg .kcard:first-child .kinfo:focus-visible::after,.exec-kpis .ekcard:first-child .kinfo:focus-visible::after{transform:translateX(0) translateY(0);}
+.kg .kcard:last-child .kinfo::after,.exec-kpis .ekcard:last-child .kinfo::after{left:auto;right:0;transform:translateX(0) translateY(2px);}
+.kg .kcard:last-child .kinfo:hover::after,.exec-kpis .ekcard:last-child .kinfo:hover::after,.kg .kcard:last-child .kinfo:focus-visible::after,.exec-kpis .ekcard:last-child .kinfo:focus-visible::after{transform:translateX(0) translateY(0);}
 
 /* SECTIONS */
 .sec{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:15px 17px;margin-bottom:14px;}
@@ -310,6 +324,8 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
   box-shadow:0 0 0 3px rgba(37,99,235,.1);
   outline:none;
 }
+.ntab:focus-visible{outline:2px solid #4da6ff;outline-offset:-2px;color:#fff;}
+th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:3px;}
 
 /* TOAST */
 
@@ -409,11 +425,11 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
-  <div class="ntab active" data-page="week">Current</div>
-  <div class="ntab" data-page="performance">Performance</div>
-  <div class="ntab" data-page="trends">Trends</div>
-  <div class="ntab" data-page="outliers">WIP</div>
-  <div class="ntab" data-page="resurvey">Resurveys</div>
+  <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
+  <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
+  <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
+  <div class="ntab" data-page="outliers" role="button" tabindex="0">WIP</div>
+  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -520,11 +536,30 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<script src="lib/metrics.cjs"></script>
 <script src="data.js"></script>
 <script>
+// Guard: if data.js or the chart CDN failed to load, show a recoverable error instead of a blank page
+(function(){
+  const missing = [];
+  if (typeof RAW === 'undefined') missing.push('the data file (data.js)');
+  if (typeof Chart === 'undefined') missing.push('the chart library');
+  if (typeof OpsMetrics === 'undefined') missing.push('the metrics library (lib/metrics.cjs)');
+  if (!missing.length) return;
+  document.body.innerHTML =
+    '<div style="max-width:420px;margin:80px auto;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a;">'
+    + '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">Couldn\'t load ' + missing.join(' and ') + '</div>'
+    + '<div style="font-size:12px;color:#6b6b6b;margin-bottom:16px;line-height:1.6;">This is usually a network hiccup or a deploy in progress. Try again in a few seconds.</div>'
+    + '<button onclick="location.reload()" style="font-size:12px;padding:7px 18px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">Reload</button>'
+    + '</div>';
+  throw new Error('Failed to load: ' + missing.join(', '));
+})();
 Chart.register(window['chartjs-plugin-annotation']);
 
-const VERSION = 'v6.8 · 2026-04-23';
+const VERSION = 'v6.9 · 2026-06-10';
+
+// Metric definitions shared with /compose and the API — see lib/metrics.cjs
+const {isComplete, isWIP, wipAgeFrom, hasResurveySig, avg, med, pct} = OpsMetrics;
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -599,7 +634,7 @@ function setSetting(key, value){
   S[key] = value;
   saveSettings();
   // Propagate changes that affect live state
-  if(key==='dataCutoff'){ DATA_CUTOFF=value; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
+  if(key==='dataCutoff'){ DATA_CUTOFF=value; rows=loadRows(JSON.parse(JSON.stringify(RAW))); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='execTheme' && currentPage==='week') renderWeek();
@@ -609,9 +644,15 @@ function setSetting(key, value){
 }
 
 
-let DATA_CUTOFF = '2025-12-29';
-let rows = JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order') && r.start >= DATA_CUTOFF);
-rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
+let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
+// Scope to active projects after the cutoff and apply legacy fixups
+// (parse-sf.js already applies these at parse time; kept for older data files)
+function loadRows(src){
+  const out = OpsMetrics.filterRows(src, DATA_CUTOFF);
+  out.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
+  return out;
+}
+let rows = loadRows(JSON.parse(JSON.stringify(RAW)));
 let filtered = [];
 let dataTimestamp = null;
 
@@ -628,6 +669,44 @@ PAGES.forEach(p => pageF[p] = defaultF());
 
 function saveFilterState(){
   try{ localStorage.setItem('ops_filters', JSON.stringify({pageF, currentPage})); }catch(e){}
+  syncURL();
+}
+
+// ═══ URL STATE — filters reflected in the hash so views are shareable ═══
+const URL_PAGES=['week','performance','trends','outliers','resurvey','data','settings'];
+function syncURL(){
+  const f=pageF[currentPage];
+  const q=new URLSearchParams();
+  if(f){
+    if(f.dateFrom) q.set('from',f.dateFrom);
+    if(f.dateTo) q.set('to',f.dateTo);
+    if(Array.isArray(f.region)&&f.region.length) q.set('region',f.region.join('|'));
+    if(f.type&&f.type!=='all') q.set('type',f.type);
+    if(f.resource&&f.resource!=='all') q.set('resource',f.resource);
+    if(f.removeOutliers) q.set('outliers','1');
+  }
+  const qs=q.toString();
+  history.replaceState(null,'','#'+currentPage+(qs?'?'+qs:''));
+}
+// Returns {page, hadDates} when the hash named a valid page, else null. URL wins over saved state.
+function applyURLState(){
+  const h=location.hash.replace(/^#/,'');
+  if(!h) return null;
+  const [page,qs]=h.split('?');
+  if(!URL_PAGES.includes(page)) return null;
+  currentPage=page;
+  let hadDates=false;
+  const f=pageF[page];
+  if(f&&qs){
+    const q=new URLSearchParams(qs);
+    if(q.has('from')){ f.dateFrom=q.get('from'); hadDates=true; }
+    if(q.has('to')){ f.dateTo=q.get('to'); hadDates=true; }
+    if(q.has('region')) f.region=q.get('region').split('|').filter(Boolean);
+    if(q.has('type')) f.type=q.get('type');
+    if(q.has('resource')) f.resource=q.get('resource');
+    if(q.has('outliers')) f.removeOutliers=q.get('outliers')==='1';
+  }
+  return {page,hadDates};
 }
 function migrateRegion(f){
   if(typeof f.region === 'string'){
@@ -681,7 +760,7 @@ function buildFBar(page){
       return '';
     }
     return `<div class="fsep"></div><span class="flabel">${fd.label}</span>
-    <select onchange="onF('${page}','${fd.key}',this.value)">
+    <select aria-label="Filter by ${esc(fd.label)}" onchange="onF('${page}','${fd.key}',this.value)">
       <option value="all">All</option>
       ${vals.map(v=>`<option value="${v}"${f[fd.key]===v?' selected':''}>${v}</option>`).join('')}
     </select>`;
@@ -701,9 +780,9 @@ function buildFBar(page){
 
   return `<div class="fbar">
     <div class="fgroup">
-      <input type="date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
+      <input type="date" aria-label="Completed from date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
       <span style="color:var(--faint);font-size:10px;">–</span>
-      <input type="date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
+      <input type="date" aria-label="Completed to date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
     </div>
     <div class="fbtn-group">
       <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All</button>
@@ -719,7 +798,7 @@ function buildFBar(page){
     <div class="fgroup">
       <span class="flabel">Region</span>
       <div class="rgdrop">
-        <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
+        <button class="rgdrop-btn${regArr.length?' active':''}" aria-label="Filter by region" aria-expanded="${panelOpen}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
         <div class="rgdrop-panel${panelOpen?' open':''}">
           ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
           ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
@@ -932,7 +1011,8 @@ function nav(page){
   pageEl.classList.add('active','entering');
   setTimeout(()=>pageEl.classList.remove('entering'),160);
   const tab=document.querySelector(`.ntab[data-page="${page}"]`);
-  if(tab) tab.classList.add('active');
+  document.querySelectorAll('.ntab').forEach(t=>t.removeAttribute('aria-current'));
+  if(tab){ tab.classList.add('active'); tab.setAttribute('aria-current','page'); }
   const sb=document.getElementById('settings-btn');
   if(sb) sb.classList.toggle('active', page==='settings');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -940,7 +1020,23 @@ function nav(page){
   applyFilter();
   renderPage(page);
 }
-document.querySelectorAll('.ntab').forEach(t=>t.addEventListener('click',()=>nav(t.dataset.page)));
+document.querySelectorAll('.ntab').forEach(t=>{
+  t.addEventListener('click',()=>nav(t.dataset.page));
+  t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav(t.dataset.page); } });
+});
+
+// Keyboard: Escape closes overlays; Enter/Space activates sortable headers
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeDrill();
+    closeUpdateModal();
+    if(rgDropOpenPage!==null){ rgDropOpenPage=null; renderFBars(); }
+    if(wipRgDropOpen){ wipRgDropOpen=false; const el=document.getElementById('wip-rgpanel'); if(el) el.classList.remove('open'); }
+  }
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('th[onclick]')){
+    e.preventDefault(); e.target.click();
+  }
+});
 
 function renderPage(p){
   if(p==='week')        renderWeek();
@@ -974,21 +1070,24 @@ function recalc(r){
   if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0;
   r.ct_full=(r.ct_total!=null&&r.ct_resurvey!=null)?Math.round((r.ct_total+r.ct_resurvey)*10)/10:null;
 }
-function isComplete(r){ return !!(r.complete && r.list==='Complete'); }
-function isWIP(r){ return !!(r.start && !isComplete(r)); }
-function wipAgeFrom(r){
-  if(r.resurvey_requested) return r.resurvey_requested;
-  if(r.complete){ const [y,m,d]=r.complete.split('-').map(Number); const dt=new Date(y,m-1,d+2); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
-  return r.start;
-}
-function avg(a){ const v=a.filter(x=>x!=null&&x>=0&&!isNaN(x)); return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*100)/100:null; }
-function med(a){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; const m=Math.floor(v.length/2); return v.length%2?v[m]:Math.round((v[m-1]+v[m])/2*100)/100; }
-function pct(a,p){ const v=[...a.filter(x=>x!=null&&x>=0)].sort((x,y)=>x-y); if(!v.length) return null; return v[Math.min(v.length-1,Math.ceil(v.length*p/100)-1)]; }
+// isComplete, isWIP, wipAgeFrom, avg, med, pct come from lib/metrics.cjs (destructured at top)
 function buildSegmentAvgs(src,dims){ const m={}; src.forEach(r=>{ const k=dims.map(d=>r[d]||'').join('|'); if(!m[k]) m[k]=[]; m[k].push(r.ct_total); }); const out={}; Object.entries(m).forEach(([k,v])=>{ const a=avg(v); if(a!=null) out[k]=a; }); return out; }
 function lookupSegmentAvg(r,dims,segs,fallback){ for(let l=dims.length;l>=1;l--){ const k=dims.slice(0,l).map(d=>r[d]||'').join('|'); if(segs[k]!=null) return segs[k]; } return fallback; }
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
 function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(tip)}">i</span>`; }
+const TIP={
+  complete:'Counts surveys with a Site Survey Complete date AND List status "Complete".',
+  cycle:'Cycle time = Project Start Date → Site Survey Complete, in calendar days.',
+  onTarget:()=>`Share of completions with cycle time at or under ${S.targetAvg} days (the average target).`,
+  wip:'Open surveys: started but not yet complete. Age counts from resurvey request if any, else completion +2 days, else project start.',
+  projected:'Completed so far + 90% of surveys scheduled for the rest of the week + unscheduled WIP ÷ recent avg cycle time × business days left. Based on yesterday’s export.',
+  schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
+  fpy:'First Pass Yield = (completions − surveyor-attributed resurveys) ÷ completions. Counts only resurveys attributed to the surveyor as internal defects.',
+  rsRate:'Projects with any resurvey signal (request, completion, reason, or design reopen) ÷ completions in view.',
+  rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
+};
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
 function projLink(r,cls=''){const name=esc(r.project||r.address||'—');const url=sfUrl(r);return url?`<a href="${url}" target="_blank" rel="noopener" class="sf-link${cls?' '+cls:''}">${name}</a>`:name;}
@@ -996,7 +1095,6 @@ function fmtDate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Ja
 function fmtDateShort(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}`; }
 function fmtWeekLabel(w){ return fmtDateShort(w.week)+' – '+fmtDateShort(w.weekEnd); }
 function weekOf(ds){ if(!ds) return ''; const [y,mo,d]=ds.split('-').map(Number); const dt=new Date(y,mo-1,d); const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1)); return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; }
-const hasResurveySig=r=>!!(r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
 function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),3400); }
 
 // ═══ DRILL DRAWER ════════════════════════════════════════
@@ -1050,6 +1148,7 @@ function openDrill(title,subtitle,drillRows,opts={}){
     thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr>`;
     tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
   }
+  if(!drillRows.length) tbody.innerHTML=`<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--faint);">No projects in this view.</td></tr>`;
   document.getElementById('drill-panel').classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
 }
@@ -1230,11 +1329,11 @@ function renderLastWeek(){
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-    <div class="ekcard"><div class="eklabel">Avg cycle</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
-    <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
-    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.complete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
+    <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
+    <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
@@ -1333,11 +1432,11 @@ function renderThisWeek(){
     <div class="exec-title">This Week</div>
     <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[yesterdayDow===0||yesterdayDow===6?4:yesterdayDow-1]||'today'}</div>`;
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard"><div class="eklabel">Completed so far</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
-    <div class="ekcard"><div class="eklabel">Projected total</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
-    <div class="ekcard"><div class="eklabel">Scheduled remaining</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
-    <div class="ekcard"><div class="eklabel">WIP</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="ekcard"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
+    <div class="ekcard"><div class="eklabel">Projected total${kinfo(TIP.projected)}</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
+    <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
+    <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
@@ -1454,10 +1553,10 @@ function renderPerformance(){
 
   document.getElementById('perf-content').innerHTML=`
     <div class="kg kg5">
-      <div class="kcard"><div class="klabel">Projects</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-      <div class="kcard"><div class="klabel">Avg total</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
-      <div class="kcard"><div class="klabel">Median total</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
+      <div class="kcard"><div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+      <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
+      <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
+      <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
       <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div style="flex:${srCount};background:#0ea5e9;"></div>`:''} ${rdCount>0?`<div style="flex:${rdCount};background:#8b5cf6;"></div>`:''} ${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:9px;color:#0ea5e9;">${srCount} Sales</span><span style="font-size:9px;color:#8b5cf6;">${rdCount} Radicl</span><span style="font-size:9px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
     <div class="res-cards">${['Sales Rep','Radicl Services','SunPower Surveyor'].map(resCard).join('')}</div>
@@ -1487,11 +1586,11 @@ function renderPerformance(){
       <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr>
-          <th onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
-          <th class="r" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
-          <th class="r" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
-          <th class="r" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
-          <th class="r" onclick="sortBy('pct_on_target')">On target<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
+          <th tabindex="0" onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
+          <th class="r" tabindex="0" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
+          <th class="r" tabindex="0" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
+          <th class="r" tabindex="0" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
+          <th class="r" tabindex="0" onclick="sortBy('pct_on_target')">On target<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
         </tr></thead>
         <tbody id="pf-tbody"></tbody>
       </table></div>
@@ -1594,7 +1693,7 @@ function renderRepTable(){
   const LIMIT=10;
   const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
   const hasMore=repRows.length>LIMIT;
-  const th=(k,l,cls='r')=>`<th class="${cls}" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
+  const th=(k,l,cls='r')=>`<th class="${cls}" tabindex="0" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
   wrap.innerHTML=`<div style="overflow-x:auto;"><table>
     <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
     <tbody>${displayRows.map(r=>`<tr class="drill-tgt" data-rep="${esc(r.name)}" data-res="${esc(resLabel)}" onclick="drillRep(this)">
@@ -1610,7 +1709,11 @@ function renderRepTable(){
 
 // ═══ TRENDS ══════════════════════════════════════════════
 function renderTrends(){
-  const trendSrc=RAW.filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF);
+  const trendSrc=OpsMetrics.filterRows(RAW, DATA_CUTOFF);
+  if(!trendSrc.length){
+    document.getElementById('tr-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No survey data after ${fmtDate(DATA_CUTOFF)}.</div>`;
+    return;
+  }
   const trendDone=trendSrc.filter(r=>isComplete(r));
   const weekly=weeklyStats(trendSrc);
   const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF);
@@ -2016,14 +2119,14 @@ function renderAgingWIP(){
       </div>
       ${wip.length?`<div style="overflow-x:auto;"><table>
         <thead><tr>
-          <th onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
-          <th onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
-          <th onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
-          <th onclick="wipSortBy('project_status')">Status<span class="sarr ${arr('project_status')}"></span></th>
-          <th class="r" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
-          <th onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
-          <th onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('project_status')">Status<span class="sarr ${arr('project_status')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
@@ -2131,7 +2234,7 @@ function renderResurvey(){
   </div>
   <div class="kg kg4">
     <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
-      <div class="klabel">FPY</div>
+      <div class="klabel">FPY${kinfo(TIP.fpy)}</div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:1px;">
         <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--muted);">${completions.length?`${internalDefects.length} / ${completions.length}`:'—'}</div>
@@ -2145,7 +2248,7 @@ function renderResurvey(){
       </div>`:''}
     </div>
     <div class="kcard">
-      <div class="klabel">Total Resurveys</div>
+      <div class="klabel">Total Resurveys${kinfo(TIP.rsRate)}</div>
       <div class="kval">${hasResurvey.length}</div>
       <div class="ksub">${closedResurvey.length} resolved · ${openResurvey.length} open</div>
       <div class="ktgt">${completions.length?Math.round(hasResurvey.length/completions.length*100)+'% resurvey rate':'—'}</div>
@@ -2157,7 +2260,7 @@ function renderResurvey(){
       <div class="ktgt">${(()=>{const ages=openResurvey.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0);const a=avg(ages);return a!=null?'Avg '+a.toFixed(1)+'d open':'—';})()}</div>
     </div>
     <div class="kcard">
-      <div class="klabel">Avg Resurvey Cycle</div>
+      <div class="klabel">Avg Resurvey Cycle${kinfo(TIP.rsCycle)}</div>
       <div class="kval">${fmtCt(avgRsCt)}</div>
       <div class="ksub">Median ${fmtCt(medRsCt)}</div>
       <div class="ktgt">Resurvey requested → complete</div>
@@ -2504,7 +2607,7 @@ function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.i
 function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
 function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=loadRows(JSON.parse(JSON.stringify(RAW))); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -2520,7 +2623,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=parsed.filter(r=>r.start>=DATA_CUTOFF&&(r.project_status==='In Progress'||r.project_status==='Change Order')); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); changedIds.clear();
+    rows=loadRows(parsed); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
@@ -2645,7 +2748,7 @@ document.addEventListener('click',function(e){
 
 window.addEventListener('load',()=>{
   loadSettings();
-  if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; rows=JSON.parse(JSON.stringify(RAW)).filter(r=>(r.project_status==='In Progress'||r.project_status==='Change Order')&&r.start>=DATA_CUTOFF); rows.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; }); }
+  if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; rows=loadRows(JSON.parse(JSON.stringify(RAW))); }
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';
@@ -2658,11 +2761,17 @@ window.addEventListener('load',()=>{
     PAGES.forEach(p=>pageF[p].removeOutliers=S.defaultRemoveOutliers);
   }
 
-  // Set date range — autoDateRange always wins over saved dates
+  // URL hash (shared link) wins over saved state
+  const urlState=applyURLState();
+
+  // Set date range — autoDateRange always wins over saved dates, but not over URL dates
   clearFenceCache();
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){
-    PAGES.forEach(p=>{pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];});
+    PAGES.forEach(p=>{
+      if(urlState&&urlState.page===p&&urlState.hadDates) return;
+      pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];
+    });
   }
   // Show data freshness in nav
   const navTs = document.getElementById('nav-ts');
@@ -2670,6 +2779,12 @@ window.addEventListener('load',()=>{
   applyFilter();
   renderFBars();
   nav(currentPage||S.defaultPage||'week');
+});
+
+// Manual hash edits / back-forward navigation
+window.addEventListener('hashchange',()=>{
+  const r=applyURLState();
+  if(r){ applyFilter(); renderFBars(); nav(currentPage); }
 });
 </script>
 </body>

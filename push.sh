@@ -3,7 +3,7 @@
 # Usage: ~/Projects/survey-ops/push.sh [path/to/report.xls]
 #
 # If a file argument is given, uses that. Otherwise looks for the most recently
-# modified report*.xls in .downloads/ (written by fetch-report.js).
+# modified report*.xls in ~/Downloads (or .downloads/ as a fallback).
 #
 # For code-only deploys (no data update): git push
 
@@ -15,7 +15,7 @@ DATA_DATE=$(date '+%Y-%m-%d %H:%M')
 if [ -n "$1" ]; then
   SF_FILE="$1"
 else
-  SF_FILE=$(ls -t "$PROJ"/.downloads/report*.xls 2>/dev/null | head -1)
+  SF_FILE=$(ls -t ~/Downloads/report*.xls "$PROJ"/.downloads/report*.xls 2>/dev/null | head -1)
 fi
 
 if [ -z "$SF_FILE" ] || [ ! -f "$SF_FILE" ]; then

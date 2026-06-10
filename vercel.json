@@ -2,5 +2,11 @@
   "rewrites": [
     { "source": "/compose", "destination": "/compose/index.html" },
     { "source": "/compose/(.*)", "destination": "/compose/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/lib/metrics.cjs",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript; charset=utf-8" }]
+    }
   ]
 }
