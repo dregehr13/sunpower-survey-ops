@@ -17,18 +17,21 @@
   --red-bg:#fee2e2;--red:#991b1b;
   --blue:#2563eb;--sf:#0070d2;
   --c1:#378ADD;--c2:#1D9E75;--c3:#BA7517;--target:#e24b4a;
+  --accent:#f59e0b;
   --radius:8px;--radius-lg:12px;
 }
+/* Tabular figures — numeric columns and KPIs align vertically */
+table,.kval,.ekval,.rval,.nbadge,.nav-ts{font-variant-numeric:tabular-nums;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;}
 
 /* NAV */
 .nav{background:#111;display:flex;align-items:center;padding:0 20px;height:48px;position:sticky;top:0;z-index:200;gap:0;}
 .brand{color:#fff;font-size:13px;font-weight:600;margin-right:20px;white-space:nowrap;flex-shrink:0;letter-spacing:-.01em;}
-.brand span{color:#555;font-weight:400;}
+.brand span{color:var(--accent);font-weight:400;}
 .ntab{color:#777;font-size:12px;padding:0 11px;height:48px;display:flex;align-items:center;cursor:pointer;border-bottom:2px solid transparent;transition:color .12s,border-color .12s;white-space:nowrap;flex-shrink:0;user-select:none;}
 .ntab:hover{color:#bbb;}
-.ntab.active{color:#fff;border-bottom-color:#fff;}
+.ntab.active{color:#fff;border-bottom-color:var(--accent);}
 .nav-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .nav-ts{font-size:10px;color:#999;white-space:nowrap;padding:3px 8px;background:#1e1e1e;border-radius:4px;border:1px solid #333;}
 .nbadge{font-size:11px;color:#666;white-space:nowrap;}
@@ -418,7 +421,13 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
   .res-cards{grid-template-columns:1fr;}
   .page{padding:12px;}
+  /* 5-card grids wrap 2+2+1 — let the 5th card span the row instead of orphaning */
+  .kg5>.kcard:nth-child(5),.exec-kpis>.ekcard:nth-child(5){grid-column:1/-1;}
 }
+
+/* WIP QUEUE — scroll within the card, header stays visible */
+.wip-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;}
+.wip-wrap th{position:sticky;top:0;background:var(--surface);z-index:5;}
 </style>
 </head>
 <body>
@@ -1347,11 +1356,12 @@ function renderLastWeek(){
     const col=TYPE_COLORS[td.t];
     const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d avg':'—';
     const rad=typeData.length===1?'6px':(i===0?'6px 0 0 6px':i===typeData.length-1?'0 6px 6px 0':'0');
+    const slim=pct<14; // small segments: skip in-bar text (clips) — header + hover tooltip carry it
     return `<div style="flex:${td.n};display:flex;flex-direction:column;gap:4px;min-width:0;">
-      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:500">${shortName(td.t)}</span> <span style="font-weight:700">${pct}%</span></div>
+      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${td.t}: ${td.n} surveys · ${avgStr}"><span style="font-weight:700">${pct}%</span></div>
       <div style="background:${col};border-radius:${rad};height:52px;padding:9px 10px;color:#fff;overflow:hidden;box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);" title="${td.t}: ${td.n} surveys · ${avgStr}">
-        <div style="font-size:10px;font-weight:600;white-space:nowrap;">${td.n} surveys</div>
-        <div style="font-size:10px;opacity:.82;white-space:nowrap;margin-top:3px;">${avgStr}</div>
+        ${slim?'':`<div style="font-size:10px;font-weight:600;white-space:nowrap;">${shortName(td.t)} · ${td.n} surveys</div>
+        <div style="font-size:10px;opacity:.82;white-space:nowrap;margin-top:3px;">${avgStr}</div>`}
       </div>
     </div>`;
   }).join('');
@@ -2117,7 +2127,7 @@ function renderAgingWIP(){
       <div class="shead">
         <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div></div>
       </div>
-      ${wip.length?`<div style="overflow-x:auto;"><table>
+      ${wip.length?`<div class="wip-wrap"><table>
         <thead><tr>
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
