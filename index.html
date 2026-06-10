@@ -208,21 +208,14 @@ tr:hover td{background:#fafaf8;}
 .wip-no-review{font-size:11px;color:var(--faint);font-style:italic;}
 
 /* NEEDS ATTENTION */
-.attn-sec{background:var(--surface);border:1px solid #f0d9a8;border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:13px 17px;margin-bottom:14px;}
-.attn-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;}
-.attn-title{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;}
-.attn-count{font-size:10px;color:var(--faint);}
-.attn-row{display:grid;grid-template-columns:190px 120px 1fr auto;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #faf3e3;font-size:12px;}
-.attn-row:last-of-type{border-bottom:none;}
-.attn-proj{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.attn-region{color:var(--faint);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.attn-text{color:var(--muted);min-width:0;}
-@media(max-width:860px){.attn-row{grid-template-columns:1fr auto;}.attn-region{display:none;}.attn-text{grid-column:1/-1;grid-row:2;}}
-.attn-dismiss{font-size:10px;padding:3px 10px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
+.attn-strip{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid #f0d9a8;border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:10px 17px;margin-bottom:14px;cursor:pointer;font-size:12px;transition:box-shadow .15s;}
+.attn-strip:hover{box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.attn-title{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.attn-strip-text{color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attn-strip-go{color:var(--amber);font-weight:600;font-size:11px;flex-shrink:0;}
+.attn-dismiss{font-size:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
 .attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
-.attn-more{padding-top:8px;font-size:11px;}
-.attn-more a{color:var(--amber);text-decoration:none;}
-.attn-more a:hover{text-decoration:underline;}
+.wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;gap:7px;font-weight:400;}
 
 /* STALE DATA BANNER */
 .stale-banner{display:none;background:var(--amber-bg);color:var(--amber);font-size:11px;padding:7px 22px;border-bottom:1px solid #f0d9a8;text-align:center;}
@@ -1369,7 +1362,7 @@ function setWeekView(v){ weekView=v; renderWeek(); }
 // so an item stays hidden across data uploads until its condition escalates.
 function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('ops_dismissed')||'[]')); }catch(e){ return new Set(); } }
 function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
-function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderNeedsAttn(); }
+function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderNeedsAttn(); if(currentPage==='wip') renderAgingWIP(); }
 function attnItems(){
   const today=localISO(new Date());
   const items=[];
@@ -1386,28 +1379,18 @@ function attnItems(){
   const dis=getDismissed();
   return items.filter(it=>!dis.has(attnKey(it)));
 }
+// Compact strip on Current — the full working view lives on the WIP page
+function openAttnView(){ wipView='attn'; nav('wip'); }
 function renderNeedsAttn(){
   const el=document.getElementById('needs-attn'); if(!el) return;
   const items=attnItems();
   if(!items.length){ el.innerHTML=''; return; }
-  // One row per project — combine its triggered rules, dismiss clears them all
-  const byProj={};
-  items.forEach(it=>{ const k=it.r.task_id||it.r.id; if(!byProj[k]) byProj[k]={r:it.r,rules:[],keys:[],sev:0}; const g=byProj[k]; g.rules.push(it.text); g.keys.push(attnKey(it)); g.sev=Math.max(g.sev,it.sev); });
-  const groups=Object.values(byProj).sort((a,b)=>b.sev-a.sev);
-  const LIMIT=8;
-  const shown=groups.slice(0,LIMIT);
-  el.innerHTML=`<div class="attn-sec">
-    <div class="attn-hd">
-      <span class="attn-title">Needs attention</span>
-      <span class="attn-count">${groups.length} project${groups.length!==1?'s':''}</span>
-    </div>
-    ${shown.map(g=>`<div class="attn-row">
-      <span class="attn-proj">${projLink(g.r)}</span>
-      <span class="attn-region">${esc(g.r.region)||'—'}</span>
-      <span class="attn-text">${g.rules.join(' · ')}</span>
-      <button class="attn-dismiss" title="Mark reviewed — hides until it gets worse" onclick="dismissAttn('${g.keys.join(',')}')">Reviewed ✓</button>
-    </div>`).join('')}
-    ${groups.length>LIMIT?`<div class="attn-more"><a href="#wip" onclick="nav('wip');return false;">+${groups.length-LIMIT} more on the WIP page →</a></div>`:''}
+  const projects=new Set(items.map(it=>it.r.task_id||it.r.id)).size;
+  const worst=items.reduce((a,b)=>b.sev>a.sev?b:a);
+  el.innerHTML=`<div class="attn-strip" role="button" tabindex="0" onclick="openAttnView()" onkeydown="if(event.key==='Enter')openAttnView()">
+    <span class="attn-title">Needs attention</span>
+    <span class="attn-strip-text"><strong>${projects} project${projects!==1?'s':''}</strong> flagged · worst: ${esc(worst.r.project||worst.r.address||'—')} ${worst.text}</span>
+    <span class="attn-strip-go">Review on WIP →</span>
   </div>`;
 }
 
@@ -2114,16 +2097,23 @@ function renderTrends(){
 }
 
 // ═══ WIP HUB ═════════════════════════════════════════════
+let wipView='all'; // 'all' | 'attn'
+function setWipView(v){ wipView=v; renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
 
   const today=localISO(new Date());
-  const wip=wipFiltered().map(r=>({
+  // Needs-attention groups keyed by project (task_id or id)
+  const attnMap={};
+  attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
+  const attnTotal=Object.keys(attnMap).length;
+  let wip=wipFiltered().map(r=>({
     ...r,
     daysOpen:dDiff(wipAgeFrom(r),today)??0,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
+  if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
 
   wip.sort((a,b)=>{
     const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey;
@@ -2210,9 +2200,11 @@ function renderAgingWIP(){
     </td>`;
   }
 
-  const tableRows=wip.map((r,i)=>`
+  const tableRows=wip.map((r,i)=>{
+    const ag=wipView==='attn'?attnMap[r.task_id||r.id]:null;
+    return `
     <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
-      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong></td>
+      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason">${ag.texts.join(' · ')} <button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
       <td style="font-size:11px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
@@ -2222,7 +2214,7 @@ function renderAgingWIP(){
       <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:9px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
-  `).join('');
+  `;}).join('');
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
@@ -2235,6 +2227,10 @@ function renderAgingWIP(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div></div>
+        <div class="toggle-group">
+          <button class="tgl-btn${wipView==='all'?' active':''}" onclick="setWipView('all')">All</button>
+          <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
+        </div>
       </div>
       ${wip.length?`<div class="wip-wrap"><table>
         <thead><tr>
