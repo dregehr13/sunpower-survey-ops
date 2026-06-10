@@ -77,6 +77,11 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#999;}
 .rgdrop-item input[type=checkbox]{accent-color:var(--blue);width:13px;height:13px;flex-shrink:0;cursor:pointer;}
 .rgdrop-clear{display:block;font-size:10px;color:var(--faint);padding:5px 12px 6px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-top:none;border-right:none;width:100%;text-align:left;}
 .rgdrop-clear:hover{color:var(--muted);}
+.fchips{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.fchip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 4px 2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-weight:500;white-space:nowrap;}
+.fchip-amber{background:var(--amber-bg);border-color:#f0d9a8;color:var(--amber);}
+.fchip-x{background:none;border:none;cursor:pointer;color:var(--faint);font-size:12px;line-height:1;padding:1px 4px;border-radius:50%;}
+.fchip-x:hover{color:var(--red);background:var(--red-bg);}
 .outlier-ctrl{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);}
 .outlier-ctrl input[type=range]{width:80px;accent-color:var(--target);cursor:pointer;}
 .outlier-badge{font-size:10px;padding:2px 7px;border-radius:99px;background:var(--red-bg);color:var(--red);font-weight:500;white-space:nowrap;}
@@ -667,15 +672,18 @@ let filtered = [];
 let dataTimestamp = null;
 
 // ═══ FILTER STATE ═════════════════════════════════════════
-const PAGES = ['week','performance','trends','wip','data'];
+const PAGES = ['week','performance','trends','wip','resurvey','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false});
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
 let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
 let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
+// One GLOBAL filter shared by every page — pageF keys all reference it so
+// existing per-page call sites keep working
+const GF = defaultF();
 const pageF = {};
-PAGES.forEach(p => pageF[p] = defaultF());
+PAGES.forEach(p => pageF[p] = GF);
 
 function saveFilterState(){
   try{ localStorage.setItem('ops_filters', JSON.stringify({pageF, currentPage})); }catch(e){}
@@ -732,12 +740,11 @@ function loadFilterState(){
     // Migrate legacy page key 'outliers' → 'wip'
     if(saved.pageF?.outliers && !saved.pageF.wip) saved.pageF.wip = saved.pageF.outliers;
     if(saved.currentPage === 'outliers') saved.currentPage = 'wip';
+    // Filters are global now — collapse old per-page state to the last-viewed page's filters
     const base = saved.globalF || {};
-    PAGES.forEach(p=>{
-      const pf = saved.pageF?.[p] || {};
-      pageF[p] = {...defaultF(), ...base, ...pf};
-      migrateRegion(pageF[p]);
-    });
+    const pf = saved.pageF?.[saved.currentPage] || saved.pageF?.performance || {};
+    Object.assign(GF, defaultF(), base, pf);
+    migrateRegion(GF);
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
 }
@@ -763,9 +770,20 @@ function applyFilter(){
   PAGES.forEach(p=>{ const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
 }
 
-// ═══ FILTER BAR ═══════════════════════════════════════════
+// Global filter pieces for pages that don't go through `filtered` (Resurveys)
+function gfDim(r){
+  if(Array.isArray(GF.region)&&GF.region.length&&!GF.region.includes(r.region)) return false;
+  if(GF.type!=='all'&&r.type!==GF.type) return false;
+  if(GF.resource&&GF.resource!=='all'&&r.resource!==GF.resource) return false;
+  return true;
+}
+function gfDateIn(d){ if(GF.dateFrom&&d<GF.dateFrom) return false; if(GF.dateTo&&d>GF.dateTo) return false; return true; }
+
+// ═══ FILTER BAR — one global bar, preset-first dates, active-filter chips ═══
+let customDatesOpen=false;
+function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
 function buildFBar(page){
-  const f = pageF[page];
+  const f = GF;
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
   const catDropdowns = catFields.map(fd=>{
     const vals = [...new Set(rows.map(r=>r[fd.key]).filter(Boolean))].sort();
@@ -781,45 +799,52 @@ function buildFBar(page){
   }).join('');
 
   const regions = [...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
-  const outlierCount = rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length;
   const lw=weekRange(-1), tw=weekRange(0), r4=recentRange(4), r13=recentRange(13);
+  const allDates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
+  const fullFrom=allDates[0]||'', fullTo=allDates[allDates.length-1]||'';
   const isLW=f.dateFrom===lw.from&&f.dateTo===lw.to;
   const isTW=f.dateFrom===tw.from&&f.dateTo===tw.to;
   const isR4=f.dateFrom===r4.from&&f.dateTo===r4.to;
   const isR13=f.dateFrom===r13.from&&f.dateTo===r13.to;
-  const isAll=!f.dateFrom&&!f.dateTo;
+  const isAll=(!f.dateFrom&&!f.dateTo)||(f.dateFrom===fullFrom&&f.dateTo===fullTo);
+  const isCustom=!isLW&&!isTW&&!isR4&&!isR13&&!isAll;
+  const showDates=customDatesOpen||isCustom;
   const regArr=Array.isArray(f.region)?f.region:[];
-  const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
+  const regLabel='Region'+(regArr.length?' · '+regArr.length:''); // chips show the actual selection
   const panelOpen=rgDropOpenPage===page;
 
+  // Active-filter chips — every non-default filter visible and removable in place
+  const chips=[];
+  regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
+  if(f.resource&&f.resource!=='all') chips.push(`<span class="fchip">${esc(f.resource)}<button class="fchip-x" aria-label="Remove resource filter" onclick="onF('${page}','resource','all')">×</button></span>`);
+  if(f.type&&f.type!=='all') chips.push(`<span class="fchip">${esc(f.type)}<button class="fchip-x" aria-label="Remove type filter" onclick="onF('${page}','type','all')">×</button></span>`);
+  if(isCustom) chips.push(`<span class="fchip">${f.dateFrom?fmtDateShort(f.dateFrom):'…'} – ${f.dateTo?fmtDateShort(f.dateTo):'…'}<button class="fchip-x" aria-label="Clear custom dates" onclick="setDateRange('${page}','','')">×</button></span>`);
+  if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
+
   return `<div class="fbar">
-    <div class="fgroup">
+    <div class="fbtn-group" role="group" aria-label="Date range">
+      <button class="fbtn${isAll?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','','')">All</button>
+      <button class="fbtn${isR13?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${r13.from}','${r13.to}')">13w</button>
+      <button class="fbtn${isR4?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${r4.from}','${r4.to}')">4w</button>
+      <button class="fbtn${isLW?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${lw.from}','${lw.to}')">Last wk</button>
+      <button class="fbtn${isTW?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${tw.from}','${tw.to}')">This wk</button>
+      <button class="fbtn${isCustom?' fbtn-active':''}" onclick="toggleCustomDates()">Custom</button>
+    </div>
+    ${showDates?`<div class="fgroup">
       <input type="date" aria-label="Completed from date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
       <span style="color:var(--faint);font-size:10px;">–</span>
       <input type="date" aria-label="Completed to date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
-    </div>
-    <div class="fbtn-group">
-      <button class="fbtn${isAll?' fbtn-active':''}" onclick="setDateRange('${page}','','')">All</button>
-      <button class="fbtn${isR13?' fbtn-active':''}" onclick="setDateRange('${page}','${r13.from}','${r13.to}')">13w</button>
-      <button class="fbtn${isR4?' fbtn-active':''}" onclick="setDateRange('${page}','${r4.from}','${r4.to}')">4w</button>
-      <button class="fbtn${isLW?' fbtn-active':''}" onclick="setDateRange('${page}','${lw.from}','${lw.to}')">Last wk</button>
-      <button class="fbtn${isTW?' fbtn-active':''}" onclick="setDateRange('${page}','${tw.from}','${tw.to}')">This wk</button>
-    </div>
+    </div>`:''}
     <div class="fsep"></div>
-    <button class="fbtn${f.removeOutliers?' fbtn-active':''}" onclick="toggleOutliers('${page}')">Hide &gt;${S.outlierDays}d</button>
-    <span class="fhint">${outlierCount}${f.removeOutliers?' hidden':' above'}</span>
-    <div class="fsep"></div>
-    <div class="fgroup">
-      <span class="flabel">Region</span>
-      <div class="rgdrop">
-        <button class="rgdrop-btn${regArr.length?' active':''}" aria-label="Filter by region" aria-expanded="${panelOpen}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
-        <div class="rgdrop-panel${panelOpen?' open':''}">
-          ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
-          ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
-        </div>
+    <div class="rgdrop">
+      <button class="rgdrop-btn${regArr.length?' active':''}" aria-label="Filter by region" aria-expanded="${panelOpen}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
+      <div class="rgdrop-panel${panelOpen?' open':''}">
+        ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
+        ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
       </div>
     </div>
     ${catDropdowns}
+    ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
       <span class="fhint" id="fb-hint-${page}">${filtered.length} of ${rows.length} shown</span>
@@ -853,7 +878,7 @@ function onRegionClear(page,ev){
 
 function renderFBars(){
   PAGES.forEach(p=>{
-    if(p==='wip') return;
+    if(p==='wip'||p==='week') return; // WIP has its own bar; Current is fixed-week
     if(p==='trends'){ const el=document.getElementById('fb-trends'); if(el) el.innerHTML=''; return; }
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
@@ -891,7 +916,8 @@ function clearF(page){
   def.removeOutliers=S.defaultRemoveOutliers;
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
-  pageF[page]={...def};
+  Object.assign(GF, def); // global filter — mutate in place, pageF keys alias it
+  customDatesOpen=false;
   saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
@@ -1116,7 +1142,7 @@ let _drillRows=[];
 let _rsDefects=[];
 let _lastWeekSrc=[];
 function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys',_rsDefects,{groupBy:'resource'}); }
-let rsTimeFilter='all'; // 'all' | '13wk' | '4wk' | 'open'
+let rsTimeFilter='all'; // 'all' (uses global date range) | 'open' (currently open only)
 const _DRILL_RES_COL={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
 function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
@@ -1188,10 +1214,15 @@ function copyDrillTable(){
 }
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
-function rsFilterApply(arr){ const today=localISO(new Date()); if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete'); if(rsTimeFilter==='13wk'){ const cut=subtractDays(today,91); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } if(rsTimeFilter==='4wk'){ const cut=subtractDays(today,28); return arr.filter(r=>(r.resurvey_requested||r.complete||'')>=cut); } return arr; }
-function drillResRegion(reg){ const src=rows.filter(r=>hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
-function drillSalesRepRs(name){ const src=rows.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
-function drillAttribution(attr){ const src=rows.filter(r=>hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function rsFilterApply(arr){
+  if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
+  // Date range from the global filter bar; rows with no datable field stay visible
+  if(GF.dateFrom||GF.dateTo) return arr.filter(r=>{ const d=r.resurvey_requested||r.complete; return !d||gfDateIn(d); });
+  return arr;
+}
+function drillResRegion(reg){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
+function drillSalesRepRs(name){ const src=rows.filter(r=>gfDim(r)&&r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillAttribution(attr){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
@@ -2155,7 +2186,8 @@ function renderResurvey(){
   const el=document.getElementById('rs-content'); if(!el) return;
   const today=localISO(new Date());
 
-  const allHasResurvey=rows.filter(r=>r.resurvey_requested||r.resurvey_complete||r.resurvey_reason||r.reopened_by_design==='1');
+  const scoped=rows.filter(gfDim); // global region/resource/type filters apply here too
+  const allHasResurvey=scoped.filter(hasResurveySig);
   const hasResurvey=rsFilterApply(allHasResurvey);
   const openResurvey=allHasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
   const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete||r.list==='Complete');
@@ -2165,8 +2197,8 @@ function renderResurvey(){
 
   const RES_COLOR={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
   const RES_LABEL={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
-  const allCompletions=rows.filter(r=>isComplete(r));
-  const completions=rsTimeFilter==='open'?[]:rsTimeFilter==='4wk'?allCompletions.filter(r=>r.complete>=subtractDays(today,28)):rsTimeFilter==='13wk'?allCompletions.filter(r=>r.complete>=subtractDays(today,91)):allCompletions;
+  const allCompletions=scoped.filter(r=>isComplete(r));
+  const completions=rsTimeFilter==='open'?[]:allCompletions.filter(r=>gfDateIn(r.complete));
   const internalDefects=completions.filter(r=>r.resurvey_attributed==='Surveyor');
   _rsDefects=internalDefects;
   const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
@@ -2245,7 +2277,7 @@ function renderResurvey(){
   const rsTgl=(v,l)=>`<button class="tgl-btn${rsTimeFilter===v?' active':''}" onclick="setRsTimeFilter('${v}')">${l}</button>`;
   el.innerHTML=`
   <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
-    <div class="toggle-group">${rsTgl('all','All Time')}${rsTgl('13wk','13 Weeks')}${rsTgl('4wk','4 Weeks')}${rsTgl('open','Currently Open')}</div>
+    <div class="toggle-group">${rsTgl('all','Date Range')}${rsTgl('open','Currently Open')}</div>
   </div>
   <div class="kg kg4">
     <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
@@ -2782,11 +2814,8 @@ window.addEventListener('load',()=>{
   // Set date range — autoDateRange always wins over saved dates, but not over URL dates
   clearFenceCache();
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
-  if(S.autoDateRange&&dates.length){
-    PAGES.forEach(p=>{
-      if(urlState&&urlState.page===p&&urlState.hadDates) return;
-      pageF[p].dateFrom=dates[0];pageF[p].dateTo=dates[dates.length-1];
-    });
+  if(S.autoDateRange&&dates.length&&!(urlState&&urlState.hadDates)){
+    GF.dateFrom=dates[0]; GF.dateTo=dates[dates.length-1];
   }
   // Show data freshness in nav
   const navTs = document.getElementById('nav-ts');
