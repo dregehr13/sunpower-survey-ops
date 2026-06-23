@@ -1297,7 +1297,6 @@ function weeklyStatsByComplete(src){
   const m={};
   src.forEach(r=>{
     if(!r.complete) return;
-    if(r.start && r.complete < r.start) return; // bad data: completion predates start
     const [y,mo,d]=r.complete.split('-').map(Number);
     const dt=new Date(y,mo-1,d);
     const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1));
