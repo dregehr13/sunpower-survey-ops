@@ -1,7 +1,9 @@
 {
   "rewrites": [
     { "source": "/compose", "destination": "/compose/index.html" },
-    { "source": "/compose/(.*)", "destination": "/compose/index.html" }
+    { "source": "/compose/(.*)", "destination": "/compose/index.html" },
+    { "source": "/queues", "destination": "/queues/index.html" },
+    { "source": "/queues/(.*)", "destination": "/queues/index.html" }
   ],
   "headers": [
     {
