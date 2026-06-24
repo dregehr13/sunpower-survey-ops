@@ -137,6 +137,7 @@ export default async function handler(req, res) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     const today = localDateStr();
 
+    const CHUNK = 200;
     // Replace all rows — delete everything first so stale projects don't linger
     await supabase.from('survey_rows').delete().neq('task_id', '');
     for (let i = 0; i < rows.length; i += CHUNK) {
