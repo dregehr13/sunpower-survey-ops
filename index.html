@@ -2255,7 +2255,9 @@ function renderResurvey(){
   const today=localISO(new Date());
 
   const scoped=rows.filter(gfDim); // global region/resource/type filters apply here too
-  const allHasResurvey=scoped.filter(hasResurveySig);
+  const isResurveyRow=r=>!!(r.resurvey_complete||r.resurvey_scheduled||(r.resurvey_requested&&(r.list==='Open'||r.list==='Holding')));
+  const isFPYDefect=r=>!!(r.resurvey_complete||r.resurvey_scheduled);
+  const allHasResurvey=scoped.filter(isResurveyRow);
   const hasResurvey=rsFilterApply(allHasResurvey);
   const openResurvey=allHasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
   const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete||r.list==='Complete');
@@ -2267,14 +2269,14 @@ function renderResurvey(){
   const RES_LABEL={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
   const allCompletions=scoped.filter(r=>isComplete(r));
   const completions=rsTimeFilter==='open'?[]:allCompletions.filter(r=>gfDateIn(r.complete));
-  const internalDefects=completions.filter(r=>hasResurveySig(r));
+  const internalDefects=completions.filter(r=>isFPYDefect(r));
   _rsDefects=internalDefects;
   const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
   const resFPY=['Sales Rep','Radicl Services','SunPower Surveyor'].map(res=>{
     const comps=completions.filter(r=>r.resource===res);
-    const defs=comps.filter(r=>hasResurveySig(r));
+    const defs=comps.filter(r=>isFPYDefect(r));
     return {res,comps:comps.length,defs:defs.length,fpy:comps.length?((comps.length-defs.length)/comps.length*100):null};
   }).filter(r=>r.comps>0);
 
@@ -2295,7 +2297,7 @@ function renderResurvey(){
   // By region — sorted by resurvey count desc, FPY split by resource
   const fpyForSegment=(reg,res)=>{
     const comps=completions.filter(r=>r.region===reg&&r.resource===res);
-    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    const defects=comps.filter(r=>isFPYDefect(r));
     return comps.length?((comps.length-defects.length)/comps.length*100):null;
   };
   const regionData=[...new Set(hasResurvey.map(r=>r.region))].filter(Boolean).map(reg=>{
@@ -2317,7 +2319,7 @@ function renderResurvey(){
   }).map(res=>{
     const rr=hasResurvey.filter(r=>r.resource===res);
     const comps=completions.filter(r=>r.resource===res);
-    const defects=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    const defects=comps.filter(r=>isFPYDefect(r));
     const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
     const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     return {res,count:rr.length,open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length,avgCt:avg(cts),fpy:rfpy};
@@ -2327,7 +2329,7 @@ function renderResurvey(){
   const MIN_REP_COMPS=3;
   const salesRepData=[...new Set(completions.map(r=>r.sales_rep).filter(Boolean))].map(name=>{
     const comps=completions.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep');
-    const resur=comps.filter(r=>hasResurveySig(r));
+    const resur=comps.filter(r=>isFPYDefect(r));
     const rate=comps.length?resur.length/comps.length*100:null;
     const regCounts={};comps.forEach(r=>{if(r.region)regCounts[r.region]=(regCounts[r.region]||0)+1;});
     const primaryRegion=Object.entries(regCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
