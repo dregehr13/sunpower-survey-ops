@@ -1139,7 +1139,7 @@ const TIP={
   wip:'Open surveys: started but not yet complete. Age counts from resurvey request if any, else completion +2 days, else project start.',
   projected:'Completed so far + 90% of surveys scheduled for the rest of the week + unscheduled WIP ÷ recent avg cycle time × business days left. Based on yesterday’s export.',
   schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
-  fpy:'First Pass Yield = (completions − surveyor-attributed resurveys) ÷ completions. Counts only resurveys attributed to the surveyor as internal defects.',
+  fpy:'First Pass Yield = (completions − resurveys with any attribution) ÷ completions. Any attributed resurvey counts as a defect regardless of cause.',
   rsRate:'Projects with any resurvey signal (request, completion, reason, or design reopen) ÷ completions in view.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
 };
@@ -1156,7 +1156,7 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 let _drillRows=[];
 let _rsDefects=[];
 let _lastWeekSrc=[];
-function drillFPYDefects(){ openDrill('FPY Defects','Surveyor-attributed resurveys',_rsDefects,{groupBy:'resource'}); }
+function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys',_rsDefects,{groupBy:'resource'}); }
 let rsTimeFilter='all'; // 'all' (uses global date range) | 'open' (currently open only)
 const _DRILL_RES_COL={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
@@ -2267,14 +2267,14 @@ function renderResurvey(){
   const RES_LABEL={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
   const allCompletions=scoped.filter(r=>isComplete(r));
   const completions=rsTimeFilter==='open'?[]:allCompletions.filter(r=>gfDateIn(r.complete));
-  const internalDefects=completions.filter(r=>r.resurvey_attributed==='Surveyor');
+  const internalDefects=completions.filter(r=>!!r.resurvey_attributed);
   _rsDefects=internalDefects;
   const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
   const resFPY=['Sales Rep','Radicl Services','SunPower Surveyor'].map(res=>{
     const comps=completions.filter(r=>r.resource===res);
-    const defs=comps.filter(r=>r.resurvey_attributed==='Surveyor');
+    const defs=comps.filter(r=>!!r.resurvey_attributed);
     return {res,comps:comps.length,defs:defs.length,fpy:comps.length?((comps.length-defs.length)/comps.length*100):null};
   }).filter(r=>r.comps>0);
 
