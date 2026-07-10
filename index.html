@@ -1522,7 +1522,7 @@ function renderThisWeek(){
     ?completedTW.length+Math.round(scheduledRemCount*0.9+unscheduledWip/recentAvgCt*bDaysRemaining)
     :completedTW.length;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const medT=med(tots);
+  const avgT=avg(tots);
   const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -1533,7 +1533,7 @@ function renderThisWeek(){
     <div class="ekcard"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
     <div class="ekcard"><div class="eklabel">Projected total${kinfo(TIP.projected)}</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
     <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed</div></div>
+    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
   // Day-by-day breakdown
