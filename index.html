@@ -222,6 +222,11 @@ tr:hover td{background:#fafaf8;}
 .verdict:hover{box-shadow:var(--shadow);}
 .verdict-word{font-size:13px;font-weight:700;letter-spacing:-.01em;flex-shrink:0;}
 .verdict-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.verdict-text b{font-weight:700;}
+.verdict-ok .verdict-text b{color:#177245;}
+.verdict-warn .verdict-text b{color:#9a5b13;}
+.verdict-bad .verdict-text b{color:#b42323;}
+.vsep{opacity:.4;margin:0 1px;}
 .verdict-go{font-weight:600;font-size:12px;flex-shrink:0;}
 .verdict-ok{background:var(--green-bg);border-color:#cbe5d3;}
 .verdict-ok .verdict-word,.verdict-ok .verdict-go{color:var(--green);}
@@ -1391,12 +1396,12 @@ function renderNeedsAttn(){
   const state=avgLW==null?'ok':avgLW<=S.targetAvg?'ok':avgLW<=S.targetAvg+2?'warn':'bad';
   const word=state==='ok'?'On track':state==='warn'?'Slightly behind':'Behind target';
   const bits=[];
-  if(avgLW!=null) bits.push(`last week avg ${avgLW.toFixed(1)}d vs ${S.targetAvg}d target`);
-  bits.push(projects?`${projects} project${projects!==1?'s':''} flagged for review`:'nothing flagged');
-  if(projects&&items.length){ const worst=items.reduce((a,b)=>b.sev>a.sev?b:a); bits.push(`worst: ${esc(worst.r.project||worst.r.address||'—')} ${worst.text}`); }
+  if(avgLW!=null) bits.push(`last week avg <b>${avgLW.toFixed(1)}d</b> vs ${S.targetAvg}d target`);
+  bits.push(projects?`<b>${projects}</b> project${projects!==1?'s':''} flagged for review`:'nothing flagged');
+  if(projects&&items.length){ const worst=items.reduce((a,b)=>b.sev>a.sev?b:a); bits.push(`worst: <b>${esc(worst.r.project||worst.r.address||'—')}</b> ${worst.text}`); }
   el.innerHTML=`<div class="verdict verdict-${state}" role="button" tabindex="0" onclick="openAttnView()" onkeydown="if(event.key==='Enter')openAttnView()">
     <span class="verdict-word">${word}</span>
-    <span class="verdict-text">${bits.join(' · ')}</span>
+    <span class="verdict-text">${bits.join(' <span class="vsep">·</span> ')}</span>
     ${projects?`<span class="verdict-go">Review on WIP →</span>`:''}
   </div>`;
 }
