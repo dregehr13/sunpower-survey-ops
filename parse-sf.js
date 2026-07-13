@@ -4,6 +4,8 @@
 // Outputs: JSON array to stdout
 
 import XLSX from 'xlsx';
+import { readFileSync } from 'fs';
+import OpsMetrics from './lib/metrics.cjs';
 
 const file = process.argv[2];
 if (!file) { console.error('Usage: node parse-sf.js <report.xls>'); process.exit(1); }
@@ -121,5 +123,54 @@ allData.slice(headerRowIdx + 1).forEach((row, i) => {
 });
 
 if (!rows.length) { console.error('ERROR: No rows parsed — check that the file is a Salesforce report export.'); process.exit(1); }
+
+// ── Import sanity report ─────────────────────────────────────────────
+// Non-blocking: warnings go to stderr (stdout carries the JSON) and never
+// fail the push. Each check emits at most one line.
+const warnings = [];
+const sample = (arr, fmt, n = 3) => arr.slice(0, n).map(fmt).join('; ') + (arr.length > n ? '; …' : '');
+const label = r => r.project || r.address || r.task_id || 'row ' + r.id;
+
+// Complete before start / negative resurvey cycle (raw dates — ct_total is clamped to 0 later)
+const backwards = rows.filter(r => r.start && r.complete && r.complete < r.start);
+if (backwards.length) warnings.push(`${backwards.length} row(s) complete before start: ${sample(backwards, r => `${label(r)} (${r.start} → ${r.complete})`)}`);
+const rsBackwards = rows.filter(r => r.resurvey_requested && r.resurvey_complete && r.resurvey_complete < r.resurvey_requested);
+if (rsBackwards.length) warnings.push(`${rsBackwards.length} row(s) resurvey complete before requested: ${sample(rsBackwards, r => `${label(r)} (${r.resurvey_requested} → ${r.resurvey_complete})`)}`);
+
+// Duplicate project ids (TaskRay Task ID)
+const idCounts = {};
+rows.forEach(r => { if (r.task_id) idCounts[r.task_id] = (idCounts[r.task_id] || 0) + 1; });
+const dupIds = Object.entries(idCounts).filter(([, n]) => n > 1);
+if (dupIds.length) warnings.push(`${dupIds.length} duplicate project id(s): ${sample(dupIds, ([id, n]) => `${id} ×${n}`)}`);
+
+// Unrecognized resource values
+const KNOWN_RESOURCES = new Set(['', 'Sales Rep', 'Radicl Services', 'SunPower Surveyor']);
+const badResources = [...new Set(rows.map(r => r.resource))].filter(v => !KNOWN_RESOURCES.has(v));
+if (badResources.length) warnings.push(`${badResources.length} unrecognized resource value(s): ${sample(badResources, v => `"${v}"`)}`);
+
+// Rep names that differ only by casing (split one rep's stats until normalized)
+const repCasings = {};
+rows.forEach(r => { if (r.sales_rep) (repCasings[r.sales_rep.toLowerCase()] ??= new Set()).add(r.sales_rep); });
+const casingClashes = Object.values(repCasings).filter(s => s.size > 1);
+if (casingClashes.length) warnings.push(`${casingClashes.length} rep name(s) with casing variants: ${sample(casingClashes, s => [...s].join(' / '))}`);
+
+// Open rows with scheduled dates far in the past (likely stale in SF)
+const today = new Date(); today.setHours(12, 0, 0, 0);
+const cutoff60 = new Date(today); cutoff60.setDate(cutoff60.getDate() - 60);
+const stale = `${cutoff60.getFullYear()}-${String(cutoff60.getMonth() + 1).padStart(2, '0')}-${String(cutoff60.getDate()).padStart(2, '0')}`;
+const staleSched = rows.filter(r => !OpsMetrics.isComplete(r) && r.scheduled && r.scheduled < stale);
+if (staleSched.length) warnings.push(`${staleSched.length} open row(s) with scheduled dates >60 days past: ${sample(staleSched, r => `${label(r)} (${r.scheduled})`)}`);
+
+// Row-count swing vs the current data.json
+try {
+  const prev = JSON.parse(readFileSync(new URL('./data.json', import.meta.url), 'utf8'));
+  if (Array.isArray(prev) && prev.length) {
+    const swing = (rows.length - prev.length) / prev.length;
+    if (Math.abs(swing) > 0.2) warnings.push(`row count swung ${(swing * 100).toFixed(0)}% vs current data.json (${prev.length.toLocaleString()} → ${rows.length.toLocaleString()}) — check the report filters`);
+  }
+} catch { /* no existing data.json — first import, nothing to compare */ }
+
+warnings.forEach(w => console.error('WARN: ' + w));
+console.error(`${rows.length.toLocaleString()} rows, ${warnings.length} warning${warnings.length === 1 ? '' : 's'}`);
 
 process.stdout.write(JSON.stringify(rows));

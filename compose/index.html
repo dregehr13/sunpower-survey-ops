@@ -197,30 +197,8 @@ const DASHBOARD_URL = 'https://sunpower-survey-ops.vercel.app';
 // Fields used to segment cycle time estimates for WIP projection.
 // Order matters for fallback: most specific first. When a combo has
 // no recent completions, it drops the last dim and retries.
+// buildSegmentAvgs / lookupSegmentAvg live in lib/metrics.cjs.
 const PROJECTION_DIMS = ['region', 'resource'];
-
-// Build a map of segment key → avg cycle time from a set of completions.
-function buildSegmentAvgs(completions, dims){
-  const m={};
-  completions.forEach(r=>{
-    const key=dims.map(d=>r[d]||'').join('|');
-    if(!m[key]) m[key]=[];
-    m[key].push(r.ct_total);
-  });
-  const out={};
-  Object.entries(m).forEach(([k,vals])=>{ const a=avg(vals); if(a!=null) out[k]=a; });
-  return out;
-}
-
-// Look up estimated cycle time for a single WIP row.
-// Falls back from full key → prefix subsets → global avg.
-function lookupSegmentAvg(r, dims, segAvgs, globalAvg){
-  for(let len=dims.length; len>=1; len--){
-    const key=dims.slice(0,len).map(d=>r[d]||'').join('|');
-    if(segAvgs[key]!=null) return segAvgs[key];
-  }
-  return globalAvg;
-}
 
 // ─── STATE ────────────────────────────────────────────────
 let mode = 'monday';
@@ -255,7 +233,8 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, wipAgeFrom, avg, med} = OpsMetrics;
+const {DATA_CUTOFF, isComplete, wipAgeFrom, avg, med,
+       businessDays, buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 const ROWS = OpsMetrics.filterRows(RAW);
 
 // ─── STATS HELPERS ────────────────────────────────────────
@@ -315,10 +294,8 @@ function computeStats(){
     const rolling=[medW1,medW2,medW3].filter(x=>x!=null);
     const rollingMed=rolling.length?rolling.reduce((a,b)=>a+b,0)/rolling.length:null;
     const prevMed=avg([medW1,medW2].filter(x=>x!=null));
-    let trend=null;
-    if(medW3!=null&&prevMed!=null){
-      trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slowing':'Stable'; // same labels as the dashboard Trends hero
-    }
+    // Same labels as the dashboard Trends hero; median dead band is wider (±0.3d)
+    const trend=trendLabel(medW3,prevMed,TREND_BAND_MED);
 
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
     const newIn=ROWS.filter(r=>r.start>=period.from&&r.start<=period.to).length;
@@ -353,11 +330,7 @@ function computeStats(){
     const newInWTD=ROWS.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
 
     // Pipeline-based projection (Little's Law: throughput = WIP / avg cycle)
-    const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-    // Mon=1…Fri=5. Sunday yesterday = Monday today: new week, 0 days elapsed.
-    // Saturday yesterday = Sunday today: business week done.
-    const daysElapsed=yesterdayDow===0?0:yesterdayDow===6?5:yesterdayDow;
-    const daysRemaining=Math.max(5-daysElapsed,0);
+    const {remaining:daysRemaining}=businessDays(yesterday);
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
     const recentCompletions=ROWS.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
     const globalAvgCt=avg(recentCompletions.map(r=>r.ct_total))||4;
@@ -371,9 +344,7 @@ function computeStats(){
     ).length;
     const unscheduledWip=Math.max(wipProjects.length-scheduledRem,0);
     const wip=wipProjects.length;
-    const projectedWeek=daysRemaining>0
-      ?wtdRows.length+Math.round(scheduledRem*0.9+unscheduledWip/recentAvgCt*daysRemaining)
-      :wtdRows.length;
+    const projectedWeek=projectWeekTotal(wtdRows.length,scheduledRem,unscheduledWip,recentAvgCt,daysRemaining);
 
     // 4-week historical weekly completion avg
     const wtdMonday=new Date(wtdFrom+'T12:00:00');
@@ -544,12 +515,13 @@ async function buildEmailHTML(s, commentary, manualNote){
     return        {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
   }
 
-  // Cycle time card colors
+  // Cycle time card colors — bands come from the shared bandFor helper
   function ctColors(v,tgt=3){
-    if(v==null)        return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
-    if(v<=tgt)         return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
-    if(v<=tgt+2)       return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a',mark:''};
-    return              {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca',mark:''};
+    const band=bandFor(v,tgt);
+    if(band==='good')  return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8',mark:' ✓'};
+    if(band==='mid')   return {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a',mark:''};
+    if(band==='bad')   return {bg:'#fff1f1',b:'#fecaca',lc:'#ef4444',vc:'#991b1b',sc:'#ef4444',sbc:'#fecaca',mark:''};
+    return              {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8',mark:''};
   }
 
   let rows='';

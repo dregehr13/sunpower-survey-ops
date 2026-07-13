@@ -19,6 +19,9 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
 - Metric definitions (DATA_CUTOFF, isComplete, isWIP, wipAgeFrom, avg/med/pct, hasResurveySig) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- Derived analytics also live in `lib/metrics.cjs`: businessDays (weekend rule), buildSegmentAvgs/lookupSegmentAvg, projectWeekTotal, bandFor (≤target/≤target+2 bands), trendLabel (TREND_BAND_AVG=0.1 dashboard avg-based, TREND_BAND_MED=0.3 compose median-based — two calculations on purpose)
+- Tests: `npm test` (node:test, `test/metrics.test.js`) locks down every definition above — run it before changing metrics
+- parse-sf.js prints a non-blocking import sanity report to stderr (backwards dates, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings); push.sh surfaces it automatically
 - Main cycle metric: **Project Start Date → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export

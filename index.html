@@ -590,7 +590,8 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, hasResurveySig, avg, med, pct} = OpsMetrics;
+const {isComplete, isWIP, wipAgeFrom, hasResurveySig, avg, med, pct,
+       businessDays, buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -1122,9 +1123,8 @@ function recalc(r){
   if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0;
   r.ct_full=(r.ct_total!=null&&r.ct_resurvey!=null)?Math.round((r.ct_total+r.ct_resurvey)*10)/10:null;
 }
-// isComplete, isWIP, wipAgeFrom, avg, med, pct come from lib/metrics.cjs (destructured at top)
-function buildSegmentAvgs(src,dims){ const m={}; src.forEach(r=>{ const k=dims.map(d=>r[d]||'').join('|'); if(!m[k]) m[k]=[]; m[k].push(r.ct_total); }); const out={}; Object.entries(m).forEach(([k,v])=>{ const a=avg(v); if(a!=null) out[k]=a; }); return out; }
-function lookupSegmentAvg(r,dims,segs,fallback){ for(let l=dims.length;l>=1;l--){ const k=dims.slice(0,l).map(d=>r[d]||'').join('|'); if(segs[k]!=null) return segs[k]; } return fallback; }
+// isComplete, isWIP, wipAgeFrom, avg, med, pct, buildSegmentAvgs, lookupSegmentAvg,
+// businessDays, projectWeekTotal, bandFor, trendLabel come from lib/metrics.cjs (destructured at top)
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
 function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
@@ -1421,7 +1421,7 @@ function renderLastWeek(){
   const src=rows.filter(r=>isComplete(r)&&r.complete>=lw.from&&r.complete<=lw.to);
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
+  const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title">Last Week</div>
     <div class="exec-sub">${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>`;
@@ -1436,8 +1436,8 @@ function renderLastWeek(){
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.complete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian,S.targetMedian+2)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
+    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
+    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
     <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
     <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
@@ -1521,11 +1521,7 @@ function renderThisWeek(){
   const atRiskRs=rows.filter(r=>r.resurvey_scheduled&&r.resurvey_scheduled>=tw.from&&r.resurvey_scheduled<=tw.to&&r.list!=='Complete'&&!r.resurvey_complete)
     .map(r=>({r,sched:r.resurvey_scheduled,isRs:true,openFrom:r.resurvey_requested||r.start}));
   const atRisk=[...atRiskInit,...atRiskRs];
-  const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-  // Sunday yesterday = Monday today: the new week hasn't started (5 days remain).
-  // Saturday yesterday = Sunday today: the business week is done.
-  const bDaysElapsed=yesterdayDow===0?0:yesterdayDow===6?5:yesterdayDow;
-  const bDaysRemaining=Math.max(5-bDaysElapsed,0);
+  const {elapsed:bDaysElapsed,remaining:bDaysRemaining}=businessDays(yesterday);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
   const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
@@ -1536,12 +1532,10 @@ function renderThisWeek(){
   const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),yesterday)));
   const scheduledRemCount=scheduledRem.length;
   const unscheduledWip=Math.max(wip-scheduledRemCount,0);
-  const projTotal=bDaysRemaining>0
-    ?completedTW.length+Math.round(scheduledRemCount*0.9+unscheduledWip/recentAvgCt*bDaysRemaining)
-    :completedTW.length;
+  const projTotal=projectWeekTotal(completedTW.length,scheduledRemCount,unscheduledWip,recentAvgCt,bDaysRemaining);
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const avgT=avg(tots);
-  const eks=(v,g,b)=>v==null?'':(v<=g?'eks-good':v<=b?'eks-mid':'eks-bad');
+  const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   document.getElementById('cur-hero-hdr').innerHTML=`
@@ -1552,7 +1546,7 @@ function renderThisWeek(){
     <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
     <div class="ekcard"><div class="eklabel">Projected total${kinfo(TIP.projected)}</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
     <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
-    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
+    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
   // Day-by-day breakdown
@@ -1641,7 +1635,7 @@ function renderPerformance(){
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
   // Grade each stat against its own target (same bands as the Current page)
-  const kclsBands=(v,tgt)=>v==null?'':(v<=tgt?'kg-c':v<=tgt+2?'ka-c':'kr-c');
+  const kclsBands=(v,tgt)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,tgt)]||'');
   const kclsAvg=v=>kclsBands(v,S.targetAvg);
   const kclsMed=v=>kclsBands(v,S.targetMedian);
   const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
@@ -1874,8 +1868,8 @@ function renderTrends(){
   const prevWks=doneWeeks.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const recentAvgCycle=avg(recentWks),prevAvgCycle=avg(prevWks);
   const trendDelta=(recentAvgCycle!=null&&prevAvgCycle!=null)?Math.round((recentAvgCycle-prevAvgCycle)*10)/10:null;
-  const trendLabel=trendDelta==null?'—':(trendDelta<-0.1?'Improving':trendDelta>0.1?'Slowing':'Stable');
-  const trendCls=trendDelta==null?'':(trendDelta<-0.1?'kg-c':trendDelta>0.1?'kr-c':'');
+  const trendTxt=trendDelta==null?'—':trendLabel(trendDelta,0,TREND_BAND_AVG);
+  const trendCls=trendTxt==='Improving'?'kg-c':trendTxt==='Slowing'?'kr-c':'';
   const trendSub=trendDelta==null?'not enough data':(Math.abs(trendDelta).toFixed(1)+'d '+(trendDelta<0?'faster':'slower')+' (3wk vs prior 3wk)');
 
   // Scrollable chart sizing: ~12 weeks visible, scroll for the rest
@@ -1887,7 +1881,7 @@ function renderTrends(){
 
   document.getElementById('tr-content').innerHTML=`
     <div class="kg kg5">
-      <div class="kcard"><div class="klabel">Trend (3wk)</div><div class="kval ${trendCls}">${trendLabel}</div><div class="ksub">${trendSub}</div></div>
+      <div class="kcard"><div class="klabel">Trend (3wk)</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
       <div class="kcard"><div class="klabel">Avg weekly pace</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
       <div class="kcard"><div class="klabel">Best week</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
       <div class="kcard"><div class="klabel">P75 cycle</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
