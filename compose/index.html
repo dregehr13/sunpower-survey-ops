@@ -317,7 +317,7 @@ function computeStats(){
     const prevMed=avg([medW1,medW2].filter(x=>x!=null));
     let trend=null;
     if(medW3!=null&&prevMed!=null){
-      trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slipping':'Holding';
+      trend=medW3<prevMed-0.3?'Improving':medW3>prevMed+0.3?'Slowing':'Stable'; // same labels as the dashboard Trends hero
     }
 
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
@@ -354,7 +354,9 @@ function computeStats(){
 
     // Pipeline-based projection (Little's Law: throughput = WIP / avg cycle)
     const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-    const daysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow; // Mon=1…Fri=5, Sat/Sun=5
+    // Mon=1…Fri=5. Sunday yesterday = Monday today: new week, 0 days elapsed.
+    // Saturday yesterday = Sunday today: business week done.
+    const daysElapsed=yesterdayDow===0?0:yesterdayDow===6?5:yesterdayDow;
     const daysRemaining=Math.max(5-daysElapsed,0);
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
     const recentCompletions=ROWS.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
@@ -417,7 +419,7 @@ function getObservations(s){
     if(s.medCycle!=null&&s.medCycle>6) obs.push(`Median cycle time (${s.medCycle.toFixed(1)}d) is significantly above the 3d target.`);
     else if(s.medCycle!=null&&s.medCycle>4) obs.push(`Median cycle time (${s.medCycle.toFixed(1)}d) is above target.`);
     if(s.outlierCount>0) obs.push(`${s.outlierCount} outlier${s.outlierCount>1?'s':''} above IQR fence. Longest: ${s.maxOutlier.toFixed(0)}d.`);
-    if(s.trend==='Slipping') obs.push('3-week trend is slipping — median cycle time is moving up.');
+    if(s.trend==='Slowing') obs.push('3-week trend is slowing — median cycle time is moving up.');
     if(s.trend==='Improving') obs.push('3-week trend is improving — median cycle time is moving down.');
     // Overdue WIP — include notes for AI context
     const today=new Date(); today.setHours(12,0,0,0);
@@ -813,7 +815,7 @@ function renderStats(){
       ${stats.pipelineRatio!=null?`<div class="stat-row"><span class="stat-label">Pipeline ratio</span><span class="stat-val ${stats.pipelineRatio<=1?'good':'warn'}">${stats.pipelineRatio.toFixed(2)}× (${stats.prAvg.toFixed(1)} avg/wk)</span></div>`:''}
       <div class="stat-row"><span class="stat-label">Median cycle</span><span class="stat-val ${ctClass}">${ct!=null?ct.toFixed(1)+'d':'—'}</span></div>
       ${stats.outlierCount>0?`<div class="stat-row"><span class="stat-label">Outliers above fence</span><span class="stat-val warn">${stats.outlierCount} (max ${stats.maxOutlier.toFixed(0)}d)</span></div>`:''}
-      <div class="stat-row"><span class="stat-label">3-wk trend</span><span class="stat-val ${stats.trend==='Improving'?'good':stats.trend==='Slipping'?'bad':''}">${stats.trend||'—'}</span></div>
+      <div class="stat-row"><span class="stat-label">3-wk trend</span><span class="stat-val ${stats.trend==='Improving'?'good':stats.trend==='Slowing'?'bad':''}">${stats.trend||'—'}</span></div>
       ${stats.rollingMed!=null?`<div class="stat-row"><span class="stat-label">3-wk rolling med</span><span class="stat-val">${stats.rollingMed.toFixed(1)}d</span></div>`:''}`;
   } else {
     pel.textContent=`Yesterday · ${fmtMed(stats.yesterday)}`;

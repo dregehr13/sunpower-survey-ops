@@ -23,7 +23,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export
 - New fields must not break old rows (import defaults missing sfCols to `''`)
-- Only initial surveys for now — no resurvey tracking until Resource/Type of Survey fields are in SF
+- Resurvey tracking is live (Resurveys tab: FPY, attribution, open queue). Per-survey resource still only covers the initial survey — future SF survey objects will fix that (see memory "Come back to" list)
 
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
@@ -38,11 +38,10 @@ triggers on every untrusted session and Chrome 134+ blocks CDP on the default
 profile. Manual export + push.sh is the reliable workflow until the SF API
 ticket is resolved.
 
-## Pending Salesforce fields (IT ticket in progress)
-When these arrive, uncomment them in FIELDS registry in index.html:
-- `resource` — who does the survey (Sunpower Surveyor / Sales Rep / Radicl)
-- `survey_type` — kind of survey (Site Survey / Battery Only Survey / Resurvey)
-- `resurvey_reason`, `resurvey_attributed` — FPY calculations
+## Salesforce fields (all live as of July 2026)
+`resource`, `survey_type`, `resurvey_reason`, and `resurvey_attributed` are all
+active in the FIELDS registry in index.html. FPY, attribution, and resource
+breakdowns are built and shipping on the dashboard (Resurveys + Performance pages).
 
 ## Targets (Spec 12744)
 - Median: 3 days | Avg: 4 days
@@ -54,5 +53,4 @@ When these arrive, uncomment them in FIELDS registry in index.html:
 Set via `const PASSWORD` in compose/index.html. Currently `sunpower`.
 
 ## Change list (next build)
-- Resource breakdown on Regions page (auto-shows once `resource` field is active)
-- FPY + Absolute FPY metrics (needs `resurvey_attributed` field)
+- (empty — FPY and resource breakdowns shipped; see memory "Come back to" list for deferred items)

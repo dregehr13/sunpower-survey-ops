@@ -24,9 +24,13 @@
 table,.kval,.ekval,.rval,.nbadge,.nav-ts{font-variant-numeric:tabular-nums;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;}
+/* Never pan the page sideways on phones — wide content scrolls inside its own wrapper */
+html,body{overflow-x:clip;}
 
 /* NAV */
-.nav{background:#111;display:flex;align-items:center;padding:0 20px;height:48px;position:sticky;top:0;z-index:200;gap:0;}
+.nav{background:#111;display:flex;align-items:center;padding:0 20px;height:48px;position:sticky;top:0;z-index:200;gap:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.nav::-webkit-scrollbar{display:none;}
+.nav>*{flex-shrink:0;}
 .brand{color:#fff;font-size:13px;font-weight:600;margin-right:20px;white-space:nowrap;flex-shrink:0;letter-spacing:-.01em;}
 .brand span{color:var(--accent);font-weight:400;}
 .ntab{color:#777;font-size:12px;padding:0 11px;height:48px;display:flex;align-items:center;cursor:pointer;border-bottom:2px solid transparent;transition:color .12s,border-color .12s;white-space:nowrap;flex-shrink:0;user-select:none;}
@@ -415,8 +419,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* DRILL DRAWER */
 .drill-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1100;display:none;}
 .drill-overlay.open{display:block;}
-.drill-panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--surface);border-left:1px solid var(--border);z-index:1101;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 28px rgba(0,0,0,.12);}
-.drill-panel.open{transform:translateX(0);}
+.drill-panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--surface);border-left:1px solid var(--border);z-index:1101;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;box-shadow:-6px 0 28px rgba(0,0,0,.12);}
+.drill-panel.open{transform:translateX(0);visibility:visible;transition:transform .22s ease;}
 .drill-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);gap:12px;}
 .drill-title{font-size:14px;font-weight:600;color:var(--text);}
 .drill-sub{font-size:11px;color:var(--muted);margin-top:3px;}
@@ -434,6 +438,10 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-table tr:hover td{background:var(--bg);}
 .drill-proj{font-weight:500;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .drill-tgt{cursor:pointer;}
+/* Drillable KPI cards get a corner arrow so they read as clickable */
+.ekcard.drill-tgt{position:relative;}
+.ekcard.drill-tgt::after{content:'↗';position:absolute;top:8px;right:10px;font-size:11px;color:var(--faint);opacity:.55;}
+.ekcard.drill-tgt:hover::after{opacity:1;}
 
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
@@ -987,7 +995,7 @@ function buildWIPFBar(){
 
   const totalOpen=rows.filter(r=>isWIP(r)).length;
 
-  return `<div class="fbar" style="flex-wrap:nowrap;">
+  return `<div class="fbar">
     <div class="fgroup">
       <span class="flabel">Region</span>
       <div class="rgdrop">
@@ -1155,6 +1163,7 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 let _drillRows=[];
 let _rsDefects=[];
 let _lastWeekSrc=[];
+let _thisWeekSrc=[];
 function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys',_rsDefects,{groupBy:'resource'}); }
 let rsTimeFilter='all'; // 'all' (uses global date range) | 'open' (currently open only)
 const _DRILL_RES_COL={'Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6','SunPower Surveyor':'#64748b'};
@@ -1238,6 +1247,8 @@ function drillResRegion(reg){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(
 function drillSalesRepRs(name){ const src=rows.filter(r=>gfDim(r)&&r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function drillAttribution(attr){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
+let rsRepsExpanded=false;
+function toggleRsReps(){ rsRepsExpanded=!rsRepsExpanded; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
@@ -1439,14 +1450,15 @@ function renderLastWeek(){
   const rh=Math.max(180,rStats.length*26+50);
 
   const shortName=t=>t==='SunPower Surveyor'?'SPWR':t.replace(' Services','');
+  const mixW=(document.getElementById('week-inner')?.offsetWidth||1100)-32;
   const splitSegs=typeData.map((td,i)=>{
     const pct=Math.round(td.n/src.length*100);
     const col=TYPE_COLORS[td.t];
     const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d avg':'—';
     const rad=typeData.length===1?'6px':(i===0?'6px 0 0 6px':i===typeData.length-1?'0 6px 6px 0':'0');
-    const slim=pct<14; // small segments: skip in-bar text (clips) — header + hover tooltip carry it
+    const slim=td.n/src.length*mixW<110; // segment too narrow for in-bar text — name it in the header line instead
     return `<div style="flex:${td.n};display:flex;flex-direction:column;gap:4px;min-width:0;">
-      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${td.t}: ${td.n} surveys · ${avgStr}"><span style="font-weight:700">${pct}%</span></div>
+      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:visible;" title="${td.t}: ${td.n} surveys · ${avgStr}"><span style="font-weight:700">${pct}%</span>${slim?` <span style="font-size:10px;">${shortName(td.t)}</span>`:''}</div>
       <div style="background:${col};border-radius:${rad};height:52px;padding:9px 10px;color:#fff;overflow:hidden;box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);" title="${td.t}: ${td.n} surveys · ${avgStr}">
         ${slim?'':`<div style="font-size:10px;font-weight:600;white-space:nowrap;">${shortName(td.t)} · ${td.n} surveys</div>
         <div style="font-size:10px;opacity:.82;white-space:nowrap;margin-top:3px;">${avgStr}</div>`}
@@ -1485,6 +1497,7 @@ function renderLastWeek(){
     type:'bar',
     data:{labels:rStats.map(r=>r.region),datasets:[{
       data:rStats.map(r=>r.start_to_complete),
+      minBarLength:3,
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
@@ -1504,9 +1517,16 @@ function renderThisWeek(){
     (r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to)||
     (r.resurvey_scheduled&&r.resurvey_scheduled>yesterday&&r.resurvey_scheduled<=tw.to)
   ));
-  const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r));
+  // Initial surveys + open resurveys scheduled this week — matches what "Scheduled remaining" counts
+  const atRiskInit=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r)&&!(r.resurvey_requested&&!r.resurvey_complete))
+    .map(r=>({r,sched:r.scheduled,isRs:false,openFrom:r.start}));
+  const atRiskRs=rows.filter(r=>r.resurvey_scheduled&&r.resurvey_scheduled>=tw.from&&r.resurvey_scheduled<=tw.to&&r.list!=='Complete'&&!r.resurvey_complete)
+    .map(r=>({r,sched:r.resurvey_scheduled,isRs:true,openFrom:r.resurvey_requested||r.start}));
+  const atRisk=[...atRiskInit,...atRiskRs];
   const yesterdayDow=new Date(yesterday+'T12:00:00').getDay();
-  const bDaysElapsed=yesterdayDow===0||yesterdayDow===6?5:yesterdayDow;
+  // Sunday yesterday = Monday today: the new week hasn't started (5 days remain).
+  // Saturday yesterday = Sunday today: the business week is done.
+  const bDaysElapsed=yesterdayDow===0?0:yesterdayDow===6?5:yesterdayDow;
   const bDaysRemaining=Math.max(5-bDaysElapsed,0);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
@@ -1528,11 +1548,12 @@ function renderThisWeek(){
 
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title">This Week</div>
-    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · Through ${dayNames[yesterdayDow===0||yesterdayDow===6?4:yesterdayDow-1]||'today'}</div>`;
+    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · ${bDaysElapsed===0?'Just started':'Through '+(dayNames[bDaysElapsed-1]||'today')}</div>`;
+  _thisWeekSrc=completedTW;
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
+    <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
     <div class="ekcard"><div class="eklabel">Projected total${kinfo(TIP.projected)}</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
-    <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week</div></div>
+    <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg,S.targetAvg+2)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
@@ -1553,6 +1574,7 @@ function renderThisWeek(){
       <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · completions and scheduled surveys</div></div>
         <div class="leg" style="margin-top:4px;">
           <span class="li"><span class="ld" style="background:#1D9E75;"></span>Completed</span>
+          <span class="li"><span class="ld" style="background:#2563eb;"></span>Completed today</span>
           <span class="li"><span class="ld" style="background:rgba(148,163,184,0.5);"></span>Scheduled</span>
         </div>
       </div>
@@ -1560,24 +1582,24 @@ function renderThisWeek(){
     </div>
     ${atRisk.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRisk.length} pending</div></div></div>
+      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div></div>
       <div style="overflow-x:auto;"><table><thead><tr>
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
-        ${atRisk.sort((a,b)=>a.scheduled.localeCompare(b.scheduled)).map(r=>`<tr>
-          <td style="font-size:11px;">${projLink(r)}</td>
-          <td style="font-size:11px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
-          <td style="font-size:11px;">${esc(r.sales_rep||'—')}</td>
-          <td class="r" style="font-size:11px;">${fmtDateShort(r.scheduled)}</td>
-          <td class="r">${pillV(dDiff(r.start,today))}</td>
+        ${atRisk.sort((a,b)=>a.sched.localeCompare(b.sched)).map(e=>`<tr>
+          <td style="font-size:11px;">${e.isRs?'<span style="font-size:9px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>':''}${projLink(e.r)}</td>
+          <td style="font-size:11px;"><span class="sbadge">${getState(e.r.region)}</span>${e.r.region.split(' ').slice(1).join(' ')}</td>
+          <td style="font-size:11px;">${esc(e.r.sales_rep||'—')}</td>
+          <td class="r" style="font-size:11px;">${fmtDateShort(e.sched)}</td>
+          <td class="r">${pillV(dDiff(e.openFrom,today))}</td>
         </tr>`).join('')}
       </tbody></table></div>
     </div>`:''}
     ${completedTW.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} surveys closed this week</div></div></div>
+      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div></div>
       <div style="overflow-x:auto;"><table><thead><tr>
-        <th>Project</th><th>Region</th><th>Surveyor</th><th class="r">Complete</th><th class="r">Cycle</th>
+        <th>Project</th><th>Region</th><th>Resource</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
         ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
           <td style="font-size:11px;">${projLink(r)}</td>
@@ -1620,7 +1642,10 @@ function renderPerformance(){
     return;
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
-  const kcls=v=>v==null?'':(v<=S.targetMedian?'kg-c':v<=(S.targetAvg+1)?'ka-c':'kr-c');
+  // Grade each stat against its own target (same bands as the Current page)
+  const kclsBands=(v,tgt)=>v==null?'':(v<=tgt?'kg-c':v<=tgt+2?'ka-c':'kr-c');
+  const kclsAvg=v=>kclsBands(v,S.targetAvg);
+  const kclsMed=v=>kclsBands(v,S.targetMedian);
   const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#0ea5e9','Radicl Services':'#8b5cf6'};
   const spCount=src.filter(r=>r.resource==='SunPower Surveyor').length;
   const srCount=src.filter(r=>r.resource==='Sales Rep').length;
@@ -1652,8 +1677,8 @@ function renderPerformance(){
   document.getElementById('perf-content').innerHTML=`
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-      <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kcls(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
-      <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kcls(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
+      <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
+      <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
       <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div style="flex:${srCount};background:#0ea5e9;"></div>`:''} ${rdCount>0?`<div style="flex:${rdCount};background:#8b5cf6;"></div>`:''} ${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:9px;color:#0ea5e9;">${srCount} Sales</span><span style="font-size:9px;color:#8b5cf6;">${rdCount} Radicl</span><span style="font-size:9px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
@@ -1692,7 +1717,7 @@ function renderPerformance(){
         </tr></thead>
         <tbody id="pf-tbody"></tbody>
       </table></div>
-      <div class="note">Green ≤${S.targetMedian}d · Amber ≤${S.targetAvg+2}d · Red >${S.targetAvg+2}d. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
+      <div class="note">Pills share one scale: green ≤${S.targetMedian}d · amber ≤${S.targetAvg+2}d · red >${S.targetAvg+2}d. KPI cards grade against their own target. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
     </div>`;
 
   document.getElementById('pf-rg-wrap').style.height=rh+'px';
@@ -1701,6 +1726,7 @@ function renderPerformance(){
     type:'bar',
     data:{labels:rStats.map(r=>r.region),datasets:[{
       data:rStats.map(r=>r.start_to_complete),
+      minBarLength:3,
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#1D9E75':(r.start_to_complete||0)<=(S.targetAvg+3)?'#BA7517':'#e24b4a'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; openDrill('Avg Cycle · '+reg,'All surveys · current filter',filtered.filter(r=>r.region===reg)); },
@@ -1763,7 +1789,9 @@ function renderRegionTablePerf(){
 }
 
 let repExpanded=false;
+let repMinVol=true; // hide reps with <3 completions by default — 1-survey reps dominate "slowest first" otherwise
 let repSortKey='average', repSortAsc=false;
+function toggleRepMinVol(){ repMinVol=!repMinVol; repExpanded=false; renderRepTable(); }
 function setRepView(v){ repView=v; repExpanded=false; repSortKey='average'; repSortAsc=false; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
 function toggleRepExpand(){ repExpanded=!repExpanded; renderRepTable(); }
 function repSortBy(k){ if(repSortKey===k) repSortAsc=!repSortAsc; else{repSortKey=k;repSortAsc=false;} renderRepTable(); }
@@ -1775,8 +1803,10 @@ function renderRepTable(){
   const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
   const repMap={};
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
-  const repRows=Object.values(repMap).filter(r=>r.tots.length>=1)
-    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}))
+  const allRepRows=Object.values(repMap).filter(r=>r.tots.length>=1)
+    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}));
+  const lowN=allRepRows.filter(r=>r.count<3).length;
+  const repRows=(repMinVol?allRepRows.filter(r=>r.count>=3):allRepRows)
     .sort((a,b)=>{
       let av=a[repSortKey],bv=b[repSortKey];
       if(av==null) av=repSortAsc?Infinity:-Infinity;
@@ -1785,7 +1815,9 @@ function renderRepTable(){
       return repSortAsc?av-bv:bv-av;
     });
   if(!repRows.length){
-    wrap.innerHTML=`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
+    wrap.innerHTML=allRepRows.length
+      ?`<div style="padding:16px;color:var(--faint);font-size:12px;">No reps with ≥3 completions in this range. <button onclick="toggleRepMinVol()" style="font-size:11px;padding:3px 12px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">Include low-volume reps</button></div>`
+      :`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
     return;
   }
   const LIMIT=10;
@@ -1802,7 +1834,10 @@ function renderRepTable(){
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
-  ${hasMore?`<div style="padding:10px 0 4px;text-align:center;"><button onclick="toggleRepExpand()" style="font-size:11px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repExpanded?'Show fewer':'Show all '+repRows.length+' reps'}</button></div>`:''}`;
+  ${hasMore||lowN?`<div style="padding:10px 0 4px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    ${hasMore?`<button onclick="toggleRepExpand()" style="font-size:11px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repExpanded?'Show fewer':'Show all '+repRows.length+' reps'}</button>`:''}
+    ${lowN?`<button onclick="toggleRepMinVol()" style="font-size:11px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repMinVol?`Include ${lowN} rep${lowN===1?'':'s'} with <3 completions`:'Hide reps with <3 completions'}</button>`:''}
+  </div>`:''}`;
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
@@ -1829,13 +1864,16 @@ function renderTrends(){
   const labelsC=weeklyC.map(fmtWeekLabel);
   const al=weeklyC.map(()=>1);
 
-  // All-time hero metrics
+  // All-time hero metrics — the in-progress week is excluded so a lone Monday
+  // completion can't swing the trend or drag the pace down
+  const curWkStart=weekRange(0).from;
+  const doneWeeks=weeklyC.filter(w=>w.week<curWkStart);
   const allTots=trendDone.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const p75=pct(allTots,75),p90=pct(allTots,90);
-  const wkCounts=weeklyC.map(w=>w.count);
+  const wkCounts=doneWeeks.map(w=>w.count);
   const avgWkPace=avg(wkCounts),bestWk=wkCounts.length?Math.max(...wkCounts):null;
-  const recentWks=weeklyC.slice(-3).map(w=>w.start_to_complete).filter(x=>x!=null);
-  const prevWks=weeklyC.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
+  const recentWks=doneWeeks.slice(-3).map(w=>w.start_to_complete).filter(x=>x!=null);
+  const prevWks=doneWeeks.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const recentAvgCycle=avg(recentWks),prevAvgCycle=avg(prevWks);
   const trendDelta=(recentAvgCycle!=null&&prevAvgCycle!=null)?Math.round((recentAvgCycle-prevAvgCycle)*10)/10:null;
   const trendLabel=trendDelta==null?'—':(trendDelta<-0.1?'Improving':trendDelta>0.1?'Slowing':'Stable');
@@ -1852,13 +1890,13 @@ function renderTrends(){
   document.getElementById('tr-content').innerHTML=`
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Trend (3wk)</div><div class="kval ${trendCls}">${trendLabel}</div><div class="ksub">${trendSub}</div></div>
-      <div class="kcard"><div class="klabel">Avg weekly pace</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week</div></div>
+      <div class="kcard"><div class="klabel">Avg weekly pace</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
       <div class="kcard"><div class="klabel">Best week</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
       <div class="kcard"><div class="klabel">P75 cycle</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
       <div class="kcard"><div class="klabel">P90 cycle</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>New In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
@@ -1871,7 +1909,7 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>Pipeline ratio</span>
@@ -1883,7 +1921,7 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · current state: Complete · Resurvey pending · Scheduled · Unscheduled</div></div></div>
+      <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · current state: Complete · Resurvey pending · Scheduled · Unscheduled · current week is partial</div></div></div>
       <div class="leg">
         <span class="li" style="color:#16a34a;"><span class="ld" style="background:rgba(34,197,94,0.8);"></span>Complete</span>
         <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Scheduled</span>
@@ -1901,7 +1939,7 @@ function renderTrends(){
       <div class="shead"><div class="stitle">Weekly detail</div></div>
       <table><thead><tr>
         <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
-        <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling</th><th class="r">On target</th>
+        <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling avg</th><th class="r">On target</th>
       </tr></thead><tbody id="tr-tbody"></tbody></table>
     </div>`;
 
@@ -2064,8 +2102,9 @@ function renderTrends(){
     const r3=wc?.r3;
     const onTgtVal=wc?.pct_on_target;
     const wipSnap=wipLine[allWks.indexOf(wk)];
-    return `<tr>
-      <td>${fmtDateShort(wk)} – ${fmtDateShort(wkEnd)}</td>
+    const isPartial=wk===curWkStart;
+    return `<tr${isPartial?' style="opacity:.55;"':''}>
+      <td>${fmtDateShort(wk)} – ${fmtDateShort(wkEnd)}${isPartial?' <span style="font-size:9px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 6px;margin-left:4px;">partial</span>':''}</td>
       <td class="r">${newIn}</td>
       <td class="r">${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
       <td class="r" style="color:#d97706;font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
@@ -2224,7 +2263,7 @@ function renderAgingWIP(){
     </div>
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d</div></div>
+        <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d · RS = open resurvey</div></div>
         <div class="toggle-group">
           <button class="tgl-btn${wipView==='all'?' active':''}" onclick="setWipView('all')">All</button>
           <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
@@ -2353,9 +2392,9 @@ function renderResurvey(){
       <div class="klabel">FPY${kinfo(TIP.fpy)}</div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:1px;">
         <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
-        <div style="font-size:13px;font-weight:600;color:var(--muted);">${completions.length?`${internalDefects.length} / ${completions.length}`:'—'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--muted);">${completions.length?`${internalDefects.length} defects / ${completions.length} surveys`:'—'}</div>
       </div>
-      <div style="font-size:10px;color:var(--faint);margin-bottom:8px;">defects · target 95%</div>
+      <div style="font-size:10px;color:var(--faint);margin-bottom:8px;">target 95%</div>
       ${resFPY.length?`<div style="display:flex;flex-direction:column;gap:5px;padding-top:8px;border-top:1px solid var(--border);">
         ${resFPY.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:10px;font-weight:600;color:${RES_COLOR[r.res]};">${RES_LABEL[r.res]||r.res}</span>
@@ -2446,7 +2485,11 @@ function renderResurvey(){
     </tbody></table></div>
   </div>
 
-  ${salesRepData.length?`
+  ${salesRepData.length?(()=>{
+    const repsWithRs=salesRepData.filter(d=>d.resurveys>0);
+    const zeroReps=salesRepData.length-repsWithRs.length;
+    const shownReps=rsRepsExpanded?salesRepData:repsWithRs;
+    return `
   <div class="sec">
     <div class="shead"><div><div class="stitle">By Sales Rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions · highest first</div></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
@@ -2457,7 +2500,7 @@ function renderResurvey(){
       <th class="r">Rate</th>
       <th style="width:120px;"></th>
     </tr></thead><tbody>
-      ${salesRepData.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${esc(d.name)}')">
+      ${shownReps.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${esc(d.name)}')">
         <td style="font-weight:500;">${esc(d.name)}</td>
         <td style="color:var(--muted);font-size:11px;">${esc(d.primaryRegion)}</td>
         <td class="r">${d.comps}</td>
@@ -2466,7 +2509,8 @@ function renderResurvey(){
         <td><div style="background:var(--border);border-radius:2px;height:6px;width:100%;"><div style="background:${d.rate>=20?'var(--red)':d.rate>=10?'var(--amber)':'var(--green)'};border-radius:2px;height:6px;width:${Math.min(Math.round((d.rate??0)/Math.max(...salesRepData.map(x=>x.rate??0),1)*100),100)}%;"></div></div></td>
       </tr>`).join('')}
     </tbody></table></div>
-  </div>`:''}
+    ${zeroReps?`<div style="padding:10px 0 4px;text-align:center;"><button onclick="toggleRsReps()" style="font-size:11px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${rsRepsExpanded?'Hide reps with 0 resurveys':`Show all ${salesRepData.length} reps (${zeroReps} with 0 resurveys)`}</button></div>`:''}
+  </div>`;})():''}
 
   ${openResurvey.length?`
   <div class="sec">
