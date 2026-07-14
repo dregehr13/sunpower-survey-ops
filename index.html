@@ -239,7 +239,8 @@ tr:hover td{background:#fafaf8;}
 .verdict-bad .verdict-text{color:#8c3f3f;}
 .attn-dismiss{font-size:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
 .attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
-.wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;gap:7px;font-weight:400;}
+.wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;justify-content:space-between;font-weight:400;}
+.attn-reason-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;}
 
 /* STALE DATA BANNER */
 .stale-banner{display:none;background:var(--amber-bg);color:var(--amber);font-size:12px;padding:7px 22px;border-bottom:1px solid #f0d9a8;text-align:center;}
@@ -1372,13 +1373,13 @@ function attnItems(){
   const items=[];
   rows.filter(r=>isWIP(r)).forEach(r=>{
     const d=dDiff(wipAgeFrom(r),today)??0;
-    if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:`open ${Math.round(d)}d`});
+    if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:''});
     if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
     if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
   });
   rows.filter(r=>r.resurvey_requested&&!r.resurvey_complete&&r.list!=='Complete'&&!r.resurvey_scheduled).forEach(r=>{
     const d=dDiff(r.resurvey_requested,today)??0;
-    if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:`resurvey requested ${Math.round(d)}d ago, unscheduled`});
+    if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:'resurvey unscheduled'});
   });
   const dis=getDismissed();
   return items.filter(it=>!dis.has(attnKey(it)));
@@ -2238,7 +2239,7 @@ function renderAgingWIP(){
     const ag=wipView==='attn'?attnMap[r.task_id||r.id]:null;
     return `
     <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
-      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason">${ag.texts.join(' · ')} <button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
+      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason"><span class="attn-reason-text">${ag.texts.filter(Boolean).join(' · ')||'overdue'}</span><button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
