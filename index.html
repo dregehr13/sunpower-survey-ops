@@ -793,6 +793,7 @@ const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'al
 let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
 let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
+let wipAgeSel = new Set(); // selected PA_BAND indices for age-filter
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
 const GF = defaultF();
@@ -2334,6 +2335,8 @@ function renderTrends(){
 // ═══ WIP HUB ═════════════════════════════════════════════
 let wipView='all'; // 'all' | 'attn'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
+function toggleWipAgeBand(i){ if(wipAgeSel.has(i)) wipAgeSel.delete(i); else wipAgeSel.add(i); renderAgingWIP(); }
+function clearWipAgeSel(){ wipAgeSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
@@ -2350,6 +2353,11 @@ function renderAgingWIP(){
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
+  if(wipAgeSel.size>0){
+    const PA_MINS=[0,15,30,60,90];
+    const PA_MAXS=[15,30,60,90,Infinity];
+    wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
+  }
 
   wip.sort((a,b)=>{
     const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey;
@@ -2447,8 +2455,8 @@ function renderAgingWIP(){
       <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
       <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
-      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
       <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
+      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
@@ -2472,17 +2480,23 @@ function renderAgingWIP(){
       const paAll=rows.filter(r=>isWIP(r)&&r.start).map(r=>dDiff(r.start,today)??0);
       const counts=PA_BANDS.map((b,i)=>paAll.filter(d=>d<b.max&&(i===0||d>=PA_BANDS[i-1].max)).length);
       const total=counts.reduce((a,b)=>a+b,0)||1;
-      const segs=PA_BANDS.map((b,i)=>counts[i]?`
-        <div title="${b.label}: ${counts[i]}" style="flex:${counts[i]};background:${b.color};height:100%;min-width:2px;"></div>`:'').join('');
+      const anySelected=wipAgeSel.size>0;
+      const segs=PA_BANDS.map((b,i)=>{
+        if(!counts[i]) return '';
+        const sel=wipAgeSel.has(i);
+        const dim=anySelected&&!sel;
+        return `<div title="${b.label}: ${counts[i]}" onclick="toggleWipAgeBand(${i})" style="flex:${counts[i]};background:${b.color};height:100%;min-width:2px;cursor:pointer;opacity:${dim?0.25:1};${sel?'outline:2px solid #333;outline-offset:-2px;':''};transition:opacity .15s;"></div>`;
+      }).join('');
       const legend=PA_BANDS.map((b,i)=>counts[i]?`
-        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;"></span>
+        <span onclick="toggleWipAgeBand(${i})" style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);cursor:pointer;opacity:${anySelected&&!wipAgeSel.has(i)?0.35:1};transition:opacity .15s;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #555;':''};"></span>
           ${b.label} <strong>${counts[i]}</strong> <span style="color:var(--faint);">${Math.round(counts[i]/total*100)}%</span>
         </span>`:'').join('');
+      const clearBtn=anySelected?`<button onclick="clearWipAgeSel()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter</button>`:'';
       return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution${anySelected?` <span style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0;">— filtered</span>`:''}</div>
         <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:8px;">${segs}</div>
-        <div style="display:flex;flex-wrap:wrap;">${legend}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${clearBtn}</div>
       </div>`;
     })()}
     <div class="sec">
@@ -2502,13 +2516,13 @@ function renderAgingWIP(){
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
           <th class="r" tabindex="0" onclick="wipSortBy('projectAge')">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div class="note">Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Proj Age = days since Project Start Date · Target: ${S.targetAvg}d avg (Spec 12744)</div>
+      <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Target: ${S.targetAvg}d avg (Spec 12744)</div>
     </div>`;
 }
 
