@@ -1424,7 +1424,6 @@ let weekView='last';
 function renderWeek(){
   const tgl=(v,l)=>`<button class="tgl-btn${weekView===v?' active':''}" onclick="setWeekView('${v}')">${l}</button>`;
   document.getElementById('week-content').innerHTML=`
-    <div id="needs-attn"></div>
     <div class="exec-wrap">
       <div class="exec-hero">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
@@ -1465,24 +1464,10 @@ function attnItems(){
 // Compact strip on Current — the full working view lives on the WIP page
 function openAttnView(){ wipView='attn'; nav('wip'); }
 function renderNeedsAttn(){
-  const el=document.getElementById('needs-attn'); if(!el) return;
   const items=attnItems();
   const projects=new Set(items.map(it=>it.r.task_id||it.r.id)).size;
-  // Verdict = last completed week's avg vs target; flags ride along as detail
-  const lw=weekRange(-1);
-  const lwDone=rows.filter(r=>isComplete(r)&&r.complete>=lw.from&&r.complete<=lw.to);
-  const avgLW=avg(lwDone.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
-  const state=avgLW==null?'ok':avgLW<=S.targetAvg?'ok':avgLW<=S.targetAvg+2?'warn':'bad';
-  const word=state==='ok'?'On track':state==='warn'?'Slightly behind':'Behind target';
-  const bits=[];
-  if(avgLW!=null) bits.push(`last week avg <b>${avgLW.toFixed(1)}d</b> vs ${S.targetAvg}d target`);
-  bits.push(projects?`<b>${projects}</b> project${projects!==1?'s':''} flagged for review`:'nothing flagged');
-  if(projects&&items.length){ const worst=items.reduce((a,b)=>b.sev>a.sev?b:a); bits.push(`worst: <b>${esc(worst.r.project||worst.r.address||'—')}</b> ${worst.text}`); }
-  el.innerHTML=`<div class="verdict verdict-${state}" role="button" tabindex="0" onclick="openAttnView()" onkeydown="if(event.key==='Enter')openAttnView()">
-    <span class="verdict-word">${word}</span>
-    <span class="verdict-text">${bits.join(' <span class="vsep">·</span> ')}</span>
-    ${projects?`<span class="verdict-go">Review on WIP →</span>`:''}
-  </div>`;
+  const b=document.getElementById('wip-attn-badge');
+  if(b){ b.textContent=projects||''; b.style.display=projects?'inline-flex':'none'; }
 }
 
 function trailing4WeekPace(){
