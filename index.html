@@ -1524,14 +1524,22 @@ function renderLastWeek(){
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
   const lwBvCls=bandFor(avgT,S.targetAvg)==='good'?'':bandFor(avgT,S.targetAvg)==='mid'?' bv-warn':' bv-bad';
-  // Build the "so what" sentence from trend data, not the cards below
-  const countDelta=pwSrc.length?src.length-pwSrc.length:null;
-  const countDeltaStr=countDelta!=null?(countDelta>0?`<span class="brief-good">+${countDelta}</span> vs prior week`:`<span class="brief-bad">${countDelta}</span> vs prior week`):'';
-  const avgDelta=avgT!=null&&pwAvgT!=null?Math.round((avgT-pwAvgT)*10)/10:null;
-  const avgTrendStr=avgDelta!=null?(avgDelta<0?`<span class="brief-good">${avgDelta.toFixed(1)}d</span> faster than prior week`:avgDelta>0?`<span class="brief-bad">+${avgDelta.toFixed(1)}d</span> slower than prior week`:'same as prior week'):'';
-  const triStr=triAvgT!=null?`3-week avg <span class="brief-num">${triAvgT.toFixed(1)}d</span>`:'';
-  const bits=[countDeltaStr,avgTrendStr,triStr].filter(Boolean);
-  document.getElementById('lw-brief').innerHTML=`<span class="brief-verdict${lwBvCls}"><span class="brief-num">${src.length}</span> closed${pwSrc.length?`, ${countDelta>=0?'up':'down'} from ${pwSrc.length}`:''}</span>${avgT!=null?` · avg <span class="brief-num">${avgT.toFixed(1)}d</span>${avgDelta!=null?(avgDelta<0?' <span class="brief-good">↓'+Math.abs(avgDelta).toFixed(1)+'d</span>':avgDelta>0?' <span class="brief-bad">↑'+avgDelta.toFixed(1)+'d</span>':''):''}${triAvgT!=null?' · 3-wk avg <span class="brief-num">'+triAvgT.toFixed(1)+'d</span>':''}`:''}.`;
+  // Volume story: % change vs prior week
+  const volPct=pwSrc.length?Math.round((src.length-pwSrc.length)/pwSrc.length*100):null;
+  let volStr;
+  if(volPct===null) volStr=`<span class="brief-verdict${lwBvCls}"><span class="brief-num">${src.length}</span> surveys closed</span>`;
+  else if(volPct>=5) volStr=`<span class="brief-verdict">Volume up <span class="brief-num">${volPct}%</span></span> from prior week`;
+  else if(volPct<=-5) volStr=`<span class="brief-verdict">Volume down <span class="brief-num">${Math.abs(volPct)}%</span></span> from prior week`;
+  else volStr=`<span class="brief-verdict">Volume roughly flat</span> vs prior week`;
+  // Quality story: avg cycle vs 3-wk baseline
+  const vsBaseline=avgT!=null&&triAvgT!=null?Math.round((avgT-triAvgT)*10)/10:null;
+  let qualStr='';
+  if(vsBaseline!==null){
+    if(Math.abs(vsBaseline)<0.2) qualStr='cycle time matched the 3-wk baseline';
+    else if(vsBaseline<0) qualStr=`cycle <span class="brief-good">${Math.abs(vsBaseline).toFixed(1)}d under</span> the 3-wk avg`;
+    else qualStr=`cycle <span class="brief-bad">${vsBaseline.toFixed(1)}d above</span> the 3-wk avg`;
+  }
+  document.getElementById('lw-brief').innerHTML=`${volStr}${qualStr?' — '+qualStr:''}.`;
   const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to)).length;
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
@@ -1717,11 +1725,22 @@ function renderThisWeek(){
   const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
   const dayWord=new Date().toLocaleDateString('en-US',{weekday:'long'});
   const avgVsLw=avgT!=null&&lwAvgT!=null?Math.round((avgT-lwAvgT)*10)/10:null;
-  const avgVsLwStr=avgVsLw!=null?(avgVsLw<0?` <span class="brief-good">↓${Math.abs(avgVsLw).toFixed(1)}d vs last week</span>`:avgVsLw>0?` <span class="brief-bad">↑${avgVsLw.toFixed(1)}d vs last week</span>`:' same as last week'):'';
+  // Pacing vs last week's same-day count
+  const lwDayDates=[0,1,2,3,4].map(i=>{const [y,m,d]=lwr.from.split('-').map(Number);return localISO(new Date(y,m-1,d+i));});
+  const lwThroughSameDay=lwSrc.filter(r=>lwDayDates.slice(0,bDaysElapsed).includes(r.complete)).length;
+  const pacingPct=lwThroughSameDay>0?Math.round((completedTW.length/lwThroughSameDay-1)*100):null;
+  let paceStr;
+  if(pacingPct===null) paceStr=`<span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> closed so far</span>`;
+  else if(pacingPct>=5) paceStr=`<span class="brief-verdict"><span class="brief-num">${pacingPct}% ahead</span> of last week's pace</span>`;
+  else if(pacingPct<=-5) paceStr=`<span class="brief-verdict"><span class="brief-num">${Math.abs(pacingPct)}% behind</span> last week's pace</span>`;
+  else paceStr=`<span class="brief-verdict">On pace</span> with last week`;
+  // Quality: on-target % for completions so far (not shown in cards)
+  const onTgtTW=pctTgt(tots);
+  const qualTWStr=onTgtTW!=null?` — <span class="brief-num">${onTgtTW}%</span> of completions hitting ≤${S.targetAvg}d target`:'';
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title" style="margin-bottom:4px;">${dayWord}</div>
     <div class="brief-eyebrow">${fmtDate(tw.from)} — ${fmtDate(tw.to)}${bDaysElapsed>0?` · through ${dayNames[bDaysElapsed-1]||'today'}`:''}</div>
-    <div class="brief-sentence"><span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> closed${bDaysRemaining>0?`, pacing to ~${projTotal}`:''}</span>${lwCount?` vs last week's ${lwCount}`:''}${avgT!=null?` · avg <span class="brief-num">${avgT.toFixed(1)}d</span>${avgVsLwStr}${triAvgTW!=null?' · 3-wk avg <span class="brief-num">'+triAvgTW.toFixed(1)+'d</span>':''}`:''}.
+    <div class="brief-sentence">${paceStr}${qualTWStr}.
     </div>`;
   _thisWeekSrc=completedTW;
   document.getElementById('cur-kpis').innerHTML=`
