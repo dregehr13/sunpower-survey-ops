@@ -1569,12 +1569,50 @@ function renderLastWeek(){
   const rgDisplay=rStats.map(r=>r.start_to_complete!=null?Math.min(r.start_to_complete,rgCap):null);
   const rgOutliers=new Set(rStats.map((r,i)=>r.start_to_complete>rgCap?i:-1).filter(i=>i>=0));
 
+  // FPY for last week
+  const isFPYDefect=r=>!!(r.resurvey_complete||r.resurvey_scheduled);
+  const lwDefects=src.filter(isFPYDefect);
+  const lwFpy=src.length?Math.round((src.length-lwDefects.length)/src.length*100):null;
+  const pwDefects=pwSrc.filter(isFPYDefect);
+  const pwFpy=pwSrc.length?Math.round((pwSrc.length-pwDefects.length)/pwSrc.length*100):null;
+  const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
+  const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
+  const fpyBarW=lwFpy!=null?lwFpy:0;
+
+  // Still open from last week
+  const todayISO=localISO(new Date());
+  const stillOpen=rows.filter(r=>r.start&&r.start>=lw.from&&r.start<=lw.to&&!isComplete(r));
+  const soAge=r=>dDiff(r.start,todayISO);
+  const so1=stillOpen.filter(r=>soAge(r)<=S.targetAvg);
+  const so2=stillOpen.filter(r=>soAge(r)>S.targetAvg&&soAge(r)<=(S.targetAvg+3));
+  const so3=stillOpen.filter(r=>soAge(r)>(S.targetAvg+3));
+  const soAvgAge=stillOpen.length?Math.round(avg(stillOpen.map(r=>soAge(r)))*10)/10:null;
+
+  const soRow=(dot,label,items,status)=>items.length===0?'':`
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+      <div style="flex:1;font-size:12px;color:var(--text);">${label}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);min-width:24px;text-align:right;">${items.length}</div>
+      <div style="font-size:11px;color:var(--muted);min-width:70px;text-align:right;">${status}</div>
+    </div>`;
+
   document.getElementById('week-inner').innerHTML=`
     <div class="cur-grid">
     <div class="cur-col">
     <div class="sec">
       <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Cycle days</div></div></div>
       <div class="cw" style="height:150px;"><canvas id="lw-dist"></canvas></div>
+    </div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">First-pass yield</div><div class="ssub">Last week</div></div></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
+        <span class="ekval ${fpyCls}" style="font-size:24px;">${lwFpy!=null?lwFpy+'%':'—'}</span>
+        ${fpyDelta!=null?`<span style="font-size:12px;color:${fpyDelta>=0?'var(--green)':'var(--red)'};">${fpyDelta>=0?'+':''}${fpyDelta}pp vs prior week</span>`:''}
+      </div>
+      <div style="background:var(--border-lt);border-radius:3px;height:5px;margin-bottom:8px;overflow:hidden;">
+        <div style="height:100%;width:${fpyBarW}%;background:${lwFpy>=90?'#3f9d6c':lwFpy>=80?'#c0912e':'#d94f4e'};border-radius:3px;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">${src.length} completions · ${lwDefects.length} resurveyed · 90% target</div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
@@ -1587,6 +1625,13 @@ function renderLastWeek(){
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
     </div>
+    ${stillOpen.length?`
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Still open from last week</div><div class="ssub">${stillOpen.length} survey${stillOpen.length!==1?'s':''} started Mon–Sun, not yet closed${soAvgAge!=null?' · '+soAvgAge+'d avg age':''}</div></div></div>
+      ${soRow('#3f9d6c','Within target (≤'+S.targetAvg+'d)',so1,'on track')}
+      ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk')}
+      ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn')}
+    </div>`:''}
     </div>
     </div>`;
 
