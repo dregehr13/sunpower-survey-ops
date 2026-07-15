@@ -164,7 +164,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
         <div class="subject-row">
           <label>To</label>
-          <input type="text" id="to-field" value="allie.morais@sunpower.com; spencer.jensen@sunpower.com; robert.barker@sunpower.com" readonly>
+          <input type="text" id="to-field" value="allie.morais@sunpower.com; Chelsea.Herrin@sunpower.com" readonly>
         </div>
         <div class="subject-row" style="margin-bottom:0;">
           <label>Subject</label>
@@ -565,7 +565,7 @@ async function buildEmailHTML(s, commentary, manualNote){
   const title=s.mode==='monday'
     ?`Site Survey — Week of ${s.periodLabel}`
     :`Site Survey — ${fmtMed(s.yesterday)}`;
-  rows+=`<tr><td style="border-left:4px solid #378ADD;padding:16px 24px 16px 20px;">
+  rows+=`<tr><td style="border-left:4px solid #f7941d;padding:16px 24px 16px 20px;">
     <span style="${f}font-size:13px;font-weight:700;color:#111;letter-spacing:.02em;">${title}</span>
   </td></tr>`;
 
@@ -716,7 +716,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       const bh=Math.max((d.count/dYMax)*Dch,2);
       const bx=(parseFloat(Dcx(i))-DbarW/2).toFixed(1);
       const byTop=(Dbaseline-bh).toFixed(1);
-      dBody+=`<rect x="${bx}" y="${byTop}" width="${DbarW}" height="${bh.toFixed(1)}" rx="2" fill="${isYest?'#378ADD':'#c8d6e8'}"/>`;
+      dBody+=`<rect x="${bx}" y="${byTop}" width="${DbarW}" height="${bh.toFixed(1)}" rx="2" fill="${isYest?'#f7941d':'#e8ddd0'}"/>`;
       dBody+=`<text x="${Dcx(i)}" y="${(parseFloat(byTop)-5).toFixed(1)}" text-anchor="middle" fill="${isYest?'#222':'#888'}" font-size="${isYest?12:11}" font-weight="${isYest?'700':'400'}" font-family="Arial,Helvetica,sans-serif">${d.count}</text>`;
     }
     const dailySvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${D_W}" height="${D_H}">${dBody}</svg>`;
