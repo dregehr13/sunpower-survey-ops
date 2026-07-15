@@ -779,6 +779,7 @@ const SETTING_DEFAULTS = {
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
+  includeInactive:      false,     // pull At-Risk/Canceled/Complete into every page (default: active only)
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -797,7 +798,8 @@ function setSetting(key, value){
   S[key] = value;
   saveSettings();
   // Propagate changes that affect live state
-  if(key==='dataCutoff'){ DATA_CUTOFF=value; rows=loadRows(JSON.parse(JSON.stringify(RAW))); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
+  if(key==='dataCutoff'){ DATA_CUTOFF=value; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
+  if(key==='includeInactive'){ scopeRows(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
@@ -807,14 +809,22 @@ function setSetting(key, value){
 
 
 let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
-// Scope to active projects after the cutoff and apply legacy fixups
-// (parse-sf.js already applies these at parse time; kept for older data files)
-function loadRows(src){
-  const out = OpsMetrics.filterRows(src, DATA_CUTOFF);
-  out.forEach(r=>{ if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
+// Full working set: every project started on/after the cutoff — ALL statuses,
+// not just active. Analytics pages read the active subset (`rows`) by default;
+// the "Include inactive" toggle (S.includeInactive) widens `rows` to everything
+// so At-Risk / Canceled / Complete projects can be looked up when needed.
+// (parse-sf.js already applies the fixups below at parse time; kept for older data files)
+function loadAll(src){
+  const out = src.filter(r=>r.start>=DATA_CUTOFF);
+  out.forEach(r=>{ r.sales_rep=OpsMetrics.normalizeName(r.sales_rep); if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
   return out;
 }
-let rows = loadRows(JSON.parse(JSON.stringify(RAW)));
+const isActiveStatus = r => r.project_status==='In Progress' || r.project_status==='Change Order';
+// Rebuild the scoped view (`rows`) from the full set based on the toggle.
+function scopeRows(){ rows = S.includeInactive ? allRows.slice() : allRows.filter(isActiveStatus); }
+let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
+let rows = [];
+scopeRows();
 let filtered = [];
 let dataTimestamp = null;
 
@@ -967,6 +977,7 @@ function buildFBar(page){
   const chips=[];
   regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
   if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
+  if(S.includeInactive){ const n=allRows.length-allRows.filter(isActiveStatus).length; chips.push(`<span class="fchip fchip-amber">Inactive shown (+${n} At-Risk/Canceled/Complete)<button class="fchip-x" aria-label="Active only" onclick="setSetting('includeInactive',false)">×</button></span>`); }
 
   return `<div class="fbar">
     <div class="fbtn-group" role="group" aria-label="Date range">
@@ -3022,6 +3033,10 @@ function renderSettings(){
           <div><div class="set-label">Data cutoff date</div><div class="set-desc">Earliest project start included in all metrics and charts — currently ${DATA_CUTOFF}</div></div>
           <div class="set-control"><input type="date" value="${S.dataCutoff}" onchange="setSetting('dataCutoff',this.value)"></div>
         </div>
+        <div class="set-row">
+          <div><div class="set-label">Include inactive projects</div><div class="set-desc">Pull At-Risk, Canceled, and Complete-status projects into every page for lookup. Off = active only (In Progress / Change Order), the default. ${allRows.length-rows.length>0?`<strong>${allRows.length-rows.length}</strong> inactive available.`:''}</div></div>
+          <div class="set-control"><input type="checkbox" ${S.includeInactive?'checked':''} onchange="setSetting('includeInactive',this.checked)"></div>
+        </div>
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
@@ -3131,12 +3146,12 @@ function renderEditor(){
 }
 
 function debounceSearch(){ clearTimeout(eSearchTimer); eSearchTimer=setTimeout(()=>{ePageNum=0;renderEditor();},220); }
-function updR(id,f,v){ const r=rows.find(x=>x.id===id); if(!r) return; r[f]=v; if(['start','requested','scheduled','complete'].includes(f)) recalc(r); changedIds.add(id); const el=document.getElementById('ect-'+id); if(el) el.textContent=r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'; const cb=document.getElementById('chg-b'); if(changedIds.size){cb.style.display='';cb.textContent=changedIds.size+' unsaved';}else cb.style.display='none'; }
-function delRow(id){ if(!confirm('Delete row?')) return; rows=rows.filter(r=>r.id!==id); changedIds.delete(id); clearFenceCache(); renderEditor(); toast('Row deleted.'); }
-function addRow(){ const mx=Math.max(...rows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); rows.push(nr); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
+function updR(id,f,v){ const r=allRows.find(x=>x.id===id); if(!r) return; r[f]=v; if(['start','requested','scheduled','complete'].includes(f)) recalc(r); changedIds.add(id); const el=document.getElementById('ect-'+id); if(el) el.textContent=r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'; const cb=document.getElementById('chg-b'); if(changedIds.size){cb.style.display='';cb.textContent=changedIds.size+' unsaved';}else cb.style.display='none'; }
+function delRow(id){ if(!confirm('Delete row?')) return; allRows=allRows.filter(r=>r.id!==id); scopeRows(); changedIds.delete(id); clearFenceCache(); renderEditor(); toast('Row deleted.'); }
+function addRow(){ const mx=Math.max(...allRows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null,project_status:'In Progress'}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); allRows.push(nr); scopeRows(); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
 function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; rows=loadRows(JSON.parse(JSON.stringify(RAW))); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -3152,7 +3167,7 @@ function loadFile(file){
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
     if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
-    rows=loadRows(parsed); changedIds.clear();
+    allRows=loadAll(parsed); scopeRows(); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
     ts.style.display='';
@@ -3277,7 +3292,8 @@ document.addEventListener('click',function(e){
 
 window.addEventListener('load',()=>{
   loadSettings();
-  if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; rows=loadRows(JSON.parse(JSON.stringify(RAW))); }
+  if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
+  scopeRows(); // apply saved includeInactive setting
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';

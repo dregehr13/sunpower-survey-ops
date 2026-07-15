@@ -108,7 +108,10 @@ allData.slice(headerRowIdx + 1).forEach((row, i) => {
       ? (f.type === 'date' ? cleanDate(cells[colIdx[f.key]] || '') : (cells[colIdx[f.key]] || ''))
       : '';
   });
-  if (!r.region) return;
+  // Keep real records even when Salesforce's Sales Region field is blank
+  // (happens in newer markets not yet mapped to a region). Only skip rows
+  // with no identifying info at all — i.e. report artifacts, not surveys.
+  if (!r.region && !r.project && !r.address && !r.task_id) return;
   if (!r.resource && r.complete) r.resource = 'Sales Rep';
   r.ct_s2r      = dDiff(r.start, r.requested);
   r.ct_r2s      = dDiff(r.requested, r.scheduled);
@@ -136,6 +139,10 @@ const backwards = rows.filter(r => r.start && r.complete && r.complete < r.start
 if (backwards.length) warnings.push(`${backwards.length} row(s) complete before start: ${sample(backwards, r => `${label(r)} (${r.start} → ${r.complete})`)}`);
 const rsBackwards = rows.filter(r => r.resurvey_requested && r.resurvey_complete && r.resurvey_complete < r.resurvey_requested);
 if (rsBackwards.length) warnings.push(`${rsBackwards.length} row(s) resurvey complete before requested: ${sample(rsBackwards, r => `${label(r)} (${r.resurvey_requested} → ${r.resurvey_complete})`)}`);
+
+// Real records missing a Sales Region (kept, but region-based groupings skip them)
+const noRegion = rows.filter(r => !r.region);
+if (noRegion.length) warnings.push(`${noRegion.length} row(s) missing Sales Region (kept; fix in SF to restore region grouping): ${sample(noRegion, label)}`);
 
 // Duplicate project ids (TaskRay Task ID)
 const idCounts = {};
