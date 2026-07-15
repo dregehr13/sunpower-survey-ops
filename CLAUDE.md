@@ -9,12 +9,12 @@ https://sunpower-survey-ops.vercel.app
 Email generator: https://sunpower-survey-ops.vercel.app/compose
 
 ## People
-- **Doug Regehr** — Site Survey Manager, the user. Email: douglas.regehr@sunpower.com, Phone: 801-793-1861
-- **Allie Morais** — Site Survey Senior Lead. allie.morais@sunpower.com. Doug's direct lead. Primary email recipient.
-- **Spencer Jensen** — SVP Operations. spencer.jensen@sunpower.com. Reads emails in 45 seconds. Wants to know if there's a problem.
-- **Rob Barker** — Director of Operations Pre-Install. robert.barker@sunpower.com. Email recipient.
+- **Doug Regehr** — Site Survey Manager, the user. douglas.regehr@sunpower.com · 801-793-1861
+- **Chelsea Herrin** — Doug's manager (as of July 2026). Chelsea.Herrin@sunpower.com. Default email recipient.
+- **Allie Morais** — Site Survey Senior Lead. allie.morais@sunpower.com. Doug's direct lead. Default email recipient.
+- **Spencer Jensen** — SVP Operations. spencer.jensen@sunpower.com. Reads emails in 45 seconds. Wants to know if there's a problem. (Not on default list as of July 2026.)
+- **Rob Barker** — Director of Operations Pre-Install. robert.barker@sunpower.com. (Not on default list as of July 2026.)
 - **David Richards** — Previous Site Survey Manager. Replaced by Doug. Used Albatross for reporting before Salesforce.
-- **Kody Wilde** — Was on David's email list, not on Doug's.
 
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
