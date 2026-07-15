@@ -313,33 +313,66 @@ tr:hover td{background:#fafaf8;}
 .mbtn-sf:disabled{opacity:.5;cursor:default;}
 
 /* ANIMATIONS */
-@keyframes pageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes modalIn{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes secIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+@keyframes barFillIn{from{clip-path:inset(0 100% 0 0 round 2px)}to{clip-path:inset(0 0% 0 0 round 2px)}}
+@keyframes subBarIn{from{opacity:0;transform:scaleY(0);transform-origin:top}to{opacity:1;transform:scaleY(1)}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes backdropIn{from{background:rgba(0,0,0,0)}to{background:rgba(0,0,0,.5)}}
-@keyframes badgePop{0%,100%{transform:scale(1)}40%{transform:scale(1.18)}}
+@keyframes badgePop{0%,100%{transform:scale(1)}40%{transform:scale(1.22)}}
 @keyframes hintFlash{0%{color:var(--blue)}100%{color:var(--faint)}}
 @keyframes dragPulse{0%,100%{border-color:#2563eb}50%{border-color:#93c5fd}}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.page.entering{animation:pageIn .14s ease}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+.page.entering{animation:pageIn .24s cubic-bezier(.22,.68,0,1.2)}
+.sec.anim{animation:secIn .26s cubic-bezier(.22,.68,0,1.2) both;}
 .mback:not(.hidden){animation:backdropIn .15s ease forwards}
-.mback:not(.hidden) .modal{animation:modalIn .16s ease}
-.nbadge.pop{animation:badgePop .3s ease}
+.mback:not(.hidden) .modal{animation:modalIn .2s cubic-bezier(.22,.68,0,1.2)}
+.nbadge.pop{animation:badgePop .35s cubic-bezier(.34,1.56,.64,1)}
 .fhint.pop{animation:hintFlash .7s ease forwards}
 .upd-drophere.drag-over{animation:dragPulse .9s ease infinite}
 #upd-save.visible{animation:fadeSlideIn .18s ease}
 
 /* BUTTON INTERACTIONS */
-button{transition:background .1s,color .1s,border-color .1s,opacity .1s,transform .08s,box-shadow .1s;}
-button:active:not(:disabled){transform:scale(.96);}
-.fbtn:active,.mbtn:active,.tbtn:active,.epbtn:active,.set-save-btn:active{transform:scale(.96)!important;}
+button{transition:background .12s,color .12s,border-color .12s,opacity .12s,transform .12s cubic-bezier(.34,1.56,.64,1),box-shadow .12s;}
+button:active:not(:disabled){transform:scale(.94)!important;transition-duration:.06s!important;}
+.fbtn:active,.mbtn:active,.tbtn:active,.epbtn:active,.set-save-btn:active{transform:scale(.94)!important;transition-duration:.06s!important;}
+.tgl-btn{transition:background .15s,color .15s,border-color .15s,box-shadow .15s,transform .12s cubic-bezier(.34,1.56,.64,1);}
+.tgl-btn:hover:not(.active){background:#f5f4f0;}
+.tgl-btn.active{box-shadow:0 1px 4px rgba(0,0,0,.08);}
 
 /* CARD HOVER */
-.kcard{transition:box-shadow .15s,transform .15s;}
-.kcard:hover{box-shadow:0 2px 10px rgba(0,0,0,.07);transform:translateY(-1px);}
-.sec{transition:box-shadow .15s;}
+.kcard{transition:box-shadow .22s cubic-bezier(.25,.46,.45,.94),transform .22s cubic-bezier(.34,1.56,.64,1),border-color .2s;}
+.kcard:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);border-color:rgba(0,0,0,.13);}
+.kcard:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07);}
+.sec{transition:box-shadow .2s ease;}
+.sec:hover{box-shadow:0 3px 16px rgba(0,0,0,.06);}
+
+/* NAV */
+.ntab{transition:color .15s,background .15s,border-color .15s!important;}
 
 /* TABLE */
-td{transition:background .07s;}
+td{transition:background .12s;}
+.wip-row{transition:background .12s;}
+.wip-row:hover td{background:#f4f3ef!important;}
+.wip-row:hover .wip-expand{transform:translateX(2px);}
+.wip-expand{transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+.wip-row-open .wip-expand{transform:rotate(90deg)!important;}
+
+/* PILLS */
+.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s;}
+.pill:hover{transform:scale(1.06);box-shadow:0 2px 8px rgba(0,0,0,.1);}
+
+/* LINKS */
+a{transition:color .12s,opacity .12s;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);}
 
 /* INPUT FOCUS */
 select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:focus,input[type=number]:focus{
@@ -793,7 +826,8 @@ const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'al
 let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
 let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
-let wipAgeSel = new Set(); // selected PA_BAND indices for age-filter
+let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
+let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — only applies when exactly one band selected
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
 const GF = defaultF();
@@ -1155,13 +1189,71 @@ function toggleWipRow(rowEl, id){
 // ═══ NAV ══════════════════════════════════════════════════
 let currentPage = 'week';
 
+// ── ANIMATION ENGINE ──────────────────────────────────────────────────────────
+const SPRING='cubic-bezier(.22,.68,0,1.2)';
+const EASE_OUT='cubic-bezier(.25,.46,.45,.94)';
+
+function countUp(el){
+  // Parse text like "~109", "6.8d", "52%", "35d", "1,857"
+  const raw=el.textContent.trim();
+  const prefix=raw.match(/^[~<>≤≥]/)?.[0]||'';
+  const numStr=raw.replace(/[^0-9.]/g,'');
+  const num=parseFloat(numStr);
+  if(isNaN(num)||num===0) return;
+  const suffix=raw.slice(raw.search(/[^0-9.~<>≤≥,]/));
+  const decimals=(numStr.includes('.'))?1:0;
+  const dur=Math.min(800, 300+num*1.5);
+  const t0=performance.now();
+  const tick=now=>{
+    const p=Math.min((now-t0)/dur,1);
+    const e=1-Math.pow(1-p,3); // ease-out cubic
+    const v=e*num;
+    el.textContent=prefix+(decimals?v.toFixed(1):Math.round(v).toLocaleString())+suffix;
+    if(p<1) requestAnimationFrame(tick);
+  };
+  el.textContent=prefix+(decimals?'0.0':'0')+suffix;
+  requestAnimationFrame(tick);
+}
+
+function staggerRows(containerEl){
+  containerEl.querySelectorAll('tbody .wip-row').forEach((row,i)=>{
+    row.style.cssText+= `;animation:rowIn .18s ${EASE_OUT} ${i*18}ms both;`;
+  });
+}
+
+function animateBars(containerEl){
+  containerEl.querySelectorAll('.bar-fill-anim').forEach((bar,i)=>{
+    bar.style.cssText+=`;animation:barFillIn .55s ${EASE_OUT} ${i*40}ms both;`;
+  });
+}
+
+function animateSections(pageId){
+  const el=document.getElementById(pageId);
+  if(!el) return;
+  // Stagger sections
+  el.querySelectorAll('.sec,.kg').forEach((s,i)=>{
+    s.classList.remove('anim');
+    void s.offsetWidth;
+    s.style.animationDelay=`${i*32}ms`;
+    s.classList.add('anim');
+  });
+  // Count up KPI values
+  el.querySelectorAll('.kval').forEach((kv,i)=>{
+    if(kv.children.length) return; // skip complex/icon content
+    setTimeout(()=>countUp(kv), i*30);
+  });
+  // Stagger table rows
+  staggerRows(el);
+  // Animate bars
+  animateBars(el);
+}
 function nav(page){
   currentPage=page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active','entering'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   pageEl.classList.add('active','entering');
-  setTimeout(()=>pageEl.classList.remove('entering'),160);
+  setTimeout(()=>pageEl.classList.remove('entering'),240);
   const tab=document.querySelector(`.ntab[data-page="${page}"]`);
   document.querySelectorAll('.ntab').forEach(t=>t.removeAttribute('aria-current'));
   if(tab){ tab.classList.add('active'); tab.setAttribute('aria-current','page'); }
@@ -1198,6 +1290,7 @@ function renderPage(p){
   if(p==='resurvey')    renderResurvey();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
+  requestAnimationFrame(()=>animateSections('page-'+p));
 }
 
 // ═══ UTILS ════════════════════════════════════════════════
@@ -1879,7 +1972,7 @@ function renderPerformance(){
       <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
-      <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
+      <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div class="bar-fill-anim" style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div class="bar-fill-anim" style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div class="bar-fill-anim" style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
     <div class="res-cards">${['Sales Rep','Radicl Services','SunPower Surveyor'].map(resCard).join('')}</div>
     <div class="sec">
@@ -2335,8 +2428,9 @@ function renderTrends(){
 // ═══ WIP HUB ═════════════════════════════════════════════
 let wipView='all'; // 'all' | 'attn'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
-function toggleWipAgeBand(i){ if(wipAgeSel.has(i)) wipAgeSel.delete(i); else wipAgeSel.add(i); renderAgingWIP(); }
-function clearWipAgeSel(){ wipAgeSel.clear(); renderAgingWIP(); }
+function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} if(wipAgeSel.size!==1) wipStatusSel=null; renderAgingWIP(); }
+function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
+function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
@@ -2353,10 +2447,14 @@ function renderAgingWIP(){
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
+  const PA_MINS=[0,15,30,60,90];
+  const PA_MAXS=[15,30,60,90,Infinity];
+  const isOpenRs=r=>!!(r.resurvey_requested&&!r.resurvey_complete);
+  const wipSchedDate=r=>isOpenRs(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
+  const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
   if(wipAgeSel.size>0){
-    const PA_MINS=[0,15,30,60,90];
-    const PA_MAXS=[15,30,60,90,Infinity];
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
+    if(wipAgeSel.size===1&&wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
   }
 
   wip.sort((a,b)=>{
@@ -2452,7 +2550,7 @@ function renderAgingWIP(){
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
-      <td class="r" style="color:var(--muted);">${r.scheduled?fmtDateShort(r.scheduled):'—'}</td>
+      <td class="r" style="color:var(--muted);">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'—'}</td>
       <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
       <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
@@ -2477,26 +2575,54 @@ function renderAgingWIP(){
         {label:'60–90d', max:90, color:'#c05252'},
         {label:'>90d', max:Infinity, color:'#7a2e2e'},
       ];
-      const paAll=rows.filter(r=>isWIP(r)&&r.start).map(r=>dDiff(r.start,today)??0);
-      const counts=PA_BANDS.map((b,i)=>paAll.filter(d=>d<b.max&&(i===0||d>=PA_BANDS[i-1].max)).length);
+      const STATUS_COLORS={scheduled:'#4a9e6a',pastdue:'#d97706',unscheduled:'#b0a898'};
+      const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
+      const paWip=rows.filter(r=>isWIP(r)&&r.start).map(r=>{
+        const age=dDiff(r.start,today)??0;
+        const s=r.scheduled||r.resurvey_scheduled;
+        const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';
+        return{age,status};
+      });
+      const counts=PA_BANDS.map((b,i)=>paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max)).length);
       const total=counts.reduce((a,b)=>a+b,0)||1;
       const anySelected=wipAgeSel.size>0;
+      const singleSel=wipAgeSel.size===1?[...wipAgeSel][0]:null;
       const segs=PA_BANDS.map((b,i)=>{
         if(!counts[i]) return '';
         const sel=wipAgeSel.has(i);
         const dim=anySelected&&!sel;
-        return `<div title="${b.label}: ${counts[i]}" onclick="toggleWipAgeBand(${i})" style="flex:${counts[i]};background:${b.color};height:100%;min-width:2px;cursor:pointer;opacity:${dim?0.25:1};${sel?'outline:2px solid #333;outline-offset:-2px;':''};transition:opacity .15s;"></div>`;
+        const bandItems=paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max));
+        const subCounts={scheduled:bandItems.filter(d=>d.status==='scheduled').length,pastdue:bandItems.filter(d=>d.status==='pastdue').length,unscheduled:bandItems.filter(d=>d.status==='unscheduled').length};
+        const subBar=singleSel===i?`<div style="display:flex;gap:1px;height:10px;margin-top:2px;animation:subBarIn .18s ease both;">${
+          ['scheduled','pastdue','unscheduled'].map(s=>subCounts[s]?`<div onclick="selectWipStatus('${s}',event)" title="${STATUS_LABELS[s]}: ${subCounts[s]}" style="flex:${subCounts[s]};background:${STATUS_COLORS[s]};border-radius:2px;cursor:pointer;${wipStatusSel===s?'outline:2px solid #333;outline-offset:-1px;':wipStatusSel?'opacity:.3;':''}transition:opacity .15s;"></div>`:'').join('')
+        }</div>`:'';
+        return `<div onclick="toggleWipAgeBand(${i})" title="${b.label}: ${counts[i]}" style="flex:${counts[i]};display:flex;flex-direction:column;cursor:pointer;min-width:4px;opacity:${dim?.25:1};transition:opacity .2s;">
+          <div class="bar-fill-anim" style="height:14px;background:${b.color};border-radius:2px;${sel?'outline:2px solid #444;outline-offset:-2px;':''}"></div>
+          ${subBar}
+        </div>`;
       }).join('');
       const legend=PA_BANDS.map((b,i)=>counts[i]?`
-        <span onclick="toggleWipAgeBand(${i})" style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);cursor:pointer;opacity:${anySelected&&!wipAgeSel.has(i)?0.35:1};transition:opacity .15s;">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #555;':''};"></span>
-          ${b.label} <strong>${counts[i]}</strong> <span style="color:var(--faint);">${Math.round(counts[i]/total*100)}%</span>
+        <span onclick="toggleWipAgeBand(${i})" style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);cursor:pointer;opacity:${anySelected&&!wipAgeSel.has(i)?.35:1};transition:opacity .15s;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #666;outline-offset:1px;':''}"></span>
+          ${b.label} <strong>${counts[i]}</strong>
         </span>`:'').join('');
-      const clearBtn=anySelected?`<button onclick="clearWipAgeSel()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter</button>`:'';
+      const subLegend=singleSel!==null?(()=>{
+        const bandItems=paWip.filter(d=>d.age<PA_BANDS[singleSel].max&&(singleSel===0||d.age>=PA_BANDS[singleSel-1].max));
+        return `<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border);display:inline-flex;align-items:center;gap:10px;">${
+          ['scheduled','pastdue','unscheduled'].map(s=>{
+            const n=bandItems.filter(d=>d.status===s).length;
+            return n?`<span onclick="selectWipStatus('${s}',event)" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;opacity:${wipStatusSel&&wipStatusSel!==s?.35:1};color:var(--muted);transition:opacity .15s;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${STATUS_COLORS[s]};flex-shrink:0;"></span>
+              ${STATUS_LABELS[s]} <strong>${n}</strong></span>`:'';
+          }).join('')
+        }</span>`;
+      })():'';
+      const filterLabel=anySelected?[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', ')+(wipStatusSel&&singleSel!==null?' · '+STATUS_LABELS[wipStatusSel]:''):'';
+      const clearBtn=anySelected?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
       return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution${anySelected?` <span style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0;">— filtered</span>`:''}</div>
-        <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:8px;">${segs}</div>
-        <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${clearBtn}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution${filterLabel?` <span style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0;">— ${filterLabel}</span>`:''}</div>
+        <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
       </div>`;
     })()}
     <div class="sec">
