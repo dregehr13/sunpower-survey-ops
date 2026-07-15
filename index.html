@@ -1505,8 +1505,17 @@ function renderLastWeek(){
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
+  // Prior week for comparison
+  const pw=weekRange(-2);
+  const pwSrc=rows.filter(r=>isComplete(r)&&r.complete>=pw.from&&r.complete<=pw.to);
+  const pwAvgT=avg(pwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
+  // 3-week avg (weeks -1, -2, -3)
+  const w3=weekRange(-3);
+  const triSrc=rows.filter(r=>isComplete(r)&&r.complete>=w3.from&&r.complete<=lw.to);
+  const triAvgT=avg(triSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   document.getElementById('cur-hero-hdr').innerHTML=`
-    <div class="brief-eyebrow">Last Week · ${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>
+    <div class="exec-title" style="margin-bottom:4px;">Last Week</div>
+    <div class="brief-eyebrow">${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>
     <div class="brief-sentence" id="lw-brief">No completed surveys last week.</div>`;
   if(!src.length){
     document.getElementById('cur-kpis').innerHTML='';
@@ -1514,11 +1523,15 @@ function renderLastWeek(){
     return;
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
-  const lwBand=bandFor(avgT,S.targetAvg)||'good';
-  const lwWord=lwBand==='good'?'Closed on target.':lwBand==='mid'?'Closed slightly behind.':'Closed behind target.';
-  const lwBvCls=lwBand==='good'?'':lwBand==='mid'?' bv-warn':' bv-bad';
-  const lwAvgCls=lwBand==='good'?'brief-good':'brief-bad';
-  document.getElementById('lw-brief').innerHTML=`<span class="brief-verdict${lwBvCls}">${lwWord}</span> <span class="brief-num">${src.length}</span> survey${src.length===1?'':'s'} completed${avgT!=null?` at a <span class="${lwAvgCls}">${avgT.toFixed(1)}-day</span> average`:''}${onTgt!=null?` — ${onTgt}% inside the ${S.targetAvg}-day target${medT!=null?`, median ${medT.toFixed(0)} day${medT===1?'':'s'}`:''}.`:'.'}`;
+  const lwBvCls=bandFor(avgT,S.targetAvg)==='good'?'':bandFor(avgT,S.targetAvg)==='mid'?' bv-warn':' bv-bad';
+  // Build the "so what" sentence from trend data, not the cards below
+  const countDelta=pwSrc.length?src.length-pwSrc.length:null;
+  const countDeltaStr=countDelta!=null?(countDelta>0?`<span class="brief-good">+${countDelta}</span> vs prior week`:`<span class="brief-bad">${countDelta}</span> vs prior week`):'';
+  const avgDelta=avgT!=null&&pwAvgT!=null?Math.round((avgT-pwAvgT)*10)/10:null;
+  const avgTrendStr=avgDelta!=null?(avgDelta<0?`<span class="brief-good">${avgDelta.toFixed(1)}d</span> faster than prior week`:avgDelta>0?`<span class="brief-bad">+${avgDelta.toFixed(1)}d</span> slower than prior week`:'same as prior week'):'';
+  const triStr=triAvgT!=null?`3-week avg <span class="brief-num">${triAvgT.toFixed(1)}d</span>`:'';
+  const bits=[countDeltaStr,avgTrendStr,triStr].filter(Boolean);
+  document.getElementById('lw-brief').innerHTML=`<span class="brief-verdict${lwBvCls}"><span class="brief-num">${src.length}</span> closed${pwSrc.length?`, ${countDelta>=0?'up':'down'} from ${pwSrc.length}`:''}</span>${avgT!=null?` · avg <span class="brief-num">${avgT.toFixed(1)}d</span>${avgDelta!=null?(avgDelta<0?' <span class="brief-good">↓'+Math.abs(avgDelta).toFixed(1)+'d</span>':avgDelta>0?' <span class="brief-bad">↑'+avgDelta.toFixed(1)+'d</span>':''):''}${triAvgT!=null?' · 3-wk avg <span class="brief-num">'+triAvgT.toFixed(1)+'d</span>':''}`:''}.`;
   const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to)).length;
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
@@ -1535,22 +1548,26 @@ function renderLastWeek(){
   const rStats=regionStats(src).sort((a,b)=>b.count-a.count).slice(0,16);
   const rh=Math.max(180,rStats.length*26+50);
 
-  const shortName=t=>t==='SunPower Surveyor'?'SPWR':t.replace(' Services','');
-  const mixW=(document.getElementById('week-inner')?.offsetWidth||1100)-32;
-  const splitSegs=typeData.map((td,i)=>{
+  const shortName=t=>t==='SunPower Surveyor'?'SunPower Surveyor':t;
+  const typeRows=typeData.map(td=>{
     const pct=Math.round(td.n/src.length*100);
     const col=TYPE_COLORS[td.t];
-    const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d avg':'—';
-    const rad=typeData.length===1?'6px':(i===0?'6px 0 0 6px':i===typeData.length-1?'0 6px 6px 0':'0');
-    const slim=td.n/src.length*mixW<110; // segment too narrow for in-bar text — name it in the header line instead
-    return `<div style="flex:${td.n};display:flex;flex-direction:column;gap:4px;min-width:0;">
-      <div style="text-align:center;color:${col};font-size:12px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${td.t}: ${td.n} surveys · ${avgStr}"><span style="font-weight:700">${pct}%</span>${slim?` <span style="font-size:10px;">${shortName(td.t)}</span>`:''}</div>
-      <div style="background:${col};border-radius:${rad};height:52px;padding:9px 10px;color:#fff;overflow:hidden;box-sizing:border-box;box-shadow:inset 0 1px 0 rgba(255,255,255,.18);" title="${td.t}: ${td.n} surveys · ${avgStr}">
-        ${slim?'':`<div style="font-size:10px;font-weight:600;white-space:nowrap;">${shortName(td.t)} · ${td.n} surveys</div>
-        <div style="font-size:10px;opacity:.82;white-space:nowrap;margin-top:3px;">${avgStr}</div>`}
-      </div>
+    const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d':'—';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+      <div style="flex:1;font-size:12px;color:var(--text);">${td.t}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);min-width:28px;text-align:right;">${td.n}</div>
+      <div style="width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0;"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px;"></div></div>
+      <div style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">${pct}%</div>
+      <div style="font-size:11px;color:var(--muted);min-width:42px;text-align:right;">${avgStr} avg</div>
     </div>`;
   }).join('');
+  // Outlier cap for regional chart
+  const rgVals=rStats.map(r=>r.start_to_complete).filter(x=>x!=null&&x>0).sort((a,b)=>a-b);
+  const p80=rgVals[Math.floor(rgVals.length*0.8)]||S.targetAvg*3;
+  const rgCap=Math.max(S.targetAvg*4, Math.ceil(p80*1.3));
+  const rgDisplay=rStats.map(r=>r.start_to_complete!=null?Math.min(r.start_to_complete,rgCap):null);
+  const rgOutliers=new Set(rStats.map((r,i)=>r.start_to_complete>rgCap?i:-1).filter(i=>i>=0));
 
   document.getElementById('week-inner').innerHTML=`
     <div class="cur-grid">
@@ -1561,7 +1578,7 @@ function renderLastWeek(){
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
-      <div style="display:flex;gap:4px;">${splitSegs}</div>
+      <div>${typeRows}</div>
     </div>
     </div>
     <div class="cur-col">
@@ -1588,15 +1605,26 @@ function renderLastWeek(){
   CH['lw-rg']=new Chart(document.getElementById('lw-rg'),{
     type:'bar',
     data:{labels:rStats.map(r=>r.region),datasets:[{
-      data:rStats.map(r=>r.start_to_complete),
+      data:rgDisplay,
       minBarLength:3,
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#3f9d6c':(r.start_to_complete||0)<=(S.targetAvg+3)?'#c0912e':'#d94f4e'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
+        tooltip:{callbacks:{label:ctx=>` ${rStats[ctx.dataIndex].start_to_complete!=null?rStats[ctx.dataIndex].start_to_complete.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#d94f4e',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98',callback:v=>v+'d'}},
-              y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
+      scales:{x:{max:rgCap,grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98',callback:v=>v+'d'}},
+              y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}},
+    plugins:[{id:'outlierLabels',afterDatasetsDraw(chart){
+      if(!rgOutliers.size) return;
+      const ctx=chart.ctx,meta=chart.getDatasetMeta(0);
+      ctx.save();ctx.font='bold 10px -apple-system,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='right';ctx.textBaseline='middle';
+      rgOutliers.forEach(i=>{
+        const bar=meta.data[i]; if(!bar) return;
+        const actual=rStats[i].start_to_complete;
+        ctx.fillText(actual.toFixed(0)+'d ▶', bar.x-5, bar.y);
+      });
+      ctx.restore();
+    }}]
   });
 }
 
@@ -1633,14 +1661,23 @@ function renderThisWeek(){
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   const lwr=weekRange(-1);
-  const lwCount=rows.filter(r=>isComplete(r)&&r.complete>=lwr.from&&r.complete<=lwr.to).length;
+  const lwSrc=rows.filter(r=>isComplete(r)&&r.complete>=lwr.from&&r.complete<=lwr.to);
+  const lwCount=lwSrc.length;
+  const lwAvgT=avg(lwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
+  // 3-week avg for cycle context
+  const w3r=weekRange(-3);
+  const triSrcTW=rows.filter(r=>isComplete(r)&&r.complete>=w3r.from&&r.complete<=lwr.to);
+  const triAvgTW=avg(triSrcTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   const twBand=avgT!=null?(bandFor(avgT,S.targetAvg)||'good'):'good';
-  const twWord=twBand==='good'?'On track.':twBand==='mid'?'Slightly behind.':'Behind target.';
   const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
   const dayWord=new Date().toLocaleDateString('en-US',{weekday:'long'});
+  const avgVsLw=avgT!=null&&lwAvgT!=null?Math.round((avgT-lwAvgT)*10)/10:null;
+  const avgVsLwStr=avgVsLw!=null?(avgVsLw<0?` <span class="brief-good">↓${Math.abs(avgVsLw).toFixed(1)}d vs last week</span>`:avgVsLw>0?` <span class="brief-bad">↑${avgVsLw.toFixed(1)}d vs last week</span>`:' same as last week'):'';
   document.getElementById('cur-hero-hdr').innerHTML=`
-    <div class="brief-eyebrow">${dayWord} Briefing · ${fmtDate(tw.from)} — ${fmtDate(tw.to)}${bDaysElapsed>0?` · through ${dayNames[bDaysElapsed-1]||'today'}`:''}</div>
-    <div class="brief-sentence"><span class="brief-verdict${twBvCls}">${twWord}</span> <span class="brief-num">${completedTW.length}</span> completed so far, pacing to <span class="brief-num">${bDaysRemaining>0?'~':''}${projTotal}</span> this week against last week's ${lwCount}.${avgT!=null?` Cycle time is running <span class="${twBand==='good'?'brief-good':'brief-bad'}">${avgT.toFixed(1)} days</span> — ${avgT<=S.targetAvg?'under':'above'} the ${S.targetAvg}-day target.`:''}</div>`;
+    <div class="exec-title" style="margin-bottom:4px;">${dayWord}</div>
+    <div class="brief-eyebrow">${fmtDate(tw.from)} — ${fmtDate(tw.to)}${bDaysElapsed>0?` · through ${dayNames[bDaysElapsed-1]||'today'}`:''}</div>
+    <div class="brief-sentence"><span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> closed${bDaysRemaining>0?`, pacing to ~${projTotal}`:''}</span>${lwCount?` vs last week's ${lwCount}`:''}${avgT!=null?` · avg <span class="brief-num">${avgT.toFixed(1)}d</span>${avgVsLwStr}${triAvgTW!=null?' · 3-wk avg <span class="brief-num">'+triAvgTW.toFixed(1)+'d</span>':''}`:''}.
+    </div>`;
   _thisWeekSrc=completedTW;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
