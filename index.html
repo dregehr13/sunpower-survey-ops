@@ -2457,6 +2457,12 @@ function renderAgingWIP(){
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
     if(wipAgeSel.size===1&&wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
   }
+  // Filtered summary stats (for strip below age bar)
+  const _totalWipCount=rows.filter(r=>isWIP(r)).length;
+  const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
+  const selAvg=selDays.length?Math.round(selDays.reduce((a,b)=>a+b,0)/selDays.length*10)/10:null;
+  const selPct=selDays.length?Math.round(selDays.filter(d=>d<=S.targetAvg).length/selDays.length*100):null;
+  const selFiltered=wip.length<_totalWipCount;
 
   wip.sort((a,b)=>{
     const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey;
@@ -2622,9 +2628,15 @@ function renderAgingWIP(){
       const filterLabel=anySelected?[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', ')+(wipStatusSel&&singleSel!==null?' · '+STATUS_LABELS[wipStatusSel]:''):'';
       const clearBtn=anySelected?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
       return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution${filterLabel?` <span style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0;">— ${filterLabel}</span>`:''}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution</div>
         <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
+        ${selFiltered?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:20px;font-size:12px;color:var(--muted);">
+          <span><strong style="color:var(--text);font-size:14px;">${wip.length}</strong> selected</span>
+          ${selAvg!=null?`<span>avg <strong style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};font-size:14px;">${selAvg}d</strong></span>`:''}
+          ${selPct!=null?`<span><strong style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};font-size:14px;">${selPct}%</strong> on track</span>`:''}
+          <span style="color:var(--faint);">of ${_totalWipCount} total</span>
+        </div>`:''}
       </div>`;
     })()}
     <div class="sec">
