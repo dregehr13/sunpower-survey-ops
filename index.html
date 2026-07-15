@@ -1200,7 +1200,8 @@ function countUp(el){
   const numStr=raw.replace(/[^0-9.]/g,'');
   const num=parseFloat(numStr);
   if(isNaN(num)||num===0) return;
-  const suffix=raw.slice(raw.search(/[^0-9.~<>≤≥,]/));
+  const sfxIdx=raw.search(/[^0-9.~<>≤≥,]/);
+  const suffix=sfxIdx>=0?raw.slice(sfxIdx):'';
   const decimals=(numStr.includes('.'))?1:0;
   const dur=Math.min(800, 300+num*1.5);
   const t0=performance.now();
