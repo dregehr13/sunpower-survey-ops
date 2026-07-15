@@ -1545,7 +1545,7 @@ function renderLastWeek(){
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
     .filter(td=>td.n>0).sort((a,b)=>b.n-a.n);
-  const rStats=regionStats(src).sort((a,b)=>b.count-a.count).slice(0,16);
+  const rStats=regionStats(src).sort((a,b)=>(a.start_to_complete||0)-(b.start_to_complete||0)).slice(0,16);
   const rh=Math.max(180,rStats.length*26+50);
 
   const shortName=t=>t==='SunPower Surveyor'?'SunPower Surveyor':t;
