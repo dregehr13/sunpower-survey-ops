@@ -2058,11 +2058,11 @@ function renderTrends(){
     <div class="sec">
       <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · current state: Complete · Resurvey pending · Scheduled · Unscheduled · current week is partial</div></div></div>
       <div class="leg">
-        <span class="li" style="color:#16a34a;"><span class="ld" style="background:rgba(34,197,94,0.8);"></span>Complete</span>
-        <span class="li" style="color:#2563eb;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Scheduled</span>
+        <span class="li" style="color:#3a9e6a;"><span class="ld" style="background:rgba(46,185,120,0.8);"></span>Complete</span>
+        <span class="li" style="color:#5570a8;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Scheduled</span>
         <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.8);"></span>Unscheduled</span>
-        <span class="li" style="color:#dc2626;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Resurvey pending</span>
-        <span class="li" style="color:#16a34a;"><span class="ldash" style="background:#16a34a;"></span>Complete %</span>
+        <span class="li" style="color:#c94040;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Resurvey pending</span>
+        <span class="li" style="color:#3a9e6a;"><span class="ldash" style="background:#3a9e6a;"></span>Complete %</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 40px;height:230px;"><canvas id="tr-vol-yL" width="40" height="230"></canvas></div>
@@ -2112,8 +2112,8 @@ function renderTrends(){
   CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
     type:'bar',
     data:{labels:inOutLabels,datasets:[
-      {label:'New In',data:inOutNewIn,backgroundColor:'rgba(96,165,250,.75)',borderRadius:3,yAxisID:'y',order:2},
-      {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(52,211,153,.75)',borderRadius:3,yAxisID:'y',order:2},
+      {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
+      {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
       {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
        tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
     ]},
@@ -2125,11 +2125,11 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#83838c',font:{size:11}}},
-        y:{min:0,position:'left',grid:{color:'rgba(20,20,25,.05)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+        y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-inout-yL',CH['tr-inout'].scales.y,true,'#83838c',null,'Surveys','#bbb');
+  _drawAxis('tr-inout-yL',CH['tr-inout'].scales.y,true,'#9b9690',null,'Surveys','#bbb');
   _drawAxis('tr-inout-yR',CH['tr-inout'].scales.y1,false,'#d97706',null,'WIP','#d97706');
 
   // ── tr-wf ─────────────────────────────────────────────────
@@ -2148,9 +2148,9 @@ function renderTrends(){
        data:weeklyC.map(w=>w.start_to_complete),
        backgroundColor:weeklyC.map(w=>{ const v=w.start_to_complete; if(v==null) return 'rgba(226,232,240,1)'; if(v<=S.targetAvg) return 'rgba(29,158,117,1)'; if(v<=(S.targetAvg+3)) return 'rgba(186,117,23,1)'; return 'rgba(226,75,74,1)'; }),
        borderRadius:3,yAxisID:'y',order:2},
-      {label:'Pipeline ratio',data:pipeRatioWf,type:'line',borderColor:'#2563eb',
+      {label:'Pipeline ratio',data:pipeRatioWf,type:'line',borderColor:'#5570a8',
        backgroundColor:'transparent',tension:.3,borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#2563eb',spanGaps:false,yAxisID:'y1',order:1},
+       pointRadius:3,pointBackgroundColor:'#5570a8',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       onClick:(evt,els)=>{ if(!els.length) return; const w=weeklyC[els[0].index]; const dr=trendDone.filter(r=>weekOf(r.complete)===w.week); openDrill('Completions · Week of '+fmtWeekLabel(w),dr.length+' surveys',dr); },
@@ -2160,12 +2160,12 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='Pipeline ratio'?` Ratio: ${ctx.parsed.y}×`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#83838c',font:{size:11}}},
-        y:{min:0,position:'left',grid:{color:'rgba(20,20,25,.05)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+        y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#83838c',v=>v+'d');
-  _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#2563eb',v=>v.toFixed(1)+'×');
+  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#9b9690',v=>v+'d');
+  _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#5570a8',v=>v.toFixed(1)+'×');
 
   // ── tr-vol: state cohorts stacked by start week ───────────────
   const COHORT_CATS=['Complete','Scheduled','Unscheduled','Resurvey pending'];
@@ -2204,9 +2204,9 @@ function renderTrends(){
         yAxisID:'y',
         order:2,
       })),
-      {label:'Complete %',data:completePct,type:'line',borderColor:'#16a34a',
+      {label:'Complete %',data:completePct,type:'line',borderColor:'#3a9e6a',
        backgroundColor:'transparent',tension:.3,borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#16a34a',spanGaps:false,yAxisID:'y1',order:1},
+       pointRadius:3,pointBackgroundColor:'#3a9e6a',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isComplete(r)) return state==='Complete'; if(hasResurveySig(r)) return state==='Resurvey pending'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
@@ -2216,14 +2216,14 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='Complete %'?` Complete: ${ctx.parsed.y}%`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#83838c',font:{size:11}},stacked:true},
-        y:{min:0,stacked:true,position:'left',grid:{color:'rgba(20,20,25,.05)'},
+        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}},stacked:true},
+        y:{min:0,stacked:true,position:'left',grid:{color:'rgba(80,65,40,.06)'},
            ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},
             ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#83838c',v=>String(Math.round(v)));
-  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#16a34a',v=>Math.round(v)+'%');
+  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#9b9690',v=>String(Math.round(v)));
+  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#3a9e6a',v=>Math.round(v)+'%');
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
     const ws=wkMap[wk],wc=wkCMap[wk];

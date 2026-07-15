@@ -716,7 +716,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       const bh=Math.max((d.count/dYMax)*Dch,2);
       const bx=(parseFloat(Dcx(i))-DbarW/2).toFixed(1);
       const byTop=(Dbaseline-bh).toFixed(1);
-      dBody+=`<rect x="${bx}" y="${byTop}" width="${DbarW}" height="${bh.toFixed(1)}" rx="2" fill="${isYest?'#f7941d':'#e8ddd0'}"/>`;
+      dBody+=`<rect x="${bx}" y="${byTop}" width="${DbarW}" height="${bh.toFixed(1)}" rx="2" fill="${isYest?'#3cb964':'#dde8d8'}"/>`;
       dBody+=`<text x="${Dcx(i)}" y="${(parseFloat(byTop)-5).toFixed(1)}" text-anchor="middle" fill="${isYest?'#222':'#888'}" font-size="${isYest?12:11}" font-weight="${isYest?'700':'400'}" font-family="Arial,Helvetica,sans-serif">${d.count}</text>`;
     }
     const dailySvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${D_W}" height="${D_H}">${dBody}</svg>`;
