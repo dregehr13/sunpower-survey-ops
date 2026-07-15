@@ -1434,7 +1434,7 @@ function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else{sortKey=k;sortAsc=fal
 function sortArrow(k){ if(sortKey!==k) return 'sarr-no'; return sortAsc?'sarr-up':'sarr-dn'; }
 
 // ═══ CURRENT ═════════════════════════════════════════════
-let weekView='last';
+let weekView=new Date().getDay()===1?'last':'this';
 function renderWeek(){
   const tgl=(v,l)=>`<button class="tgl-btn${weekView===v?' active':''}" onclick="setWeekView('${v}')">${l}</button>`;
   document.getElementById('week-content').innerHTML=`
