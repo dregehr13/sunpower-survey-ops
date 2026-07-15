@@ -1597,17 +1597,17 @@ function renderLastWeek(){
     </div>`;
 
   document.getElementById('week-inner').innerHTML=`
-    <div class="cur-grid">
-    <div class="cur-col">
     <div class="sec">
       <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Cycle days</div></div></div>
       <div class="cw" style="height:150px;"><canvas id="lw-dist"></canvas></div>
     </div>
+    <div class="cur-grid">
+    <div class="cur-col">
     <div class="sec">
       <div class="shead"><div><div class="stitle">First-pass yield</div><div class="ssub">Last week</div></div></div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
         <span class="ekval ${fpyCls}" style="font-size:24px;">${lwFpy!=null?lwFpy+'%':'—'}</span>
-        ${fpyDelta!=null?`<span style="font-size:12px;color:${fpyDelta>=0?'var(--green)':'var(--red)'};">${fpyDelta>=0?'+':''}${fpyDelta}pp vs prior week</span>`:''}
+        ${fpyDelta!=null?`<span style="font-size:12px;color:${fpyDelta>=0?'var(--green)':'var(--red)'};">${fpyDelta>=0?'+':''}${fpyDelta}% vs prior week</span>`:''}
       </div>
       <div style="background:var(--border-lt);border-radius:3px;height:5px;margin-bottom:8px;overflow:hidden;">
         <div style="height:100%;width:${fpyBarW}%;background:${lwFpy>=90?'#3f9d6c':lwFpy>=80?'#c0912e':'#d94f4e'};border-radius:3px;"></div>
@@ -1618,13 +1618,6 @@ function renderLastWeek(){
       <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
       <div>${typeRows}</div>
     </div>
-    </div>
-    <div class="cur-col">
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Regional</div><div class="ssub">Avg cycle by region</div></div></div>
-      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-      <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
-    </div>
     ${stillOpen.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Still open from last week</div><div class="ssub">${stillOpen.length} survey${stillOpen.length!==1?'s':''} started Mon–Sun, not yet closed${soAvgAge!=null?' · '+soAvgAge+'d avg age':''}</div></div></div>
@@ -1632,6 +1625,13 @@ function renderLastWeek(){
       ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk')}
       ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn')}
     </div>`:''}
+    </div>
+    <div class="cur-col">
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Regional</div><div class="ssub">Avg cycle by region</div></div></div>
+      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
+      <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
+    </div>
     </div>
     </div>`;
 
