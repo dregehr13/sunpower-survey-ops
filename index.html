@@ -1684,11 +1684,12 @@ function renderLastWeek(){
 function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
-  const yesterday=localISO(new Date(Date.now()-86400000));
-  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=today);
+  // Use the DATA_TS date as the cutoff — export captures completions through the moment it was run
+  const dataThrough=window.DATA_TS?DATA_TS.slice(0,10):today;
+  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
   const scheduledRem=rows.filter(r=>!isComplete(r)&&(
-    (r.scheduled&&r.scheduled>yesterday&&r.scheduled<=tw.to)||
-    (r.resurvey_scheduled&&r.resurvey_scheduled>yesterday&&r.resurvey_scheduled<=tw.to)
+    (r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to)||
+    (r.resurvey_scheduled&&r.resurvey_scheduled>=dataThrough&&r.resurvey_scheduled<=tw.to)
   ));
   // Initial surveys + open resurveys scheduled this week — matches what "Scheduled remaining" counts
   const atRiskInit=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r)&&!(r.resurvey_requested&&!r.resurvey_complete))
@@ -1696,15 +1697,15 @@ function renderThisWeek(){
   const atRiskRs=rows.filter(r=>r.resurvey_scheduled&&r.resurvey_scheduled>=tw.from&&r.resurvey_scheduled<=tw.to&&r.list!=='Complete'&&!r.resurvey_complete)
     .map(r=>({r,sched:r.resurvey_scheduled,isRs:true,openFrom:r.resurvey_requested||r.start}));
   const atRisk=[...atRiskInit,...atRiskRs];
-  const {elapsed:bDaysElapsed,remaining:bDaysRemaining}=businessDays(yesterday);
+  const {elapsed:bDaysElapsed,remaining:bDaysRemaining}=businessDays(dataThrough);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
-  const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
+  const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=dataThrough&&r.ct_total!=null&&r.ct_total>=1);
   const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
   const segAvgs=buildSegmentAvgs(recentComps,['region','resource']);
   const wipProjects=rows.filter(r=>isWIP(r));
   const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
   const wip=wipProjects.length;
-  const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),yesterday)));
+  const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),dataThrough)));
   const scheduledRemCount=scheduledRem.length;
   const unscheduledWip=Math.max(wip-scheduledRemCount,0);
   const projTotal=projectWeekTotal(completedTW.length,scheduledRemCount,unscheduledWip,recentAvgCt,bDaysRemaining);
@@ -1725,15 +1726,13 @@ function renderThisWeek(){
   const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
   const dayWord=new Date().toLocaleDateString('en-US',{weekday:'long'});
   const avgVsLw=avgT!=null&&lwAvgT!=null?Math.round((avgT-lwAvgT)*10)/10:null;
-  // Pacing vs last week's same-day count
-  const lwDayDates=[0,1,2,3,4].map(i=>{const [y,m,d]=lwr.from.split('-').map(Number);return localISO(new Date(y,m-1,d+i));});
-  const lwThroughSameDay=lwSrc.filter(r=>lwDayDates.slice(0,bDaysElapsed).includes(r.complete)).length;
-  const pacingPct=lwThroughSameDay>0?Math.round((completedTW.length/lwThroughSameDay-1)*100):null;
+  // Pacing: compare projected week total vs last week's total
+  const pacingPct=lwCount>0?Math.round((projTotal/lwCount-1)*100):null;
   let paceStr;
-  if(pacingPct===null) paceStr=`<span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> closed so far</span>`;
-  else if(pacingPct>=5) paceStr=`<span class="brief-verdict"><span class="brief-num">${pacingPct}% ahead</span> of last week's pace</span>`;
-  else if(pacingPct<=-5) paceStr=`<span class="brief-verdict"><span class="brief-num">${Math.abs(pacingPct)}% behind</span> last week's pace</span>`;
-  else paceStr=`<span class="brief-verdict">On pace</span> with last week`;
+  if(pacingPct===null||bDaysRemaining===0) paceStr=`<span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> completions this week</span>`;
+  else if(pacingPct>=5) paceStr=`<span class="brief-verdict">Pacing <span class="brief-num">${pacingPct}% above</span> last week</span>`;
+  else if(pacingPct<=-5) paceStr=`<span class="brief-verdict">Pacing <span class="brief-num">${Math.abs(pacingPct)}% below</span> last week</span>`;
+  else paceStr=`<span class="brief-verdict">Pacing on par</span> with last week`;
   // Quality: on-target % for completions so far (not shown in cards)
   const onTgtTW=pctTgt(tots);
   const qualTWStr=onTgtTW!=null?` — <span class="brief-num">${onTgtTW}%</span> of completions hitting ≤${S.targetAvg}d target`:'';
@@ -1782,7 +1781,7 @@ function renderThisWeek(){
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
         ${atRisk.sort((a,b)=>a.sched.localeCompare(b.sched)).map(e=>`<tr>
-          <td style="font-size:12px;">${e.isRs?'<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>':''}${projLink(e.r)}</td>
+          <td style="font-size:12px;">${projLink(e.r)}${e.isRs?' <span style="font-size:10px;font-weight:700;color:#d97706;margin-left:4px;">RS</span>':''}</td>
           <td style="font-size:12px;"><span class="sbadge">${getState(e.r.region)}</span>${e.r.region.split(' ').slice(1).join(' ')}</td>
           <td style="font-size:12px;">${esc(e.r.sales_rep||'—')}</td>
           <td class="r" style="font-size:12px;">${fmtDateShort(e.sched)}</td>
@@ -2347,6 +2346,7 @@ function renderAgingWIP(){
   let wip=wipFiltered().map(r=>({
     ...r,
     daysOpen:dDiff(wipAgeFrom(r),today)??0,
+    projectAge:r.start?dDiff(r.start,today)??0:null,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
@@ -2381,7 +2381,7 @@ function renderAgingWIP(){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
-    return `<td colspan="8" style="padding:0;">
+    return `<td colspan="9" style="padding:0;">
       <div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
 
@@ -2448,6 +2448,7 @@ function renderAgingWIP(){
       <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
       <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
+      <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
@@ -2460,6 +2461,30 @@ function renderAgingWIP(){
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
       <div class="kcard"><div class="klabel">Oldest</div><div class="kval ${maxAge!=null?(maxAge>7?'kr-c':maxAge>S.targetAvg?'ka-c':'kg-c'):''}">${maxAge!=null?maxAge+'d':'—'}</div><div class="ksub">Longest open survey</div></div>
     </div>
+    ${(()=>{
+      const PA_BANDS=[
+        {label:'<15d', max:15, color:'#4a9e6a'},
+        {label:'15–30d', max:30, color:'#d4a843'},
+        {label:'30–60d', max:60, color:'#d97535'},
+        {label:'60–90d', max:90, color:'#c05252'},
+        {label:'>90d', max:Infinity, color:'#7a2e2e'},
+      ];
+      const paAll=rows.filter(r=>isWIP(r)&&r.start).map(r=>dDiff(r.start,today)??0);
+      const counts=PA_BANDS.map((b,i)=>paAll.filter(d=>d<b.max&&(i===0||d>=PA_BANDS[i-1].max)).length);
+      const total=counts.reduce((a,b)=>a+b,0)||1;
+      const segs=PA_BANDS.map((b,i)=>counts[i]?`
+        <div title="${b.label}: ${counts[i]}" style="flex:${counts[i]};background:${b.color};height:100%;min-width:2px;"></div>`:'').join('');
+      const legend=PA_BANDS.map((b,i)=>counts[i]?`
+        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;"></span>
+          ${b.label} <strong>${counts[i]}</strong> <span style="color:var(--faint);">${Math.round(counts[i]/total*100)}%</span>
+        </span>`:'').join('');
+      return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution</div>
+        <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:8px;">${segs}</div>
+        <div style="display:flex;flex-wrap:wrap;">${legend}</div>
+      </div>`;
+    })()}
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d · RS = open resurvey</div></div>
@@ -2477,12 +2502,13 @@ function renderAgingWIP(){
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div class="note">Days open = Project Start Date to today · Target: ${S.targetAvg}d avg (Spec 12744)</div>
+      <div class="note">Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Proj Age = days since Project Start Date · Target: ${S.targetAvg}d avg (Spec 12744)</div>
     </div>`;
 }
 
