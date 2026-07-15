@@ -2580,7 +2580,8 @@ function renderAgingWIP(){
       const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
       const paWip=rows.filter(r=>isWIP(r)&&r.start).map(r=>{
         const age=dDiff(r.start,today)??0;
-        const s=r.scheduled||r.resurvey_scheduled;
+        const _isOpenRs=!!(r.resurvey_requested&&!r.resurvey_complete);
+        const s=_isOpenRs?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
         const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';
         return{age,status};
       });
