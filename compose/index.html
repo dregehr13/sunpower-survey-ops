@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#111111">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Site Survey — Email Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f2f2ef;--surface:#fff;--border:#e0e0db;--text:#1a1a1a;--muted:#6b6b6b;--faint:#aaa;
@@ -63,6 +65,39 @@ textarea:focus{border-color:#999;}
 .empty-state{padding:48px;text-align:center;color:var(--faint);font-size:12px;line-height:1.8;}
 .section-gap{margin-top:12px;}
 @media(max-width:860px){.wrap{grid-template-columns:1fr;}}
+
+/* ═══ REDESIGN SKIN ═══ */
+:root{
+  --bg:#faf9f6;--surface:#ffffff;--border:#e4e1d8;--border-lt:#eeece5;
+  --text:#141414;--muted:#6b665a;--faint:#a9a390;
+  --green:#2e7a52;--green-bg:#e6f2ea;
+  --amber:#8a6413;--amber-bg:#f7efd9;
+  --red:#b3402e;--red-bg:#f9e7e4;
+  --blue:#4f7fae;--radius:6px;--radius-lg:10px;
+}
+body{font-family:'Archivo',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.nav{background:#111;padding:0 20px;height:48px;gap:10px;}
+.brand{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;}
+.brand span{color:#f7941d;font-weight:700;}
+.nav-mode{font-size:11px;padding:3px 10px;border-radius:5px;border:1px solid #333;color:#888;}
+.nav-mode.active{background:#f7941d;color:#111;border-color:#f7941d;font-weight:600;}
+.nav-mode:hover:not(.active){background:#ffffff14;color:#ccc;}
+.nav-date{font-size:10px;color:#666;}
+.panel{border-radius:var(--radius-lg);border-color:var(--border);box-shadow:0 1px 2px rgba(20,20,25,.04);}
+.ptitle{font-size:10px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:0;border-color:var(--border);}
+.btn{border-color:var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);}
+.btn:hover{background:var(--bg);}
+.btn-primary{background:#141414;color:#fff;border-color:#141414;}
+.btn-primary:hover{background:#333;}
+.opt{border-radius:var(--radius);border-color:var(--border);}
+.opt:hover{border-color:#a9a390;background:var(--bg);}
+.opt.selected{border-color:var(--blue);background:#f0f5fb;}
+textarea,.subject-row input{border-color:var(--border);background:var(--bg);border-radius:var(--radius);}
+textarea:focus,.subject-row input:focus{border-color:#a9a390;}
+.preview-wrap{border-color:var(--border);border-radius:var(--radius-lg);}
+.preview-bar{background:var(--bg);border-color:var(--border);}
+.obs-item{background:var(--amber-bg);border-color:#e8d9a8;color:var(--amber);}
+.obs-item.unchecked{background:var(--bg);border-color:var(--border);color:var(--muted);}
 /* ── Team card ──────────────────────────────────────── */
 .team-wrap{max-width:1100px;margin:0 auto;padding:18px 22px;display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
 @media(max-width:860px){.team-wrap{grid-template-columns:1fr;}}
