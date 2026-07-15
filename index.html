@@ -522,6 +522,20 @@ body{padding-left:180px;}
 /* WIP attention badge in nav */
 #wip-attn-badge{display:none;align-items:center;justify-content:center;background:#4f7fae;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;line-height:1.4;}
 
+/* Briefing hero — Current page editorial header */
+.brief-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.brief-sentence{font-size:24px;line-height:1.36;font-weight:400;letter-spacing:-.01em;max-width:780px;color:var(--text);}
+.brief-verdict{font-weight:700;border-bottom:3px solid var(--green);padding-bottom:1px;}
+.bv-warn{border-bottom-color:#e0a33c;}
+.bv-bad{border-bottom-color:var(--red);}
+.brief-num{font-weight:700;}
+.brief-good{font-weight:700;color:#2e7a52;}
+.brief-bad{font-weight:700;color:#c04a38;}
+.cur-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+.cur-col{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.cur-col .sec{margin-bottom:0;}
+@media(max-width:860px){.cur-grid{grid-template-columns:1fr;}.brief-sentence{font-size:19px;}}
+
 /* Phones: sidebar collapses back to a top bar */
 @media(max-width:860px){
   body{padding-left:0;}
@@ -1426,9 +1440,9 @@ function renderWeek(){
   document.getElementById('week-content').innerHTML=`
     <div class="exec-wrap">
       <div class="exec-hero">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
-          <div id="cur-hero-hdr"></div>
-          <div class="toggle-group" style="flex-shrink:0;margin-left:16px;">${tgl('last','Last Week')}${tgl('this','This Week')}</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;">
+          <div id="cur-hero-hdr" style="flex:1;min-width:0;"></div>
+          <div class="toggle-group" style="flex-shrink:0;">${tgl('last','Last Week')}${tgl('this','This Week')}</div>
         </div>
         <div class="exec-kpis" id="cur-kpis"></div>
       </div>
@@ -1492,14 +1506,19 @@ function renderLastWeek(){
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
   document.getElementById('cur-hero-hdr').innerHTML=`
-    <div class="exec-title">Last Week</div>
-    <div class="exec-sub">${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>`;
+    <div class="brief-eyebrow">Last Week · ${fmtDate(lw.from)} — ${fmtDate(lw.to)}</div>
+    <div class="brief-sentence" id="lw-brief">No completed surveys last week.</div>`;
   if(!src.length){
     document.getElementById('cur-kpis').innerHTML='';
-    document.getElementById('week-inner').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No completed surveys last week.</div>`;
+    document.getElementById('week-inner').innerHTML=`<div style="padding:48px;text-align:center;color:var(--faint);font-size:13px;">No completed surveys last week.</div>`;
     return;
   }
   const avgT=avg(tots),medT=med(tots),onTgt=pctTgt(tots);
+  const lwBand=bandFor(avgT,S.targetAvg)||'good';
+  const lwWord=lwBand==='good'?'Closed on target.':lwBand==='mid'?'Closed slightly behind.':'Closed behind target.';
+  const lwBvCls=lwBand==='good'?'':lwBand==='mid'?' bv-warn':' bv-bad';
+  const lwAvgCls=lwBand==='good'?'brief-good':'brief-bad';
+  document.getElementById('lw-brief').innerHTML=`<span class="brief-verdict${lwBvCls}">${lwWord}</span> <span class="brief-num">${src.length}</span> survey${src.length===1?'':'s'} completed${avgT!=null?` at a <span class="${lwAvgCls}">${avgT.toFixed(1)}-day</span> average`:''}${onTgt!=null?` — ${onTgt}% inside the ${S.targetAvg}-day target${medT!=null?`, median ${medT.toFixed(0)} day${medT===1?'':'s'}`:''}.`:'.'}`;
   const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to)).length;
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
@@ -1534,18 +1553,24 @@ function renderLastWeek(){
   }).join('');
 
   document.getElementById('week-inner').innerHTML=`
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
-      <div style="display:flex;gap:4px;">${splitSegs}</div>
-    </div>
+    <div class="cur-grid">
+    <div class="cur-col">
     <div class="sec">
       <div class="shead"><div><div class="stitle">Distribution</div><div class="ssub">Cycle days</div></div></div>
       <div class="cw" style="height:150px;"><canvas id="lw-dist"></canvas></div>
     </div>
     <div class="sec">
+      <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
+      <div style="display:flex;gap:4px;">${splitSegs}</div>
+    </div>
+    </div>
+    <div class="cur-col">
+    <div class="sec">
       <div class="shead"><div><div class="stitle">Regional</div><div class="ssub">Avg cycle by region</div></div></div>
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
+    </div>
+    </div>
     </div>`;
 
   const dist=distBuckets(src);
@@ -1607,9 +1632,15 @@ function renderThisWeek(){
   const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+  const lwr=weekRange(-1);
+  const lwCount=rows.filter(r=>isComplete(r)&&r.complete>=lwr.from&&r.complete<=lwr.to).length;
+  const twBand=avgT!=null?(bandFor(avgT,S.targetAvg)||'good'):'good';
+  const twWord=twBand==='good'?'On track.':twBand==='mid'?'Slightly behind.':'Behind target.';
+  const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
+  const dayWord=new Date().toLocaleDateString('en-US',{weekday:'long'});
   document.getElementById('cur-hero-hdr').innerHTML=`
-    <div class="exec-title">This Week</div>
-    <div class="exec-sub">${fmtDate(tw.from)} — ${fmtDate(tw.to)} · ${bDaysElapsed===0?'Just started':'Through '+(dayNames[bDaysElapsed-1]||'today')}</div>`;
+    <div class="brief-eyebrow">${dayWord} Briefing · ${fmtDate(tw.from)} — ${fmtDate(tw.to)}${bDaysElapsed>0?` · through ${dayNames[bDaysElapsed-1]||'today'}`:''}</div>
+    <div class="brief-sentence"><span class="brief-verdict${twBvCls}">${twWord}</span> <span class="brief-num">${completedTW.length}</span> completed so far, pacing to <span class="brief-num">${bDaysRemaining>0?'~':''}${projTotal}</span> this week against last week's ${lwCount}.${avgT!=null?` Cycle time is running <span class="${twBand==='good'?'brief-good':'brief-bad'}">${avgT.toFixed(1)} days</span> — ${avgT<=S.targetAvg?'under':'above'} the ${S.targetAvg}-day target.`:''}</div>`;
   _thisWeekSrc=completedTW;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
@@ -1631,6 +1662,8 @@ function renderThisWeek(){
   });
 
   document.getElementById('week-inner').innerHTML=`
+    <div class="cur-grid">
+    <div class="cur-col">
     <div class="sec">
       <div class="shead"><div><div class="stitle">Completions by day</div><div class="ssub">Mon–Sun · completions and scheduled surveys</div></div>
         <div class="leg" style="margin-top:4px;">
@@ -1656,6 +1689,8 @@ function renderThisWeek(){
         </tr>`).join('')}
       </tbody></table></div>
     </div>`:''}
+    </div>
+    <div class="cur-col">
     ${completedTW.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div></div>
@@ -1670,7 +1705,9 @@ function renderThisWeek(){
           <td class="r">${pillV(r.ct_total)}</td>
         </tr>`).join('')}
       </tbody></table></div>
-    </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}`;
+    </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}
+    </div>
+    </div>`;
 
   dc('tw-daily');
   CH['tw-daily']=new Chart(document.getElementById('tw-daily'),{
