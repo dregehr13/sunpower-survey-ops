@@ -818,7 +818,7 @@ function loadAll(src){
   return out;
 }
 const isActiveStatus = r => r.project_status==='In Progress' || r.project_status==='Change Order';
-const DEFAULT_STATUSES = ['In Progress','Change Order'];
+const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
@@ -904,6 +904,9 @@ function loadFilterState(){
     const base = saved.globalF || {};
     const pf = saved.pageF?.[saved.currentPage] || saved.pageF?.performance || {};
     Object.assign(GF, defaultF(), base, pf);
+    // Upgrade saved state that exactly matched the old 2-item default to the current default
+    const _od=['In Progress','Change Order'];
+    if(GF.statuses?.length===_od.length&&_od.every(s=>GF.statuses.includes(s))) GF.statuses=[...DEFAULT_STATUSES];
     migrateRegion(GF);
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
@@ -1194,6 +1197,7 @@ function buildWIPFBar(){
     </div>
     ${salesRepCtrl}
     ${resourceCtrl}
+    ${regArr.length?`<div class="fsep"></div><div class="fchips">${regArr.map(r=>`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onWipRegion('${esc(r)}',false,event)">×</button></span>`).join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearWipF()">Reset</button>
       <span class="fhint">${wipFiltered().length} of ${totalOpen} open surveys</span>
@@ -2740,7 +2744,7 @@ function renderResurvey(){
   const today=localISO(new Date());
 
   const scoped=rows.filter(gfDim); // global region/resource/type filters apply here too
-  const isResurveyRow=r=>!!(r.resurvey_complete||r.resurvey_scheduled||(r.resurvey_requested&&(r.list==='Open'||r.list==='Holding')));
+  const isResurveyRow=r=>!!(r.resurvey_complete||r.resurvey_scheduled||(r.resurvey_requested&&(r.list==='Open'||r.list==='Holding'))||(r.list==='Reopened'&&r.reopened_by_design==='1'));
   const isFPYDefect=r=>!!(r.resurvey_complete||r.resurvey_scheduled);
   const allHasResurvey=scoped.filter(isResurveyRow);
   const hasResurvey=rsFilterApply(allHasResurvey);
