@@ -779,7 +779,6 @@ const SETTING_DEFAULTS = {
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
-  includeInactive:      false,     // pull At-Risk/Canceled/Complete into every page (default: active only)
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -799,7 +798,6 @@ function setSetting(key, value){
   saveSettings();
   // Propagate changes that affect live state
   if(key==='dataCutoff'){ DATA_CUTOFF=value; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
-  if(key==='includeInactive'){ scopeRows(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
@@ -811,8 +809,8 @@ function setSetting(key, value){
 let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
 // Full working set: every project started on/after the cutoff — ALL statuses,
 // not just active. Analytics pages read the active subset (`rows`) by default;
-// the "Include inactive" toggle (S.includeInactive) widens `rows` to everything
-// so At-Risk / Canceled / Complete projects can be looked up when needed.
+// the global Status filter (GF.statuses) can be widened via the filter bar
+// to include At-Risk / Canceled / Complete projects when needed.
 // (parse-sf.js already applies the fixups below at parse time; kept for older data files)
 function loadAll(src){
   const out = src.filter(r=>r.start>=DATA_CUTOFF);
@@ -820,17 +818,25 @@ function loadAll(src){
   return out;
 }
 const isActiveStatus = r => r.project_status==='In Progress' || r.project_status==='Change Order';
-// Rebuild the scoped view (`rows`) from the full set based on the toggle.
-function scopeRows(){ rows = S.includeInactive ? allRows.slice() : allRows.filter(isActiveStatus); }
+const DEFAULT_STATUSES = ['In Progress','Change Order'];
+
+// ═══ FILTER STATE ═════════════════════════════════════════
+// Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
+const PAGES = ['week','performance','trends','wip','resurvey','data'];
+const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
+// One GLOBAL filter shared by every page — pageF keys all reference it so
+// existing per-page call sites keep working
+const GF = defaultF();
+const pageF = {};
+PAGES.forEach(p => pageF[p] = GF);
+
+// Rebuild the scoped view (`rows`) from the full set based on GF.statuses.
+function scopeRows(){ const s=GF&&GF.statuses; rows = (s&&s.length) ? allRows.filter(r=>s.includes(r.project_status)) : allRows.slice(); }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
 scopeRows();
 let filtered = [];
 let dataTimestamp = null;
-
-// ═══ FILTER STATE ═════════════════════════════════════════
-const PAGES = ['week','performance','trends','wip','resurvey','data'];
-const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false});
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
 let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
@@ -838,11 +844,6 @@ let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
 let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — only applies when exactly one band selected
-// One GLOBAL filter shared by every page — pageF keys all reference it so
-// existing per-page call sites keep working
-const GF = defaultF();
-const pageF = {};
-PAGES.forEach(p => pageF[p] = GF);
 
 function saveFilterState(){
   try{ localStorage.setItem('ops_filters', JSON.stringify({pageF, currentPage})); }catch(e){}
@@ -977,7 +978,6 @@ function buildFBar(page){
   const chips=[];
   regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
   if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
-  if(S.includeInactive){ const n=allRows.length-allRows.filter(isActiveStatus).length; chips.push(`<span class="fchip fchip-amber">Inactive shown (+${n} At-Risk/Canceled/Complete)<button class="fchip-x" aria-label="Active only" onclick="setSetting('includeInactive',false)">×</button></span>`); }
 
   return `<div class="fbar">
     <div class="fbtn-group" role="group" aria-label="Date range">
@@ -1001,6 +1001,18 @@ function buildFBar(page){
         ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
       </div>
     </div>
+    <div class="fsep"></div>
+    ${(()=>{
+      const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
+      const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
+      const isDefault=sel.length===DEFAULT_STATUSES.length&&DEFAULT_STATUSES.every(s=>sel.includes(s));
+      return `<div class="status-drop rgdrop">
+        <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleStatusDrop(event)">Status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
+        <div class="rgdrop-panel${statusDropOpen?' open':''}" id="status-panel">
+          ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
+        </div>
+      </div>`;
+    })()}
     ${catDropdowns}
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
@@ -1016,10 +1028,29 @@ function toggleOutliers(page){
 }
 
 let rgDropOpenPage=null;
+let statusDropOpen=false;
 function toggleRegionDrop(page,ev){
   ev&&ev.stopPropagation();
   rgDropOpenPage=rgDropOpenPage===page?null:page;
+  if(rgDropOpenPage) statusDropOpen=false;
   renderFBars();
+}
+function toggleStatusDrop(ev){
+  ev&&ev.stopPropagation();
+  statusDropOpen=!statusDropOpen;
+  if(statusDropOpen) rgDropOpenPage=null;
+  renderFBars();
+}
+function onStatusF(status,checked,ev){
+  ev&&ev.stopPropagation();
+  const arr=Array.isArray(GF.statuses)?[...GF.statuses]:[];
+  if(checked){if(!arr.includes(status))arr.push(status);}else arr.splice(arr.indexOf(status),1);
+  GF.statuses=arr;
+  scopeRows();
+  saveFilterState();
+  applyFilter();
+  renderFBars();
+  renderPage(currentPage);
 }
 function onRegion(page,region,checked,ev){
   ev&&ev.stopPropagation();
@@ -1075,6 +1106,7 @@ function clearF(page){
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
   Object.assign(GF, def); // global filter — mutate in place, pageF keys alias it
   customDatesOpen=false;
+  scopeRows();
   saveFilterState();
   applyFilter(); renderFBars(); renderPage(currentPage);
 }
@@ -1084,7 +1116,6 @@ function wipFiltered(){
   const regArr=Array.isArray(wipF.region)?wipF.region:[];
   return rows.filter(r=>{
     if(!r.start||isComplete(r)) return false;
-    if(r.project_status!=='In Progress'&&r.project_status!=='Change Order') return false;
     if(regArr.length&&!regArr.includes(r.region)) return false;
     if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
@@ -3033,10 +3064,6 @@ function renderSettings(){
           <div><div class="set-label">Data cutoff date</div><div class="set-desc">Earliest project start included in all metrics and charts — currently ${DATA_CUTOFF}</div></div>
           <div class="set-control"><input type="date" value="${S.dataCutoff}" onchange="setSetting('dataCutoff',this.value)"></div>
         </div>
-        <div class="set-row">
-          <div><div class="set-label">Include inactive projects</div><div class="set-desc">Pull At-Risk, Canceled, and Complete-status projects into every page for lookup. Off = active only (In Progress / Change Order), the default. ${allRows.length-rows.length>0?`<strong>${allRows.length-rows.length}</strong> inactive available.`:''}</div></div>
-          <div class="set-control"><input type="checkbox" ${S.includeInactive?'checked':''} onchange="setSetting('includeInactive',this.checked)"></div>
-        </div>
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
@@ -3288,18 +3315,23 @@ document.addEventListener('click',function(e){
     wipRgDropOpen=false;
     const el=document.getElementById('wip-rgpanel');if(el)el.classList.remove('open');
   }
+  if(statusDropOpen&&!e.target.closest('.status-drop')){
+    statusDropOpen=false;
+    const el=document.getElementById('status-panel');if(el)el.classList.remove('open');
+  }
 });
 
 window.addEventListener('load',()=>{
   loadSettings();
   if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
-  scopeRows(); // apply saved includeInactive setting
+  scopeRows(); // re-scope based on restored GF.statuses
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';
 
   // Restore saved filter state (region, type, dates, outlier settings, global mode)
   loadFilterState();
+  scopeRows(); // re-scope after filter state restored (statuses may differ from default)
 
   // Apply default outlier toggle if no saved state
   if(!localStorage.getItem('ops_filters')){
