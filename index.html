@@ -1029,6 +1029,7 @@ function toggleOutliers(page){
 
 let rgDropOpenPage=null;
 let statusDropOpen=false;
+let wipStatusDropOpen=false;
 function toggleRegionDrop(page,ev){
   ev&&ev.stopPropagation();
   rgDropOpenPage=rgDropOpenPage===page?null:page;
@@ -1040,6 +1041,12 @@ function toggleStatusDrop(ev){
   statusDropOpen=!statusDropOpen;
   if(statusDropOpen) rgDropOpenPage=null;
   renderFBars();
+}
+function toggleWipStatusDrop(ev){
+  ev&&ev.stopPropagation();
+  wipStatusDropOpen=!wipStatusDropOpen;
+  if(wipStatusDropOpen) wipRgDropOpen=false;
+  renderAgingWIP();
 }
 function onStatusF(status,checked,ev){
   ev&&ev.stopPropagation();
@@ -1172,6 +1179,19 @@ function buildWIPFBar(){
         </div>
       </div>
     </div>
+    <div class="fgroup">
+      ${(()=>{
+        const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
+        const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
+        const isDefault=sel.length===DEFAULT_STATUSES.length&&DEFAULT_STATUSES.every(s=>sel.includes(s));
+        return `<div class="status-drop-wip rgdrop">
+          <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleWipStatusDrop(event)">Status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
+          <div class="rgdrop-panel${wipStatusDropOpen?' open':''}" id="wip-status-panel">
+            ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
+          </div>
+        </div>`;
+      })()}
+    </div>
     ${salesRepCtrl}
     ${resourceCtrl}
     <div class="fgroup" style="margin-left:auto;">
@@ -1200,6 +1220,7 @@ function clearWipRegion(ev){
 function toggleWipRegionDrop(ev){
   ev&&ev.stopPropagation();
   wipRgDropOpen=!wipRgDropOpen;
+  if(wipRgDropOpen) wipStatusDropOpen=false;
   const panel=document.getElementById('wip-rgpanel');
   if(panel) panel.classList.toggle('open',wipRgDropOpen);
 }
@@ -2471,7 +2492,7 @@ function renderTrends(){
 // ═══ WIP HUB ═════════════════════════════════════════════
 let wipView='all'; // 'all' | 'attn'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
-function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} if(wipAgeSel.size!==1) wipStatusSel=null; renderAgingWIP(); }
+function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
 function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
 function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; renderAgingWIP(); }
 function renderAgingWIP(){
@@ -2495,10 +2516,9 @@ function renderAgingWIP(){
   const isOpenRs=r=>!!(r.resurvey_requested&&!r.resurvey_complete);
   const wipSchedDate=r=>isOpenRs(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
-  if(wipAgeSel.size>0){
+  if(wipAgeSel.size>0)
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
-    if(wipAgeSel.size===1&&wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
-  }
+  if(wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
   // Filtered summary stats (for strip below age bar)
   const _totalWipCount=rows.filter(r=>isWIP(r)).length;
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
@@ -2610,7 +2630,7 @@ function renderAgingWIP(){
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard drill-tgt" onclick="openDrill('Open WIP','All open surveys',rows.filter(r=>isWIP(r)))"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
+      <div class="kcard"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
       <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days in flight</div></div>
       <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
@@ -2624,7 +2644,7 @@ function renderAgingWIP(){
         {label:'60–90d', max:90, color:'#c05252'},
         {label:'>90d', max:Infinity, color:'#7a2e2e'},
       ];
-      const STATUS_COLORS={scheduled:'#4a9e6a',pastdue:'#d97706',unscheduled:'#b0a898'};
+      const STATUS_COLORS={scheduled:'#3b82f6',pastdue:'#f87171',unscheduled:'#9ca3af'};
       const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
       const paWip=rows.filter(r=>isWIP(r)&&r.start).map(r=>{
         const age=dDiff(r.start,today)??0;
@@ -2643,11 +2663,11 @@ function renderAgingWIP(){
         const dim=anySelected&&!sel;
         const bandItems=paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max));
         const subCounts={scheduled:bandItems.filter(d=>d.status==='scheduled').length,pastdue:bandItems.filter(d=>d.status==='pastdue').length,unscheduled:bandItems.filter(d=>d.status==='unscheduled').length};
-        const subBar=singleSel===i?`<div style="display:flex;gap:1px;height:10px;margin-top:2px;animation:subBarIn .18s ease both;">${
+        const subBar=`<div style="display:flex;gap:1px;height:10px;margin-top:2px;">${
           ['scheduled','pastdue','unscheduled'].map(s=>subCounts[s]?`<div onclick="selectWipStatus('${s}',event)" title="${STATUS_LABELS[s]}: ${subCounts[s]}" style="flex:${subCounts[s]};background:${STATUS_COLORS[s]};border-radius:2px;cursor:pointer;${wipStatusSel===s?'outline:2px solid #333;outline-offset:-1px;':wipStatusSel?'opacity:.3;':''}transition:opacity .15s;"></div>`:'').join('')
-        }</div>`:'';
+        }</div>`;
         return `<div onclick="toggleWipAgeBand(${i})" title="${b.label}: ${counts[i]}" style="flex:${counts[i]};display:flex;flex-direction:column;cursor:pointer;min-width:4px;opacity:${dim?.25:1};transition:opacity .2s;">
-          <div class="bar-fill-anim" style="height:14px;background:${b.color};border-radius:2px;${sel?'outline:2px solid #444;outline-offset:-2px;':''}"></div>
+          <div class="bar-fill-anim" style="height:20px;background:${b.color};border-radius:2px;${sel?'outline:2px solid #444;outline-offset:-2px;':''}"></div>
           ${subBar}
         </div>`;
       }).join('');
@@ -2656,21 +2676,23 @@ function renderAgingWIP(){
           <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #666;outline-offset:1px;':''}"></span>
           ${b.label} <strong>${counts[i]}</strong>
         </span>`:'').join('');
-      const subLegend=singleSel!==null?(()=>{
-        const bandItems=paWip.filter(d=>d.age<PA_BANDS[singleSel].max&&(singleSel===0||d.age>=PA_BANDS[singleSel-1].max));
+      const subLegend=(()=>{
+        const visItems=anySelected
+          ? paWip.filter(d=>[...wipAgeSel].some(i=>d.age<PA_BANDS[i].max&&(i===0||d.age>=PA_BANDS[i-1].max)))
+          : paWip;
         return `<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border);display:inline-flex;align-items:center;gap:10px;">${
           ['scheduled','pastdue','unscheduled'].map(s=>{
-            const n=bandItems.filter(d=>d.status===s).length;
+            const n=visItems.filter(d=>d.status===s).length;
             return n?`<span onclick="selectWipStatus('${s}',event)" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;opacity:${wipStatusSel&&wipStatusSel!==s?.35:1};color:var(--muted);transition:opacity .15s;">
               <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${STATUS_COLORS[s]};flex-shrink:0;"></span>
               ${STATUS_LABELS[s]} <strong>${n}</strong></span>`:'';
           }).join('')
         }</span>`;
-      })():'';
-      const filterLabel=anySelected?[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', ')+(wipStatusSel&&singleSel!==null?' · '+STATUS_LABELS[wipStatusSel]:''):'';
-      const clearBtn=anySelected?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
+      })();
+      const filterLabel=(anySelected||wipStatusSel)?[[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', '),wipStatusSel?STATUS_LABELS[wipStatusSel]:''].filter(Boolean).join(' · '):'';
+      const clearBtn=(anySelected||wipStatusSel)?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
       return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Project Age Distribution</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">WIP by Age &amp; Schedule Status</div>
         <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
         ${selFiltered?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:20px;font-size:12px;color:var(--muted);">
@@ -3318,6 +3340,10 @@ document.addEventListener('click',function(e){
   if(statusDropOpen&&!e.target.closest('.status-drop')){
     statusDropOpen=false;
     const el=document.getElementById('status-panel');if(el)el.classList.remove('open');
+  }
+  if(wipStatusDropOpen&&!e.target.closest('.status-drop-wip')){
+    wipStatusDropOpen=false;
+    const el=document.getElementById('wip-status-panel');if(el)el.classList.remove('open');
   }
 });
 
