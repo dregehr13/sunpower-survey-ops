@@ -2504,17 +2504,21 @@ function renderAgingWIP(){
   const attnMap={};
   attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
   const attnTotal=Object.keys(attnMap).length;
+  const isOpenRs=r=>!!(r.resurvey_requested&&!r.resurvey_complete);
+  const wipSchedDate=r=>isOpenRs(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
+  // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
+  // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
+  const projCt=r=>{const anchor=wipAgeFrom(r);const sched=wipSchedDate(r);return dDiff(anchor,(sched&&sched>=today)?sched:today)??0;};
   let wip=wipFiltered().map(r=>({
     ...r,
     daysOpen:dDiff(wipAgeFrom(r),today)??0,
+    projectedCt:projCt(r),
     projectAge:r.start?dDiff(r.start,today)??0:null,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
   const PA_MINS=[0,15,30,60,90];
   const PA_MAXS=[15,30,60,90,Infinity];
-  const isOpenRs=r=>!!(r.resurvey_requested&&!r.resurvey_complete);
-  const wipSchedDate=r=>isOpenRs(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
   if(wipAgeSel.size>0)
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
@@ -2523,7 +2527,7 @@ function renderAgingWIP(){
   const _totalWipCount=rows.filter(r=>isWIP(r)).length;
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
   const selAvg=selDays.length?Math.round(selDays.reduce((a,b)=>a+b,0)/selDays.length*10)/10:null;
-  const selPct=selDays.length?Math.round(selDays.filter(d=>d<=S.targetAvg).length/selDays.length*100):null;
+  const selPct=wip.length?Math.round(wip.filter(r=>r.projectedCt<=S.targetAvg).length/wip.length*100):null;
   const selFiltered=wip.length<_totalWipCount;
 
   wip.sort((a,b)=>{
@@ -2534,13 +2538,13 @@ function renderAgingWIP(){
   });
 
   // Stats from full unfiltered WIP
-  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0}));
+  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0,projectedCt:projCt(r)}));
   const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
   const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
   const maxAge=sortedAges.length?sortedAges[sortedAges.length-1]:null;
-  const pctOnTrack=allAges.length?Math.round(allAges.filter(d=>d<=S.targetAvg).length/allAges.length*100):null;
+  const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
   const totalWip=allWip.length;
 
   const agePill=d=>{
