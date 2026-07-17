@@ -2563,7 +2563,7 @@ function renderAgingWIP(){
     if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
     if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
     if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
-    if(!r.last_reviewed_date) return {label:'New',bg:'#f1f1ee',fg:'var(--muted)',sort:7};
+    if(!r.last_reviewed_date) return {label:'New',bg:'#ffffff',fg:'var(--muted)',sort:7};
     return {label:'Unscheduled',bg:'#f1f1ee',fg:'var(--muted)',sort:8};
   };
 
