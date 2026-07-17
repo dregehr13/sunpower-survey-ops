@@ -102,10 +102,20 @@ test('filterRows keeps active projects started on/after the cutoff', () => {
     { project_status: 'In Progress',  start: DATA_CUTOFF,  sales_rep: 'A B' },
     { project_status: 'Change Order', start: '2026-06-01', sales_rep: 'C D' },
     { project_status: 'In Progress',  start: '2025-12-28', sales_rep: 'E F' }, // before cutoff
-    { project_status: 'Cancelled',    start: '2026-06-01', sales_rep: 'G H' }, // wrong status
+    { project_status: 'Cancelled',    start: '2026-06-01', sales_rep: 'G H' }, // inactive, not complete
   ];
   const out = filterRows(rows);
   assert.deepEqual(out.map(r => r.sales_rep), ['A B', 'C D']);
+});
+
+test('inScope keeps completed surveys regardless of project status, but not as WIP', () => {
+  const atRiskDone = { project_status: 'At-Risk', start: '2026-07-15', complete: '2026-07-16', list: 'Complete' };
+  const cancelledDone = { project_status: 'Cancelled', start: '2026-07-10', complete: '2026-07-12', list: 'Complete' };
+  const atRiskOpen = { project_status: 'At-Risk', start: '2026-07-15', complete: '', list: 'Open' };
+  assert.equal(inScope(atRiskDone), true);
+  assert.equal(cancelledDone && inScope(cancelledDone), true);
+  assert.equal(inScope(atRiskOpen), false); // never shows up as open WIP
+  assert.equal(isWIP(atRiskDone), false);
 });
 
 test('filterRows honors a custom cutoff and normalizes rep names', () => {

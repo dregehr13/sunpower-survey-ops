@@ -832,7 +832,9 @@ const pageF = {};
 PAGES.forEach(p => pageF[p] = GF);
 
 // Rebuild the scoped view (`rows`) from the full set based on GF.statuses.
-function scopeRows(){ const s=GF&&GF.statuses; rows = (s&&s.length) ? allRows.filter(r=>s.includes(r.project_status)) : allRows.slice(); }
+// A completed survey counts under the 'Complete' bucket even if the project
+// is At-Risk/Cancelled — the survey happened; it just never shows as open WIP.
+function scopeRows(){ const s=GF&&GF.statuses; rows = (s&&s.length) ? allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r))) : allRows.slice(); }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
 scopeRows();
