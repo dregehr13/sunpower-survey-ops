@@ -8,7 +8,8 @@ import OpsMetrics from '../lib/metrics.cjs';
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   wipAgeFrom, hasResurveySig, avg, med, pct,
-  businessDays, buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
+  businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
+  buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
   bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
 
@@ -134,22 +135,94 @@ test('businessDays midweek', () => {
   assert.deepEqual(businessDays('2026-07-10'), { elapsed: 5, remaining: 0 }); // Friday
 });
 
-// ── projectWeekTotal ──
-test('projectWeekTotal formula: completed + scheduled*0.9 + unscheduled/avgCt*daysLeft', () => {
-  // 10 done + round(4*0.9 + 20/5*3) = 10 + round(3.6+12) = 10 + 16 = 26
-  assert.equal(projectWeekTotal(10, 4, 20, 5, 3), 26);
+// ── weekDaysRemaining: fractional days through Sunday, export day = half ──
+test('weekDaysRemaining: export day counts as half, week runs through Sunday', () => {
+  assert.equal(weekDaysRemaining('2026-07-13'), 6.5); // Monday
+  assert.equal(weekDaysRemaining('2026-07-15'), 4.5); // Wednesday
+  assert.equal(weekDaysRemaining('2026-07-17'), 2.5); // Friday
+  assert.equal(weekDaysRemaining('2026-07-18'), 1.5); // Saturday
+  assert.equal(weekDaysRemaining('2026-07-19'), 0.5); // Sunday — still projecting
 });
 
-test('projectWeekTotal Monday morning uses the full 5 remaining days', () => {
-  const { remaining } = businessDays('2026-07-12'); // yesterday=Sunday
-  // 0 done + round(2*0.9 + 10/4*5) = round(1.8+12.5) = 14
-  assert.equal(projectWeekTotal(0, 2, 10, 4, remaining), 14);
+// ── buildShowRates: measured per-resource, ≥5 sample floor, 0.9 fallback ──
+test('buildShowRates measures completion within 1 day of scheduled date', () => {
+  const mk = (sched, complete, resource) => ({ scheduled: sched, complete, resource });
+  const rows = [
+    // 6 Sales Rep rows: 4 hit (complete ≤ sched+1), 2 miss
+    ...Array.from({ length: 4 }, () => mk('2026-07-01', '2026-07-01', 'Sales Rep')),
+    mk('2026-07-01', '2026-07-05', 'Sales Rep'),
+    mk('2026-07-01', '', 'Sales Rep'),
+    // 2 Radicl rows — below the 5-sample floor, excluded from byResource
+    mk('2026-07-02', '2026-07-02', 'Radicl Services'),
+    mk('2026-07-02', '', 'Radicl Services'),
+  ];
+  const sr = buildShowRates(rows, '2026-07-16');
+  assert.equal(Math.round(sr.byResource['Sales Rep'] * 100), 67); // 4/6
+  assert.equal(sr.byResource['Radicl Services'], undefined);
+  assert.equal(Math.round(sr.global * 100), 63); // 5/8
 });
 
-test('projectWeekTotal with the week done returns completions only', () => {
-  const { remaining } = businessDays('2026-07-11'); // yesterday=Saturday
-  assert.equal(remaining, 0);
-  assert.equal(projectWeekTotal(37, 4, 20, 5, remaining), 37);
+test('buildShowRates with no scheduled history falls back to 0.9 global', () => {
+  const sr = buildShowRates([], '2026-07-16');
+  assert.equal(sr.global, 0.9);
+});
+
+test('buildShowRates ignores schedules outside the trailing window', () => {
+  const rows = [
+    { scheduled: '2026-01-01', complete: '2026-01-01', resource: 'Sales Rep' }, // too old
+    { scheduled: '2026-07-20', complete: '', resource: 'Sales Rep' },           // future
+  ];
+  const sr = buildShowRates(rows, '2026-07-16');
+  assert.equal(sr.global, 0.9);
+});
+
+// ── buildExpectedCt: rep avg (≥3) → region|resource segment → global ──
+test('buildExpectedCt prefers rep history for Sales Rep surveys', () => {
+  const comps = [
+    { resource: 'Sales Rep', sales_rep: 'Fast Rep', region: 'VA', ct_total: 1 },
+    { resource: 'Sales Rep', sales_rep: 'Fast Rep', region: 'VA', ct_total: 1 },
+    { resource: 'Sales Rep', sales_rep: 'Fast Rep', region: 'VA', ct_total: 1 },
+    { resource: 'Radicl Services', region: 'VA', ct_total: 8 },
+  ];
+  const ct = buildExpectedCt(comps);
+  assert.equal(ct({ resource: 'Sales Rep', sales_rep: 'Fast Rep', region: 'VA' }), 1);
+  // Rep with <3 completions falls back to region|resource segment
+  assert.equal(ct({ resource: 'Radicl Services', region: 'VA' }), 8);
+  // Unknown segment falls back to global avg
+  assert.equal(ct({ resource: 'SunPower Surveyor', region: 'ZZ' }), avg([1, 1, 1, 8]));
+});
+
+// ── projectWeekTotal: per-row show-rates + flow probability ──
+const flatCtx = (daysRemaining, rate, ctDays) => ({
+  daysRemaining,
+  showRates: { byResource: {}, global: rate },
+  expectedCt: () => ctDays,
+});
+
+test('projectWeekTotal: completed + Σ showRate + Σ min(daysLeft/ct, 1)', () => {
+  const sched = [{}, {}, {}, {}];       // 4 scheduled at 0.9 → 3.6
+  const unsched = Array.from({ length: 20 }, () => ({})); // 20 × min(3/5,1)=0.6 → 12
+  assert.equal(projectWeekTotal(10, sched, unsched, flatCtx(3, 0.9, 5)), 26);
+});
+
+test('projectWeekTotal caps per-row flow probability at 1', () => {
+  const unsched = [{}, {}]; // min(6.5/1, 1) = 1 each
+  assert.equal(projectWeekTotal(0, [], unsched, flatCtx(6.5, 0.9, 1)), 2);
+});
+
+test('projectWeekTotal uses per-resource show-rate when available', () => {
+  const ctx = {
+    daysRemaining: 2.5,
+    showRates: { byResource: { 'Sales Rep': 1 }, global: 0.5 },
+    expectedCt: () => 4,
+  };
+  const sched = [{ resource: 'Sales Rep' }, { resource: 'Radicl Services' }];
+  // 1 + 0.5 = 1.5 → rounds to 2
+  assert.equal(projectWeekTotal(0, sched, [], ctx), 2);
+});
+
+test('projectWeekTotal with no days remaining returns completions only', () => {
+  assert.equal(projectWeekTotal(37, [{}, {}], [{}], flatCtx(0, 0.9, 4)), 37);
 });
 
 // ── buildSegmentAvgs / lookupSegmentAvg ──

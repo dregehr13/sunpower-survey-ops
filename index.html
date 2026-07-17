@@ -722,7 +722,8 @@ const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
 const {isComplete, isWIP, wipAgeFrom, hasResurveySig, avg, med, pct,
-       businessDays, buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
+       businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
+       buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -1394,7 +1395,6 @@ const TIP={
   cycle:'Cycle time = Project Start Date → Site Survey Complete, in calendar days.',
   onTarget:()=>`Share of completions with cycle time at or under ${S.targetAvg} days (the average target).`,
   wip:'Open surveys: started but not yet complete. Age counts from resurvey request if any, else completion +2 days, else project start.',
-  projected:'Completed so far + 90% of surveys scheduled for the rest of the week + unscheduled WIP ÷ recent avg cycle time × business days left. Based on yesterday’s export.',
   schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. Any completed account with a resurvey (requested, completed, reason, or reopened by design) counts as a defect.',
   rsRate:'Projects with any resurvey signal (request, completion, reason, or design reopen) ÷ completions in view.',
@@ -1859,18 +1859,24 @@ function renderThisWeek(){
   const atRiskRs=rows.filter(r=>r.resurvey_scheduled&&r.resurvey_scheduled>=tw.from&&r.resurvey_scheduled<=tw.to&&r.list!=='Complete'&&!r.resurvey_complete)
     .map(r=>({r,sched:r.resurvey_scheduled,isRs:true,openFrom:r.resurvey_requested||r.start}));
   const atRisk=[...atRiskInit,...atRiskRs];
-  const {elapsed:bDaysElapsed,remaining:bDaysRemaining}=businessDays(dataThrough);
+  const {elapsed:bDaysElapsed}=businessDays(dataThrough);
+  // Week is only over once the export date is past the week's Sunday
+  const daysRem=dataThrough>tw.to?0:weekDaysRemaining(dataThrough);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=dataThrough&&r.ct_total!=null&&r.ct_total>=1);
-  const globalAvgCt=avg(recentComps.map(r=>r.ct_total))||4;
-  const segAvgs=buildSegmentAvgs(recentComps,['region','resource']);
+  const expectedCt=buildExpectedCt(recentComps);
+  const showRates=buildShowRates(rows,dataThrough);
   const wipProjects=rows.filter(r=>isWIP(r));
-  const recentAvgCt=avg(wipProjects.map(r=>lookupSegmentAvg(r,['region','resource'],segAvgs,globalAvgCt)))||globalAvgCt;
+  const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
   const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),dataThrough)));
-  const scheduledRemCount=scheduledRem.length;
-  const unscheduledWip=Math.max(wip-scheduledRemCount,0);
-  const projTotal=projectWeekTotal(completedTW.length,scheduledRemCount,unscheduledWip,recentAvgCt,bDaysRemaining);
+  const schedSet=new Set(scheduledRem);
+  const unschedRows=wipProjects.filter(r=>!schedSet.has(r));
+  const projTotal=projectWeekTotal(completedTW.length,scheduledRem,unschedRows,{daysRemaining:daysRem,showRates,expectedCt});
+  // Breakdown for the tooltip — mirrors projectWeekTotal's internals
+  let _schedExp=0;scheduledRem.forEach(r=>{const v=showRates.byResource[r.resource||''];_schedExp+=v!=null?v:showRates.global;});
+  let _flowExp=0;unschedRows.forEach(r=>{_flowExp+=Math.min(daysRem/Math.max(expectedCt(r),1),1);});
+  const projTip=`${completedTW.length} completed + ${_schedExp.toFixed(1)} expected from ${scheduledRem.length} scheduled (measured show-rates by resource) + ${_flowExp.toFixed(1)} expected from ${unschedRows.length} unscheduled WIP (rep/region cycle times) over the ${daysRem} days left ≈ ${projTotal}.`;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const avgT=avg(tots);
   const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
@@ -1891,7 +1897,7 @@ function renderThisWeek(){
   // Pacing: compare projected week total vs last week's total
   const pacingPct=lwCount>0?Math.round((projTotal/lwCount-1)*100):null;
   let paceStr;
-  if(pacingPct===null||bDaysRemaining===0) paceStr=`<span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> completions this week</span>`;
+  if(pacingPct===null||daysRem===0) paceStr=`<span class="brief-verdict${twBvCls}"><span class="brief-num">${completedTW.length}</span> completions this week</span>`;
   else if(pacingPct>=5) paceStr=`<span class="brief-verdict">Pacing <span class="brief-num">${pacingPct}% above</span> last week</span>`;
   else if(pacingPct<=-5) paceStr=`<span class="brief-verdict">Pacing <span class="brief-num">${Math.abs(pacingPct)}% below</span> last week</span>`;
   else paceStr=`<span class="brief-verdict">Pacing on par</span> with last week`;
@@ -1906,7 +1912,7 @@ function renderThisWeek(){
   _thisWeekSrc=completedTW;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
-    <div class="ekcard"><div class="eklabel">Projected total${kinfo(TIP.projected)}</div><div class="ekval">${bDaysRemaining>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${bDaysRemaining>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
+    <div class="ekcard"><div class="eklabel">Projected total${kinfo(projTip)}</div><div class="ekval">${daysRem>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${daysRem>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
     <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
@@ -2513,10 +2519,22 @@ function renderAgingWIP(){
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
   const projCt=r=>{const anchor=wipAgeFrom(r);const sched=wipSchedDate(r);return dDiff(anchor,(sched&&sched>=today)?sched:today)??0;};
+  // Estimated completion date: future scheduled date wins; else anchor + expected
+  // cycle time (rep → region|resource → global), floored at today.
+  const _sixW=localISO(new Date(Date.now()-42*24*3600*1000));
+  const _expCt=buildExpectedCt(rows.filter(r=>isComplete(r)&&r.complete>=_sixW&&r.ct_total!=null&&r.ct_total>=1));
+  const _isoAdd=(iso,n)=>{const[y,m,d]=iso.split('-').map(Number);const dt=new Date(y,m-1,d+n);return localISO(dt);};
+  const estComplete=r=>{
+    const sched=wipSchedDate(r);
+    if(sched&&sched>=today) return sched;
+    const est=_isoAdd(wipAgeFrom(r),Math.round(_expCt(r)));
+    return est>today?est:today;
+  };
   let wip=wipFiltered().map(r=>({
     ...r,
     daysOpen:dDiff(wipAgeFrom(r),today)??0,
     projectedCt:projCt(r),
+    schedEff:wipSchedDate(r)||'',
     projectAge:r.start?dDiff(r.start,today)??0:null,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
   }));
@@ -2535,7 +2553,7 @@ function renderAgingWIP(){
   const selFiltered=wip.length<_totalWipCount;
 
   wip.sort((a,b)=>{
-    const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey;
+    const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey==='scheduled'?'schedEff':wipSortKey;
     const va=a[sk]??'', vb=b[sk]??'';
     const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
     return wipSortAsc?cmp:-cmp;
@@ -2547,7 +2565,10 @@ function renderAgingWIP(){
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
   const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
-  const maxAge=sortedAges.length?sortedAges[sortedAges.length-1]:null;
+  // Pipeline ratio (Spencer's model): WIP ÷ avg completions of the last 3 full
+  // weeks = weeks of backlog if nothing new came in.
+  const wk3Avg=avg([1,2,3].map(i=>{const w=weekRange(-i);return rows.filter(r=>isComplete(r)&&r.complete>=w.from&&r.complete<=w.to).length;}));
+  const pipeRatio=wk3Avg?Math.round(allWip.length/wk3Avg*10)/10:null;
   const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
   const totalWip=allWip.length;
 
@@ -2587,13 +2608,13 @@ function renderAgingWIP(){
             <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?'6px':'10px'};">
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">Started</span><span class="wip-date-val">${r.start?fmtDateShort(r.start):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">Scheduled</span><span class="wip-date-val">${r.scheduled?fmtDateShort(r.scheduled):'—'}</span></div>
-              <div class="wip-date-item"><span class="wip-date-label">Completed</span><span class="wip-date-val">${r.complete?fmtDateShort(r.complete):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">Completed</span><span class="wip-date-val">${r.complete?fmtDateShort(r.complete):`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`}</span></div>
             </div>
             ${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?`
             <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;opacity:.8;">
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-left:5px;">${dDiff(r.resurvey_requested,today)??'?'}d open</span>`:''}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
-              <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):isOpenRs(r)?`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`:'—'}</span></div>
             </div>`:''}
             <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:12px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
@@ -2642,7 +2663,7 @@ function renderAgingWIP(){
       <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days in flight</div></div>
       <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
-      <div class="kcard"><div class="klabel">Oldest</div><div class="kval ${maxAge!=null?(maxAge>7?'kr-c':maxAge>S.targetAvg?'ka-c':'kg-c'):''}">${maxAge!=null?maxAge+'d':'—'}</div><div class="ksub">Longest open survey</div></div>
+      <div class="kcard"><div class="klabel">Pipeline ratio</div><div class="kval ${pipeRatio!=null?(pipeRatio<=1?'kg-c':pipeRatio<=1.5?'ka-c':'kr-c'):''}">${pipeRatio!=null?pipeRatio+'wk':'—'}</div><div class="ksub">to clear WIP at recent pace</div></div>
     </div>
     ${(()=>{
       const PA_BANDS=[
