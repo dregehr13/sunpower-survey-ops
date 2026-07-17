@@ -1239,6 +1239,24 @@ function wipSortBy(k){
   if(wipSortKey===k) wipSortAsc=!wipSortAsc; else{wipSortKey=k;wipSortAsc=false;}
   renderAgingWIP();
 }
+let WIP_COPY_ROWS=[];
+function copyWipTable(){
+  const headers=['Project','Contact','Region','Status','Scheduled','Last Reviewed','Reviewed By','Proj Age','Days Open in SS','Last Review Note'];
+  const tsv=[headers.join('\t'),...WIP_COPY_ROWS.map(r=>[
+    r.project,r.contact,r.region,r.status,
+    r.scheduled?fmtDateShort(r.scheduled):'',
+    r.last_reviewed?fmtReviewDate(r.last_reviewed):'',
+    r.reviewed_by,
+    r.proj_age!==''?r.proj_age+'d':'',
+    r.days_open+'d',
+    r.note,
+  ].map(v=>String(v??'').replace(/[\t\n\r]+/g,' ')).join('\t'))].join('\n');
+  navigator.clipboard.writeText(tsv).then(()=>{
+    const b=document.getElementById('wip-copy-btn'); if(!b) return;
+    const t=b.textContent; b.textContent='Copied ✓';
+    setTimeout(()=>{b.textContent=t;},1500);
+  });
+}
 function fmtPhone(s){
   if(!s) return '';
   const d=s.replace(/\D/g,'');
@@ -2532,6 +2550,23 @@ function renderAgingWIP(){
     const est=_isoAdd(wipAgeFrom(r),Math.round(_expCt(r)));
     return est>today?est:today;
   };
+  // Queue status: what is this survey waiting on?
+  // Returns {label, bg, fg, sort} rendered as a pill in the WIP table status column.
+  const wipQueueStatus=r=>{
+    const sched=wipSchedDate(r);
+    if(sched&&sched>=today) return {label:'Scheduled',bg:'#eff6ff',fg:'#3b82f6',sort:0};
+    if(sched&&sched<today) return {label:'Past due',bg:'var(--red-bg)',fg:'var(--red)',sort:1};
+    // Unscheduled — classify by last review subject
+    const subj=(r.last_reviewed_subject||'').toUpperCase();
+    const comm=(r.last_comment||'').toUpperCase();
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'At-Risk',bg:'#fef3e7',fg:'#b45309',sort:6};
+    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
+    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
+    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
+    if(!r.last_reviewed_date) return {label:'New',bg:'#f1f1ee',fg:'var(--muted)',sort:7};
+    return {label:'Unscheduled',bg:'#f1f1ee',fg:'var(--muted)',sort:8};
+  };
+
   let wip=wipFiltered().map(r=>({
     ...r,
     daysOpen:dDiff(wipAgeFrom(r),today)??0,
@@ -2539,6 +2574,7 @@ function renderAgingWIP(){
     schedEff:wipSchedDate(r)||'',
     projectAge:r.start?dDiff(r.start,today)??0:null,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
+    qsSort:wipQueueStatus(r).sort,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
   const PA_MINS=[0,15,30,60,90];
@@ -2561,22 +2597,19 @@ function renderAgingWIP(){
     return wipSortAsc?cmp:-cmp;
   });
 
-  // Queue status: what is this survey waiting on?
-  // Returns {label, bg, fg, sort} rendered as a pill in the WIP table status column.
-  const wipQueueStatus=r=>{
-    const sched=wipSchedDate(r);
-    if(sched&&sched>=today) return {label:'Scheduled',bg:'#eff6ff',fg:'#3b82f6',sort:0};
-    if(sched&&sched<today) return {label:'Past due',bg:'var(--red-bg)',fg:'var(--red)',sort:1};
-    // Unscheduled — classify by last review subject
-    const subj=(r.last_reviewed_subject||'').toUpperCase();
-    const comm=(r.last_comment||'').toUpperCase();
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'At-Risk',bg:'#fef3e7',fg:'#b45309',sort:6};
-    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
-    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
-    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
-    if(!r.last_reviewed_date) return {label:'New',bg:'#f1f1ee',fg:'var(--muted)',sort:7};
-    return {label:'Unscheduled',bg:'#f1f1ee',fg:'var(--muted)',sort:8};
-  };
+  // Snapshot for "Copy table" — mirrors the visible columns, filtered + sorted
+  WIP_COPY_ROWS=wip.map(r=>({
+    project:r.project||r.address||'',
+    contact:r.contact||'',
+    region:r.region||'',
+    status:wipQueueStatus(r).label,
+    scheduled:wipSchedDate(r)||'',
+    last_reviewed:r.last_reviewed_date||'',
+    reviewed_by:r.reviewed_by||'',
+    proj_age:r.projectAge!=null?r.projectAge:'',
+    days_open:r.daysOpen,
+    note:r.last_comment||'',
+  }));
 
   // Stats from full unfiltered WIP
   const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0,projectedCt:projCt(r)}));
@@ -2623,7 +2656,7 @@ function renderAgingWIP(){
           </div>
 
           <div class="wip-panel">
-            <div class="wip-panel-label">Account</div>
+            <div class="wip-panel-label">Account${r.project_status&&r.project_status!=='In Progress'?` <span class="pill" style="background:#fef3e7;color:#b45309;font-weight:700;margin-left:6px;vertical-align:middle;">${esc(r.project_status)}</span>`:r.project_status?` <span class="pill" style="background:#f1f1ee;color:var(--muted);font-weight:700;margin-left:6px;vertical-align:middle;">${esc(r.project_status)}</span>`:''}</div>
             <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:${r.resurvey_requested||r.resurvey_scheduled||r.resurvey_complete?'6px':'10px'};">
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">Started</span><span class="wip-date-val">${r.start?fmtDateShort(r.start):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">Scheduled</span><span class="wip-date-val">${r.scheduled?fmtDateShort(r.scheduled):'—'}</span></div>
@@ -2764,7 +2797,7 @@ function renderAgingWIP(){
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
-          <th tabindex="0">Status</th>
+          <th tabindex="0" onclick="wipSortBy('qsSort')">Status<span class="sarr ${arr('qsSort')}"></span></th>
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
@@ -2774,7 +2807,10 @@ function renderAgingWIP(){
         <tbody>${tableRows}</tbody>
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Target: ${S.targetAvg}d avg (Spec 12744)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Target: ${S.targetAvg}d avg (Spec 12744)</div>
+        ${wip.length?`<button id="wip-copy-btn" onclick="copyWipTable()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap;margin-top:6px;" title="Copy the table as filtered and sorted">Copy table</button>`:''}
+      </div>
     </div>`;
 }
 
