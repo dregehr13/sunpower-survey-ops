@@ -2559,7 +2559,7 @@ function renderAgingWIP(){
     // Unscheduled — classify by last review subject
     const subj=(r.last_reviewed_subject||'').toUpperCase();
     const comm=(r.last_comment||'').toUpperCase();
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'At-Risk',bg:'#fef3e7',fg:'#b45309',sort:6};
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'Likely Cancel',bg:'#fef3e7',fg:'#b45309',sort:6};
     if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
     if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
     if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
