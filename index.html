@@ -3286,7 +3286,9 @@ function parseImport(content){
     const cells=Array.from(row.querySelectorAll('td')).map(c=>c.textContent.trim());
     const r={id:i,ct_s2r:null,ct_r2s:null,ct_total:null};
     FIELDS.filter(f=>!f.computed).forEach(f=>{ r[f.key]=colIdx[f.key]!==undefined?(f.type==='date'?cleanDate(cells[colIdx[f.key]]):cells[colIdx[f.key]]||''):''; });
-    if(!r.region) return null;
+    // Keep rows with blank Sales Region (parse-sf.js does too) — dropping them
+    // silently undercounts completions vs Chelsea's report
+    if(!r.project&&!r.contact) return null; // fully empty row
     if(r.surveyor_type==='Radicl'&&!r.surveyor_name) r.surveyor_name=null;
     recalc(r); return r;
   }).filter(Boolean);
