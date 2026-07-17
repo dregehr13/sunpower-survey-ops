@@ -2561,6 +2561,23 @@ function renderAgingWIP(){
     return wipSortAsc?cmp:-cmp;
   });
 
+  // Queue status: what is this survey waiting on?
+  // Returns {label, bg, fg, sort} rendered as a pill in the WIP table status column.
+  const wipQueueStatus=r=>{
+    const sched=wipSchedDate(r);
+    if(sched&&sched>=today) return {label:'Scheduled',bg:'#eff6ff',fg:'#3b82f6',sort:0};
+    if(sched&&sched<today) return {label:'Past due',bg:'var(--red-bg)',fg:'var(--red)',sort:1};
+    // Unscheduled — classify by last review subject
+    const subj=(r.last_reviewed_subject||'').toUpperCase();
+    const comm=(r.last_comment||'').toUpperCase();
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'At-Risk',bg:'#fef3e7',fg:'#b45309',sort:6};
+    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
+    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
+    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
+    if(!r.last_reviewed_date) return {label:'New',bg:'#f1f1ee',fg:'var(--muted)',sort:7};
+    return {label:'Unscheduled',bg:'#f1f1ee',fg:'var(--muted)',sort:8};
+  };
+
   // Stats from full unfiltered WIP
   const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0,projectedCt:projCt(r)}));
   const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
@@ -2649,7 +2666,7 @@ function renderAgingWIP(){
       <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason"><span class="attn-reason-text">${ag.texts.filter(Boolean).join(' · ')||'overdue'}</span><button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
-      <td style="font-size:12px;color:var(--muted);">${esc(r.project_status)||'—'}</td>
+      ${(()=>{const qs=wipQueueStatus(r);return`<td style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>`;})()}
       <td class="r" style="color:var(--muted);">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'—'}</td>
       <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
@@ -2747,7 +2764,7 @@ function renderAgingWIP(){
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
-          <th tabindex="0" onclick="wipSortBy('project_status')">Status<span class="sarr ${arr('project_status')}"></span></th>
+          <th tabindex="0">Status</th>
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
