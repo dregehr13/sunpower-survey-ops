@@ -138,6 +138,13 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       <div id="obs-body"></div>
     </div>
 
+    <div class="panel section-gap" id="wip-snap-panel">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;">
+        <input type="checkbox" id="wip-snap-cb" onchange="onWipSnapToggle()" style="cursor:pointer;">
+        <span>Include WIP snapshot <span style="font-size:10px;color:var(--faint);">— open queue by status</span></span>
+      </label>
+    </div>
+
     <div class="panel section-gap">
       <div class="ptitle">Commentary</div>
       <div id="commentary-body">
@@ -725,6 +732,27 @@ async function buildEmailHTML(s, commentary, manualNote){
     </td></tr>`;
   }
 
+  // ── WIP snapshot (optional, checkbox in sidebar) ────────
+  if(document.getElementById('wip-snap-cb')?.checked){
+    const snap=computeWipSnapshot();
+    const row=(x,color)=>`<tr>
+      <td style="${f}font-size:11px;color:#888;padding:3px 0;border-bottom:1px solid #f2f2f0;">${x.name}</td>
+      <td style="${f}font-size:12px;font-weight:700;color:${color||'#111'};text-align:right;padding:3px 0 3px 12px;border-bottom:1px solid #f2f2f0;">${x.count}</td>
+      <td style="${f}font-size:10px;color:#bbb;text-align:right;padding:3px 0 3px 10px;border-bottom:1px solid #f2f2f0;white-space:nowrap;">${x.avgAge!=null?x.avgAge+'d avg':''}</td>
+    </tr>`;
+    const gHead=(label,n)=>`<tr><td colspan="3" style="${f}font-size:9px;font-weight:700;letter-spacing:.07em;color:#aaa;padding:10px 0 3px;">${label.toUpperCase()} · ${n}</td></tr>`;
+    const naColor=x=>x.name==='Past due'?'#991b1b':x.name==='Missing UB'?'#92400e':'#111';
+    rows+=`<tr><td style="padding:16px 24px 4px;border-top:1px solid #ebebeb;">
+      <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:2px;">OPEN WIP — ${snap.total} SURVEYS</div>
+      <table cellpadding="0" cellspacing="0" style="width:100%;max-width:340px;">
+        ${gHead('Needs action',snap.naTotal)}
+        ${snap.needsAction.map(x=>row(x,naColor(x))).join('')}
+        ${gHead('In motion',snap.imTotal)}
+        ${snap.inMotion.map(x=>row(x,x.name==='Scheduled'?'#2d6a0a':'#111')).join('')}
+      </table>
+    </td></tr>`;
+  }
+
   // ── Commentary ──────────────────────────────────────────
   if(commentary&&commentary.trim()){
     rows+=`<tr><td style="${base}padding:16px 24px;border-top:1px solid #ebebeb;line-height:1.7;">${commentary.replace(/\n/g,'<br>')}</td></tr>`;
@@ -850,6 +878,48 @@ function onObsToggle(i){
   const cb=document.getElementById('obs-'+i);
   const lbl=document.getElementById('obs-label-'+i);
   if(lbl) lbl.classList.toggle('unchecked',!cb.checked);
+}
+
+function onWipSnapToggle(){ refreshPreview(); }
+
+// Open WIP grouped by queue status — mirrors the dashboard WIP queue Status column
+function computeWipSnapshot(){
+  const today=todayISO();
+  const dd=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
+  const wipSched=r=>(r.resurvey_requested&&!r.resurvey_complete)?(r.resurvey_scheduled||''):(r.scheduled||r.resurvey_scheduled||'');
+  const status=r=>{
+    const sched=wipSched(r);
+    if(sched&&sched>=today) return 'Scheduled';
+    if(sched&&sched<today) return 'Past due';
+    const subj=(r.last_reviewed_subject||'').toUpperCase();
+    const comm=(r.last_comment||'').toUpperCase();
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return 'Likely Cancel';
+    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return 'Missing UB';
+    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return 'Radicl scheduling';
+    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return 'Awaiting rep';
+    if(!r.last_reviewed_date) return 'New';
+    return 'Unscheduled';
+  };
+  const IN_MOTION=['Scheduled','Radicl scheduling'];
+  const wip=ROWS.filter(r=>r.start&&!isComplete(r));
+  const groups={};
+  wip.forEach(r=>{
+    const s=status(r);
+    if(!groups[s]) groups[s]=[];
+    groups[s].push(dd(wipAgeFrom(r),today));
+  });
+  const mk=names=>names
+    .filter(n=>groups[n]&&groups[n].length)
+    .map(n=>{
+      const ages=groups[n].filter(x=>x>=0);
+      return {name:n,count:groups[n].length,avgAge:ages.length?Math.round(ages.reduce((a,b)=>a+b,0)/ages.length):null};
+    })
+    .sort((a,b)=>b.count-a.count);
+  const inMotion=mk(IN_MOTION);
+  const needsAction=mk(Object.keys(groups).filter(n=>!IN_MOTION.includes(n)));
+  return {needsAction,inMotion,total:wip.length,
+    naTotal:needsAction.reduce((s,x)=>s+x.count,0),
+    imTotal:inMotion.reduce((s,x)=>s+x.count,0)};
 }
 
 function renderCommentary(){
