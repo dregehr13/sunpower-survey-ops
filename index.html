@@ -618,10 +618,11 @@ body{padding-left:180px;}
 <div class="mback hidden" id="updateModal">
   <div class="modal" style="width:520px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <h2>Update dashboard data</h2>
-      <button onclick="closeUpdateModal()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">×</button>
+      <h2 id="upd-heading">Update dashboard data</h2>
+      <button id="upd-close-x" onclick="closeUpdateModal()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">×</button>
     </div>
-    <p class="msub">Pull a fresh export from Salesforce and drop it here to update the dashboard for everyone.</p>
+    <div id="upd-gate-notice" style="display:none;margin:6px 0 12px;padding:11px 13px;border-radius:var(--radius);background:#fef3e7;border:1px solid #f3c98a;font-size:12px;color:#8a5a12;line-height:1.5;"></div>
+    <p class="msub" id="upd-subtitle">Pull a fresh export from Salesforce and drop it here to update the dashboard for everyone.</p>
 
     <div class="upd-step">
       <div class="upd-num">1</div>
@@ -667,7 +668,8 @@ body{padding-left:180px;}
 
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0ec;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div style="font-size:10px;color:var(--faint);" id="upd-ts-line"></div>
-      <button class="mbtn" onclick="closeUpdateModal()">Done</button>
+      <button class="mbtn" id="upd-done-btn" onclick="closeUpdateModal()">Done</button>
+      <a id="upd-gate-dismiss" href="#" onclick="dismissStaleGate();return false;" style="display:none;font-size:11px;color:var(--faint);text-decoration:underline;cursor:pointer;"></a>
     </div>
   </div>
 </div>
@@ -1642,7 +1644,8 @@ function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('op
 function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
 function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderNeedsAttn(); if(currentPage==='wip') renderAgingWIP(); }
 function attnItems(){
-  const today=localISO(new Date());
+  // Anchor to the export date so attention flags match the WIP page ages.
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
   const items=[];
   rows.filter(r=>isWIP(r)).forEach(r=>{
     const d=dDiff(wipAgeFrom(r),today)??0;
@@ -1867,7 +1870,7 @@ function renderThisWeek(){
   const tw=weekRange(0);
   const today=localISO(new Date());
   // Use the DATA_TS date as the cutoff — export captures completions through the moment it was run
-  const dataThrough=window.DATA_TS?DATA_TS.slice(0,10):today;
+  const dataThrough=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):today;
   const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
   const scheduledRem=rows.filter(r=>!isComplete(r)&&(
     (r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to)||
@@ -2529,7 +2532,9 @@ function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
 
-  const today=localISO(new Date());
+  // Anchor all WIP ages and schedule status to the export date, not the wall
+  // clock — a stale export otherwise inflates every age and mislabels schedules.
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
   // Needs-attention groups keyed by project (task_id or id)
   const attnMap={};
   attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
@@ -2577,8 +2582,8 @@ function renderAgingWIP(){
     qsSort:wipQueueStatus(r).sort,
   }));
   if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
-  const PA_MINS=[0,15,30,60,90];
-  const PA_MAXS=[15,30,60,90,Infinity];
+  const PA_MINS=[0,5,15,30,60,90];
+  const PA_MAXS=[5,15,30,60,90,Infinity];
   const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
   if(wipAgeSel.size>0)
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
@@ -2719,7 +2724,8 @@ function renderAgingWIP(){
     </div>
     ${(()=>{
       const PA_BANDS=[
-        {label:'<15d', max:15, color:'#4a9e6a'},
+        {label:'<5d', max:5, color:'#7ec488'},
+        {label:'5–15d', max:15, color:'#4a9e6a'},
         {label:'15–30d', max:30, color:'#d4a843'},
         {label:'30–60d', max:60, color:'#d97535'},
         {label:'60–90d', max:90, color:'#c05252'},
@@ -3353,8 +3359,35 @@ function parseImport(content){
 
 
 // ═══ UPDATE MODAL ════════════════════════════════════════
-function openUpdateModal(){
+let staleGateActive=false;
+function openUpdateModal(gate){
+  staleGateActive=!!gate;
   document.getElementById('updateModal').classList.remove('hidden');
+  const notice=document.getElementById('upd-gate-notice');
+  const dismiss=document.getElementById('upd-gate-dismiss');
+  const closeX=document.getElementById('upd-close-x');
+  const doneBtn=document.getElementById('upd-done-btn');
+  const heading=document.getElementById('upd-heading');
+  const subtitle=document.getElementById('upd-subtitle');
+  if(gate){
+    const dataDay=DATA_TS?DATA_TS.slice(0,10):'';
+    const ageDays=dataDay?dDiff(dataDay,localISO(new Date())):null;
+    heading.textContent='Start the day with fresh data';
+    subtitle.style.display='none';
+    notice.innerHTML=`Today is <strong>${new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</strong>, but the dashboard is showing the export from <strong>${esc(dataDay)}</strong>${ageDays?` (${Math.round(ageDays)} day${Math.round(ageDays)===1?'':'s'} old)`:''}. Pull today's Salesforce report and drop it below so every number reflects the latest state.`;
+    notice.style.display='';
+    dismiss.textContent=`View with ${dataDay} data anyway`;
+    dismiss.style.display='';
+    closeX.style.display='none';
+    doneBtn.style.display='none';
+  } else {
+    heading.textContent='Update dashboard data';
+    subtitle.style.display='';
+    notice.style.display='none';
+    dismiss.style.display='none';
+    closeX.style.display='';
+    doneBtn.style.display='';
+  }
   const tsLine = document.getElementById('upd-ts-line');
   tsLine.textContent = dataTimestamp
     ? 'Last updated: ' + dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
@@ -3368,8 +3401,9 @@ function openUpdateModal(){
   document.getElementById('upd-save-status').style.color = '';
   document.getElementById('upd-password').value = '';
 }
-function closeUpdateModal(){ document.getElementById('updateModal').classList.add('hidden'); }
-document.getElementById('updateModal').addEventListener('click',e=>{ if(e.target===document.getElementById('updateModal')) closeUpdateModal(); });
+function closeUpdateModal(){ staleGateActive=false; document.getElementById('updateModal').classList.add('hidden'); }
+function dismissStaleGate(){ sessionStorage.setItem('stale_gate_dismissed',DATA_TS||'1'); closeUpdateModal(); }
+document.getElementById('updateModal').addEventListener('click',e=>{ if(e.target===document.getElementById('updateModal')&&!staleGateActive) closeUpdateModal(); });
 
 function openSFFromUpdate(){
   const inst=(S.sfInst||localStorage.getItem('sf_inst')||'').trim().replace(/\/+$/,'');
@@ -3477,6 +3511,12 @@ window.addEventListener('load',()=>{
   applyFilter();
   renderFBars();
   nav(currentPage||S.defaultPage||'week');
+  // Force a fresh export once the calendar day rolls past the export date.
+  if(DATA_TS){
+    const dataDay=DATA_TS.slice(0,10);
+    const dismissed=sessionStorage.getItem('stale_gate_dismissed')===DATA_TS;
+    if(dataDay!==localISO(new Date())&&!dismissed) openUpdateModal(true);
+  }
 });
 
 // Manual hash edits / back-forward navigation

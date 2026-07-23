@@ -742,14 +742,47 @@ async function buildEmailHTML(s, commentary, manualNote){
     </tr>`;
     const gHead=(label,n)=>`<tr><td colspan="3" style="${f}font-size:9px;font-weight:700;letter-spacing:.07em;color:#aaa;padding:10px 0 3px;">${label.toUpperCase()} · ${n}</td></tr>`;
     const naColor=x=>x.name==='Past due'?'#991b1b':x.name==='Missing UB'?'#92400e':'#111';
+    // Vertical stacked age bar (email-safe: table rows with bgcolor + height)
+    const BAR_H=150;
+    const withCount=snap.ageBuckets.filter(b=>b.count>0);
+    const barTotal=withCount.reduce((s,b)=>s+b.count,0);
+    let barSegs='',legend='';
+    if(barTotal){
+      // proportional heights with an 8px floor so thin slices stay visible
+      const hs=withCount.map(b=>Math.max(Math.round(b.count/barTotal*BAR_H),8));
+      const scale=BAR_H/hs.reduce((a,b)=>a+b,0);
+      withCount.forEach((b,i)=>{
+        const h=Math.max(Math.round(hs[i]*scale),6);
+        barSegs+=`<tr><td width="26" height="${h}" bgcolor="${b.color}" style="line-height:${h}px;font-size:1px;">&nbsp;</td></tr>`;
+      });
+      legend=snap.ageBuckets.map(b=>`
+        <tr>
+          <td style="padding:2px 6px 2px 0;"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.count?b.color:'#e4e1d8'};"></span></td>
+          <td style="${f}font-size:10px;color:${b.count?'#666':'#ccc'};padding:2px 0;white-space:nowrap;">${b.label}</td>
+          <td style="${f}font-size:10px;font-weight:700;color:${b.count?'#111':'#ccc'};text-align:right;padding:2px 0 2px 8px;">${b.count}</td>
+        </tr>`).join('');
+    }
     rows+=`<tr><td style="padding:16px 24px 4px;border-top:1px solid #ebebeb;">
       <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:2px;">OPEN WIP — ${snap.total} SURVEYS</div>
-      <table cellpadding="0" cellspacing="0" style="width:100%;max-width:340px;">
-        ${gHead('Needs action',snap.naTotal)}
-        ${snap.needsAction.map(x=>row(x,naColor(x))).join('')}
-        ${gHead('In motion',snap.imTotal)}
-        ${snap.inMotion.map(x=>row(x,x.name==='Scheduled'?'#2d6a0a':'#111')).join('')}
-      </table>
+      <table cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+        <td valign="middle" style="width:320px;">
+          <table cellpadding="0" cellspacing="0" style="width:100%;max-width:320px;">
+            ${gHead('Needs action',snap.naTotal)}
+            ${snap.needsAction.map(x=>row(x,naColor(x))).join('')}
+            ${gHead('In motion',snap.imTotal)}
+            ${snap.inMotion.map(x=>row(x,x.name==='Scheduled'?'#2d6a0a':'#111')).join('')}
+          </table>
+        </td>
+        ${barTotal?`<td valign="middle" align="center" style="padding:0 8px;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td valign="top">
+              <div style="${f}font-size:9px;font-weight:700;letter-spacing:.07em;color:#aaa;margin-bottom:6px;text-align:left;">PROJECT AGE</div>
+              <table cellpadding="0" cellspacing="1" style="border-collapse:separate;">${barSegs}</table>
+            </td>
+            <td valign="middle" style="padding-left:10px;"><table cellpadding="0" cellspacing="0">${legend}</table></td>
+          </tr></table>
+        </td>`:''}
+      </tr></table>
     </td></tr>`;
   }
 
@@ -884,7 +917,9 @@ function onWipSnapToggle(){ refreshPreview(); }
 
 // Open WIP grouped by queue status — mirrors the dashboard WIP queue Status column
 function computeWipSnapshot(){
-  const today=todayISO();
+  // Anchor ages and schedule status to the export date, not the wall clock —
+  // otherwise a stale export inflates every age and mislabels scheduled rows.
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):todayISO();
   const dd=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
   const wipSched=r=>(r.resurvey_requested&&!r.resurvey_complete)?(r.resurvey_scheduled||''):(r.scheduled||r.resurvey_scheduled||'');
   const status=r=>{
@@ -917,7 +952,23 @@ function computeWipSnapshot(){
     .sort((a,b)=>b.count-a.count);
   const inMotion=mk(IN_MOTION);
   const needsAction=mk(Object.keys(groups).filter(n=>!IN_MOTION.includes(n)));
-  return {needsAction,inMotion,total:wip.length,
+  // Project-age distribution — dashboard WIP age buckets, plus a <5d split
+  const AGE_BUCKETS=[
+    {label:'<5d',   min:0,  max:5,        color:'#7cc47f'},
+    {label:'5–15d', min:5,  max:15,       color:'#57a55a'},
+    {label:'15–30d',min:15, max:30,       color:'#c9a227'},
+    {label:'30–60d',min:30, max:60,       color:'#d97706'},
+    {label:'60–90d',min:60, max:90,       color:'#b3402e'},
+    {label:'>90d',  min:90, max:Infinity, color:'#7f1d1d'},
+  ];
+  const ageBuckets=AGE_BUCKETS.map(b=>({...b,count:0}));
+  wip.forEach(r=>{
+    const age=dd(r.start,today);
+    if(age==null||age<0) return;
+    const b=ageBuckets.find(x=>age>=x.min&&age<x.max);
+    if(b) b.count++;
+  });
+  return {needsAction,inMotion,total:wip.length,ageBuckets,
     naTotal:needsAction.reduce((s,x)=>s+x.count,0),
     imTotal:inMotion.reduce((s,x)=>s+x.count,0)};
 }
