@@ -733,56 +733,14 @@ async function buildEmailHTML(s, commentary, manualNote){
   }
 
   // ── WIP snapshot (optional, checkbox in sidebar) ────────
+  // Rendered as a PNG (like the metric cards and charts) so it pastes into
+  // Outlook pixel-identical instead of being re-flowed with Outlook's fonts.
   if(document.getElementById('wip-snap-cb')?.checked){
     const snap=computeWipSnapshot();
-    const row=(x,color)=>`<tr>
-      <td style="${f}font-size:11px;color:#888;padding:3px 0;border-bottom:1px solid #f2f2f0;">${x.name}</td>
-      <td style="${f}font-size:12px;font-weight:700;color:${color||'#111'};text-align:right;padding:3px 0 3px 12px;border-bottom:1px solid #f2f2f0;">${x.count}</td>
-      <td style="${f}font-size:10px;color:#bbb;text-align:right;padding:3px 0 3px 10px;border-bottom:1px solid #f2f2f0;white-space:nowrap;">${x.avgAge!=null?x.avgAge+'d avg':''}</td>
-    </tr>`;
-    const gHead=(label,n)=>`<tr><td colspan="3" style="${f}font-size:9px;font-weight:700;letter-spacing:.07em;color:#aaa;padding:10px 0 3px;">${label.toUpperCase()} · ${n}</td></tr>`;
-    const naColor=x=>x.name==='Past due'?'#991b1b':x.name==='Missing UB'?'#92400e':'#111';
-    // Vertical stacked age bar (email-safe: table rows with bgcolor + height)
-    const BAR_H=150;
-    const withCount=snap.ageBuckets.filter(b=>b.count>0);
-    const barTotal=withCount.reduce((s,b)=>s+b.count,0);
-    let barSegs='',legend='';
-    if(barTotal){
-      // proportional heights with an 8px floor so thin slices stay visible
-      const hs=withCount.map(b=>Math.max(Math.round(b.count/barTotal*BAR_H),8));
-      const scale=BAR_H/hs.reduce((a,b)=>a+b,0);
-      withCount.forEach((b,i)=>{
-        const h=Math.max(Math.round(hs[i]*scale),6);
-        barSegs+=`<tr><td width="26" height="${h}" bgcolor="${b.color}" style="line-height:${h}px;font-size:1px;">&nbsp;</td></tr>`;
-      });
-      legend=snap.ageBuckets.map(b=>`
-        <tr>
-          <td style="padding:2px 6px 2px 0;"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.count?b.color:'#e4e1d8'};"></span></td>
-          <td style="${f}font-size:10px;color:${b.count?'#666':'#ccc'};padding:2px 0;white-space:nowrap;">${b.label}</td>
-          <td style="${f}font-size:10px;font-weight:700;color:${b.count?'#111':'#ccc'};text-align:right;padding:2px 0 2px 8px;">${b.count}</td>
-        </tr>`).join('');
-    }
-    rows+=`<tr><td style="padding:16px 24px 4px;border-top:1px solid #ebebeb;">
-      <div style="${f}font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;margin-bottom:2px;">OPEN WIP — ${snap.total} SURVEYS</div>
-      <table cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-        <td valign="middle" style="width:320px;">
-          <table cellpadding="0" cellspacing="0" style="width:100%;max-width:320px;">
-            ${gHead('Needs action',snap.naTotal)}
-            ${snap.needsAction.map(x=>row(x,naColor(x))).join('')}
-            ${gHead('In motion',snap.imTotal)}
-            ${snap.inMotion.map(x=>row(x,x.name==='Scheduled'?'#2d6a0a':'#111')).join('')}
-          </table>
-        </td>
-        ${barTotal?`<td valign="middle" align="center" style="padding:0 8px;">
-          <table cellpadding="0" cellspacing="0"><tr>
-            <td valign="top">
-              <div style="${f}font-size:9px;font-weight:700;letter-spacing:.07em;color:#aaa;margin-bottom:6px;text-align:left;">PROJECT AGE</div>
-              <table cellpadding="0" cellspacing="1" style="border-collapse:separate;">${barSegs}</table>
-            </td>
-            <td valign="middle" style="padding-left:10px;"><table cellpadding="0" cellspacing="0">${legend}</table></td>
-          </tr></table>
-        </td>`:''}
-      </tr></table>
+    const {svg,w,h}=buildWipSnapshotSVG(snap);
+    const png=await svgToDataURL(svg,w,h);
+    if(png) rows+=`<tr><td style="padding:16px 24px 4px;border-top:1px solid #ebebeb;">
+      <img src="${png}" width="${w}" style="display:block;max-width:100%;border:0;" alt="Open WIP by status and project age">
     </td></tr>`;
   }
 
@@ -971,6 +929,66 @@ function computeWipSnapshot(){
   return {needsAction,inMotion,total:wip.length,ageBuckets,
     naTotal:needsAction.reduce((s,x)=>s+x.count,0),
     imTotal:inMotion.reduce((s,x)=>s+x.count,0)};
+}
+
+// Render the WIP snapshot as an SVG (→ PNG via svgToDataURL) so it pastes into
+// Outlook pixel-identical, matching the metric-card and chart images.
+function buildWipSnapshotSVG(snap){
+  const FN='Arial,Helvetica,sans-serif';
+  const W=552, LEFT_W=300;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const naColor=x=>x.name==='Past due'?'#991b1b':x.name==='Missing UB'?'#92400e':'#111';
+  let body='';
+  // Title
+  body+=`<text x="0" y="12" font-family="${FN}" font-size="10" font-weight="700" fill="#999" letter-spacing="0.5">OPEN WIP — ${snap.total} SURVEYS</text>`;
+  // ── Left column: grouped stat rows ──
+  const START_Y=36, ROW_H=19;
+  let ly=START_Y;
+  const drawGroup=(label,total)=>{
+    body+=`<text x="0" y="${ly}" font-family="${FN}" font-size="9" font-weight="700" fill="#aaa" letter-spacing="0.6">${label.toUpperCase()} · ${total}</text>`;
+    ly+=17;
+  };
+  const drawRow=(x,color)=>{
+    body+=`<text x="0" y="${ly}" font-family="${FN}" font-size="11" fill="#888">${esc(x.name)}</text>`;
+    body+=`<text x="228" y="${ly}" font-family="${FN}" font-size="12" font-weight="700" fill="${color}" text-anchor="end">${x.count}</text>`;
+    body+=`<text x="${LEFT_W}" y="${ly}" font-family="${FN}" font-size="10" fill="#bbb" text-anchor="end">${x.avgAge!=null?x.avgAge+'d avg':''}</text>`;
+    body+=`<line x1="0" y1="${ly+6}" x2="${LEFT_W}" y2="${ly+6}" stroke="#f2f2f0" stroke-width="1"/>`;
+    ly+=ROW_H;
+  };
+  drawGroup('Needs action',snap.naTotal);
+  snap.needsAction.forEach(x=>drawRow(x,naColor(x)));
+  ly+=8;
+  drawGroup('In motion',snap.imTotal);
+  snap.inMotion.forEach(x=>drawRow(x,x.name==='Scheduled'?'#2d6a0a':'#111'));
+  const leftBottom=ly;
+  // ── Right column: vertical stacked age bar + legend ──
+  const BAR_X=372, BAR_W=26, BAR_TOP=START_Y+4, BAR_H=150;
+  const withCount=snap.ageBuckets.filter(b=>b.count>0);
+  const barTotal=withCount.reduce((s,b)=>s+b.count,0);
+  let rightBottom=BAR_TOP;
+  if(barTotal){
+    body+=`<text x="${BAR_X}" y="${START_Y}" font-family="${FN}" font-size="9" font-weight="700" fill="#aaa" letter-spacing="0.6">PROJECT AGE</text>`;
+    // proportional heights with an 8px floor so thin slices stay visible, then rescale to BAR_H
+    let hs=withCount.map(b=>Math.max(Math.round(b.count/barTotal*BAR_H),8));
+    const sc=BAR_H/hs.reduce((a,b)=>a+b,0);
+    hs=hs.map(x=>Math.max(Math.round(x*sc),6));
+    let by=BAR_TOP;
+    withCount.forEach((b,i)=>{ body+=`<rect x="${BAR_X}" y="${by}" width="${BAR_W}" height="${hs[i]-1}" rx="1" fill="${b.color}"/>`; by+=hs[i]; });
+    // Legend, vertically centered against the bar
+    const LEG_X=BAR_X+BAR_W+14, LEG_RH=18;
+    const legH=snap.ageBuckets.length*LEG_RH;
+    let gy=BAR_TOP+(BAR_H-legH)/2+9;
+    snap.ageBuckets.forEach(b=>{
+      const col=b.count?b.color:'#e4e1d8';
+      body+=`<rect x="${LEG_X}" y="${gy-9}" width="9" height="9" rx="1.5" fill="${col}"/>`;
+      body+=`<text x="${LEG_X+16}" y="${gy}" font-family="${FN}" font-size="10" fill="${b.count?'#666':'#ccc'}">${esc(b.label)}</text>`;
+      body+=`<text x="${LEG_X+96}" y="${gy}" font-family="${FN}" font-size="10" font-weight="700" fill="${b.count?'#111':'#ccc'}" text-anchor="end">${b.count}</text>`;
+      gy+=LEG_RH;
+    });
+    rightBottom=Math.max(BAR_TOP+BAR_H,gy-LEG_RH+4);
+  }
+  const H=Math.max(leftBottom,rightBottom)+4;
+  return {svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${body}</svg>`,w:W,h:H};
 }
 
 function renderCommentary(){
