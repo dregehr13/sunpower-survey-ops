@@ -3369,6 +3369,7 @@ function openUpdateModal(gate){
   const doneBtn=document.getElementById('upd-done-btn');
   const heading=document.getElementById('upd-heading');
   const subtitle=document.getElementById('upd-subtitle');
+  doneBtn.textContent='Done'; // reset in case a prior save relabeled it
   if(gate){
     const dataDay=DATA_TS?DATA_TS.slice(0,10):'';
     const ageDays=dataDay?dDiff(dataDay,localISO(new Date())):null;
@@ -3439,6 +3440,12 @@ async function saveToServer(){
     status.style.color='var(--green)';
     status.textContent=`Saved — ${data.rows} projects committed. Dashboard will update in ~30 seconds.`;
     btn.textContent='Saved';
+    // Fresh data is already loaded in memory — give a clean exit out of the gate.
+    const dismiss=document.getElementById('upd-gate-dismiss');
+    const doneBtn=document.getElementById('upd-done-btn');
+    if(dismiss) dismiss.style.display='none';
+    if(doneBtn){ doneBtn.textContent='View updated dashboard'; doneBtn.style.display=''; }
+    if(staleGateActive) sessionStorage.setItem('stale_gate_dismissed',DATA_TS||'1');
   }catch(err){
     status.style.color='var(--red)';
     status.textContent='Error: '+err.message;
