@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1648,7 +1648,7 @@ function attnItems(){
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
   const items=[];
   rows.filter(r=>isWIP(r)).forEach(r=>{
-    const d=dDiff(wipAgeFrom(r),today)??0;
+    const d=ssDaysOpen(r,today)??0;
     if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:''});
     if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
     if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
@@ -1892,7 +1892,7 @@ function renderThisWeek(){
   const wipProjects=rows.filter(r=>isWIP(r));
   const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
-  const avgWipAge=avg(wipProjects.map(r=>dDiff(wipAgeFrom(r),dataThrough)));
+  const avgWipAge=avg(wipProjects.map(r=>ssDaysOpen(r,dataThrough)));
   const schedSet=new Set(scheduledRem);
   const unschedRows=wipProjects.filter(r=>!schedSet.has(r));
   const projTotal=projectWeekTotal(completedTW.length,scheduledRem,unschedRows,{daysRemaining:daysRem,showRates,expectedCt});
@@ -2574,7 +2574,8 @@ function renderAgingWIP(){
 
   let wip=wipFiltered().map(r=>({
     ...r,
-    daysOpen:dDiff(wipAgeFrom(r),today)??0,
+    daysOpen:ssDaysOpen(r,today)??0,
+    inGrace:inRepGrace(r,today),
     projectedCt:projCt(r),
     schedEff:wipSchedDate(r)||'',
     projectAge:r.start?dDiff(r.start,today)??0:null,
@@ -2617,7 +2618,7 @@ function renderAgingWIP(){
   }));
 
   // Stats from full unfiltered WIP
-  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:dDiff(wipAgeFrom(r),today)??0,projectedCt:projCt(r)}));
+  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r)}));
   const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
@@ -2629,7 +2630,9 @@ function renderAgingWIP(){
   const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
   const totalWip=allWip.length;
 
-  const agePill=d=>{
+  const agePill=(d,inGrace)=>{
+    // Rep still owns it today — the SS clock hasn't started.
+    if(inGrace) return '<span class="pill" style="background:#f1f1ee;color:var(--muted);font-style:italic;" title="Rep has until tomorrow before Site Survey starts working it">Rep day</span>';
     if(d==null) return '<span class="pna">—</span>';
     if(d<=S.targetAvg) return `<span class="pill pg">${Math.round(d)}d</span>`;
     if(d<=7)           return `<span class="pill pam">${Math.round(d)}d</span>`;
@@ -2709,7 +2712,7 @@ function renderAgingWIP(){
       <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
       <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
       <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
-      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen)}</td>
+      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
@@ -2719,7 +2722,7 @@ function renderAgingWIP(){
       <div class="kcard"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
       <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
       <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allAges.filter(d=>d<=S.targetAvg).length} of ${totalWip}</div></div>
+      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
       <div class="kcard"><div class="klabel">Pipeline ratio</div><div class="kval ${pipeRatio!=null?(pipeRatio<=1?'kg-c':pipeRatio<=1.5?'ka-c':'kr-c'):''}">${pipeRatio!=null?pipeRatio+'wk':'—'}</div><div class="ksub">to clear WIP at recent pace</div></div>
     </div>
     ${(()=>{
@@ -2814,7 +2817,7 @@ function renderAgingWIP(){
       </table></div>`
       :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback) · Target: ${S.targetAvg}d avg (Spec 12744)</div>
+        <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
         ${wip.length?`<button id="wip-copy-btn" onclick="copyWipTable()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap;margin-top:6px;" title="Copy the table as filtered and sorted">Copy table</button>`:''}
       </div>
     </div>`;

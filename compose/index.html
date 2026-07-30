@@ -269,7 +269,7 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, wipAgeFrom, avg, med,
+const {DATA_CUTOFF, isComplete, wipAgeFrom, ssDaysOpen, avg, med,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 const ROWS = OpsMetrics.filterRows(RAW);
@@ -434,12 +434,9 @@ function getObservations(s){
     // Overdue WIP — include notes for AI context
     const today=new Date(); today.setHours(12,0,0,0);
     const todayISO=today.toISOString().slice(0,10);
-    const overdueWip=ROWS.filter(r=>r.start&&!isComplete(r)).map(r=>{
-      const ageFrom=wipAgeFrom(r);
-      const [ay,am,ad]=ageFrom.split('-').map(Number);
-      const days=Math.round((today-new Date(ay,am-1,ad))/86400000);
-      return {...r,days};
-    }).filter(r=>r.days>4).sort((a,b)=>b.days-a.days);
+    const overdueWip=ROWS.filter(r=>r.start&&!isComplete(r))
+      .map(r=>({...r,days:ssDaysOpen(r,todayISO)??0}))
+      .filter(r=>r.days>4).sort((a,b)=>b.days-a.days);
     if(overdueWip.length>0){
       const critical=overdueWip.filter(r=>r.days>7);
       const withNotes=overdueWip.filter(r=>r.last_comment);
@@ -899,7 +896,7 @@ function computeWipSnapshot(){
   wip.forEach(r=>{
     const s=status(r);
     if(!groups[s]) groups[s]=[];
-    groups[s].push(dd(wipAgeFrom(r),today));
+    groups[s].push(ssDaysOpen(r,today));
   });
   const mk=names=>names
     .filter(n=>groups[n]&&groups[n].length)

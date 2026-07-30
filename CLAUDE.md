@@ -18,7 +18,11 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
-- Metric definitions (DATA_CUTOFF, isComplete, isWIP, wipAgeFrom, avg/med/pct, hasResurveySig) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- Metric definitions (DATA_CUTOFF, isComplete, isWIP, wipAgeFrom, ssDaysOpen/hasRepGrace/inRepGrace, avg/med/pct, hasResurveySig) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- **Two different age metrics — don't conflate them:**
+  - `wipAgeFrom(r)` returns the *anchor date* and drives cycle-time math (`ct_total`, `projCt`, `estComplete`). Never shift it — Spec 12744 reporting depends on it
+  - `ssDaysOpen(r, asOf)` is the *queue triage* number shown as "Days Open in SS". It subtracts a **rep grace day**: when a rep elects to do the survey they have until the next calendar day before SS starts working it. Blank resource counts as rep (SF corrects it if untrue); only surveys that went straight to Radicl/SunPower with no `requested` skip the grace; open resurveys get none. `inRepGrace()` flags rows still in that first day — the WIP table shows a "Rep day" pill instead of a number
+- `requested` is only populated when a rep declines, so it doubles as the rep→field/Radicl handoff date (~99% coverage on Radicl/SunPower Surveyor rows vs 13% on Sales Rep)
 - Derived analytics also live in `lib/metrics.cjs`: businessDays (weekend rule), buildSegmentAvgs/lookupSegmentAvg, projectWeekTotal, bandFor (≤target/≤target+2 bands), trendLabel (TREND_BAND_AVG=0.1 dashboard avg-based, TREND_BAND_MED=0.3 compose median-based — two calculations on purpose)
 - Tests: `npm test` (node:test, `test/metrics.test.js`) locks down every definition above — run it before changing metrics
 - parse-sf.js prints a non-blocking import sanity report to stderr (backwards dates, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings); push.sh surfaces it automatically

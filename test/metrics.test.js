@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  wipAgeFrom, hasResurveySig, avg, med, pct,
+  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
   bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
@@ -41,6 +41,51 @@ test('wipAgeFrom fallback chain', () => {
 test('wipAgeFrom completion +2 rolls over month boundaries', () => {
   assert.equal(wipAgeFrom({ resurvey_requested: '', complete: '2026-06-30', start: '2026-06-01' }), '2026-07-02');
   assert.equal(wipAgeFrom({ resurvey_requested: '', complete: '2026-12-31', start: '2026-12-01' }), '2027-01-02');
+});
+
+// ── Rep grace day: the SS clock starts the day after the rep takes it ──
+test('hasRepGrace: blank resource defaults to rep, straight-to-field does not', () => {
+  assert.equal(hasRepGrace({ resource: 'Sales Rep', start: '2026-07-01' }), true);
+  assert.equal(hasRepGrace({ resource: '', start: '2026-07-01' }), true);
+  // handed off from a rep (requested populated) — the rep phase still happened
+  assert.equal(hasRepGrace({ resource: 'Radicl Services', requested: '2026-07-03', start: '2026-07-01' }), true);
+  assert.equal(hasRepGrace({ resource: 'SunPower Surveyor', requested: '2026-07-03', start: '2026-07-01' }), true);
+  // never had a rep phase
+  assert.equal(hasRepGrace({ resource: 'Radicl Services', requested: '', start: '2026-07-01' }), false);
+  assert.equal(hasRepGrace({ resource: 'SunPower Surveyor', requested: '', start: '2026-07-01' }), false);
+});
+
+test('hasRepGrace: open resurveys get no grace', () => {
+  assert.equal(hasRepGrace({ resource: 'Sales Rep', resurvey_requested: '2026-07-05', resurvey_complete: '' }), false);
+  // a closed resurvey is back to normal rules
+  assert.equal(hasRepGrace({ resource: 'Sales Rep', resurvey_requested: '2026-07-05', resurvey_complete: '2026-07-08', start: '2026-07-01' }), true);
+});
+
+test('ssDaysOpen subtracts the grace day and floors at zero', () => {
+  const rep = { resource: 'Sales Rep', start: '2026-07-01' };
+  assert.equal(ssDaysOpen(rep, '2026-07-01'), 0); // rep's day — SS clock not started
+  assert.equal(ssDaysOpen(rep, '2026-07-02'), 0); // grace just expired
+  assert.equal(ssDaysOpen(rep, '2026-07-05'), 3);
+  const field = { resource: 'Radicl Services', requested: '', start: '2026-07-01' };
+  assert.equal(ssDaysOpen(field, '2026-07-05'), 4); // no grace, full elapsed
+});
+
+test('ssDaysOpen leaves open resurveys on the full clock', () => {
+  const rs = { resource: 'Sales Rep', start: '2026-06-01', resurvey_requested: '2026-07-01', resurvey_complete: '' };
+  assert.equal(ssDaysOpen(rs, '2026-07-04'), 3); // anchored at resurvey request, no grace
+});
+
+test('inRepGrace only while the rep still owns the day', () => {
+  const rep = { resource: 'Sales Rep', start: '2026-07-01' };
+  assert.equal(inRepGrace(rep, '2026-07-01'), true);
+  assert.equal(inRepGrace(rep, '2026-07-02'), false);
+  assert.equal(inRepGrace({ resource: 'Radicl Services', requested: '', start: '2026-07-01' }, '2026-07-01'), false);
+});
+
+test('grace day never moves the cycle-time anchor', () => {
+  // wipAgeFrom drives ct_total, projCt and estComplete — Spec 12744 must not shift
+  const rep = { resource: 'Sales Rep', start: '2026-07-01', resurvey_requested: '', complete: '' };
+  assert.equal(wipAgeFrom(rep), '2026-07-01');
 });
 
 // ── hasResurveySig: reopened_by_design is a STRING flag '0'/'1' ──
