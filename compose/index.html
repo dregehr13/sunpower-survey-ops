@@ -547,6 +547,7 @@ async function buildEmailHTML(s, commentary, manualNote){
   // Pipeline ratio card colors (≤1.0 green, >1.0 amber)
   function prColors(v){
     if(v==null)  return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8'};
+    v=Math.round(v*10)/10; // colour on the displayed value, as bandFor does
     if(v<=1.0)   return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8'};
     return        {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
   }

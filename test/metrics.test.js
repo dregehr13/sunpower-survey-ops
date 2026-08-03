@@ -313,6 +313,14 @@ test('bandFor bands: ≤target good, ≤target+2 mid, else bad, null → empty',
   assert.equal(bandFor(0, 3), 'good');
 });
 
+test('bandFor bands on the displayed (1dp) value, not the raw one', () => {
+  // avg() keeps 2dp: 4.04 renders "4.0d" and must not colour as a miss
+  assert.equal(bandFor(4.04, 4), 'good');
+  assert.equal(bandFor(4.05, 4), 'mid'); // renders "4.1d" — a real miss
+  assert.equal(bandFor(6.04, 4), 'mid');
+  assert.equal(bandFor(6.05, 4), 'bad');
+});
+
 // ── trendLabel ──
 test('trendLabel with the avg dead band (dashboard)', () => {
   assert.equal(TREND_BAND_AVG, 0.1);
