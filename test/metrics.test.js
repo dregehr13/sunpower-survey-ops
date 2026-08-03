@@ -367,6 +367,7 @@ test('ssRatioBand: under a week good, 1-2 weeks uncoloured, 2+ is the alarm', ()
   assert.equal(ssRatioBand(1.0), 'good');
   assert.equal(ssRatioBand(1.16), 'normal'); // the Fri/Sat rhythm, not an alarm
   assert.equal(ssRatioBand(1.9), 'normal');
+  assert.equal(ssRatioBand(1.95), 'normal'); // renders "1.9wk" — must match
   assert.equal(ssRatioBand(2.0), 'bad');
   assert.equal(ssRatioBand(2.5), 'bad');
   assert.equal(ssRatioBand(null), '');
@@ -391,9 +392,11 @@ test('floorAlarm fires above 1.5x the trailing median', () => {
 test('bandFor bands on the displayed (1dp) value, not the raw one', () => {
   // avg() keeps 2dp: 4.04 renders "4.0d" and must not colour as a miss
   assert.equal(bandFor(4.04, 4), 'good');
-  assert.equal(bandFor(4.05, 4), 'mid'); // renders "4.1d" — a real miss
+  assert.equal(bandFor(4.05, 4), 'good'); // renders "4.0d" — toFixed rounds down
+  assert.equal(bandFor(4.06, 4), 'mid');  // renders "4.1d" — a real miss
   assert.equal(bandFor(6.04, 4), 'mid');
-  assert.equal(bandFor(6.05, 4), 'bad');
+  assert.equal(bandFor(6.05, 4), 'mid'); // renders "6.0d" — exactly target+2
+  assert.equal(bandFor(6.06, 4), 'bad'); // renders "6.1d" — over the band
 });
 
 // ── trendLabel ──

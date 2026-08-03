@@ -1,0 +1,112 @@
+{
+ "fixture": {
+  "rows": 150,
+  "asOf": "2026-08-03"
+ },
+ "scope": {
+  "rawRows": 150,
+  "inScope": 141,
+  "droppedByScope": 9,
+  "complete": 109,
+  "wip": 32,
+  "dateButNotComplete": 6,
+  "withResurveySig": 20,
+  "blankRegion": 22
+ },
+ "cycle": {
+  "count": 109,
+  "avg": 2.91,
+  "med": 1,
+  "p75": 2,
+  "p90": 3
+ },
+ "age": {
+  "hasRepGrace": 129,
+  "noRepGrace": 12,
+  "inGraceNow": 1,
+  "ssDaysOpen": {
+   "avg": 4.84,
+   "med": 4,
+   "max": 46
+  },
+  "projectAge": {
+   "avg": 12.13,
+   "med": 5,
+   "max": 79
+  },
+  "anchorsUnmovedByGrace": true
+ },
+ "ratio": {
+  "weekEnd": "2026-08-02",
+  "wipOnWeekEnd": 31,
+  "meanWipForWeek": 26.571,
+  "avgWeeklyCompletions": 19.333,
+  "forWeek": 1.37,
+  "live": 1.66,
+  "lastCompleteWeekEnd": "2026-08-02",
+  "bands": [
+   "0.5:good",
+   "1:good",
+   "1.04:good",
+   "1.6:normal",
+   "1.99:bad",
+   "2:bad",
+   "3:bad"
+  ]
+ },
+ "flow": {
+  "rollingClearance4wk": 0.706,
+  "clearSeries": [
+   null,
+   null,
+   0.095,
+   0.706
+  ],
+  "mondayFloors": [
+   4,
+   4,
+   18,
+   32
+  ],
+  "clearanceAlarm": true,
+  "floorAlarm": false
+ },
+ "projection": {
+  "recentCompletions": 51,
+  "showRateGlobal": 0.733,
+  "showRateResources": [
+   "Radicl Services",
+   "Sales Rep"
+  ],
+  "segmentKeys": 14,
+  "expectedCtSample": 4.37,
+  "lookupFallback": 4,
+  "businessDays": {
+   "elapsed": 1,
+   "remaining": 4
+  },
+  "weekDaysRemaining": 6.5,
+  "projectWeekTotal": 17
+ },
+ "helpers": {
+  "bandFor": [
+   "3.9:good",
+   "4:good",
+   "4.04:good",
+   "4.05:good",
+   "6:mid",
+   "6.05:mid"
+  ],
+  "trendLabel": [
+   "Improving",
+   "Slowing",
+   "Stable"
+  ],
+  "normalizeName": [
+   "Robert Davis III",
+   "Jules Lyusya",
+   "Jules Lyusya",
+   "McDonald ANNE"
+  ]
+ }
+}
