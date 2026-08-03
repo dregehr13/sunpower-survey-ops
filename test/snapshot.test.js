@@ -100,7 +100,7 @@ function computeAll() {
   const flow = {
     rollingClearance4wk: clearSeries[clearSeries.length - 1],
     clearSeries,
-    mondayFloors: floors,
+    weeklyFloors: floors,
     clearanceAlarm: clearanceAlarm(clearSeries),
     floorAlarm: floorAlarm(floors),
   };

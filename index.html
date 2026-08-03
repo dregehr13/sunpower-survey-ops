@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, mondayFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1433,7 +1433,7 @@ const TIP={
 
   // ── Flow ──
   clearance:'Surveys completed ÷ surveys started, for the last full week. Above 100% the backlog is shrinking, below 100% it is growing — regardless of how much volume comes in.',
-  mondayFloor:'Open WIP once each Monday has cleared the weekend buildup. The weekend peak is expected; if this floor climbs week over week, backlog is genuinely growing.',
+  weeklyFloor:'Open WIP once each week\'s weekend buildup has drained (currently the day after Monday). The weekend peak is expected; if this floor climbs week over week, backlog is genuinely growing.',
 
   // ── Trends ──
   trend3wk:'Direction of the 3-week rolling average cycle time versus the 3 weeks before it. Stable means the change is inside a 0.1 day dead band.',
@@ -2266,6 +2266,8 @@ function renderRepTable(){
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
+let trFlowView='daily'; // 'daily' | 'weekly' — Intake & flow chart granularity
+function setTrFlowView(v){ trFlowView=v; renderTrends(); }
 function renderTrends(){
   const trendSrc=rows.filter(gfDim); // global region/resource/type filters apply
   if(!trendSrc.length){
@@ -2321,32 +2323,25 @@ function renderTrends(){
       <div class="kcard"><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance · current week is partial</div></div></div>
-      <div class="leg">
-        <span class="li"><span class="ld" style="background:#60a5fa;"></span>New In</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>Completed</span>
-        <span class="li"><span class="ld" style="background:#f59e0b;"></span>WIP</span>
+      <div class="shead">
+        <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?'Surveys in (by start date) vs out (by complete date), last 8 weeks · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected':'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · Line = open WIP</div></div>
+        <div class="toggle-group">
+          <button class="tgl-btn${trFlowView==='daily'?' active':''}" onclick="setTrFlowView('daily')">Daily</button>
+          <button class="tgl-btn${trFlowView==='weekly'?' active':''}" onclick="setTrFlowView('weekly')">Weekly</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:stretch;">
-        <div style="flex:0 0 58px;height:260px;"><canvas id="tr-inout-yL" width="58" height="260"></canvas></div>
-        <div id="tr-inout-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:260px;position:relative;"><canvas id="tr-inout"></canvas></div></div>
-        <div style="flex:0 0 52px;height:260px;"><canvas id="tr-inout-yR" width="52" height="260"></canvas></div>
-      </div>
-    </div>
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Daily intake &amp; clearance</div><div class="ssub">Surveys in (by start date) vs out (by complete date), last 8 weeks · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected · the number that matters is the Monday floor</div></div></div>
       <div id="tr-alarm" style="margin-bottom:10px;"></div>
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>Out</span>
-        <span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekend</span>
+        <span class="li"><span class="ld" style="background:#60a5fa;"></span>${trFlowView==='daily'?'In':'New In'}</span>
+        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':'Completed'}</span>
+        ${trFlowView==='daily'?'<span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekend</span>':''}
         <span class="li" style="color:#d97706;"><span class="ldash" style="background:#d97706;"></span>WIP</span>
       </div>
       <div style="display:flex;align-items:stretch;">
-        <div style="flex:0 0 48px;height:250px;"><canvas id="tr-flow-yL" width="48" height="250"></canvas></div>
-        <div id="tr-flow-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${Math.max(containerW,56*15)}px;height:250px;position:relative;"><canvas id="tr-flow"></canvas></div></div>
-        <div style="flex:0 0 52px;height:250px;"><canvas id="tr-flow-yR" width="52" height="250"></canvas></div>
+        <div style="flex:0 0 52px;height:260px;"><canvas id="tr-flow-yL" width="52" height="260"></canvas></div>
+        <div id="tr-flow-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${trFlowView==='daily'?Math.max(containerW,56*15):chartW}px;height:260px;position:relative;"><canvas id="tr-flow"></canvas></div></div>
+        <div style="flex:0 0 52px;height:260px;"><canvas id="tr-flow-yR" width="52" height="260"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -2425,32 +2420,38 @@ function renderTrends(){
     ctx.restore();
   }
 
-  // ── tr-inout ──────────────────────────────────────────────
-  dc('tr-inout');
-  CH['tr-inout']=new Chart(document.getElementById('tr-inout'),{
-    type:'bar',
-    data:{labels:inOutLabels,datasets:[
-      {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
-      {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
-      {label:'WIP',data:wipLine,type:'line',borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
-       tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#f59e0b',spanGaps:false,yAxisID:'y1',order:1},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
-      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{
-          title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
-          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
-        }}},
-      scales:{
-        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
-        y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
-        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
-  });
-  _drawAxis('tr-inout-yL',CH['tr-inout'].scales.y,true,'#9b9690',null,'Surveys','#bbb');
-  _drawAxis('tr-inout-yR',CH['tr-inout'].scales.y1,false,'#d97706',null,'WIP','#d97706');
+  // Small inline trend line for a stat cell — area fill, faint grid-free
+  // baseline, a dashed reference at the alarm/baseline threshold, and an
+  // emphasized endpoint coloured to match the cell's current state.
+  function miniSpark(series,opts){
+    opts=opts||{};
+    const W=110,H=28,PAD=3;
+    const vals=series.filter(v=>v!=null);
+    if(vals.length<2) return '';
+    const thresh=opts.thresh;
+    const min=Math.min(...vals,thresh!=null?thresh:Infinity);
+    const max=Math.max(...vals,thresh!=null?thresh:-Infinity);
+    const range=(max-min)||1;
+    const n=series.length;
+    const x=i=>PAD+(i/(n-1))*(W-PAD*2);
+    const y=v=>H-PAD-((v-min)/range)*(H-PAD*2);
+    const color=opts.color||'#8a8571';
+    let d='';
+    let lastIdx=-1;
+    series.forEach((v,i)=>{ if(v==null) return; d+=(d?'L ':'M ')+x(i).toFixed(1)+','+y(v).toFixed(1)+' '; lastIdx=i; });
+    let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:5px;" aria-hidden="true">`;
+    if(thresh!=null){
+      const ty=y(thresh).toFixed(1);
+      svg+=`<line x1="${PAD}" y1="${ty}" x2="${W-PAD}" y2="${ty}" stroke="#c7c2b5" stroke-width="1" stroke-dasharray="2,2"/>`;
+    }
+    svg+=`<path d="M ${x(0).toFixed(1)},${(H-PAD).toFixed(1)} L ${d.trim().replace(/^M /,'')} L ${x(lastIdx).toFixed(1)},${(H-PAD).toFixed(1)} Z" fill="${color}" opacity="0.10"/>`;
+    svg+=`<path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if(lastIdx>=0) svg+=`<circle cx="${x(lastIdx).toFixed(1)}" cy="${y(series[lastIdx]).toFixed(1)}" r="2.6" fill="${color}"/>`;
+    svg+='</svg>';
+    return svg;
+  }
 
-  // ── tr-flow: daily intake vs clearance ────────────────────
+  // ── tr-flow: daily or weekly intake/clearance chart ───────
   // The Sat/Sun buildup is structural — reps sell weekends, the admin team is
   // Mon–Fri. Weekend bars are muted so the eye reads the trend, not the rhythm.
   const flowEnd=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
@@ -2474,7 +2475,7 @@ function renderTrends(){
     // The floor is only real once that Monday has fully elapsed — the export
     // runs in the morning, before the day's clearing.
     const mon=isoAddD(end,1);
-    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?mondayFloor(trendSrc,end):null});
+    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?weeklyFloor(trendSrc,end):null});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
@@ -2489,47 +2490,72 @@ function renderTrends(){
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
     const cl=clear4!=null?Math.round(clear4*100):null;
+    const clColor=cl==null?'#8a8571':aClear?'#b3402e':cl<90?'#8a6413':'#2e7a52';
     const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
     const inDelta=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
-    const lastFloor=floorSeries[floorSeries.length-1];
     const floorCls=aFloor?'color:var(--red);':'';
+    const floorColor=aFloor?'#b3402e':'#8a8571';
+    const clearSpark=miniSpark(clearSeries.map(v=>v==null?null:Math.round(v*100)),{thresh:90,color:clColor});
+    const floorSpark=miniSpark(floorSeries,{thresh:floorMed,color:floorColor});
     fEl.innerHTML=
-      stat('Clearance (4wk)',(cl!=null?cl+'%':'—'),'completed ÷ started · alarm below 90%',clCls,TIP.clearance)
-      +stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
+      stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',fw.out,'last full week','',TIP.complete)
-      +stat('Monday floor',floorSeries.slice(-4).join(' → ')||'—',
-        floorMed!=null?'baseline '+floorMed+' · alarm above '+Math.round(floorMed*1.5):'WIP after each Monday clears',floorCls,TIP.mondayFloor);
+      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
+      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;${floorCls}">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">${floorMed!=null?'baseline '+floorMed+' · alarm above '+Math.round(floorMed*1.5):'WIP after each week\'s buildup drains'}</div>${floorSpark}</div>`;
   }
   const aEl=document.getElementById('tr-alarm');
   if(aEl){
     const msgs=[];
-    if(aFloor) msgs.push(`<strong>Monday floor is ${floorSeries[floorSeries.length-1]}</strong>, more than 1.5× its ${floorMed} baseline — the queue is not draining back to where it used to. This is the early signal; it moved a month before the SS ratio did last time.`);
+    if(aFloor) msgs.push(`<strong>Weekly floor is ${floorSeries[floorSeries.length-1]}</strong>, more than 1.5× its ${floorMed} baseline — the queue is not draining back to where it used to. This is the early signal; it moved a month before the SS ratio did last time.`);
     if(aClear) msgs.push(`<strong>4-week clearance is ${Math.round(clear4*100)}%</strong>, under 90% for a second reading running — completions are not keeping up with intake, independent of volume.`);
     aEl.innerHTML=msgs.length
       ? `<div style="padding:10px 13px;border-radius:var(--radius);background:#fdf0ee;border:1px solid #e8b4aa;font-size:12px;color:#7a2f22;line-height:1.55;">${msgs.join('<br><br>')}</div>`
-      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">Backlog alarms clear — Monday floor is within its normal band and 4-week clearance is holding at or above 90%.</div>`;
+      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">Backlog alarms clear — weekly floor is within its normal band and 4-week clearance is holding at or above 90%.</div>`;
   }
   dc('tr-flow');
-  CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
-    type:'bar',
-    data:{labels:flowDays,datasets:[
-      {label:'In',data:flowIn,backgroundColor:flowDays.map(d=>isWknd(d)?'#cbd5e1':'#60a5fa'),borderRadius:2,yAxisID:'y',order:3},
-      {label:'Out',data:flowOut,backgroundColor:flowDays.map(d=>isWknd(d)?'#e2e8f0':'#34d399'),borderRadius:2,yAxisID:'y',order:3},
-      {label:'WIP',data:flowWip,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
-       tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{
-          title:ctx=>{const d=flowDays[ctx[0].dataIndex];return fmtDateShort(d)+' ('+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()]+')';},
-          label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y}`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
-        }}},
-      scales:{
-        x:{stacked:false,grid:{display:false},ticks:{color:'#9b9690',font:{size:9},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
-        y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
-        y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
-  });
-  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',v=>Math.abs(v));
+  if(trFlowView==='daily'){
+    CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
+      type:'bar',
+      data:{labels:flowDays,datasets:[
+        {label:'In',data:flowIn,backgroundColor:flowDays.map(d=>isWknd(d)?'#cbd5e1':'#60a5fa'),borderRadius:2,yAxisID:'y',order:3},
+        {label:'Out',data:flowOut,backgroundColor:flowDays.map(d=>isWknd(d)?'#e2e8f0':'#34d399'),borderRadius:2,yAxisID:'y',order:3},
+        {label:'WIP',data:flowWip,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
+         tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{
+            title:ctx=>{const d=flowDays[ctx[0].dataIndex];return fmtDateShort(d)+' ('+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()]+')';},
+            label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y}`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
+          }}},
+        scales:{
+          x:{stacked:false,grid:{display:false},ticks:{color:'#9b9690',font:{size:9},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
+          y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+          y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
+    });
+  } else {
+    CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
+      type:'bar',
+      data:{labels:inOutLabels,datasets:[
+        {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
+        {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
+        {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.08)',
+         tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#d97706',spanGaps:false,yAxisID:'y1',order:1},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,
+        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{
+            title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
+            label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
+          }}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+          y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+          y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
+    });
+  }
+  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',trFlowView==='daily'?v=>Math.abs(v):null,trFlowView==='weekly'?'Surveys':null,'#bbb');
   _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
@@ -2677,7 +2703,7 @@ function renderTrends(){
   }).join('');
 
   // Scroll all charts to most recent (right end) and keep them in sync
-  const wrapIds=['tr-inout-wrap','tr-wf-wrap','tr-vol-wrap'];
+  const wrapIds=['tr-flow-wrap','tr-wf-wrap','tr-vol-wrap'];
   requestAnimationFrame(()=>{
     wrapIds.forEach(id=>{const el=document.getElementById(id);if(el) el.scrollLeft=el.scrollWidth;});
     let _trSync=false;

@@ -63,7 +63,7 @@ every open row while the denominator averages in a barely-started week.
 | metric | definition | notes |
 |---|---|---|
 | `rollingClearance(rows, weekEnd, 4)` | completions ÷ starts over 4 weeks | volume-normalised; the 1-week version is noise (under 100% in 12 of 20 weeks) |
-| `mondayFloor(rows, weekEnd)` | WIP after that Monday drains the weekend | robust to the Fri/Sat rhythm by construction |
+| `weeklyFloor(rows, weekEnd)` | WIP after the weekend buildup drains (currently the day after Monday) | robust to the Fri/Sat rhythm by construction |
 | `floorBaseline(series, 16)` | median of the prior 16 floors | long window on purpose — a short one absorbs a regime shift and the alarm silences itself |
 | `clearanceAlarm(series)` | 4-wk clearance <90% twice running | confirmation |
 | `floorAlarm(series)` | floor > 1.5× baseline | early warning; moved a month before the ratio did |
