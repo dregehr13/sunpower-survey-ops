@@ -9,7 +9,7 @@ const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
   bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
@@ -359,6 +359,17 @@ test('ssRatio variants return null without completion history', () => {
   const rows = [{ start: '2026-07-01', complete: '', list: 'Open' }];
   assert.equal(ssRatioForWeek(rows, '2026-08-02'), null);
   assert.equal(ssRatioLive(rows, '2026-08-03'), null);
+});
+
+test('ssRatioBand: under a week good, 1-2 weeks uncoloured, 2+ is the alarm', () => {
+  assert.equal(ssRatioBand(0.8), 'good');
+  assert.equal(ssRatioBand(0.99), 'good');   // renders "1.0wk" — a week is fine
+  assert.equal(ssRatioBand(1.0), 'good');
+  assert.equal(ssRatioBand(1.16), 'normal'); // the Fri/Sat rhythm, not an alarm
+  assert.equal(ssRatioBand(1.9), 'normal');
+  assert.equal(ssRatioBand(2.0), 'bad');
+  assert.equal(ssRatioBand(2.5), 'bad');
+  assert.equal(ssRatioBand(null), '');
 });
 
 test('bandFor bands on the displayed (1dp) value, not the raw one', () => {

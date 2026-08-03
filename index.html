@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, wipOn, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1413,14 +1413,41 @@ function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(tip)}">i</span>`; }
 const TIP={
-  complete:'Counts surveys with a Site Survey Complete date AND List status "Complete".',
-  cycle:'Cycle time = Project Start Date → Site Survey Complete, in calendar days.',
-  onTarget:()=>`Share of completions with cycle time at or under ${S.targetAvg} days (the average target).`,
-  wip:'Open surveys: started but not yet complete. Age counts from resurvey request if any, else completion +2 days, else project start.',
+  // ── Completions & cycle time (Spec 12744) ──
+  complete:'A survey counts as complete only when it has a Site Survey Complete date AND List status "Complete". A Holding or Reopened row keeps its date but is still open.',
+  cycle:'Project Start Date → Site Survey Complete, in calendar days. This is the Spec 12744 metric and is never adjusted.',
+  onTarget:()=>`Share of completed surveys that finished within ${S.targetAvg} calendar days — the Spec 12744 average target.`,
   schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
+
+  // ── The two age metrics — different questions, don't mix them ──
+  wip:'Surveys that have started but are not yet complete.',
+  ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start — minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
+  projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
+  avgAge:'Mean Days Open in SS across every open survey — how long the queue has been ours on average, not how long surveys take start to finish.',
+  medAge:'Middle value of Days Open in SS across open surveys. Less sensitive than the average to a few very old stragglers.',
+  onTrackWip:()=>`Share of open surveys projected to finish within ${S.targetAvg} days, using each survey's scheduled date where it has one and its expected cycle time where it does not.`,
+
+  // ── SS ratio: two variants, on purpose ──
+  ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 means roughly a week of work is queued. This reads high on a Monday morning — that is the genuine queue before the day clears it.',
+  ssRatioWeek:'Weeks of backlog: average WIP across the week ÷ average weekly completions over that week and the two before. Averaged across the week deliberately — intake keeps arriving Friday and Saturday while the team is off, so a Sunday snapshot would catch the weekly peak every time.',
+
+  // ── Flow ──
+  clearance:'Surveys completed ÷ surveys started, for the last full week. Above 100% the backlog is shrinking, below 100% it is growing — regardless of how much volume comes in.',
+  mondayFloor:'Open WIP once each Monday has cleared the weekend buildup. The weekend peak is expected; if this floor climbs week over week, backlog is genuinely growing.',
+
+  // ── Trends ──
+  trend3wk:'Direction of the 3-week rolling average cycle time versus the 3 weeks before it. Stable means the change is inside a 0.1 day dead band.',
+  pace:'Average completions per week across full weeks in range. The current partial week is excluded so it cannot drag the number down.',
+  bestWeek:'Highest completion count of any full week in the current range.',
+  p75:'75% of completed surveys finished at or under this cycle time.',
+  p90:'90% of completed surveys finished at or under this cycle time. Useful for spotting a long tail the average hides.',
+  resourceMix:'Share of completions in view by who performed the survey — sales rep, Radicl, or a SunPower surveyor.',
+
+  // ── Resurveys ──
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. Any completed account with a resurvey (requested, completed, reason, or reopened by design) counts as a defect.',
   rsRate:'Projects with any resurvey signal (request, completion, reason, or design reopen) ÷ completions in view.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
+  rsOpen:'Resurveys requested but not yet complete, as of the latest export.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -2069,7 +2096,7 @@ function renderPerformance(){
       <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
-      <div class="kcard"><div class="klabel">Resource mix</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div class="bar-fill-anim" style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div class="bar-fill-anim" style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div class="bar-fill-anim" style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
+      <div class="kcard"><div class="klabel">Resource mix${kinfo(TIP.resourceMix)}</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div class="bar-fill-anim" style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div class="bar-fill-anim" style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div class="bar-fill-anim" style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
     <div class="res-cards">${['Sales Rep','Radicl Services','SunPower Surveyor'].map(resCard).join('')}</div>
     <div class="sec">
@@ -2278,11 +2305,11 @@ function renderTrends(){
 
   document.getElementById('tr-content').innerHTML=`
     <div class="kg kg5">
-      <div class="kcard"><div class="klabel">Trend (3wk)</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
-      <div class="kcard"><div class="klabel">Avg weekly pace</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
-      <div class="kcard"><div class="klabel">Best week</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
-      <div class="kcard"><div class="klabel">P75 cycle</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
-      <div class="kcard"><div class="klabel">P90 cycle</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
+      <div class="kcard"><div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
+      <div class="kcard"><div class="klabel">Avg weekly pace${kinfo(TIP.pace)}</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
+      <div class="kcard"><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
+      <div class="kcard"><div class="klabel">P75 cycle${kinfo(TIP.p75)}</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
+      <div class="kcard"><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly In / Out</div><div class="ssub">New surveys (by start date) vs completions (by complete date) · Line = WIP balance · current week is partial</div></div></div>
@@ -2328,7 +2355,7 @@ function renderTrends(){
       <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
-        <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>Pipeline ratio</span>
+        <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>SS ratio</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 48px;height:290px;"><canvas id="tr-wf-yL" width="48" height="290"></canvas></div>
@@ -2440,17 +2467,17 @@ function renderTrends(){
     flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?wipOn(trendSrc,mon):null});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
-  const stat=(lab,val,sub,cls)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
+  const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
     const cl=fw.clear!=null?Math.round(fw.clear*100):null;
     const clCls=cl==null?'':cl>=100?'color:var(--green);':cl>=85?'color:var(--amber);':'color:var(--red);';
     const inDelta=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
     fEl.innerHTML=
-      stat('Clearance',(cl!=null?cl+'%':'—'),'completed ÷ started, last full week',clCls)
-      +stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'))
-      +stat('Completed',fw.out,'last full week')
-      +stat('Monday floor',flowWeeks.map(w=>w.floor).filter(v=>v!=null).join(' → ')||'—','WIP after each Monday clears');
+      stat('Clearance',(cl!=null?cl+'%':'—'),'completed ÷ started, last full week',clCls,TIP.clearance)
+      +stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
+      +stat('Completed',fw.out,'last full week','',TIP.complete)
+      +stat('Monday floor',flowWeeks.map(w=>w.floor).filter(v=>v!=null).join(' → ')||'—','WIP after each Monday clears','',TIP.mondayFloor);
   }
   dc('tr-flow');
   CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
@@ -2517,7 +2544,7 @@ function renderTrends(){
        data:weeklyC.map(w=>w.start_to_complete),
        backgroundColor:weeklyC.map(w=>{ const v=w.start_to_complete; if(v==null) return 'rgba(226,232,240,1)'; if(v<=S.targetAvg) return 'rgba(29,158,117,1)'; if(v<=(S.targetAvg+3)) return 'rgba(186,117,23,1)'; return 'rgba(226,75,74,1)'; }),
        borderRadius:3,yAxisID:'y',order:2},
-      {label:'Pipeline ratio',data:pipeRatioWf,type:'line',borderColor:'#5570a8',
+      {label:'SS ratio',data:pipeRatioWf,type:'line',borderColor:'#5570a8',
        backgroundColor:'transparent',tension:.3,borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#5570a8',spanGaps:false,yAxisID:'y1',order:1},
     ]},
@@ -2526,7 +2553,7 @@ function renderTrends(){
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:ctx=>'Week of '+weeklyC[ctx[0].dataIndex].week+' ('+weeklyC[ctx[0].dataIndex].count+' completions)',
-          label:ctx=>ctx.dataset.label==='Pipeline ratio'?` Ratio: ${ctx.parsed.y}×`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
+          label:ctx=>ctx.dataset.label==='SS ratio'?` SS ratio: ${ctx.parsed.y}× weeks of backlog`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
         }}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
@@ -2833,12 +2860,14 @@ function renderAgingWIP(){
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard"><div class="klabel">Open WIP</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
-      <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
-      <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
+      <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
+      <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge+' '+TIP.ssDaysOpen)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
+      <div class="kcard"><div class="klabel">Median age${kinfo(TIP.medAge)}</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
+      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d${kinfo(TIP.onTrackWip())}</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
-        return `<div class="kcard"><div class="klabel">Pipeline ratio</div><div class="kval ${shown!=null?(shown<=1?'kg-c':shown<=1.5?'ka-c':'kr-c'):''}">${shown!=null?shown.toFixed(1)+'wk':'—'}</div><div class="ksub">to clear WIP at recent pace</div></div>`;})()}
+        const band=ssRatioBand(pipeRatio);
+        const cls=band==='good'?'kg-c':band==='bad'?'kr-c':'';
+        return `<div class="kcard"><div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div><div class="kval ${cls}">${shown!=null?shown.toFixed(1)+'wk':'—'}</div><div class="ksub">of backlog at recent pace</div></div>`;})()}
     </div>
     ${(()=>{
       const PA_BANDS=[
@@ -2925,8 +2954,8 @@ function renderAgingWIP(){
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="Calendar days since Project Start Date, regardless of who has owned it.">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="How long the survey has been Site Survey's to move — from resurvey request, else project start, minus one rep grace day. Reads a day lower than Salesforce.">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
@@ -3060,7 +3089,7 @@ function renderResurvey(){
       <div class="ktgt">${completions.length?Math.round(hasResurvey.length/completions.length*100)+'% resurvey rate':'—'}</div>
     </div>
     <div class="kcard">
-      <div class="klabel">Open Now</div>
+      <div class="klabel">Open Now${kinfo(TIP.rsOpen)}</div>
       <div class="kval ${openResurvey.length>0?'kr-c':''}">${openResurvey.length}</div>
       <div class="ksub">${openResurvey.filter(r=>r.resurvey_scheduled).length} scheduled · ${openResurvey.filter(r=>!r.resurvey_scheduled).length} awaiting</div>
       <div class="ktgt">${(()=>{const ages=openResurvey.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0);const a=avg(ages);return a!=null?'Avg '+a.toFixed(1)+'d open':'—';})()}</div>
