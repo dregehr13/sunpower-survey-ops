@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, mondayFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1468,7 +1468,13 @@ let rsTimeFilter='all'; // 'all' (uses global date range) | 'open' (currently op
 const _DRILL_RES_COL={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
 function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
-function _drillDaysSpan(r,today){ const d=r.ct_total!=null?r.ct_total:(r.start?dDiff(r.start,today):null); if(d==null) return '<span style="color:var(--faint);">—</span>'; const wip=!r.complete; const c=d<=S.targetMedian?'#16a34a':d<=(S.targetAvg+1)?'#d97706':'#dc2626'; return `<span style="color:${c};font-weight:600;">${d}d${wip?' open':''}</span>`; }
+function _drillDaysSpan(r,today){
+  // A Holding/Reopened row carries a completion date and a ct_total from an
+  // earlier pass but is still open — testing r.complete showed 28 such rows as
+  // finished, labelled with a stale final cycle time instead of their real age.
+  const done=isComplete(r);
+  const d=done?(r.ct_total!=null?r.ct_total:null):(r.start?dDiff(r.start,today):null);
+  if(d==null) return '<span style="color:var(--faint);">—</span>'; const wip=!done; const c=d<=S.targetMedian?'#16a34a':d<=(S.targetAvg+1)?'#d97706':'#dc2626'; return `<span style="color:${c};font-weight:600;">${d}d${wip?' open':''}</span>`; }
 function openDrill(title,subtitle,drillRows,opts={}){
   _drillRows=drillRows;
   const today=localISO(new Date());
@@ -1606,7 +1612,10 @@ function weeklyStats(src){
 function weeklyStatsByComplete(src){
   const m={};
   src.forEach(r=>{
-    if(!r.complete) return;
+    // Shared definition, not a bare date check — a Holding row carries a date
+    // but is not a completion. The only caller pre-filters; this keeps it true
+    // if another one ever doesn't.
+    if(!isComplete(r)) return;
     const [y,mo,d]=r.complete.split('-').map(Number);
     const dt=new Date(y,mo-1,d);
     const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1));
@@ -2353,7 +2362,7 @@ function renderTrends(){
       <div id="tr-dow-net" class="note" style="margin-top:8px;"></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time${kinfo(TIP.ssRatioWeek)}</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
         <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>SS ratio</span>
@@ -2465,7 +2474,7 @@ function renderTrends(){
     // The floor is only real once that Monday has fully elapsed — the export
     // runs in the morning, before the day's clearing.
     const mon=isoAddD(end,1);
-    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?wipOn(trendSrc,mon):null});
+    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?mondayFloor(trendSrc,end):null});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
@@ -2975,8 +2984,8 @@ function renderAgingWIP(){
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="Calendar days since Project Start Date, regardless of who has owned it.">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="How long the survey has been Site Survey's to move — from resurvey request, else project start, minus one rep grace day. Reads a day lower than Salesforce.">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="${esc(TIP.projAge)}">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="${esc(TIP.ssDaysOpen)}">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`

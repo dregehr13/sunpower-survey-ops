@@ -35,7 +35,11 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
   - `clearanceAlarm` — `rollingClearance()` (4wk completions ÷ starts) under 90% for two readings running. The **confirmation**: the 4wk figure held 89–103% for five months, so it is a tight baseline; the single-week version is useless (under 100% in 12 of 20 weeks)
   - Both thresholds are fit to this team's own 20-week history — they encode "unusual for us", not an industry standard. Revisit after a quarter
 - Derived analytics also live in `lib/metrics.cjs`: businessDays (weekend rule), buildSegmentAvgs/lookupSegmentAvg, projectWeekTotal, bandFor (≤target/≤target+2 bands), trendLabel (TREND_BAND_AVG=0.1 dashboard avg-based, TREND_BAND_MED=0.3 compose median-based — two calculations on purpose)
-- Tests: `npm test` (node:test, `test/metrics.test.js`) locks down every definition above — run it before changing metrics
+- Tests: `npm test` (node:test) — three suites, run before changing any metric:
+  - `test/metrics.test.js` — each function against hand-written cases
+  - `test/snapshot.test.js` — every metric against a frozen real-data fixture (`test/fixtures/rows.json`, rebuilt by `scripts/build-fixture.cjs`). A definition change fails with a value diff; accept it deliberately with `UPDATE_SNAPSHOT=1 npm test`
+  - `test/surfaces.test.js` — static cross-surface guards: no surface may reimplement the completion test, read a data.js const off `window`, band inline, redefine a shared definition, destructure a name metrics.cjs doesn't export, or leave a `TIP` entry unreferenced
+- **`docs/METRICS.md` is the metric register** — every displayed number, its definition, and which surfaces read it. Update it when adding a metric
 - parse-sf.js prints a non-blocking import sanity report to stderr (backwards dates, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings); push.sh surfaces it automatically
 - Main cycle metric: **Project Start Date → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
