@@ -2314,6 +2314,30 @@ function renderTrends(){
   const chartW=Math.max(containerW, allWks.length*WEEK_W);
   const chartWC=Math.max(containerW, weeklyC.length*WEEK_W);
 
+  // Intake & flow (Daily mode) — a browsing view like the Weekly toggle mode,
+  // so it follows the date-range picker (GF.dateFrom/dateTo) when set. Fixed
+  // 8-week window only as the "All" default; capped so it never runs past the
+  // data itself.
+  const flowEnd=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
+  const isoAddD=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return localISO(new Date(y,m-1,d+n));};
+  const dayCount=(a,b)=>{ const [ay,am,ad]=a.split('-').map(Number),[by,bm,bd]=b.split('-').map(Number); return Math.round((new Date(by,bm-1,bd)-new Date(ay,am-1,ad))/86400000); };
+  // "All" auto-populates GF.dateFrom/dateTo to the full dataset span (see
+  // isAll in the filter-bar renderer) — that's not a real narrower pick, so it
+  // must fall back to the 8-week default rather than rendering one bar per day
+  // across the whole dataset.
+  const _allCDates=rows.filter(isComplete).map(r=>r.complete).sort();
+  const _fullFrom=_allCDates[0]||'', _fullTo=_allCDates[_allCDates.length-1]||'';
+  const hasDateRange=!!(GF.dateFrom&&GF.dateTo)&&!(GF.dateFrom===_fullFrom&&GF.dateTo===_fullTo);
+  const flowTo=hasDateRange?(GF.dateTo<flowEnd?GF.dateTo:flowEnd):flowEnd;
+  const flowFrom=hasDateRange?GF.dateFrom:isoAddD(flowEnd,-55);
+  const flowDays=[]; for(let i=0,n=Math.max(dayCount(flowFrom,flowTo)+1,1);i<n;i++) flowDays.push(isoAddD(flowFrom,i));
+  const flowRangeLabel=hasDateRange?(fmtDateShort(flowFrom)+' – '+fmtDateShort(flowTo)):'last 8 weeks';
+  const chartWD=Math.max(containerW, flowDays.length*15);
+  // Weekly rhythm always averages the trailing 8 weeks, independent of the
+  // picker above — it's a "what's normal" chart, not a browsing one, and a
+  // short custom range would give each weekday only one or two samples.
+  const rhythmDays=[]; for(let i=55;i>=0;i--) rhythmDays.push(isoAddD(flowEnd,-i));
+
   document.getElementById('tr-content').innerHTML=`
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
@@ -2324,7 +2348,7 @@ function renderTrends(){
     </div>
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?'Surveys in (by start date) vs out (by complete date), last 8 weeks · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected':'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · Line = open WIP</div></div>
+        <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?`Surveys in (by start date) vs out (by complete date), ${flowRangeLabel} · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected`:'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · Line = open WIP</div></div>
         <div class="toggle-group">
           <button class="tgl-btn${trFlowView==='daily'?' active':''}" onclick="setTrFlowView('daily')">Daily</button>
           <button class="tgl-btn${trFlowView==='weekly'?' active':''}" onclick="setTrFlowView('weekly')">Weekly</button>
@@ -2340,7 +2364,7 @@ function renderTrends(){
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 52px;height:260px;"><canvas id="tr-flow-yL" width="52" height="260"></canvas></div>
-        <div id="tr-flow-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${trFlowView==='daily'?Math.max(containerW,56*15):chartW}px;height:260px;position:relative;"><canvas id="tr-flow"></canvas></div></div>
+        <div id="tr-flow-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${trFlowView==='daily'?chartWD:chartW}px;height:260px;position:relative;"><canvas id="tr-flow"></canvas></div></div>
         <div style="flex:0 0 52px;height:260px;"><canvas id="tr-flow-yR" width="52" height="260"></canvas></div>
       </div>
     </div>
@@ -2372,7 +2396,7 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly rhythm</div><div class="ssub">Average surveys in vs out by day of week · the Saturday gap is structural: reps sell weekends, the admin team does not work them</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly rhythm</div><div class="ssub">Average surveys in vs out by day of week, always the trailing 8 weeks — not affected by the date filter above, since a short custom range would leave each weekday only one or two samples · the Saturday gap is structural: reps sell weekends, the admin team does not work them</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Out</span>
@@ -2456,9 +2480,6 @@ function renderTrends(){
   // ── tr-flow: daily or weekly intake/clearance chart ───────
   // The Sat/Sun buildup is structural — reps sell weekends, the admin team is
   // Mon–Fri. Weekend bars are muted so the eye reads the trend, not the rhythm.
-  const flowEnd=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  const isoAddD=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return localISO(new Date(y,m-1,d+n));};
-  const flowDays=[]; for(let i=55;i>=0;i--) flowDays.push(isoAddD(flowEnd,-i));
   const inByDay={},outByDay={};
   trendSrc.forEach(r=>{ if(r.start) inByDay[r.start]=(inByDay[r.start]||0)+1;
     if(isComplete(r)) outByDay[r.complete]=(outByDay[r.complete]||0)+1; });
@@ -2567,7 +2588,7 @@ function renderTrends(){
   const DOWL=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const dowIdx=s=>{const g=new Date(s+'T12:00:00').getDay();return g===0?6:g-1;};
   const dIn=[0,0,0,0,0,0,0],dOut=[0,0,0,0,0,0,0],dN=[0,0,0,0,0,0,0];
-  flowDays.forEach(d=>{const i=dowIdx(d);dN[i]++;dIn[i]+=(inByDay[d]||0);dOut[i]+=(outByDay[d]||0);});
+  rhythmDays.forEach(d=>{const i=dowIdx(d);dN[i]++;dIn[i]+=(inByDay[d]||0);dOut[i]+=(outByDay[d]||0);});
   const dInAvg=dIn.map((v,i)=>dN[i]?+(v/dN[i]).toFixed(1):0);
   const dOutAvg=dOut.map((v,i)=>dN[i]?+(v/dN[i]).toFixed(1):0);
   // Running sum of the daily net (in − out), reset to 0 at the start of Monday.
