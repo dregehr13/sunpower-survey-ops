@@ -9,6 +9,7 @@ const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
   bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
@@ -311,6 +312,53 @@ test('bandFor bands: ≤target good, ≤target+2 mid, else bad, null → empty',
   assert.equal(bandFor(6.1, 4), 'bad');
   assert.equal(bandFor(null, 4), '');
   assert.equal(bandFor(0, 3), 'good');
+});
+
+// ── SS Ratio ──
+test('wipOn counts Holding/Reopened rows as still open', () => {
+  // a completion date alone is not done — list must be 'Complete' too
+  const rows = [
+    { start: '2026-07-01', complete: '2026-07-03', list: 'Complete' }, // done
+    { start: '2026-07-01', complete: '2026-07-03', list: 'Holding' },  // still open
+    { start: '2026-07-01', complete: '2026-07-03', list: 'Reopened' }, // still open
+    { start: '2026-07-01', complete: '', list: 'Open' },               // still open
+  ];
+  assert.equal(wipOn(rows, '2026-07-05'), 3);
+  assert.equal(wipOn(rows, '2026-07-02'), 4); // nothing finished yet
+  assert.equal(wipOn(rows, '2026-06-30'), 0); // nothing started yet
+});
+
+test('meanWipForWeek averages the week, not the Sunday close', () => {
+  // one row starts each day Mon-Sun, none complete: WIP runs 1..7, mean 4
+  const rows = [];
+  for (let d = 27; d <= 31; d++) rows.push({ start: `2026-07-${d}`, complete: '', list: 'Open' });
+  rows.push({ start: '2026-08-01', complete: '', list: 'Open' });
+  rows.push({ start: '2026-08-02', complete: '', list: 'Open' });
+  assert.equal(wipOn(rows, '2026-08-02'), 7);      // Sunday close
+  assert.equal(meanWipForWeek(rows, '2026-08-02'), 4); // (1+2+..+7)/7
+});
+
+test('avgWeeklyCompletions averages the 3 weeks ending at the anchor', () => {
+  const mk = (iso) => ({ start: '2026-01-01', complete: iso, list: 'Complete' });
+  const rows = [
+    mk('2026-07-27'), mk('2026-07-29'), mk('2026-08-02'), // wk ending Aug 2 -> 3
+    mk('2026-07-21'), mk('2026-07-26'),                   // wk ending Jul 26 -> 2
+    mk('2026-07-15'),                                     // wk ending Jul 19 -> 1
+    mk('2026-07-08'),                                     // 4 weeks back — excluded
+  ];
+  assert.equal(avgWeeklyCompletions(rows, '2026-08-02', 3), 2); // (3+2+1)/3
+});
+
+test('lastCompleteWeekEnd treats the containing week as partial', () => {
+  assert.equal(lastCompleteWeekEnd('2026-08-03'), '2026-08-02'); // Mon -> prior Sun
+  assert.equal(lastCompleteWeekEnd('2026-08-05'), '2026-08-02'); // Wed -> prior Sun
+  assert.equal(lastCompleteWeekEnd('2026-08-02'), '2026-07-26'); // Sun itself is partial
+});
+
+test('ssRatio variants return null without completion history', () => {
+  const rows = [{ start: '2026-07-01', complete: '', list: 'Open' }];
+  assert.equal(ssRatioForWeek(rows, '2026-08-02'), null);
+  assert.equal(ssRatioLive(rows, '2026-08-03'), null);
 });
 
 test('bandFor bands on the displayed (1dp) value, not the raw one', () => {

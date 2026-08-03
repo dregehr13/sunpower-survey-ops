@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2387,12 +2387,13 @@ function renderTrends(){
   _drawAxis('tr-inout-yR',CH['tr-inout'].scales.y1,false,'#d97706',null,'WIP','#d97706');
 
   // ── tr-wf ─────────────────────────────────────────────────
+  // SS ratio per week — shared definition, see lib/metrics.cjs. The current
+  // week is dropped: its end date is in the future, so WIP would count every
+  // open row while the denominator averages in a barely-started week.
   const pipeRatioWf=weeklyC.map((w,i)=>{
     if(i<2) return null;
-    const wE=w.weekEnd;
-    const wipEow=trendSrc.filter(r=>r.start&&r.start<=wE&&(!r.complete||r.complete>wE)).length;
-    const avgC=(w.count+(weeklyC[i-1]?.count||0)+(weeklyC[i-2]?.count||0))/3;
-    return avgC>0?Math.round(wipEow/avgC*100)/100:null;
+    if(w.week>=curWkStart) return null;
+    return ssRatioForWeek(trendSrc,w.weekEnd);
   });
   dc('tr-wf');
   CH['tr-wf']=new Chart(document.getElementById('tr-wf'),{
@@ -2623,10 +2624,9 @@ function renderAgingWIP(){
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
   const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
-  // Pipeline ratio (Spencer's model): WIP ÷ avg completions of the last 3 full
-  // weeks = weeks of backlog if nothing new came in.
-  const wk3Avg=avg([1,2,3].map(i=>{const w=weekRange(-i);return rows.filter(r=>isComplete(r)&&r.complete>=w.from&&r.complete<=w.to).length;}));
-  const pipeRatio=wk3Avg?Math.round(allWip.length/wk3Avg*10)/10:null;
+  // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
+  // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
+  const pipeRatio=ssRatioLive(rows,today);
   const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
   const totalWip=allWip.length;
 
@@ -2723,7 +2723,8 @@ function renderAgingWIP(){
       <div class="kcard"><div class="klabel">Avg age</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
       <div class="kcard"><div class="klabel">Median age</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
-      <div class="kcard"><div class="klabel">Pipeline ratio</div><div class="kval ${pipeRatio!=null?(pipeRatio<=1?'kg-c':pipeRatio<=1.5?'ka-c':'kr-c'):''}">${pipeRatio!=null?pipeRatio+'wk':'—'}</div><div class="ksub">to clear WIP at recent pace</div></div>
+      ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
+        return `<div class="kcard"><div class="klabel">Pipeline ratio</div><div class="kval ${shown!=null?(shown<=1?'kg-c':shown<=1.5?'ka-c':'kr-c'):''}">${shown!=null?shown.toFixed(1)+'wk':'—'}</div><div class="ksub">to clear WIP at recent pace</div></div>`;})()}
     </div>
     ${(()=>{
       const PA_BANDS=[

@@ -269,7 +269,7 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, wipAgeFrom, ssDaysOpen, avg, med,
+const {DATA_CUTOFF, isComplete, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, avg, med,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 const ROWS = OpsMetrics.filterRows(RAW);
@@ -337,19 +337,17 @@ function computeStats(){
     const onTargetPct=cts.length?Math.round(cts.filter(x=>x<=4).length/cts.length*100):null;
     const newIn=ROWS.filter(r=>r.start>=period.from&&r.start<=period.to).length;
 
-    // Pipeline Ratio = EOW WIP ÷ avg completions (reporting week + 2 prior) — Spencer's model
-    const prWeeks=[];
-    for(let i=0;i<=2;i++){
-      const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
-      const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      prWeeks.push(ROWS.filter(r=>isComplete(r)&&r.complete>=wS&&r.complete<=wE).length);
-    }
-    const prAvg=prWeeks.reduce((a,b)=>a+b,0)/3;
-    const pipelineRatio=prAvg>0?wip/prAvg:null;
+    // SS Ratio — shared definition in lib/metrics.cjs (mean WIP across the week
+    // ÷ completions of the reporting week + 2 prior). Spencer's model.
+    const prAvg=avgWeeklyCompletions(ROWS,period.to);
+    const pipelineRatio=ssRatioForWeek(ROWS,period.to);
+    // Prior week, so the card only colours on a sustained breach — one elevated
+    // week is usually just the Fri/Sat intake rhythm working itself out.
+    const pipelineRatioPrev=ssRatioForWeek(ROWS,toISO(addDays(new Date(period.to+'T12:00:00'),-7)));
 
     return {
       mode:'monday', period, periodLabel:`${fmtShort(period.from)} – ${fmtShort(period.to)}`,
-      newIn, wip, wipChange, pipelineRatio, prAvg,
+      newIn, wip, wipChange, pipelineRatio, pipelineRatioPrev, prAvg,
       completedCount:rows.length,
       medCycle:med(cts), avgCycle:avg(cts), onTargetPct,
       outlierCount:outlierRows.length,
@@ -545,10 +543,15 @@ async function buildEmailHTML(s, commentary, manualNote){
   const small=`${f}font-size:11px;color:#888;line-height:1.6;`;
 
   // Pipeline ratio card colors (≤1.0 green, >1.0 amber)
-  function prColors(v){
-    if(v==null)  return {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8'};
+  // SS Ratio colours. Amber needs a SUSTAINED breach — a single elevated week
+  // is usually the Fri/Sat intake rhythm, not backlog actually building.
+  function prColors(v,prev){
+    const NEUTRAL={bg:'#f8f8f8',b:'#e8e8e8',lc:'#999', vc:'#111',  sc:'#aaa', sbc:'#e8e8e8'};
+    if(v==null)  return NEUTRAL;
     v=Math.round(v*10)/10; // colour on the displayed value, as bandFor does
     if(v<=1.0)   return {bg:'#f0f7eb',b:'#d4e8c2',lc:'#6a9a3a',vc:'#2d6a0a',sc:'#7aaa44',sbc:'#c8e0a8'};
+    const prevOver=prev!=null&&Math.round(prev*10)/10>1.0;
+    if(!prevOver) return NEUTRAL; // first week over — hold fire
     return        {bg:'#fef9ec',b:'#fde68a',lc:'#d97706',vc:'#92400e',sc:'#d97706',sbc:'#fde68a'};
   }
 
@@ -575,7 +578,7 @@ async function buildEmailHTML(s, commentary, manualNote){
   let cardsData;
   if(s.mode==='monday'){
     const ct=ctColors(s.avgCycle,4);
-    const pr=prColors(s.pipelineRatio);
+    const pr=prColors(s.pipelineRatio,s.pipelineRatioPrev);
     const prSub=s.prAvg!=null?s.wip+' open · '+s.prAvg.toFixed(1)+' avg/wk':'';
     cardsData=[
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN',val:String(s.newIn),sub:'week started'},
