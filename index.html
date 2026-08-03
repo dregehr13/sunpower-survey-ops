@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2326,6 +2326,7 @@ function renderTrends(){
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Daily intake &amp; clearance</div><div class="ssub">Surveys in (by start date) vs out (by complete date), last 8 weeks · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected · the number that matters is the Monday floor</div></div></div>
+      <div id="tr-alarm" style="margin-bottom:10px;"></div>
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
@@ -2456,7 +2457,7 @@ function renderTrends(){
 
   // Clearance rate and intake trend answer "growing, or falling behind?"
   const flowWeeks=[];
-  for(let i=3;i>=0;i--){
+  for(let i=19;i>=0;i--){
     const end=isoAddD(flowEnd,-(new Date(flowEnd+'T12:00:00').getDay()||7)-7*i);
     const from=isoAddD(end,-6);
     const inn=trendSrc.filter(r=>r.start&&r.start>=from&&r.start<=end).length;
@@ -2468,16 +2469,36 @@ function renderTrends(){
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
+  // Backlog alarms. The SS ratio is deliberately not one of these — see
+  // lib/metrics.cjs. The floor moved a month before the ratio did last time.
+  const clearSeries=flowWeeks.map(w=>rollingClearance(trendSrc,w.end,4));
+  const floorSeries=flowWeeks.map(w=>w.floor).filter(v=>v!=null);
+  const clear4=clearSeries[clearSeries.length-1];
+  const aClear=clearanceAlarm(clearSeries), aFloor=floorAlarm(floorSeries);
+  const floorMed=floorBaseline(floorSeries);
+
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
-    const cl=fw.clear!=null?Math.round(fw.clear*100):null;
-    const clCls=cl==null?'':cl>=100?'color:var(--green);':cl>=85?'color:var(--amber);':'color:var(--red);';
+    const cl=clear4!=null?Math.round(clear4*100):null;
+    const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
     const inDelta=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
+    const lastFloor=floorSeries[floorSeries.length-1];
+    const floorCls=aFloor?'color:var(--red);':'';
     fEl.innerHTML=
-      stat('Clearance',(cl!=null?cl+'%':'—'),'completed ÷ started, last full week',clCls,TIP.clearance)
+      stat('Clearance (4wk)',(cl!=null?cl+'%':'—'),'completed ÷ started · alarm below 90%',clCls,TIP.clearance)
       +stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',fw.out,'last full week','',TIP.complete)
-      +stat('Monday floor',flowWeeks.map(w=>w.floor).filter(v=>v!=null).join(' → ')||'—','WIP after each Monday clears','',TIP.mondayFloor);
+      +stat('Monday floor',floorSeries.slice(-4).join(' → ')||'—',
+        floorMed!=null?'baseline '+floorMed+' · alarm above '+Math.round(floorMed*1.5):'WIP after each Monday clears',floorCls,TIP.mondayFloor);
+  }
+  const aEl=document.getElementById('tr-alarm');
+  if(aEl){
+    const msgs=[];
+    if(aFloor) msgs.push(`<strong>Monday floor is ${floorSeries[floorSeries.length-1]}</strong>, more than 1.5× its ${floorMed} baseline — the queue is not draining back to where it used to. This is the early signal; it moved a month before the SS ratio did last time.`);
+    if(aClear) msgs.push(`<strong>4-week clearance is ${Math.round(clear4*100)}%</strong>, under 90% for a second reading running — completions are not keeping up with intake, independent of volume.`);
+    aEl.innerHTML=msgs.length
+      ? `<div style="padding:10px 13px;border-radius:var(--radius);background:#fdf0ee;border:1px solid #e8b4aa;font-size:12px;color:#7a2f22;line-height:1.55;">${msgs.join('<br><br>')}</div>`
+      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">Backlog alarms clear — Monday floor is within its normal band and 4-week clearance is holding at or above 90%.</div>`;
   }
   dc('tr-flow');
   CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{

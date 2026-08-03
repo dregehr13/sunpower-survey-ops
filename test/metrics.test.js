@@ -9,7 +9,7 @@ const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
   bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
@@ -370,6 +370,22 @@ test('ssRatioBand: under a week good, 1-2 weeks uncoloured, 2+ is the alarm', ()
   assert.equal(ssRatioBand(2.0), 'bad');
   assert.equal(ssRatioBand(2.5), 'bad');
   assert.equal(ssRatioBand(null), '');
+});
+
+test('clearanceAlarm needs two consecutive readings under 90%', () => {
+  assert.equal(clearanceAlarm([0.99, 0.95, 0.89]), false);        // one dip
+  assert.equal(clearanceAlarm([0.95, 0.89, 0.99]), false);        // recovered
+  assert.equal(clearanceAlarm([0.95, 0.89, 0.83]), true);         // two running
+  assert.equal(clearanceAlarm([0.89]), false);                    // too short
+  assert.equal(clearanceAlarm([0.85, null]), false);              // null-safe
+});
+
+test('floorAlarm fires above 1.5x the trailing median', () => {
+  const base = [40, 34, 50, 36, 46, 57, 40, 40]; // median 40
+  assert.equal(floorAlarm([...base, 79], 8), true);   // 79 > 60
+  assert.equal(floorAlarm([...base, 57], 8), false);  // 57 < 60
+  assert.equal(floorAlarm([40, 79], 8), false);       // not enough history
+  assert.equal(floorAlarm([...base, null], 8), false);// unknown current floor
 });
 
 test('bandFor bands on the displayed (1dp) value, not the raw one', () => {
