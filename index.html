@@ -2349,10 +2349,12 @@ function renderTrends(){
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Out</span>
+        <span class="li" style="color:#8677b8;"><span class="ldash" style="background:#8677b8;"></span>Bucket level (cumulative)</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 48px;height:200px;"><canvas id="tr-dow-yL" width="48" height="200"></canvas></div>
         <div style="flex:1;min-width:0;"><div style="height:200px;position:relative;"><canvas id="tr-dow"></canvas></div></div>
+        <div style="flex:0 0 52px;height:200px;"><canvas id="tr-dow-yR" width="52" height="200"></canvas></div>
       </div>
       <div id="tr-dow-net" class="note" style="margin-top:8px;"></div>
     </div>
@@ -2534,28 +2536,31 @@ function renderTrends(){
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   } else {
+    // Diverging bars (New In above zero, Completed below), matching the daily
+    // view — a grouped side-by-side layout here would flip the chart's whole
+    // visual language on every toggle click.
     CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
       type:'bar',
       data:{labels:inOutLabels,datasets:[
         {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
-        {label:'Completed',data:inOutCompleted,backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
-        {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.08)',
-         tension:.3,fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#d97706',spanGaps:false,yAxisID:'y1',order:1},
+        {label:'Completed',data:inOutCompleted.map(v=>-v),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
+        {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
+         tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
         onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
             title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
-            label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
+            label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
           }}},
         scales:{
           x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
-          y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+          y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   }
-  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',trFlowView==='daily'?v=>Math.abs(v):null,trFlowView==='weekly'?'Surveys':null,'#bbb');
+  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',v=>Math.abs(v));
   _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
@@ -2565,20 +2570,29 @@ function renderTrends(){
   flowDays.forEach(d=>{const i=dowIdx(d);dN[i]++;dIn[i]+=(inByDay[d]||0);dOut[i]+=(outByDay[d]||0);});
   const dInAvg=dIn.map((v,i)=>dN[i]?+(v/dN[i]).toFixed(1):0);
   const dOutAvg=dOut.map((v,i)=>dN[i]?+(v/dN[i]).toFixed(1):0);
+  // Running sum of the daily net (in − out), reset to 0 at the start of Monday.
+  // This traces the shape of the sawtooth itself — drop as Monday drains,
+  // climb back up through the week — rather than just the per-day deltas.
+  const netAvg=DOWL.map((_,i)=>+(dInAvg[i]-dOutAvg[i]).toFixed(1));
+  let _cum=0; const cumLine=netAvg.map(n=>{ _cum=+(_cum+n).toFixed(1); return _cum; });
   dc('tr-dow');
   CH['tr-dow']=new Chart(document.getElementById('tr-dow'),{
     type:'bar',
     data:{labels:DOWL,datasets:[
-      {label:'In',data:dInAvg,backgroundColor:'#60a5fa',borderRadius:3},
-      {label:'Out',data:dOutAvg,backgroundColor:'#34d399',borderRadius:3},
+      {label:'In',data:dInAvg,backgroundColor:'#60a5fa',borderRadius:3,yAxisID:'y',order:2},
+      {label:'Out',data:dOutAvg,backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
+      {label:'Bucket level (cumulative)',data:cumLine,type:'line',borderColor:'#8677b8',backgroundColor:'transparent',
+       tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{
-        label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}/day avg`}}},
+        label:ctx=>ctx.dataset.label.startsWith('Bucket')?` Bucket level: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y}`:` ${ctx.dataset.label}: ${ctx.parsed.y}/day avg`}}},
       scales:{x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
-        y:{min:0,grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
+        y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
   _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#9b9690',v=>v);
+  _drawAxis('tr-dow-yR',CH['tr-dow'].scales.y1,false,'#8677b8',v=>(v>0?'+':'')+v);
   const netEl=document.getElementById('tr-dow-net');
   if(netEl) netEl.innerHTML=DOWL.map((d,i)=>{const n=+(dInAvg[i]-dOutAvg[i]).toFixed(1);
     return `${d} <strong style="color:${n>0?'var(--red)':'var(--green)'};">${n>0?'+':''}${n}</strong>`;}).join(' &nbsp;·&nbsp; ')+' &nbsp;— net surveys added per day';
