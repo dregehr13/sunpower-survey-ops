@@ -3,7 +3,9 @@
     { "source": "/compose", "destination": "/compose/index.html" },
     { "source": "/compose/(.*)", "destination": "/compose/index.html" },
     { "source": "/queues", "destination": "/queues/index.html" },
-    { "source": "/queues/(.*)", "destination": "/queues/index.html" }
+    { "source": "/queues/(.*)", "destination": "/queues/index.html" },
+    { "source": "/va-map", "destination": "/va-map/index.html" },
+    { "source": "/va-map/(.*)", "destination": "/va-map/index.html" }
   ],
   "headers": [
     {
