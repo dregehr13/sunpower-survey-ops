@@ -13,7 +13,7 @@ status for five months; a colour band that disagreed with the number beside it).
 
 | surface | file | what it renders |
 |---|---|---|
-| Dashboard | `index.html` | Current / Performance / Trends / WIP / Resurveys |
+| Dashboard | `index.html` | Current / Performance / Trends / WIP / Resurveys / Map |
 | Compose | `compose/index.html` | Monday recap + daily email |
 | Morning card | `api/morning-card.js` | Teams card (not adopted — see CLAUDE.md) |
 
@@ -113,6 +113,8 @@ the most likely next source of drift:
 | Drill-drawer segments | `index.html` `DRILL_SEGS` / `_renderDrill()` | All / Resurveyed / Open resurvey, filtering the drilled rows. Deliberately not a toggle on the Intake & flow chart: an open resurvey is never `isComplete()`, so a chart-level resurvey filter is structurally empty on the Current basis |
 | Open resurveys by week | `index.html` `rsWeekAnchor` / `drillRsWeek()` | Two anchors that genuinely disagree. **Complete wk** = "of the surveys we closed that week, which bounced back" (has a `of N done` denominator). **Request wk** = "how long has this resurvey been sitting". Completion-week scatters aging — a 54-day-old resurvey lands on whatever week its original survey closed |
 | `RS_STALE` | `index.html` Resurveys page | p90 of resolved `ct_resurvey`, fit to this team's history like `floorBaseline` (currently ~15d). A fixed `targetAvg+3` lit 6 of 19 rows — resurveys legitimately run to a 4d median / 8d p75 |
+| Map location | `index.html` `MAP_ZIP_RE` | **The ZIP in `address`, never `region`.** Region is a sales territory, not a place — 317 of Virginia's rows say "VA Richmond" while the addresses run Burke to King George. Reading the address also places the 71 in-scope rows whose `region` is blank, which no other view can show, so Virginia reads 368 on the Map vs 303 by region |
+| `MAP_MIN_N` | `index.html` Map page | 3 completions before a ZIP gets a colour in the Cycle or Resurvey modes; below it the circle draws hollow. 779 of 1028 national ZIPs fall below it — without the guard most of the map would be a confident colour drawn from one job |
 
 ## Regenerating
 

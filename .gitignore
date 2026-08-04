@@ -3,3 +3,6 @@
 node_modules
 .sfconfig.json
 .downloads/
+
+# Cached upstream geo sources (re-downloaded by scripts/build-geo.cjs)
+geo/.src/

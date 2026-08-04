@@ -1,16 +1,38 @@
 {
   "rewrites": [
-    { "source": "/compose", "destination": "/compose/index.html" },
-    { "source": "/compose/(.*)", "destination": "/compose/index.html" },
-    { "source": "/queues", "destination": "/queues/index.html" },
-    { "source": "/queues/(.*)", "destination": "/queues/index.html" },
-    { "source": "/va-map", "destination": "/va-map/index.html" },
-    { "source": "/va-map/(.*)", "destination": "/va-map/index.html" }
+    {
+      "source": "/compose",
+      "destination": "/compose/index.html"
+    },
+    {
+      "source": "/compose/(.*)",
+      "destination": "/compose/index.html"
+    },
+    {
+      "source": "/queues",
+      "destination": "/queues/index.html"
+    },
+    {
+      "source": "/queues/(.*)",
+      "destination": "/queues/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/lib/metrics.cjs",
-      "headers": [{ "key": "Content-Type", "value": "application/javascript; charset=utf-8" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/va-map",
+      "destination": "/#map",
+      "permanent": false
     }
   ]
 }

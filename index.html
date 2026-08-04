@@ -454,6 +454,46 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rswk-n{grid-area:n;font-size:13px;font-weight:700;color:var(--text);text-align:right;}
 .rswk-meta{grid-area:meta;font-size:10px;color:var(--muted);}
 .rswk-meta b{color:var(--red);font-weight:700;}
+
+/* ═══ MAP ═══ */
+.map-wrap{position:relative;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;}
+#map-cv{display:block;width:100%;height:auto;cursor:default;}
+#map-cv.hot{cursor:pointer;}
+.map-tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .12s;z-index:4;
+  background:var(--text);color:var(--surface);border-radius:var(--radius);
+  padding:7px 9px;font-size:11px;line-height:1.5;max-width:230px;box-shadow:var(--shadow);}
+.map-tip.on{opacity:1;}
+.map-tip b{font-size:12px;}
+.map-tip .mz{font-family:monospace;opacity:.62;}
+.map-tip .mv{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.16);opacity:.85;}
+.map-state{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:12px;}
+.map-state[hidden]{display:none;}
+.map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted);}
+.map-ramp{width:120px;height:7px;border-radius:99px;}
+.map-swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px;}
+.map-scrub{display:flex;gap:11px;align-items:center;margin-top:12px;}
+.map-play{flex-shrink:0;width:29px;height:29px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;padding:0;}
+.map-play:hover{border-color:var(--muted);}
+.map-play svg{fill:currentColor;}
+.map-track{position:relative;flex:1;min-width:0;height:42px;}
+#map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+#map-range{position:absolute;left:0;right:0;bottom:8px;width:100%;margin:0;height:18px;
+  -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;}
+#map-range::-webkit-slider-runnable-track{height:2px;background:var(--border);border-radius:2px;}
+#map-range::-moz-range-track{height:2px;background:var(--border);border-radius:2px;}
+#map-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--surface);margin-top:-5.5px;box-shadow:var(--shadow);}
+#map-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);
+  border:2px solid var(--surface);box-shadow:var(--shadow);}
+.map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
+.map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
+.map-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--border);
+  border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;}
+.map-back{font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border:1px solid var(--border);
+  border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;}
+.map-back:hover{color:var(--text);border-color:var(--muted);}
 .rs-sched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;}
 .rs-unsched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--faint);border:1px solid var(--border);}
 
@@ -610,6 +650,7 @@ body{padding-left:180px;}
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-attn-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
+  <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -630,6 +671,7 @@ body{padding-left:180px;}
 <div id="page-trends"      class="page">     <div id="fb-trends"></div>      <div id="tr-content"></div></div>
 <div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
+<div id="page-map"         class="page">     <div id="fb-map"></div>         <div id="map-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
 
@@ -847,7 +889,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','performance','trends','wip','resurvey','data'];
+const PAGES = ['week','performance','trends','wip','resurvey','map','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -1411,6 +1453,7 @@ function renderPage(p){
   if(p==='trends')      renderTrends();
   if(p==='wip')         renderAgingWIP();
   if(p==='resurvey')    renderResurvey();
+  if(p==='map')         renderMap();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
   requestAnimationFrame(()=>animateSections('page-'+p));
@@ -1481,6 +1524,13 @@ const TIP={
   rsRate:'Projects with any resurvey signal (request, completion, reason, or design reopen) ÷ completions in view.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export.',
+
+  // ── Map ──
+  mapLocation:'Position comes from the ZIP in the installation address, not the Sales Region. Region is a sales territory, not a place: 317 of Virginia\'s rows are tagged "VA Richmond" while the addresses run from Burke to King George. Reading the address also places the rows whose Region is blank, which no other view can show.',
+  mapVolume:'Job density. Each ZIP contributes a blob weighted by how many jobs it holds, and overlapping blobs add together, so colour reads as concentration rather than any single survey.',
+  mapCycle:'Average Project Start to Site Survey Complete for the completed jobs in each ZIP, banded against the same targets as every other card. ZIPs below the minimum sample are drawn hollow rather than coloured.',
+  mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
+  mapScrub:'Project Start Date. Salesforce has no agreement-signed field, and per Spec 12744 project start is the booking moment. The bar behind the slider is weekly volume, so the shape of the year is visible before you drag.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -3474,6 +3524,455 @@ function renderResurvey(){
   </div>`:''}
   `;
 }
+
+// ═══ MAP ═════════════════════════════════════════════════
+// Geography comes from the ZIP in the installation address, never from
+// `region`: region is a sales territory, not a place (317 of Virginia's rows
+// say "VA Richmond" while the addresses run Burke to King George), and reading
+// the address also places the 78 rows whose region is blank.
+const MAP_ZIP_RE = /,\s*([A-Za-z]{2})\.?\s+(\d{5})/;
+// Averages over one or two jobs are noise; below this a ZIP draws hollow.
+// Same guard the Resurveys page uses for per-rep rates.
+const MAP_MIN_N = 3;
+const MAP_STATE_NAMES = {AL:'Alabama',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+
+let mapMarket='US', mapMetric='vol', mapMode='cum', mapDay=null, mapPlaying=false, mapRaf=0;
+let mapHoverZip=null, _mapZips=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
+const MAPGEO={zips:null,states:null,counties:{}};
+let _mapLoading=false, _mapErr=null;
+
+function setMapMarket(v){ mapMarket=v; mapDay=null; mapHoverZip=null; renderMap(); }
+function setMapMetric(v){ mapMetric=v; mapStop(); mapDraw(); }
+function setMapMode(v){ mapMode=v; mapStop(); mapDraw(); }
+
+// ── geo assets: fetched, never baked. The page derives from data.js, which
+// push.sh rewrites daily; baked centroids would drift out from under it.
+function mapEnsureGeo(){
+  const need=[];
+  if(!MAPGEO.zips)   need.push(fetch('geo/zips.json').then(r=>r.json()).then(j=>MAPGEO.zips=j));
+  if(!MAPGEO.states) need.push(fetch('geo/states.json').then(r=>r.json()).then(j=>MAPGEO.states=j));
+  if(mapMarket!=='US'&&!MAPGEO.counties[mapMarket]){
+    const st=mapMarket;
+    need.push(fetch('geo/counties/'+st+'.json').then(r=>r.json()).then(j=>MAPGEO.counties[st]=j));
+  }
+  return need.length?Promise.all(need):null;
+}
+
+// ── Albers Equal Area Conic, CONUS parameters. One projection at both zooms:
+// equirectangular is fine for a single state but visibly wrong nationally.
+const _ALB=(()=>{ const r=Math.PI/180, p1=29.5*r, p2=45.5*r;
+  const n=(Math.sin(p1)+Math.sin(p2))/2, C=Math.cos(p1)**2+2*n*Math.sin(p1);
+  return {n,C,r,r0:Math.sqrt(C-2*n*Math.sin(37.5*r))/n,l0:-96*r}; })();
+function mapAlbers(lon,lat){
+  const {n,C,r,r0,l0}=_ALB;
+  const rho=Math.sqrt(Math.max(C-2*n*Math.sin(lat*r),0))/n, th=n*(lon*r-l0);
+  // y is negated: Albers northing grows toward the pole, screen y grows down.
+  // Without this Portland renders below Los Angeles.
+  return [rho*Math.sin(th), -(r0-rho*Math.cos(th))];
+}
+
+// Rows placed by address, with whatever market/date filter is active.
+function mapRows(){
+  const src=rows.filter(gfDim);
+  const out=[]; let unplaced=0;
+  for(const r of src){
+    if(!r.start) continue;
+    const m=(r.address||'').match(MAP_ZIP_RE);
+    if(!m){ unplaced++; continue; }
+    const st=m[1].toUpperCase(), zip=m[2];
+    const ll=MAPGEO.zips&&MAPGEO.zips[zip];
+    if(!ll){ unplaced++; continue; }
+    if(mapMarket!=='US'&&st!==mapMarket) continue;
+    out.push({r,st,zip,ll});
+  }
+  return {out,unplaced};
+}
+
+function mapDayBounds(all){
+  const ds=all.map(p=>p.r.start).sort();
+  let lo=ds[0], hi=ds[ds.length-1];
+  if(GF.dateFrom&&GF.dateFrom>lo) lo=GF.dateFrom;
+  if(GF.dateTo&&GF.dateTo<hi) hi=GF.dateTo;
+  return {lo,hi,span:Math.max(dDiff(lo,hi)??0,0)};
+}
+const mapDateAt=(lo,i)=>{ const [y,m,d]=lo.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); };
+
+function renderMap(){
+  const el=document.getElementById('map-content'); if(!el) return;
+  const pending=mapEnsureGeo();
+  if(pending&&!_mapLoading){
+    _mapLoading=true; _mapErr=null;
+    pending.then(()=>{_mapLoading=false;renderMap();})
+           .catch(e=>{_mapLoading=false;_mapErr=e.message||'load failed';renderMap();});
+  }
+
+  const ready=MAPGEO.zips&&MAPGEO.states&&(mapMarket==='US'||MAPGEO.counties[mapMarket]);
+  const {out:all,unplaced}=ready?mapRows():{out:[],unplaced:0};
+
+  // Markets present in the data, so the picker never offers an empty state.
+  const stCount={};
+  if(ready) rows.filter(gfDim).forEach(r=>{ const m=(r.address||'').match(MAP_ZIP_RE); if(m) { const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; } });
+  const markets=Object.entries(stCount).sort((a,b)=>b[1]-a[1]);
+
+  const b=all.length?mapDayBounds(all):null;
+  if(b&&(mapDay===null||mapDay>b.span)) mapDay=b.span;
+
+  const mTgl=(v,l,tip)=>`<button class="tgl-btn${mapMetric===v?' active':''}" onclick="setMapMetric('${v}')">${l}</button>`;
+  const wTgl=(v,l)=>`<button class="tgl-btn${mapMode===v?' active':''}" onclick="setMapMode('${v}')">${l}</button>`;
+
+  el.innerHTML=`
+    <div class="kg kg4" id="map-kpis"></div>
+    <div class="sec">
+      <div class="shead">
+        <div>
+          <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}${kinfo(TIP.mapLocation)}</div>
+          <div class="ssub" id="map-sub">&nbsp;</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All markets</button>`:''}
+          <select class="map-sel" aria-label="Market" onchange="setMapMarket(this.value)">
+            <option value="US"${mapMarket==='US'?' selected':''}>All markets</option>
+            ${markets.map(([s,n])=>`<option value="${s}"${mapMarket===s?' selected':''}>${esc(MAP_STATE_NAMES[s]||s)} (${n})</option>`).join('')}
+          </select>
+          <div class="toggle-group">
+            ${mTgl('vol','Volume')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}
+          </div>
+        </div>
+      </div>
+      <div class="map-wrap">
+        <canvas id="map-cv"></canvas>
+        <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
+        <div class="map-state" id="map-msg" hidden></div>
+      </div>
+      <div class="map-legend" id="map-legend"></div>
+      <div class="map-scrub">
+        <button class="map-play" id="map-play" aria-label="Play timeline" onclick="mapTogglePlay()">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path id="map-play-i" d="M4 2.5v11l9-5.5z"/></svg>
+        </button>
+        <div class="map-track">
+          <canvas id="map-hist" aria-hidden="true"></canvas>
+          <input type="range" id="map-range" min="0" max="${b?b.span:0}" value="${mapDay??0}" step="1"
+                 aria-label="Project start date" oninput="mapScrubTo(this.value)">
+          <div class="map-ticks" id="map-ticks"></div>
+        </div>
+        <div class="toggle-group" style="flex-shrink:0;">${wTgl('cum','Cumulative')}${wTgl('win','30-day')}</div>
+      </div>
+      <div class="note">Scrubber runs on Project Start Date${kinfo(TIP.mapScrub)} · the date range in the filter bar sets its span${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
+    </div>`;
+
+  const msg=document.getElementById('map-msg');
+  if(_mapErr){ msg.hidden=false; msg.textContent='Could not load map geography: '+_mapErr; return; }
+  if(!ready){ msg.hidden=false; msg.textContent='Loading geography…'; return; }
+  if(!all.length){ msg.hidden=false; msg.textContent='No jobs match the current filters.'; }
+
+  _mapAll=all; _mapBounds=b;
+  mapResize(); mapDrawHist(); mapDrawTicks();
+}
+
+let _mapAll=[], _mapBounds=null;
+
+function mapVisible(){
+  if(!_mapBounds) return [];
+  const hiI=mapDay??_mapBounds.span;
+  const hi=mapDateAt(_mapBounds.lo,hiI);
+  const lo=mapMode==='win'?mapDateAt(_mapBounds.lo,Math.max(0,hiI-29)):_mapBounds.lo;
+  return _mapAll.filter(p=>p.r.start>=lo&&p.r.start<=hi);
+}
+
+// One pass per ZIP: volume, and the two averages with their sample counts.
+function mapGroup(pts){
+  const m=new Map();
+  pts.forEach(p=>{
+    let e=m.get(p.zip);
+    if(!e){ e={zip:p.zip,st:p.st,ll:p.ll,n:0,rows:[],cts:[],comps:0,defects:0}; m.set(p.zip,e); }
+    e.n++; e.rows.push(p.r);
+    if(isComplete(p.r)){
+      e.comps++;
+      if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
+      if(hasResurveySig(p.r)) e.defects++;
+    }
+  });
+  m.forEach(e=>{
+    e.avgCt=e.cts.length>=MAP_MIN_N?avg(e.cts):null;
+    e.rsRate=e.comps>=MAP_MIN_N?Math.round(e.defects/e.comps*100):null;
+  });
+  return m;
+}
+
+function mapGeoRings(){
+  return mapMarket==='US'
+    ? MAPGEO.states.map(s=>s.r)
+    : MAPGEO.counties[mapMarket];
+}
+
+function mapResize(){
+  const cv=document.getElementById('map-cv'); if(!cv) return;
+  const rings=mapGeoRings(); if(!rings) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  rings.forEach(g=>g.forEach(r=>r.forEach(([lon,lat])=>{
+    const [x,y]=mapAlbers(lon,lat);
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  })));
+  const w=cv.parentElement.clientWidth;
+  const ar=(x1-x0)/(y1-y0);
+  const h=Math.max(280,Math.min(560,Math.round(w/ar)));
+  const pad=12, s=Math.min((w-pad*2)/(x1-x0),(h-pad*2)/(y1-y0));
+  const ox=(w-(x1-x0)*s)/2-x0*s, oy=(h-(y1-y0)*s)/2-y0*s;
+  _mapProj=(lon,lat)=>{ const [x,y]=mapAlbers(lon,lat); return [ox+x*s, oy+y*s]; };
+  _mapDpr=Math.min(window.devicePixelRatio||1,2); _mapW=w; _mapH=h;
+  cv.width=w*_mapDpr; cv.height=h*_mapDpr; cv.style.height=h+'px';
+  _mapPath=new Path2D();
+  rings.forEach(g=>g.forEach(r=>{
+    r.forEach(([lon,lat],i)=>{ const [x,y]=_mapProj(lon,lat); i?_mapPath.lineTo(x,y):_mapPath.moveTo(x,y); });
+    _mapPath.closePath();
+  }));
+  mapDraw();
+}
+
+const _MAP_RAMP=[[0,232,217,176,0],[0.18,232,217,176,190],[0.42,201,148,46,225],[0.72,179,64,46,240],[1,125,35,24,252]];
+const _MAP_LUT=(()=>{ const o=new Uint8ClampedArray(1024);
+  for(let i=0;i<256;i++){ const t=i/255; let a=_MAP_RAMP[0],b=_MAP_RAMP[_MAP_RAMP.length-1];
+    for(let k=0;k<_MAP_RAMP.length-1;k++){ if(t>=_MAP_RAMP[k][0]&&t<=_MAP_RAMP[k+1][0]){a=_MAP_RAMP[k];b=_MAP_RAMP[k+1];break;} }
+    const sp=(b[0]-a[0])||1,u=(t-a[0])/sp;
+    o[i*4]=a[1]+(b[1]-a[1])*u; o[i*4+1]=a[2]+(b[2]-a[2])*u; o[i*4+2]=a[3]+(b[3]-a[3])*u; o[i*4+3]=a[4]+(b[4]-a[4])*u; }
+  return o; })();
+
+function mapDraw(){
+  const cv=document.getElementById('map-cv'); if(!cv||!_mapProj) return;
+  const ctx=cv.getContext('2d');
+  const cs=getComputedStyle(document.documentElement);
+  const land=cs.getPropertyValue('--border-lt').trim(), rule=cs.getPropertyValue('--border').trim();
+  const ink=cs.getPropertyValue('--text').trim(), surf=cs.getPropertyValue('--surface').trim();
+
+  ctx.setTransform(_mapDpr,0,0,_mapDpr,0,0);
+  ctx.clearRect(0,0,_mapW,_mapH);
+  ctx.fillStyle=surf; ctx.fillRect(0,0,_mapW,_mapH);
+  ctx.fillStyle=land; ctx.fill(_mapPath,'evenodd');
+  ctx.strokeStyle=rule; ctx.lineWidth=mapMarket==='US'?0.8:0.5; ctx.stroke(_mapPath);
+
+  const vis=mapVisible();
+  const zips=mapGroup(vis);
+  _mapZips=zips;
+
+  if(mapMetric==='vol'){
+    // Additive density, colour-mapped after compositing. Only honest for counts.
+    const heat=document.createElement('canvas');
+    heat.width=cv.width; heat.height=cv.height;
+    const hc=heat.getContext('2d',{willReadFrequently:true});
+    hc.setTransform(_mapDpr,0,0,_mapDpr,0,0);
+    const maxN=Math.max(...[...zips.values()].map(z=>z.n),1);
+    const R=Math.max(9,Math.min(26,_mapW/(mapMarket==='US'?70:42)));
+    zips.forEach(z=>{
+      const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+      const a=0.30+0.70*Math.sqrt(z.n/maxN);
+      const g=hc.createRadialGradient(x,y,0,x,y,R);
+      g.addColorStop(0,'rgba(0,0,0,'+a.toFixed(3)+')'); g.addColorStop(1,'rgba(0,0,0,0)');
+      hc.fillStyle=g; hc.beginPath(); hc.arc(x,y,R,0,Math.PI*2); hc.fill();
+    });
+    if(zips.size){
+      const img=hc.getImageData(0,0,heat.width,heat.height), d=img.data;
+      for(let i=0;i<d.length;i+=4){ const a=d[i+3]; if(!a) continue; const o=a*4;
+        d[i]=_MAP_LUT[o]; d[i+1]=_MAP_LUT[o+1]; d[i+2]=_MAP_LUT[o+2]; d[i+3]=_MAP_LUT[o+3]*(a/255); }
+      hc.putImageData(img,0,0);
+      ctx.save(); ctx.clip(_mapPath,'evenodd'); ctx.setTransform(1,0,0,1,0,0);
+      ctx.drawImage(heat,0,0); ctx.restore();
+    }
+  } else {
+    // Averages cannot be additive — graduated circles instead, banded with the
+    // same helpers the KPI cards use so a colour means the same thing here.
+    const maxN=Math.max(...[...zips.values()].map(z=>z.n),1);
+    const sorted=[...zips.values()].sort((a,b)=>b.n-a.n);
+    sorted.forEach(z=>{
+      const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+      const rad=Math.max(3.2,Math.min(17,3.2+Math.sqrt(z.n/maxN)*13));
+      const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
+      ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2);
+      if(v==null){ ctx.strokeStyle=cs.getPropertyValue('--faint').trim(); ctx.lineWidth=1; ctx.stroke(); }
+      else { ctx.fillStyle=mapBandColor(v,cs); ctx.globalAlpha=.78; ctx.fill(); ctx.globalAlpha=1;
+             ctx.strokeStyle=surf; ctx.lineWidth=1; ctx.stroke(); }
+    });
+  }
+
+  // Label only the strongest clusters; more than a handful is noise.
+  const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,mapMarket==='US'?9:7);
+  ctx.font='600 10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  const placed=[];
+  top.forEach(z=>{
+    const [x,y0]=_mapProj(z.ll[1],z.ll[0]); const y=y0-9;
+    if(placed.some(p=>Math.abs(p.x-x)<58&&Math.abs(p.y-y)<13)) return;
+    placed.push({x,y});
+    const lbl=mapMarket==='US'?z.st:z.zip;
+    ctx.lineWidth=3; ctx.strokeStyle=surf; ctx.strokeText(lbl,x,y);
+    ctx.fillStyle=ink; ctx.fillText(lbl,x,y);
+  });
+
+  if(mapHoverZip&&zips.has(mapHoverZip)){
+    const z=zips.get(mapHoverZip); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2);
+    ctx.strokeStyle=ink; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  const msg=document.getElementById('map-msg');
+  if(msg) msg.hidden=zips.size>0;
+  mapPaintMeta(vis,zips);
+  mapDrawHist();
+}
+
+// Cycle bands come from bandFor so the map agrees with every other surface.
+// The resurvey-rate cut points match the per-rep pill on the Resurveys page.
+function mapBandColor(v,cs){
+  const c=k=>cs.getPropertyValue(k).trim();
+  if(mapMetric==='cycle'){
+    const b=bandFor(v,S.targetAvg);
+    return b==='good'?c('--green'):b==='mid'?c('--amber'):c('--red');
+  }
+  return v>=20?c('--red'):v>=10?c('--amber'):c('--green');
+}
+
+function mapPaintMeta(vis,zips){
+  const k=document.getElementById('map-kpis'); if(!k) return;
+  const comps=vis.filter(p=>isComplete(p.r));
+  const cts=comps.map(p=>p.r.ct_total).filter(x=>x!=null&&x>=0);
+  const defects=comps.filter(p=>hasResurveySig(p.r)).length;
+  const avgCt=avg(cts);
+  const rate=comps.length?Math.round(defects/comps.length*100):null;
+  const byMkt={}; vis.forEach(p=>{byMkt[p.st]=(byMkt[p.st]||0)+1;});
+  const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
+  const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
+  k.innerHTML=
+     `<div class="kcard"><div class="klabel">Jobs in view${kinfo(TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} ZIP${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
+    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top ZIP'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?topZ.zip:'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
+    +`<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`
+    +`<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`;
+
+  const sub=document.getElementById('map-sub');
+  if(sub&&_mapBounds){
+    const hi=mapDateAt(_mapBounds.lo,mapDay??_mapBounds.span);
+    sub.innerHTML=(mapMode==='win'?'30 days ending ':'Through ')+fmtDate(hi)
+      +' · '+({vol:'job density',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
+  }
+
+  const lg=document.getElementById('map-legend'); if(!lg) return;
+  const sw=(c,t)=>`<span><span class="map-swatch" style="background:var(${c});"></span>${t}</span>`;
+  lg.innerHTML=mapMetric==='vol'
+    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(TIP.mapVolume)}</span><span style="color:var(--faint);">Blob size follows job count; overlaps add.</span>`
+    : mapMetric==='cycle'
+      ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`
+      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`;
+}
+
+function mapDrawHist(){
+  const c=document.getElementById('map-hist'); if(!c||!_mapBounds) return;
+  const cx=c.getContext('2d');
+  const w=c.parentElement.clientWidth,h=c.parentElement.clientHeight;
+  const r=Math.min(window.devicePixelRatio||1,2);
+  c.width=w*r; c.height=h*r; cx.setTransform(r,0,0,r,0,0); cx.clearRect(0,0,w,h);
+  const cs=getComputedStyle(document.documentElement);
+  const weeks=Math.max(1,Math.ceil((_mapBounds.span+1)/7));
+  const bins=new Array(weeks).fill(0);
+  _mapAll.forEach(p=>{ const i=Math.floor((dDiff(_mapBounds.lo,p.r.start)??0)/7); if(i>=0&&i<weeks) bins[i]++; });
+  const max=Math.max(...bins,1), bh=h-14, bw=w/weeks;
+  const cur=mapDay??_mapBounds.span;
+  for(let i=0;i<weeks;i++){
+    if(!bins[i]) continue;
+    const hh=Math.max(2,(bins[i]/max)*bh);
+    const on=(i*7)<=cur;
+    cx.fillStyle=on?cs.getPropertyValue('--c3').trim():cs.getPropertyValue('--border').trim();
+    cx.globalAlpha=on?.85:.5;
+    cx.fillRect(i*bw+0.7,bh-hh,Math.max(1.4,bw-1.4),hh);
+  }
+  cx.globalAlpha=1;
+}
+
+function mapDrawTicks(){
+  const el=document.getElementById('map-ticks'); if(!el||!_mapBounds) return;
+  el.innerHTML=''; const seen=new Set();
+  for(let i=0;i<=_mapBounds.span;i++){
+    const d=mapDateAt(_mapBounds.lo,i);
+    if(d.slice(8)!=='01') continue;
+    const key=d.slice(0,7); if(seen.has(key)) continue; seen.add(key);
+    const s=document.createElement('span');
+    s.style.left=(_mapBounds.span?i/_mapBounds.span*100:0)+'%';
+    s.textContent=new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short'});
+    el.appendChild(s);
+  }
+}
+
+function mapScrubTo(v){ mapDay=+v; mapStop(); mapDraw(); }
+
+function mapStop(){
+  mapPlaying=false; cancelAnimationFrame(mapRaf);
+  const i=document.getElementById('map-play-i'); if(i) i.setAttribute('d','M4 2.5v11l9-5.5z');
+  const b=document.getElementById('map-play'); if(b) b.setAttribute('aria-label','Play timeline');
+}
+function mapTogglePlay(){
+  if(mapPlaying) return mapStop();
+  if(!_mapBounds) return;
+  if((mapDay??0)>=_mapBounds.span) mapDay=0;
+  mapPlaying=true;
+  const i=document.getElementById('map-play-i'); if(i) i.setAttribute('d','M4 3h3.2v10H4zM8.8 3H12v10H8.8z');
+  const b=document.getElementById('map-play'); if(b) b.setAttribute('aria-label','Pause timeline');
+  let last=performance.now(),acc=0;
+  const step=now=>{
+    if(!mapPlaying) return;
+    acc+=now-last; last=now;
+    const per=Math.max(12,2600/Math.max(_mapBounds.span,1));
+    while(acc>per){ acc-=per; mapDay=Math.min((mapDay??0)+1,_mapBounds.span); }
+    const rg=document.getElementById('map-range'); if(rg) rg.value=mapDay;
+    mapDraw();
+    if(mapDay>=_mapBounds.span) return mapStop();
+    mapRaf=requestAnimationFrame(step);
+  };
+  mapRaf=requestAnimationFrame(step);
+}
+
+function mapNearest(mx,my){
+  let best=null,bd=mapMetric==='vol'?24:20;
+  _mapZips.forEach(z=>{ const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+    const d=Math.hypot(x-mx,y-my); if(d<bd){ bd=d; best=z; } });
+  return best;
+}
+
+document.addEventListener('mousemove',e=>{
+  const cv=document.getElementById('map-cv');
+  if(!cv||currentPage!=='map'||!_mapProj) return;
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const tip=document.getElementById('map-tip');
+  if(mx<0||my<0||mx>r.width||my>r.height){ if(mapHoverZip){mapHoverZip=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
+  const z=mapNearest(mx,my);
+  if(!z){ if(mapHoverZip){mapHoverZip=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
+  if(z.zip!==mapHoverZip){ mapHoverZip=z.zip; cv.classList.add('hot'); mapDraw(); }
+  const val=mapMetric==='cycle'
+      ? (z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
+      : mapMetric==='rs'
+        ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
+        : '';
+  tip.innerHTML=`<b>${z.zip}</b> <span class="mz">${esc(MAP_STATE_NAMES[z.st]||z.st)}</span><br>`
+    +`${z.n} job${z.n!==1?'s':''} in view`
+    +(val?`<div class="mv">${val}</div>`:'')
+    +`<div class="mv" style="opacity:.6;">Click for the project list</div>`;
+  tip.classList.add('on');
+  tip.style.left=Math.min(Math.max(4,mx+13),r.width-tip.offsetWidth-4)+'px';
+  tip.style.top=Math.min(Math.max(4,my+13),r.height-tip.offsetHeight-4)+'px';
+});
+
+document.addEventListener('click',e=>{
+  const cv=document.getElementById('map-cv');
+  if(!cv||currentPage!=='map'||!_mapProj||!e.target.closest('#map-cv')) return;
+  const r=cv.getBoundingClientRect();
+  const z=mapNearest(e.clientX-r.left,e.clientY-r.top);
+  if(!z) return;
+  openDrill(z.zip+' · '+(MAP_STATE_NAMES[z.st]||z.st), z.n+' job'+(z.n!==1?'s':'')+' in the current view', z.rows);
+});
+
+let _mapRt;
+window.addEventListener('resize',()=>{
+  if(currentPage!=='map') return;
+  clearTimeout(_mapRt);
+  _mapRt=setTimeout(()=>{ mapResize(); mapDrawHist(); mapDrawTicks(); },140);
+});
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
