@@ -111,6 +111,8 @@ the most likely next source of drift:
 | Attention rules | `index.html` `attnItems()` | aging >7d, schedule passed, no review >5d, resurvey unscheduled >3d |
 | Cohort / FPY splits | `index.html` Resurveys page | built on `hasResurveySig` |
 | Drill-drawer segments | `index.html` `DRILL_SEGS` / `_renderDrill()` | All / Resurveyed / Open resurvey, filtering the drilled rows. Deliberately not a toggle on the Intake & flow chart: an open resurvey is never `isComplete()`, so a chart-level resurvey filter is structurally empty on the Current basis |
+| Open resurveys by week | `index.html` `rsWeekAnchor` / `drillRsWeek()` | Two anchors that genuinely disagree. **Complete wk** = "of the surveys we closed that week, which bounced back" (has a `of N done` denominator). **Request wk** = "how long has this resurvey been sitting". Completion-week scatters aging — a 54-day-old resurvey lands on whatever week its original survey closed |
+| `RS_STALE` | `index.html` Resurveys page | p90 of resolved `ct_resurvey`, fit to this team's history like `floorBaseline` (currently ~15d). A fixed `targetAvg+3` lit 6 of 19 rows — resurveys legitimately run to a 4d median / 8d p75 |
 
 ## Regenerating
 

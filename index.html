@@ -443,6 +443,17 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rs-region-bar{height:3px;border-radius:2px;background:var(--border);margin-top:4px;overflow:hidden;}
 .rs-region-fill{height:100%;border-radius:2px;background:var(--c1);}
 .rs-open-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);}
+.rswk-rows{display:flex;flex-direction:column;}
+.rswk-row{display:grid;grid-template-columns:112px 1fr 28px;grid-template-areas:"wk bar n" ". meta meta";gap:2px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-lt);}
+.rswk-row:last-child{border-bottom:0;}
+.rswk-row:hover{background:var(--bg);}
+.rswk-wk{grid-area:wk;font-size:12px;color:var(--text);white-space:nowrap;}
+.rswk-barwrap{grid-area:bar;height:7px;background:var(--border-lt);border-radius:99px;overflow:hidden;}
+.rswk-bar{height:100%;background:var(--muted);opacity:.42;border-radius:99px;}
+.rswk-bar.stale{background:var(--red);opacity:.8;}
+.rswk-n{grid-area:n;font-size:13px;font-weight:700;color:var(--text);text-align:right;}
+.rswk-meta{grid-area:meta;font-size:10px;color:var(--muted);}
+.rswk-meta b{color:var(--red);font-weight:700;}
 .rs-sched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;}
 .rs-unsched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--faint);border:1px solid var(--border);}
 
@@ -1306,15 +1317,25 @@ function countUp(el){
   const decimals=(numStr.includes('.'))?1:0;
   const dur=Math.min(800, 300+num*1.5);
   const t0=performance.now();
+  // Always land on the ORIGINAL string, never on the last interpolated frame:
+  // rAF does not fire in a backgrounded or unpainted tab, which used to strand
+  // the KPI on a partial number permanently (FPY reading 35.8% instead of
+  // 81.2%). The timeout is the backstop for the case where rAF never resumes;
+  // restoring `raw` also avoids toLocaleString/toFixed drifting from the text
+  // the renderer actually produced.
+  let settled=false;
+  const settle=()=>{ if(settled) return; settled=true; el.textContent=raw; };
   const tick=now=>{
     const p=Math.min((now-t0)/dur,1);
+    if(p>=1) return settle();
     const e=1-Math.pow(1-p,3); // ease-out cubic
     const v=e*num;
-    el.textContent=prefix+(decimals?v.toFixed(1):Math.round(v).toLocaleString())+suffix;
-    if(p<1) requestAnimationFrame(tick);
+    if(!settled) el.textContent=prefix+(decimals?v.toFixed(1):Math.round(v).toLocaleString())+suffix;
+    requestAnimationFrame(tick);
   };
   el.textContent=prefix+(decimals?'0.0':'0')+suffix;
   requestAnimationFrame(tick);
+  setTimeout(settle,dur+150);
 }
 
 function staggerRows(containerEl){
@@ -1603,6 +1624,19 @@ function drillResRegion(reg){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(
 function drillSalesRepRs(name){ const src=rows.filter(r=>gfDim(r)&&r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function drillAttribution(attr){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function setRsTimeFilter(v){ rsTimeFilter=v; renderResurvey(); }
+// Which date anchors an open resurvey to a week. The two answer different
+// questions and genuinely disagree: 'complete' asks "of the surveys we closed
+// that week, which bounced back", 'request' asks "how long has this resurvey
+// been sitting". Completion-week scatters the aging signal — a single 54-day-
+// old resurvey lands on whatever week its original survey closed.
+let rsWeekAnchor='complete'; // 'complete' | 'request'
+function setRsWeekAnchor(v){ rsWeekAnchor=v; renderResurvey(); }
+function drillRsWeek(wk){
+  const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)&&weekOf(rsWeekAnchor==='complete'?r.complete:r.resurvey_requested)===wk);
+  const [wy,wm,wd]=wk.split('-').map(Number);
+  const lbl=fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))});
+  openDrill('Open resurveys · '+lbl,(rsWeekAnchor==='complete'?'Completed':'Requested')+' that week · '+src.length+' still open',src,{mode:'resurvey'});
+}
 let rsRepsExpanded=false;
 function toggleRsReps(){ rsRepsExpanded=!rsRepsExpanded; renderResurvey(); }
 
@@ -3222,6 +3256,35 @@ function renderResurvey(){
 
   const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
 
+  // Open resurveys bucketed by week. Anchor is the user's choice — see
+  // rsWeekAnchor. Deliberately ignores rsTimeFilter: this section is about the
+  // open queue by definition, so a "Currently Open" toggle would be a no-op.
+  const rsWkAnchorDate=r=>rsWeekAnchor==='complete'?r.complete:r.resurvey_requested;
+  const rsWkOpen=scoped.filter(r=>isOpenResurvey(r)&&rsWkAnchorDate(r));
+  const rsWkMap={};
+  rsWkOpen.forEach(r=>{ const k=weekOf(rsWkAnchorDate(r)); (rsWkMap[k]=rsWkMap[k]||[]).push(r); });
+  // Denominator only means something on the completion anchor: "8 of the 117
+  // we closed that week". On the request anchor there is no such population.
+  const rsWkComps={};
+  if(rsWeekAnchor==='complete') scoped.forEach(r=>{ if(everCompleted(r)) { const k=weekOf(r.complete); rsWkComps[k]=(rsWkComps[k]||0)+1; } });
+  const rsWeeks=Object.keys(rsWkMap).sort().reverse().map(wk=>{
+    const gr=rsWkMap[wk];
+    const ages=gr.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0);
+    const [wy,wm,wd]=wk.split('-').map(Number);
+    return {wk, label:fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))}),
+      n:gr.length, comps:rsWkComps[wk]||0,
+      unsched:gr.filter(r=>!r.resurvey_scheduled).length,
+      oldest:ages.length?Math.max(...ages):null};
+  });
+  const rsWkMax=Math.max(...rsWeeks.map(w=>w.n),1);
+  // Stale = open longer than 90% of resurveys have ever taken to resolve, fit
+  // to this team's own history the way floorBaseline is. Currently ~15d, which
+  // flags the single genuine outlier. A fixed target+3 (7d) was useless here:
+  // resurveys legitimately run to a 4d median and 8d p75, so it lit 6 of 19.
+  const rsCycleAll=scoped.filter(r=>r.resurvey_complete&&r.ct_resurvey!=null&&r.ct_resurvey>=0).map(r=>r.ct_resurvey);
+  const RS_STALE=pct(rsCycleAll,90)??14;
+  const rsAnchorTgl=(v,l)=>`<button class="tgl-btn${rsWeekAnchor===v?' active':''}" onclick="setRsWeekAnchor('${v}')">${l}</button>`;
+
   if(!hasResurvey.length){
     el.innerHTML=`<div style="padding:64px;text-align:center;color:var(--faint);font-size:13px;">No resurveys found in current data.</div>`;
     return;
@@ -3282,6 +3345,29 @@ function renderResurvey(){
         <span class="attr-legend-pct">${(v/hasResurvey.length*100).toFixed(0)}%</span>
       </div>`).join('')}
     </div>
+  </div>`:''}
+
+  ${rsWeeks.length?`
+  <div class="sec">
+    <div class="shead">
+      <div><div class="stitle">Open resurveys by week</div><div class="ssub">${rsWeekAnchor==='complete'?'Which week&rsquo;s completed surveys are still sitting in resurvey':'When the resurvey was requested &mdash; the aging view'} · ${rsWkOpen.length} open</div></div>
+      <div class="toggle-group">${rsAnchorTgl('complete','Complete wk')}${rsAnchorTgl('request','Request wk')}</div>
+    </div>
+    <div class="rswk-rows">
+      ${rsWeeks.map(w=>{
+        const stale=w.oldest!=null&&w.oldest>RS_STALE;
+        const meta=[rsWeekAnchor==='complete'&&w.comps?`of ${w.comps} done`:null,
+                    w.unsched?`${w.unsched} unscheduled`:null,
+                    w.oldest!=null?`oldest ${stale?`<b>${w.oldest}d</b>`:w.oldest+'d'}`:null].filter(Boolean).join(' · ');
+        return `<div class="rswk-row drill-tgt" onclick="drillRsWeek('${w.wk}')">
+          <div class="rswk-wk">${w.label}</div>
+          <div class="rswk-barwrap"><div class="rswk-bar${stale?' stale':''}" style="width:${Math.max(w.n/rsWkMax*100,4)}%;"></div></div>
+          <div class="rswk-n">${w.n}</div>
+          <div class="rswk-meta">${meta}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="note">Click a week to open those resurveys. Ages run from the resurvey request; red marks one open longer than ${RS_STALE}d, the point 90% of past resurveys had already resolved by${rsWeekAnchor==='complete'?'. On this anchor an old resurvey sits on whatever week its original survey closed, so switch to Request wk to read aging directly':''}. Weeks with none open are omitted.</div>
   </div>`:''}
 
   <div class="sec">
