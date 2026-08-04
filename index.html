@@ -455,6 +455,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-title{font-size:14px;font-weight:600;color:var(--text);}
 .drill-sub{font-size:12px;color:var(--muted);margin-top:3px;}
 .drill-count{font-size:12px;color:var(--faint);padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--border);}
+.drill-seg{display:flex;gap:6px;padding:9px 16px 0;background:var(--bg);flex-wrap:wrap;}
+.drill-seg:empty{display:none;}
+.drill-seg-btn{font-size:11px;font-weight:600;padding:4px 10px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
+.drill-seg-btn:hover:not(:disabled){border-color:var(--muted);color:var(--text);}
+.drill-seg-btn.active{background:var(--text);border-color:var(--text);color:var(--surface);}
+.drill-seg-btn:disabled{opacity:.4;cursor:default;}
+.drill-seg-n{font-weight:700;margin-left:4px;}
+.drill-seg-note{font-size:10px;color:var(--faint);padding:6px 16px 0;line-height:1.45;}
+.drill-seg-note:empty{display:none;}
 .drill-copy-btn{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap;}
 .drill-copy-btn:hover{background:var(--text);color:#fff;border-color:var(--text);}
 .drill-close{width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -689,6 +698,8 @@ body{padding-left:180px;}
       <button class="drill-close" onclick="closeDrill()">×</button>
     </div>
   </div>
+  <div class="drill-seg" id="drill-seg"></div>
+  <div class="drill-seg-note" id="drill-seg-note"></div>
   <div class="drill-count" id="drill-count"></div>
   <div class="drill-table-wrap">
     <table class="drill-table">
@@ -723,7 +734,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, isOpenResurvey, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1476,11 +1487,51 @@ function _drillDaysSpan(r,today){
   const done=isComplete(r);
   const d=done?(r.ct_total!=null?r.ct_total:null):(r.start?dDiff(r.start,today):null);
   if(d==null) return '<span style="color:var(--faint);">—</span>'; const wip=!done; const c=d<=S.targetMedian?'#16a34a':d<=(S.targetAvg+1)?'#d97706':'#dc2626'; return `<span style="color:${c};font-weight:600;">${d}d${wip?' open':''}</span>`; }
+// Resurvey segments inside the drawer. These live here rather than as another
+// toggle on the Intake & flow chart on purpose: an open resurvey is never
+// isComplete(), so a chart-level resurvey filter would be structurally empty
+// whenever the Completed bar is on the "Current" basis. Filtering the drilled
+// rows instead works from every entry point and adds no chart state.
+const DRILL_SEGS=[
+  {k:'all',    label:'All',           test:null},
+  {k:'rs',     label:'Resurveyed',    test:hasResurveySig},
+  {k:'rsopen', label:'Open resurvey', test:isOpenResurvey},
+];
+let _drillAll=[], _drillOpts={}, _drillSeg='all';
+function setDrillSeg(k){ _drillSeg=k; _renderDrill(); }
+
 function openDrill(title,subtitle,drillRows,opts={}){
-  _drillRows=drillRows;
-  const today=localISO(new Date());
+  _drillAll=drillRows; _drillOpts=opts; _drillSeg=opts.seg||'all';
   document.getElementById('drill-title').textContent=title;
   document.getElementById('drill-sub').textContent=subtitle;
+  _renderDrill();
+  document.getElementById('drill-panel').classList.add('open');
+  document.getElementById('drill-overlay').classList.add('open');
+}
+
+function _renderDrill(){
+  const opts=_drillOpts;
+  const today=localISO(new Date());
+  const counts={all:_drillAll.length};
+  DRILL_SEGS.forEach(s=>{ if(s.test) counts[s.k]=_drillAll.filter(s.test).length; });
+  // Chips only where they would actually partition the rows. A grouped
+  // FPY-defect view is already resurvey-scoped, and a drill that is entirely
+  // open resurveys would render three chips with identical counts.
+  const showSegs=!opts.groupBy&&counts.rs>0&&(counts.rs<counts.all||counts.rsopen<counts.rs);
+  if(!showSegs&&_drillSeg!=='all') _drillSeg='all';
+  const seg=DRILL_SEGS.find(s=>s.k===_drillSeg)||DRILL_SEGS[0];
+  const drillRows=seg.test?_drillAll.filter(seg.test):_drillAll;
+  _drillRows=drillRows; // copy buttons act on what is shown
+
+  document.getElementById('drill-seg').innerHTML=showSegs
+    ? DRILL_SEGS.map(s=>{ const n=counts[s.k]??0; return `<button class="drill-seg-btn${s.k===_drillSeg?' active':''}" ${n?'':'disabled'} onclick="setDrillSeg('${s.k}')">${s.label}<span class="drill-seg-n">${n}</span></button>`; }).join('')
+    : '';
+  // The Current basis excludes reopened surveys by construction, so an empty
+  // "Open resurvey" there is a property of the basis, not good news.
+  document.getElementById('drill-seg-note').textContent=
+    (showSegs&&counts.rsopen===0&&opts.basis==='current')
+      ? 'No open resurveys can appear here: this view is on the Current completion basis, which drops a survey the moment it is reopened. Switch Intake & flow to First-time to see them.'
+      : '';
   document.getElementById('drill-count').textContent=drillRows.length+' account'+(drillRows.length!==1?'s':'');
   const thead=document.getElementById('drill-thead');
   const tbody=document.getElementById('drill-tbody');
@@ -1518,8 +1569,6 @@ function openDrill(title,subtitle,drillRows,opts={}){
     tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
   }
   if(!drillRows.length) tbody.innerHTML=`<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--faint);">No projects in this view.</td></tr>`;
-  document.getElementById('drill-panel').classList.add('open');
-  document.getElementById('drill-overlay').classList.add('open');
 }
 function closeDrill(){
   document.getElementById('drill-panel').classList.remove('open');
@@ -1544,11 +1593,12 @@ function copyDrillTable(){
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
 function rsFilterApply(arr){
-  if(rsTimeFilter==='open') return arr.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
+  if(rsTimeFilter==='open') return arr.filter(isOpenResurvey);
   // Date range from the global filter bar; rows with no datable field stay visible
   if(GF.dateFrom||GF.dateTo) return arr.filter(r=>{ const d=r.resurvey_requested||r.complete; return !d||gfDateIn(d); });
   return arr;
 }
+function drillOpenResurveys(){ const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)); openDrill('Open Resurveys',src.length+' awaiting completion',src,{mode:'resurvey'}); }
 function drillResRegion(reg){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)&&r.region===reg); const view=rsFilterApply(src); openDrill('Resurveys · '+reg,view.length+' in current filter',view); }
 function drillSalesRepRs(name){ const src=rows.filter(r=>gfDim(r)&&r.sales_rep===name&&r.resource==='Sales Rep'&&hasResurveySig(r)); const view=rsFilterApply(src); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function drillAttribution(attr){ const src=rows.filter(r=>gfDim(r)&&hasResurveySig(r)); const view=rsFilterApply(src).filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
@@ -1690,7 +1740,7 @@ function attnItems(){
     if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
     if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
   });
-  rows.filter(r=>r.resurvey_requested&&!r.resurvey_complete&&r.list!=='Complete'&&!r.resurvey_scheduled).forEach(r=>{
+  rows.filter(r=>isOpenResurvey(r)&&!r.resurvey_scheduled).forEach(r=>{
     const d=dDiff(r.resurvey_requested,today)??0;
     if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:'resurvey unscheduled'});
   });
@@ -1803,11 +1853,12 @@ function renderLastWeek(){
   const rgDisplay=rStats.map(r=>r.start_to_complete!=null?Math.min(r.start_to_complete,rgCap):null);
   const rgOutliers=new Set(rStats.map((r,i)=>r.start_to_complete>rgCap?i:-1).filter(i=>i>=0));
 
-  // FPY for last week
-  const isFPYDefect=r=>!!(r.resurvey_complete||r.resurvey_scheduled);
-  const lwDefects=src.filter(isFPYDefect);
+  // FPY for last week — hasResurveySig (lib/metrics.cjs), not a local
+  // reimplementation: a resurvey counts as a defect the moment it's
+  // requested, not only once it's been scheduled or completed.
+  const lwDefects=src.filter(hasResurveySig);
   const lwFpy=src.length?Math.round((src.length-lwDefects.length)/src.length*100):null;
-  const pwDefects=pwSrc.filter(isFPYDefect);
+  const pwDefects=pwSrc.filter(hasResurveySig);
   const pwFpy=pwSrc.length?Math.round((pwSrc.length-pwDefects.length)/pwSrc.length*100):null;
   const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
   const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
@@ -2591,7 +2642,7 @@ function renderTrends(){
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
-        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
+        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr,{basis:trFlowCompletionBasis==='first'?'first':'current'}); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
             title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -2794,8 +2845,7 @@ function renderAgingWIP(){
   const attnMap={};
   attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
   const attnTotal=Object.keys(attnMap).length;
-  const isOpenRs=r=>!!(r.resurvey_requested&&!r.resurvey_complete);
-  const wipSchedDate=r=>isOpenRs(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
+  const wipSchedDate=r=>isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
   const projCt=r=>{const anchor=wipAgeFrom(r);const sched=wipSchedDate(r);return dDiff(anchor,(sched&&sched>=today)?sched:today)??0;};
@@ -2928,7 +2978,7 @@ function renderAgingWIP(){
             <div class="wip-dates" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:10px;opacity:.8;">
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-left:5px;">${dDiff(r.resurvey_requested,today)??'?'}d open</span>`:''}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
-              <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):isOpenRs(r)?`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`:'—'}</span></div>
+              <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):isOpenResurvey(r)?`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`:'—'}</span></div>
             </div>`:''}
             <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:12px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
@@ -2995,8 +3045,7 @@ function renderAgingWIP(){
       const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
       const paWip=rows.filter(r=>isWIP(r)&&r.start).map(r=>{
         const age=dDiff(r.start,today)??0;
-        const _isOpenRs=!!(r.resurvey_requested&&!r.resurvey_complete);
-        const s=_isOpenRs?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
+        const s=isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
         const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';
         return{age,status};
       });
@@ -3087,10 +3136,13 @@ function renderResurvey(){
 
   const scoped=rows.filter(gfDim); // global region/resource/type filters apply here too
   const isResurveyRow=r=>!!(r.resurvey_complete||r.resurvey_scheduled||(r.resurvey_requested&&(r.list==='Open'||r.list==='Holding'))||(r.list==='Reopened'&&r.reopened_by_design==='1'));
-  const isFPYDefect=r=>!!(r.resurvey_complete||r.resurvey_scheduled);
+  // FPY defect = hasResurveySig (lib/metrics.cjs), not a local reimplementation
+  // that only catches a resurvey once it's scheduled or completed — a survey
+  // requested for resurvey is already a defect, whether or not it's been
+  // scheduled yet.
   const allHasResurvey=scoped.filter(isResurveyRow);
   const hasResurvey=rsFilterApply(allHasResurvey);
-  const openResurvey=allHasResurvey.filter(r=>!r.resurvey_complete&&r.list!=='Complete');
+  const openResurvey=allHasResurvey.filter(isOpenResurvey);
   const closedResurvey=hasResurvey.filter(r=>r.resurvey_complete||r.list==='Complete');
   const ctVals=closedResurvey.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
   const avgRsCt=avg(ctVals);
@@ -3100,14 +3152,14 @@ function renderResurvey(){
   const RES_LABEL={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
   const allCompletions=scoped.filter(r=>isComplete(r));
   const completions=rsTimeFilter==='open'?[]:allCompletions.filter(r=>gfDateIn(r.complete));
-  const internalDefects=completions.filter(r=>isFPYDefect(r));
+  const internalDefects=completions.filter(r=>hasResurveySig(r));
   _rsDefects=internalDefects;
   const fpy=completions.length?((completions.length-internalDefects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
   const resFPY=['Sales Rep','Radicl Services','SunPower Surveyor'].map(res=>{
     const comps=completions.filter(r=>r.resource===res);
-    const defs=comps.filter(r=>isFPYDefect(r));
+    const defs=comps.filter(r=>hasResurveySig(r));
     return {res,comps:comps.length,defs:defs.length,fpy:comps.length?((comps.length-defs.length)/comps.length*100):null};
   }).filter(r=>r.comps>0);
 
@@ -3128,14 +3180,14 @@ function renderResurvey(){
   // By region — sorted by resurvey count desc, FPY split by resource
   const fpyForSegment=(reg,res)=>{
     const comps=completions.filter(r=>r.region===reg&&r.resource===res);
-    const defects=comps.filter(r=>isFPYDefect(r));
+    const defects=comps.filter(r=>hasResurveySig(r));
     return comps.length?((comps.length-defects.length)/comps.length*100):null;
   };
   const regionData=[...new Set(hasResurvey.map(r=>r.region))].filter(Boolean).map(reg=>{
     const rr=hasResurvey.filter(r=>r.region===reg);
     const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     return {
-      reg, count:rr.length, open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length, avgCt:avg(cts),
+      reg, count:rr.length, open:rr.filter(isOpenResurvey).length, avgCt:avg(cts),
       fpySR:fpyForSegment(reg,'Sales Rep'),
       fpyRD:fpyForSegment(reg,'Radicl Services'),
       fpySP:fpyForSegment(reg,'SunPower Surveyor'),
@@ -3150,17 +3202,17 @@ function renderResurvey(){
   }).map(res=>{
     const rr=hasResurvey.filter(r=>r.resource===res);
     const comps=completions.filter(r=>r.resource===res);
-    const defects=comps.filter(r=>isFPYDefect(r));
+    const defects=comps.filter(r=>hasResurveySig(r));
     const rfpy=comps.length?((comps.length-defects.length)/comps.length*100):null;
     const cts=rr.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
-    return {res,count:rr.length,open:rr.filter(r=>!r.resurvey_complete&&r.list!=='Complete').length,avgCt:avg(cts),fpy:rfpy};
+    return {res,count:rr.length,open:rr.filter(isOpenResurvey).length,avgCt:avg(cts),fpy:rfpy};
   });
 
   // By sales rep — resurvey rate per rep, min 3 completions
   const MIN_REP_COMPS=3;
   const salesRepData=[...new Set(completions.map(r=>r.sales_rep).filter(Boolean))].map(name=>{
     const comps=completions.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep');
-    const resur=comps.filter(r=>isFPYDefect(r));
+    const resur=comps.filter(r=>hasResurveySig(r));
     const rate=comps.length?resur.length/comps.length*100:null;
     const regCounts={};comps.forEach(r=>{if(r.region)regCounts[r.region]=(regCounts[r.region]||0)+1;});
     const primaryRegion=Object.entries(regCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
@@ -3201,7 +3253,7 @@ function renderResurvey(){
       <div class="ksub">${closedResurvey.length} resolved · ${openResurvey.length} open</div>
       <div class="ktgt">${completions.length?Math.round(hasResurvey.length/completions.length*100)+'% resurvey rate':'—'}</div>
     </div>
-    <div class="kcard">
+    <div class="kcard" style="cursor:pointer;" onclick="drillOpenResurveys()">
       <div class="klabel">Open Now${kinfo(TIP.rsOpen)}</div>
       <div class="kval ${openResurvey.length>0?'kr-c':''}">${openResurvey.length}</div>
       <div class="ksub">${openResurvey.filter(r=>r.resurvey_scheduled).length} scheduled · ${openResurvey.filter(r=>!r.resurvey_scheduled).length} awaiting</div>

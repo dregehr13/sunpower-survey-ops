@@ -38,6 +38,7 @@ status for five months; a colour band that disagreed with the number beside it).
 | `wipAgeFrom(r)` | **anchor date**: resurvey request → completion +2d → project start | cycle-time math: `ct_total`, `projCt`, `estComplete`. **Never shift it** — Spec 12744 depends on it |
 | `ssDaysOpen(r, asOf)` | days the survey has been SS's, = anchor → asOf **minus one rep grace day** | queue triage, the "Days Open in SS" column, attention rules |
 | `hasRepGrace(r)` | blank resource counts as rep; straight-to-field skips it; open resurveys get none | `requested` is the rep→field handoff marker (99% coverage on Radicl/SPWR vs 13% on Sales Rep) |
+| `isOpenResurvey(r)` | resurvey requested, no resurvey-complete date, **and `list !== 'Complete'`** | **18 rows were resolved without the Resurvey Complete Date ever being filled in.** Testing only the dates counts those as still open. Powers the drill-drawer chips, the WIP schedule date, and the Resurveys open queue |
 | `inRepGrace(r, asOf)` | still inside the rep's first day | WIP table shows a "Rep day" pill instead of a number |
 
 "Proj Age" (`start → today`) is a *third* number, computed inline on the WIP page.
@@ -109,6 +110,7 @@ the most likely next source of drift:
 | Queue status pills | `index.html` `wipQueueStatus()` | classified from schedule date + last review subject |
 | Attention rules | `index.html` `attnItems()` | aging >7d, schedule passed, no review >5d, resurvey unscheduled >3d |
 | Cohort / FPY splits | `index.html` Resurveys page | built on `hasResurveySig` |
+| Drill-drawer segments | `index.html` `DRILL_SEGS` / `_renderDrill()` | All / Resurveyed / Open resurvey, filtering the drilled rows. Deliberately not a toggle on the Intake & flow chart: an open resurvey is never `isComplete()`, so a chart-level resurvey filter is structurally empty on the Current basis |
 
 ## Regenerating
 

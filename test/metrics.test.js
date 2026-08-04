@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, avg, med, pct,
+  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isOpenResurvey, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
@@ -97,6 +97,19 @@ test('hasResurveySig detects any resurvey signal', () => {
   assert.equal(hasResurveySig({ reopened_by_design: '1' }), true);
   assert.equal(hasResurveySig({ reopened_by_design: '0' }), false);
   assert.equal(hasResurveySig({}), false);
+});
+
+test('isOpenResurvey needs list to have left Complete, not just a blank date', () => {
+  const open = { resurvey_requested: '2026-07-01', resurvey_complete: '', list: 'Holding' };
+  assert.equal(isOpenResurvey(open), true);
+  // Resolved the normal way.
+  assert.equal(isOpenResurvey({ ...open, resurvey_complete: '2026-07-05' }), false);
+  // Resolved but the Resurvey Complete Date was never filled in — 18 real rows
+  // look like this. Testing only the dates would count them as still open.
+  assert.equal(isOpenResurvey({ ...open, list: 'Complete' }), false);
+  // A resurvey that was never requested is not an open one.
+  assert.equal(isOpenResurvey({ resurvey_requested: '', list: 'Holding' }), false);
+  assert.equal(isOpenResurvey({}), false);
 });
 
 // ── avg / med / pct: null and negative handling ──
