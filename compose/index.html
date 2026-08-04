@@ -269,7 +269,7 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
+const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 const ROWS = OpsMetrics.filterRows(RAW);
@@ -296,7 +296,10 @@ function computeStats(){
 
   if(mode==='monday'){
     const period=getLastWeekRange();
-    const rows=ROWS.filter(r=>isComplete(r)&&r.complete>=period.from&&r.complete<=period.to);
+    // First-time completions, not isComplete() — mirrors the Current → Last
+    // Week fix. A survey that closed last week and was later reopened for
+    // resurvey should still count as a last-week completion here.
+    const rows=ROWS.filter(r=>everCompleted(r)&&r.complete>=period.from&&r.complete<=period.to);
     const cts=rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const allCtsM=ROWS.filter(r=>isComplete(r)&&r.ct_total!=null&&r.ct_total>=0).map(r=>r.ct_total);
     const fence=iqrFence(allCtsM);

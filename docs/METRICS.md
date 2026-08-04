@@ -28,6 +28,7 @@ status for five months; a colour band that disagreed with the number beside it).
 | `filterRows(raw)` | `inScope` + `normalizeName` on `sales_rep` | the only correct entry point — never filter raw rows by hand |
 | `isComplete(r)` | completion date **AND** `list === 'Complete'` | **48 rows carry a date but are Holding/Reopened.** A bare `r.complete` test counts them as finished |
 | `isWIP(r)` | `start` and not `isComplete` | complete + WIP partition the scoped rows exactly |
+| `everCompleted(r)` | completion date, **regardless of current `list`** | first-time completion — for "how many closed out in week X", which must not shrink when a completed survey is later reopened for resurvey. Not a substitute for `isComplete` in WIP/backlog math |
 | `normalizeName(n)` | title-cases fully-uppercase reps; keeps roman numerals | SF exports the same rep in mixed casings, splitting their stats |
 
 ### The two age metrics — never interchangeable

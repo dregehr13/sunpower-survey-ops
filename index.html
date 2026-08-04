@@ -723,7 +723,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1415,6 +1415,7 @@ function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(ti
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
   complete:'A survey counts as complete only when it has a Site Survey Complete date AND List status "Complete". A Holding or Reopened row keeps its date but is still open.',
+  firstComplete:'First-time completion: counts a survey the week its Site Survey Complete date lands, regardless of current List status. Unlike the plain "complete" count, this never shrinks later if the survey is reopened for a resurvey — it answers "how many closed out that week," not "how many are sitting in Complete right now."',
   cycle:'Project Start Date → Site Survey Complete, in calendar days. This is the Spec 12744 metric and is never adjusted.',
   onTarget:()=>`Share of completed surveys that finished within ${S.targetAvg} calendar days — the Spec 12744 average target.`,
   schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
@@ -1722,17 +1723,21 @@ function trailing4WeekPace(){
 
 function renderLastWeek(){
   const lw=weekRange(-1);
-  const src=rows.filter(r=>isComplete(r)&&r.complete>=lw.from&&r.complete<=lw.to);
+  // First-time completions, not the isComplete() gate — a survey that closed
+  // last week and then got reopened for resurvey should still count as a
+  // last-week completion. The resurvey story itself is the First-pass yield
+  // card below, not a reason to make this number disappear.
+  const src=rows.filter(r=>everCompleted(r)&&r.complete>=lw.from&&r.complete<=lw.to);
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
   // Prior week for comparison
   const pw=weekRange(-2);
-  const pwSrc=rows.filter(r=>isComplete(r)&&r.complete>=pw.from&&r.complete<=pw.to);
+  const pwSrc=rows.filter(r=>everCompleted(r)&&r.complete>=pw.from&&r.complete<=pw.to);
   const pwAvgT=avg(pwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   // 3-week avg (weeks -1, -2, -3)
   const w3=weekRange(-3);
-  const triSrc=rows.filter(r=>isComplete(r)&&r.complete>=w3.from&&r.complete<=lw.to);
+  const triSrc=rows.filter(r=>everCompleted(r)&&r.complete>=w3.from&&r.complete<=lw.to);
   const triAvgT=avg(triSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title" style="margin-bottom:4px;">Last Week</div>
@@ -1765,7 +1770,7 @@ function renderLastWeek(){
   const curWipProjects=rows.filter(r=>isWIP(r));
   const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.complete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.firstComplete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
     <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
@@ -2268,6 +2273,12 @@ function renderRepTable(){
 // ═══ TRENDS ══════════════════════════════════════════════
 let trFlowView='daily'; // 'daily' | 'weekly' — Intake & flow chart granularity
 function setTrFlowView(v){ trFlowView=v; renderTrends(); }
+// 'current' | 'first' — completion basis for the Weekly Completed bar/stat.
+// 'current' matches isComplete() (drops out again if reopened for resurvey);
+// 'first' counts a survey once, the week it first closed, and never un-counts
+// it. Weekly-only: Daily mode always reads current-truth (Out by day).
+let trFlowCompletionBasis='current';
+function setTrFlowCompletionBasis(v){ trFlowCompletionBasis=v; renderTrends(); }
 function renderTrends(){
   const trendSrc=rows.filter(gfDim); // global region/resource/type filters apply
   if(!trendSrc.length){
@@ -2287,6 +2298,7 @@ function renderTrends(){
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
   const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
+  const inOutCompletedFirst=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return 0; return trendSrc.filter(r=>everCompleted(r)&&r.complete>=wk&&r.complete<=we).length; });
   const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!isComplete(r)||r.complete>we)).length; });
   const labelsC=weeklyC.map(fmtWeekLabel);
   const al=weeklyC.map(()=>1);
@@ -2349,16 +2361,22 @@ function renderTrends(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?`Surveys in (by start date) vs out (by complete date), ${flowRangeLabel} · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected`:'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · Line = open WIP</div></div>
-        <div class="toggle-group">
-          <button class="tgl-btn${trFlowView==='daily'?' active':''}" onclick="setTrFlowView('daily')">Daily</button>
-          <button class="tgl-btn${trFlowView==='weekly'?' active':''}" onclick="setTrFlowView('weekly')">Weekly</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${trFlowView==='weekly'?`<div class="toggle-group">
+            <button class="tgl-btn${trFlowCompletionBasis==='current'?' active':''}" onclick="setTrFlowCompletionBasis('current')">Current</button>
+            <button class="tgl-btn${trFlowCompletionBasis==='first'?' active':''}" onclick="setTrFlowCompletionBasis('first')">First-time</button>
+          </div>`:''}
+          <div class="toggle-group">
+            <button class="tgl-btn${trFlowView==='daily'?' active':''}" onclick="setTrFlowView('daily')">Daily</button>
+            <button class="tgl-btn${trFlowView==='weekly'?' active':''}" onclick="setTrFlowView('weekly')">Weekly</button>
+          </div>
         </div>
       </div>
       <div id="tr-alarm" style="margin-bottom:10px;"></div>
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>${trFlowView==='daily'?'In':'New In'}</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':'Completed'}</span>
+        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':(trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed')}${trFlowView==='weekly'?kinfo(trFlowCompletionBasis==='first'?TIP.firstComplete:TIP.complete):''}</span>
         ${trFlowView==='daily'?'<span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekend</span>':''}
         <span class="li" style="color:#d97706;"><span class="ldash" style="background:#d97706;"></span>WIP</span>
       </div>
@@ -2495,10 +2513,14 @@ function renderTrends(){
     const from=isoAddD(end,-6);
     const inn=trendSrc.filter(r=>r.start&&r.start>=from&&r.start<=end).length;
     const out=trendSrc.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=end).length;
+    // First-time completion count — see everCompleted() in lib/metrics.cjs.
+    // Clearance/floor/alarms stay on `out` (current-truth) on purpose; only
+    // the displayed Completed stat switches with the toggle.
+    const outFirst=trendSrc.filter(r=>everCompleted(r)&&r.complete>=from&&r.complete<=end).length;
     // The floor is only real once that Monday has fully elapsed — the export
     // runs in the morning, before the day's clearing.
     const mon=isoAddD(end,1);
-    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:mon<flowEnd?weeklyFloor(trendSrc,end):null});
+    flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:mon<flowEnd?weeklyFloor(trendSrc,end):null});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
@@ -2522,7 +2544,7 @@ function renderTrends(){
     const floorSpark=miniSpark(floorSeries,{thresh:floorMed,color:floorColor});
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
-      +stat('Completed',fw.out,'last full week','',TIP.complete)
+      +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
       +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
       +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;${floorCls}">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">${floorMed!=null?'baseline '+floorMed+' · alarm above '+Math.round(floorMed*1.5):'WIP after each week\'s buildup drains'}</div>${floorSpark}</div>`;
   }
@@ -2564,12 +2586,12 @@ function renderTrends(){
       type:'bar',
       data:{labels:inOutLabels,datasets:[
         {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
-        {label:'Completed',data:inOutCompleted.map(v=>-v),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
+        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted).map(v=>-v),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
         {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
-        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
+        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
             title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
