@@ -473,20 +473,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-ramp{width:120px;height:7px;border-radius:99px;}
 .map-swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px;}
 .map-scrub{display:flex;gap:11px;align-items:center;margin-top:12px;}
-.map-play{flex-shrink:0;width:29px;height:29px;border-radius:50%;border:1px solid var(--border);
-  background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;padding:0;}
-.map-play:hover{border-color:var(--muted);}
-.map-play svg{fill:currentColor;}
 .map-track{position:relative;flex:1;min-width:0;height:52px;}
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
-#map-range{position:absolute;left:0;right:0;bottom:2px;width:100%;margin:0;height:18px;
-  -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;}
-#map-range::-webkit-slider-runnable-track{height:2px;background:var(--border);border-radius:2px;}
-#map-range::-moz-range-track{height:2px;background:var(--border);border-radius:2px;}
-#map-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;
-  border-radius:50%;background:var(--accent);border:2px solid var(--surface);margin-top:-5.5px;box-shadow:var(--shadow);}
-#map-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);
-  border:2px solid var(--surface);box-shadow:var(--shadow);}
 .map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
 .map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
 .map-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--border);
@@ -1530,7 +1518,8 @@ const TIP={
   mapVolume:'Job density. Each ZIP contributes a blob weighted by how many jobs it holds, and overlapping blobs add together, so colour reads as concentration rather than any single survey.',
   mapCycle:'Average Project Start to Site Survey Complete for the completed jobs in each ZIP, banded against the same targets as every other card. ZIPs below the minimum sample are drawn hollow rather than coloured.',
   mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
-  mapScrub:'Project Start Date. Salesforce has no agreement-signed field, and per Spec 12744 project start is the booking moment. The bar behind the slider is weekly volume, so the shape of the year is visible before you drag.',
+  mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a town for its average days open.',
+  mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -3577,14 +3566,14 @@ function mapCities(){
 }
 const mapCityFor=zip=>mapCities()[zip]||zip;
 
-let mapMarket='US', mapMetric='vol', mapMode='cum', mapDay=null, mapPlaying=false, mapRaf=0;
+let mapMarket='US', mapMetric='vol';
 let mapHoverKey=null, _mapPlaces=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
 let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
 const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
 const MAPGEO={zips:null,states:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
 
-function setMapMarket(v){ mapMarket=v; mapDay=null; mapHoverKey=null; renderMap(); }
+function setMapMarket(v){ mapMarket=v; mapHoverKey=null; renderMap(); }
 // The toggles are painted once by renderMap, but switching metric or window
 // only redraws the canvas — without this the highlight stays on whatever was
 // selected at the last full render.
@@ -3593,13 +3582,8 @@ function _mapSyncToggles(){
     const on=b.dataset.mm===mapMetric;
     b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
   });
-  document.querySelectorAll('#page-map [data-mw]').forEach(b=>{
-    const on=b.dataset.mw===mapMode;
-    b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
-  });
 }
-function setMapMetric(v){ mapMetric=v; mapStop(); _mapSyncToggles(); mapDraw(); }
-function setMapMode(v){ mapMode=v; mapStop(); _mapSyncToggles(); mapDraw(); }
+function setMapMetric(v){ mapMetric=v; _mapSyncToggles(); mapDraw(); }
 
 // ── geo assets: fetched, never baked. The page derives from data.js, which
 // push.sh rewrites daily; baked centroids would drift out from under it.
@@ -3684,15 +3668,8 @@ function renderMap(){
   _mapMarketCounts=stCount;
 
   const b=all.length?mapDayBounds(all):null;
-  // Reset to the end whenever the span itself moves — after changing the date
-  // filter a stale index points at an unrelated date, so the map silently
-  // showed a fraction of the range the filter bar says is selected.
-  const bk=b?b.lo+'|'+b.hi:'';
-  if(b&&(mapDay===null||bk!==_mapBoundsKey||mapDay>b.span)) mapDay=b.span;
-  _mapBoundsKey=bk;
 
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
-  const wTgl=(v,l)=>`<button class="tgl-btn${mapMode===v?' active':''}" data-mw="${v}" aria-pressed="${mapMode===v}" onclick="setMapMode('${v}')">${l}</button>`;
 
   el.innerHTML=`
     <div class="kg kg4" id="map-kpis"></div>
@@ -3709,7 +3686,7 @@ function renderMap(){
             ${markets.map(([s,n])=>`<option value="${s}"${mapMarket===s?' selected':''}>${esc(MAP_STATE_NAMES[s]||s)} (${n})</option>`).join('')}
           </select>
           <div class="toggle-group">
-            ${mTgl('vol','Volume')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}
+            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}
           </div>
         </div>
       </div>
@@ -3720,18 +3697,12 @@ function renderMap(){
       </div>
       <div class="map-legend" id="map-legend"></div>
       <div class="map-scrub">
-        <button class="map-play" id="map-play" aria-label="Play timeline" onclick="mapTogglePlay()">
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path id="map-play-i" d="M4 2.5v11l9-5.5z"/></svg>
-        </button>
         <div class="map-track">
           <canvas id="map-hist" aria-hidden="true"></canvas>
-          <input type="range" id="map-range" min="0" max="${b?b.span:0}" value="${mapDay??0}" step="1"
-                 aria-label="Project start date" oninput="mapScrubTo(this.value)">
           <div class="map-ticks" id="map-ticks"></div>
         </div>
-        <div class="toggle-group" style="flex-shrink:0;">${wTgl('cum','Cumulative')}${wTgl('win','30-day')}</div>
       </div>
-      <div class="note">Scrubber runs on Project Start Date${kinfo(TIP.mapScrub)} · the date range in the filter bar sets its span${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
+      <div class="note">Weekly volume across the range${kinfo(TIP.mapTimeline)} · the period is set by the date range in the filter bar${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
     </div>
     <div class="sec" id="map-top-sec">
       <div class="shead"><div><div class="stitle">Top locations</div><div class="ssub" id="map-top-sub">&nbsp;</div></div></div>
@@ -3750,13 +3721,16 @@ function renderMap(){
 
 let _mapAll=[], _mapBounds=null, _mapBoundsKey='';
 
+// Time is the filter bar's job — the map shows whatever it selected. The one
+// scope the map adds is Open WIP, which is a different question from a date
+// range: not "what did we sell then" but "what is on the books right now".
 function mapVisible(){
-  if(!_mapBounds) return [];
-  const hiI=mapDay??_mapBounds.span;
-  const hi=mapDateAt(_mapBounds.lo,hiI);
-  const lo=mapMode==='win'?mapDateAt(_mapBounds.lo,Math.max(0,hiI-29)):_mapBounds.lo;
-  return _mapAll.filter(p=>p.r.start>=lo&&p.r.start<=hi);
+  return mapMetric==='wip'?_mapAll.filter(p=>isWIP(p.r)):_mapAll;
 }
+
+// Ages anchor on the export date, not the wall clock, so a stale upload does
+// not inflate every queue age — same rule the WIP page uses.
+const _mapToday=()=>(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
 
 // Grouped by town, not ZIP. A ZIP is a postal artefact — Glen Allen's two and
 // Fredericksburg's three split one place into several dots and several rows,
@@ -3769,9 +3743,10 @@ function mapGroup(pts){
     const city=mapCityFor(p.zip);
     const key=city+'|'+p.st;   // Springfield exists in a dozen states
     let e=m.get(key);
-    if(!e){ e={key,city,st:p.st,zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,_la:0,_ln:0}; m.set(key,e); }
+    if(!e){ e={key,city,st:p.st,zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],_la:0,_ln:0}; m.set(key,e); }
     e.n++; e.rows.push(p.r); e.zips.add(p.zip);
     e._la+=p.ll[0]; e._ln+=p.ll[1];
+    if(isWIP(p.r)){ const d=ssDaysOpen(p.r,_mapToday()); if(d!=null) e.opens.push(d); }
     if(isComplete(p.r)){
       e.comps++;
       if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
@@ -3782,6 +3757,8 @@ function mapGroup(pts){
     e.ll=[e._la/e.n,e._ln/e.n];
     e.avgCt=e.cts.length>=MAP_MIN_N?avg(e.cts):null;
     e.rsRate=e.comps>=MAP_MIN_N?Math.round(e.defects/e.comps*100):null;
+    // Queue age, not cycle time — the same number the WIP page triages on.
+    e.avgOpen=e.opens.length?avg(e.opens):null;
   });
   return m;
 }
@@ -3899,7 +3876,7 @@ function mapDraw(){
   const zips=mapGroup(vis);
   _mapPlaces=zips;
 
-  if(mapMetric==='vol'){
+  if(mapMetric==='vol'||mapMetric==='wip'){
     // Additive density, colour-mapped after compositing. Only honest for counts.
     const heat=document.createElement('canvas');
     heat.width=cv.width; heat.height=cv.height;
@@ -4009,16 +3986,24 @@ function mapPaintMeta(vis,zips){
   const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   k.innerHTML=
-     `<div class="kcard"><div class="klabel">Jobs in view${kinfo(TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
+     `<div class="kcard"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
     +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
-    +`<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`
-    +`<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`;
+    +(mapMetric==='wip'
+      ? (()=>{ const ages=vis.map(p=>ssDaysOpen(p.r,_mapToday())).filter(x=>x!=null&&x>=0); const a=avg(ages);
+          return `<div class="kcard"><div class="klabel">Avg days open${kinfo(TIP.ssDaysOpen)}</div><div class="kval ${a!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(a,S.targetAvg)]+'-c':''}">${a!=null?a.toFixed(1)+'d':'—'}</div><div class="ksub">in the Site Survey queue</div></div>`; })()
+      : `<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`)
+    +(mapMetric==='wip'
+      // A resurvey rate over open surveys is 0 of 0 by construction — nothing
+      // in this view has completed. Show what can actually be acted on.
+      ? (()=>{ const over=vis.filter(p=>(ssDaysOpen(p.r,_mapToday())??0)>S.targetAvg).length;
+          const pc=vis.length?Math.round(over/vis.length*100):null;
+          return `<div class="kcard"><div class="klabel">Past ${S.targetAvg}d${kinfo(TIP.ssDaysOpen)}</div><div class="kval ${pc!=null?(pc>=40?'kr-c':pc>=20?'ka-c':'kg-c'):''}">${over}</div><div class="ksub">${pc!=null?pc+'% of the open queue':'—'}</div></div>`; })()
+      : `<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`);
 
   const sub=document.getElementById('map-sub');
   if(sub&&_mapBounds){
-    const hi=mapDateAt(_mapBounds.lo,mapDay??_mapBounds.span);
-    sub.innerHTML=(mapMode==='win'?'30 days ending ':'Through ')+fmtDate(hi)
-      +' · '+({vol:'job density',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
+    sub.innerHTML=fmtDate(_mapBounds.lo)+' – '+fmtDate(_mapBounds.hi)
+      +' · '+({vol:'job density',wip:'open surveys',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
   }
 
   // Same figures as the canvas, as text: scannable, keyboard-reachable, and
@@ -4032,6 +4017,7 @@ function mapPaintMeta(vis,zips){
     tl.innerHTML=list.length?list.map(z=>{
       const val=mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
               :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
+              :mapMetric==='wip'?(z.avgOpen!=null?z.avgOpen.toFixed(1)+'d avg open':'open')
               :(z.comps+' completed');
       const nz=z.zips.size;
       const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):(nz===1?[...z.zips][0]:nz+' ZIPs')),val].join(' · ');
@@ -4048,8 +4034,8 @@ function mapPaintMeta(vis,zips){
 
   const lg=document.getElementById('map-legend'); if(!lg) return;
   const sw=(c,t)=>`<span><span class="map-swatch" style="background:var(${c});"></span>${t}</span>`;
-  lg.innerHTML=mapMetric==='vol'
-    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(TIP.mapVolume)}</span><span style="color:var(--faint);">Blob size follows job count; overlaps add.</span>`
+  lg.innerHTML=(mapMetric==='vol'||mapMetric==='wip')
+    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapVolume)}</span><span style="color:var(--faint);">${mapMetric==='wip'?'Open surveys only, as of the latest export. Hover a town for its average days open.':'Blob size follows job count; overlaps add.'}</span>`
     : mapMetric==='cycle'
       ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`
       : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`;
@@ -4066,13 +4052,11 @@ function mapDrawHist(){
   const bins=new Array(weeks).fill(0);
   _mapAll.forEach(p=>{ const i=Math.floor((dDiff(_mapBounds.lo,p.r.start)??0)/7); if(i>=0&&i<weeks) bins[i]++; });
   const max=Math.max(...bins,1), bh=h-24, bw=w/weeks;
-  const cur=mapDay??_mapBounds.span;
   for(let i=0;i<weeks;i++){
     if(!bins[i]) continue;
     const hh=Math.max(2,(bins[i]/max)*bh);
-    const on=(i*7)<=cur;
-    cx.fillStyle=on?cs.getPropertyValue('--c3').trim():cs.getPropertyValue('--border').trim();
-    cx.globalAlpha=on?.85:.5;
+    cx.fillStyle=cs.getPropertyValue('--c3').trim();
+    cx.globalAlpha=.8;
     cx.fillRect(i*bw+0.7,bh-hh,Math.max(1.4,bw-1.4),hh);
   }
   cx.globalAlpha=1;
@@ -4092,8 +4076,6 @@ function mapDrawTicks(){
   }
 }
 
-function mapScrubTo(v){ mapDay=+v; mapStop(); mapDraw(); }
-
 function mapPlaceSub(z){
   const nz=z.zips.size;
   return z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st)
@@ -4104,31 +4086,6 @@ function mapDrillPlace(key){
   openDrill(z.city, mapPlaceSub(z), z.rows);
 }
 
-function mapStop(){
-  mapPlaying=false; cancelAnimationFrame(mapRaf);
-  const i=document.getElementById('map-play-i'); if(i) i.setAttribute('d','M4 2.5v11l9-5.5z');
-  const b=document.getElementById('map-play'); if(b) b.setAttribute('aria-label','Play timeline');
-}
-function mapTogglePlay(){
-  if(mapPlaying) return mapStop();
-  if(!_mapBounds) return;
-  if((mapDay??0)>=_mapBounds.span) mapDay=0;
-  mapPlaying=true;
-  const i=document.getElementById('map-play-i'); if(i) i.setAttribute('d','M4 3h3.2v10H4zM8.8 3H12v10H8.8z');
-  const b=document.getElementById('map-play'); if(b) b.setAttribute('aria-label','Pause timeline');
-  let last=performance.now(),acc=0;
-  const step=now=>{
-    if(!mapPlaying) return;
-    acc+=now-last; last=now;
-    const per=Math.max(12,2600/Math.max(_mapBounds.span,1));
-    while(acc>per){ acc-=per; mapDay=Math.min((mapDay??0)+1,_mapBounds.span); }
-    const rg=document.getElementById('map-range'); if(rg) rg.value=mapDay;
-    mapDraw();
-    if(mapDay>=_mapBounds.span) return mapStop();
-    mapRaf=requestAnimationFrame(step);
-  };
-  mapRaf=requestAnimationFrame(step);
-}
 
 function mapNearest(mx,my){
   let best=null,bd=mapMetric==='vol'?24:20;
@@ -4175,7 +4132,9 @@ document.addEventListener('mousemove',e=>{
       ? (z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
       : mapMetric==='rs'
         ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
-        : '';
+        : mapMetric==='wip'
+          ? (z.avgOpen!=null?z.avgOpen.toFixed(1)+'d average in the queue':'')
+          : '';
   const nz=z.zips.size;
   tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${nz===1?[...z.zips][0]:nz+' ZIPs'}${mapMarket==='US'?' &middot; '+z.st:''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
