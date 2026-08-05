@@ -115,6 +115,7 @@ the most likely next source of drift:
 | `RS_STALE` | `index.html` Resurveys page | p90 of resolved `ct_resurvey`, fit to this team's history like `floorBaseline` (currently ~15d). A fixed `targetAvg+3` lit 6 of 19 rows — resurveys legitimately run to a 4d median / 8d p75 |
 | Map location | `index.html` `MAP_ZIP_RE` | **The ZIP in `address`, never `region`.** Region is a sales territory, not a place — 317 of Virginia's rows say "VA Richmond" while the addresses run Burke to King George. Reading the address also places the 71 in-scope rows whose `region` is blank, which no other view can show, so Virginia reads 368 on the Map vs 303 by region |
 | `MAP_MIN_N` | `index.html` Map page | 3 completions before a ZIP gets a colour in the Cycle or Resurvey modes; below it the circle draws hollow. 779 of 1028 national ZIPs fall below it — without the guard most of the map would be a confident colour drawn from one job |
+| Map city names | `index.html` `mapCities()` | Derived from the addresses, not a lookup table. SF gives one unpunctuated string ("11314 Glen Park Dr Fredericksburg, VA 22407"), so "last N words" mangles Glen Allen / King George / Virginia Beach. Diff the addresses sharing a ZIP: the longest common trailing words are the town. A ZIP with one job has nothing to diff, so there it cuts after the last street-type token |
 
 ## Regenerating
 

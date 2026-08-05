@@ -3536,14 +3536,70 @@ const MAP_ZIP_RE = /,\s*([A-Za-z]{2})\.?\s+(\d{5})/;
 const MAP_MIN_N = 3;
 const MAP_STATE_NAMES = {AL:'Alabama',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
 
+// ── City names, derived from the addresses themselves. Salesforce gives one
+// unpunctuated string ("11314 Glen Park Dr Fredericksburg, VA 22407"), so the
+// city cannot be taken as "the last N words" — that mangles Glen Allen, King
+// George and Virginia Beach. Instead diff the addresses sharing a ZIP: their
+// longest common trailing words are the place name. A ZIP holding a single job
+// has nothing to diff, so there we cut after the last street-type token.
+const MAP_ST_SUFFIX=/^(rd|road|dr|drive|ln|lane|st|street|ct|court|way|pl|place|ave|avenue|blvd|cir|circle|trl|trail|ter|terrace|pkwy|hwy|aly|alley|run|path|loop|sq|xing|pt|bnd|cv|row|walk|rdg|ridge|hl|hls|knl|mnr|crk|br|byp|ext|spur|grn|gln|frst|vw|vis|hts|est|park|pike|tpke)\.?$/i;
+function _mapCutStreet(w,guess){
+  for(let i=w.length-2;i>=0;i--) if(MAP_ST_SUFFIX.test(w[i])) return w.slice(i+1).join(' ');
+  // No street token: either the words already are the place name, or (single
+  // address) we have to guess and the last word is the best available.
+  return guess?w.slice(-1).join(' '):w.join(' ');
+}
+let _mapCityCache=null;
+function mapCities(){
+  if(_mapCityCache) return _mapCityCache;
+  const byZip={};
+  allRows.forEach(r=>{
+    const m=(r.address||'').match(/^(.*?),\s*[A-Za-z]{2}\.?\s+(\d{5})/);
+    if(m) (byZip[m[2]]=byZip[m[2]]||[]).push(m[1].trim().split(/\s+/));
+  });
+  const out={};
+  Object.entries(byZip).forEach(([zip,list])=>{
+    if(list.length===1){ out[zip]=_mapCutStreet(list[0],true); return; }
+    let c=list[0].slice();
+    for(const w of list.slice(1)){
+      let n=0;
+      while(n<c.length&&n<w.length&&c[c.length-1-n].toLowerCase()===w[w.length-1-n].toLowerCase()) n++;
+      c=c.slice(c.length-n);
+      if(!c.length) break;
+    }
+    if(!c.length){ // ZIP spans more than one place name — take the commonest
+      const t={}; list.forEach(w=>{const k=w[w.length-1];t[k]=(t[k]||0)+1;});
+      out[zip]=Object.entries(t).sort((a,b)=>b[1]-a[1])[0][0];
+    } else out[zip]=_mapCutStreet(c,false);
+  });
+  _mapCityCache=out;
+  return out;
+}
+const mapCityFor=zip=>mapCities()[zip]||zip;
+
 let mapMarket='US', mapMetric='vol', mapMode='cum', mapDay=null, mapPlaying=false, mapRaf=0;
 let mapHoverZip=null, _mapZips=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
+let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
+const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
 const MAPGEO={zips:null,states:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
 
 function setMapMarket(v){ mapMarket=v; mapDay=null; mapHoverZip=null; renderMap(); }
-function setMapMetric(v){ mapMetric=v; mapStop(); mapDraw(); }
-function setMapMode(v){ mapMode=v; mapStop(); mapDraw(); }
+// The toggles are painted once by renderMap, but switching metric or window
+// only redraws the canvas — without this the highlight stays on whatever was
+// selected at the last full render.
+function _mapSyncToggles(){
+  document.querySelectorAll('#page-map [data-mm]').forEach(b=>{
+    const on=b.dataset.mm===mapMetric;
+    b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
+  });
+  document.querySelectorAll('#page-map [data-mw]').forEach(b=>{
+    const on=b.dataset.mw===mapMode;
+    b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
+  });
+}
+function setMapMetric(v){ mapMetric=v; mapStop(); _mapSyncToggles(); mapDraw(); }
+function setMapMode(v){ mapMode=v; mapStop(); _mapSyncToggles(); mapDraw(); }
 
 // ── geo assets: fetched, never baked. The page derives from data.js, which
 // push.sh rewrites daily; baked centroids would drift out from under it.
@@ -3602,8 +3658,11 @@ function renderMap(){
   const pending=mapEnsureGeo();
   if(pending&&!_mapLoading){
     _mapLoading=true; _mapErr=null;
-    pending.then(()=>{_mapLoading=false;renderMap();})
-           .catch(e=>{_mapLoading=false;_mapErr=e.message||'load failed';renderMap();});
+    // renderMap() is deliberately outside the catch: chaining it inside meant
+    // any render error surfaced as "could not load map geography", which sent
+    // me looking at the network instead of the canvas.
+    pending.catch(e=>{ _mapErr=e.message||'load failed'; })
+           .then(()=>{ _mapLoading=false; renderMap(); });
   }
 
   const ready=MAPGEO.zips&&MAPGEO.states&&(mapMarket==='US'||MAPGEO.counties[mapMarket]);
@@ -3613,12 +3672,13 @@ function renderMap(){
   const stCount={};
   if(ready) rows.filter(gfDim).forEach(r=>{ const m=(r.address||'').match(MAP_ZIP_RE); if(m) { const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; } });
   const markets=Object.entries(stCount).sort((a,b)=>b[1]-a[1]);
+  _mapMarketCounts=stCount;
 
   const b=all.length?mapDayBounds(all):null;
   if(b&&(mapDay===null||mapDay>b.span)) mapDay=b.span;
 
-  const mTgl=(v,l,tip)=>`<button class="tgl-btn${mapMetric===v?' active':''}" onclick="setMapMetric('${v}')">${l}</button>`;
-  const wTgl=(v,l)=>`<button class="tgl-btn${mapMode===v?' active':''}" onclick="setMapMode('${v}')">${l}</button>`;
+  const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
+  const wTgl=(v,l)=>`<button class="tgl-btn${mapMode===v?' active':''}" data-mw="${v}" aria-pressed="${mapMode===v}" onclick="setMapMode('${v}')">${l}</button>`;
 
   el.innerHTML=`
     <div class="kg kg4" id="map-kpis"></div>
@@ -3640,7 +3700,7 @@ function renderMap(){
         </div>
       </div>
       <div class="map-wrap">
-        <canvas id="map-cv"></canvas>
+        <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
         <div class="map-state" id="map-msg" hidden></div>
       </div>
@@ -3658,6 +3718,11 @@ function renderMap(){
         <div class="toggle-group" style="flex-shrink:0;">${wTgl('cum','Cumulative')}${wTgl('win','30-day')}</div>
       </div>
       <div class="note">Scrubber runs on Project Start Date${kinfo(TIP.mapScrub)} · the date range in the filter bar sets its span${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
+    </div>
+    <div class="sec" id="map-top-sec">
+      <div class="shead"><div><div class="stitle">Top locations</div><div class="ssub" id="map-top-sub">&nbsp;</div></div></div>
+      <div class="rswk-rows" id="map-top"></div>
+      <div class="note">Click any row to open its projects.</div>
     </div>`;
 
   const msg=document.getElementById('map-msg');
@@ -3705,6 +3770,23 @@ function mapGeoRings(){
     : MAPGEO.counties[mapMarket];
 }
 
+// Redraw when the map actually gains a width, whatever the reason — first
+// layout, a window resize, or the tab becoming visible again.
+let _mapRO=null, _mapROel=null, _mapLastW=0;
+function mapObserve(el){
+  if(_mapROel===el&&_mapRO) return;
+  if(_mapRO) _mapRO.disconnect();
+  if(typeof ResizeObserver==='undefined') return;
+  _mapROel=el;
+  _mapRO=new ResizeObserver(entries=>{
+    const w=Math.round(entries[0].contentRect.width);
+    if(w<=0||w===_mapLastW||currentPage!=='map') return;
+    _mapLastW=w;
+    mapResize(); mapDrawHist(); mapDrawTicks();
+  });
+  _mapRO.observe(el);
+}
+
 function mapResize(){
   const cv=document.getElementById('map-cv'); if(!cv) return;
   const rings=mapGeoRings(); if(!rings) return;
@@ -3714,6 +3796,12 @@ function mapResize(){
     if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
   })));
   const w=cv.parentElement.clientWidth;
+  // A hidden or not-yet-laid-out page measures 0 wide, which blows up in
+  // getImageData. The ResizeObserver below redraws once it has a real width;
+  // a requestAnimationFrame retry does not work here, because rAF is exactly
+  // what stops firing while the tab is not being painted.
+  if(w<=0){ mapObserve(cv.parentElement); return; }
+  mapObserve(cv.parentElement);
   const ar=(x1-x0)/(y1-y0);
   const h=Math.max(280,Math.min(560,Math.round(w/ar)));
   const pad=12, s=Math.min((w-pad*2)/(x1-x0),(h-pad*2)/(y1-y0));
@@ -3726,6 +3814,19 @@ function mapResize(){
     r.forEach(([lon,lat],i)=>{ const [x,y]=_mapProj(lon,lat); i?_mapPath.lineTo(x,y):_mapPath.moveTo(x,y); });
     _mapPath.closePath();
   }));
+  // Per-state paths so the national view can be clicked into a market. Kept
+  // separate from _mapPath, which is one merged path for fill and clipping.
+  _mapStatePaths=[];
+  if(mapMarket==='US'){
+    MAPGEO.states.forEach(s=>{
+      const p=new Path2D();
+      s.r.forEach(r=>{
+        r.forEach(([lon,lat],i)=>{ const [x,y]=_mapProj(lon,lat); i?p.lineTo(x,y):p.moveTo(x,y); });
+        p.closePath();
+      });
+      _mapStatePaths.push({name:s.n,abbr:MAP_ABBR[s.n],path:p});
+    });
+  }
   mapDraw();
 }
 
@@ -3769,7 +3870,7 @@ function mapDraw(){
       g.addColorStop(0,'rgba(0,0,0,'+a.toFixed(3)+')'); g.addColorStop(1,'rgba(0,0,0,0)');
       hc.fillStyle=g; hc.beginPath(); hc.arc(x,y,R,0,Math.PI*2); hc.fill();
     });
-    if(zips.size){
+    if(zips.size&&heat.width>0&&heat.height>0){
       const img=hc.getImageData(0,0,heat.width,heat.height), d=img.data;
       for(let i=0;i<d.length;i+=4){ const a=d[i+3]; if(!a) continue; const o=a*4;
         d[i]=_MAP_LUT[o]; d[i+1]=_MAP_LUT[o+1]; d[i+2]=_MAP_LUT[o+2]; d[i+3]=_MAP_LUT[o+3]*(a/255); }
@@ -3793,19 +3894,27 @@ function mapDraw(){
     });
   }
 
-  // Label only the strongest clusters; more than a handful is noise.
-  const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,mapMarket==='US'?9:7);
+  // Label the strongest clusters only; more than a handful is noise. In a
+  // market that means the town, which is what reads on a map — the ZIP is one
+  // hover away and carries no meaning at a glance.
+  const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,mapMarket==='US'?9:14);
   ctx.font='600 10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='bottom';
-  const placed=[];
-  top.forEach(z=>{
+  const placed=[], seen=new Set();
+  let drawn=0;
+  const cap=mapMarket==='US'?9:8;
+  for(const z of top){
+    if(drawn>=cap) break;
+    const lbl=mapMarket==='US'?z.st:mapCityFor(z.zip);
+    // Glen Allen holds two ZIPs; printing it twice reads as two towns.
+    if(seen.has(lbl)) continue;
     const [x,y0]=_mapProj(z.ll[1],z.ll[0]); const y=y0-9;
-    if(placed.some(p=>Math.abs(p.x-x)<58&&Math.abs(p.y-y)<13)) return;
-    placed.push({x,y});
-    const lbl=mapMarket==='US'?z.st:z.zip;
+    const half=ctx.measureText(lbl).width/2+6;
+    if(placed.some(p=>Math.abs(p.x-x)<(p.half+half)&&Math.abs(p.y-y)<13)) continue;
+    placed.push({x,y,half}); seen.add(lbl); drawn++;
     ctx.lineWidth=3; ctx.strokeStyle=surf; ctx.strokeText(lbl,x,y);
     ctx.fillStyle=ink; ctx.fillText(lbl,x,y);
-  });
+  }
 
   if(mapHoverZip&&zips.has(mapHoverZip)){
     const z=zips.get(mapHoverZip); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
@@ -3842,7 +3951,7 @@ function mapPaintMeta(vis,zips){
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   k.innerHTML=
      `<div class="kcard"><div class="klabel">Jobs in view${kinfo(TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} ZIP${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
-    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top ZIP'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?topZ.zip:'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
+    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(mapCityFor(topZ.zip)):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs · '+topZ.zip:'—')}</div></div>`
     +`<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`
     +`<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`;
 
@@ -3851,6 +3960,29 @@ function mapPaintMeta(vis,zips){
     const hi=mapDateAt(_mapBounds.lo,mapDay??_mapBounds.span);
     sub.innerHTML=(mapMode==='win'?'30 days ending ':'Through ')+fmtDate(hi)
       +' · '+({vol:'job density',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
+  }
+
+  // Same figures as the canvas, as text: scannable, keyboard-reachable, and
+  // the only form of this data a screen reader can get at.
+  const tl=document.getElementById('map-top');
+  if(tl){
+    const list=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,12);
+    const maxN=Math.max(...list.map(z=>z.n),1);
+    document.getElementById('map-top-sub').textContent=
+      zips.size?zips.size+' location'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
+    tl.innerHTML=list.length?list.map(z=>{
+      const val=mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
+              :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
+              :(z.comps+' completed');
+      const meta=[z.zip+(mapMarket==='US'?' · '+(MAP_STATE_NAMES[z.st]||z.st):''),val].join(' · ');
+      return `<div class="rswk-row drill-tgt" role="button" tabindex="0" onclick="mapDrillZip('${z.zip}')"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mapDrillZip('${z.zip}');}">
+        <div class="rswk-wk">${esc(mapCityFor(z.zip))}</div>
+        <div class="rswk-barwrap"><div class="rswk-bar" style="width:${Math.max(z.n/maxN*100,4)}%;"></div></div>
+        <div class="rswk-n">${z.n}</div>
+        <div class="rswk-meta">${esc(meta)}</div>
+      </div>`;
+    }).join(''):'<div class="note" style="padding:6px 0;">No jobs in this window.</div>';
   }
 
   const lg=document.getElementById('map-legend'); if(!lg) return;
@@ -3901,6 +4033,11 @@ function mapDrawTicks(){
 
 function mapScrubTo(v){ mapDay=+v; mapStop(); mapDraw(); }
 
+function mapDrillZip(zip){
+  const z=_mapZips.get(zip); if(!z) return;
+  openDrill(mapCityFor(z.zip)+' · '+z.zip, z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st), z.rows);
+}
+
 function mapStop(){
   mapPlaying=false; cancelAnimationFrame(mapRaf);
   const i=document.getElementById('map-play-i'); if(i) i.setAttribute('d','M4 2.5v11l9-5.5z');
@@ -3933,6 +4070,16 @@ function mapNearest(mx,my){
     const d=Math.hypot(x-mx,y-my); if(d<bd){ bd=d; best=z; } });
   return best;
 }
+// Which market the cursor is over, national view only, and only where we
+// actually sell — offering to open a state with no jobs is a dead end.
+function mapStateAt(mx,my){
+  if(mapMarket!=='US'||!_mapStatePaths.length) return null;
+  const ctx=document.getElementById('map-cv').getContext('2d');
+  for(const s of _mapStatePaths){
+    if(s.abbr&&_mapMarketCounts[s.abbr]&&ctx.isPointInPath(s.path,mx*_mapDpr,my*_mapDpr)) return s;
+  }
+  return null;
+}
 
 document.addEventListener('mousemove',e=>{
   const cv=document.getElementById('map-cv');
@@ -3942,17 +4089,31 @@ document.addEventListener('mousemove',e=>{
   const tip=document.getElementById('map-tip');
   if(mx<0||my<0||mx>r.width||my>r.height){ if(mapHoverZip){mapHoverZip=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
   const z=mapNearest(mx,my);
-  if(!z){ if(mapHoverZip){mapHoverZip=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
+  if(!z){
+    if(mapHoverZip){mapHoverZip=null;mapDraw();}
+    // Fall back to the state under the cursor so the national view reads as
+    // clickable even between clusters.
+    const st=mapStateAt(mx,my);
+    if(st){
+      cv.classList.add('hot');
+      tip.innerHTML=`<b>${esc(st.name)}</b><br>${_mapMarketCounts[st.abbr]} job${_mapMarketCounts[st.abbr]!==1?'s':''}`
+        +`<div class="mv" style="opacity:.6;">Click to open this market</div>`;
+      tip.classList.add('on');
+      tip.style.left=Math.min(Math.max(4,mx+13),r.width-tip.offsetWidth-4)+'px';
+      tip.style.top=Math.min(Math.max(4,my+13),r.height-tip.offsetHeight-4)+'px';
+    } else { tip.classList.remove('on'); cv.classList.remove('hot'); }
+    return;
+  }
   if(z.zip!==mapHoverZip){ mapHoverZip=z.zip; cv.classList.add('hot'); mapDraw(); }
   const val=mapMetric==='cycle'
       ? (z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
       : mapMetric==='rs'
         ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
         : '';
-  tip.innerHTML=`<b>${z.zip}</b> <span class="mz">${esc(MAP_STATE_NAMES[z.st]||z.st)}</span><br>`
+  tip.innerHTML=`<b>${esc(mapCityFor(z.zip))}</b> <span class="mz">${z.zip}${mapMarket==='US'?' &middot; '+z.st:''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
     +(val?`<div class="mv">${val}</div>`:'')
-    +`<div class="mv" style="opacity:.6;">Click for the project list</div>`;
+    +`<div class="mv" style="opacity:.6;">${mapMarket==='US'?'Click to open '+esc(MAP_STATE_NAMES[z.st]||z.st):'Click for the project list'}</div>`;
   tip.classList.add('on');
   tip.style.left=Math.min(Math.max(4,mx+13),r.width-tip.offsetWidth-4)+'px';
   tip.style.top=Math.min(Math.max(4,my+13),r.height-tip.offsetHeight-4)+'px';
@@ -3962,9 +4123,16 @@ document.addEventListener('click',e=>{
   const cv=document.getElementById('map-cv');
   if(!cv||currentPage!=='map'||!_mapProj||!e.target.closest('#map-cv')) return;
   const r=cv.getBoundingClientRect();
-  const z=mapNearest(e.clientX-r.left,e.clientY-r.top);
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  // Nationally a click means "go there", not "open this one ZIP" — at that
+  // zoom a single ZIP is meaningless, and in a dense market like Pennsylvania
+  // every pixel is within reach of some cluster, so a cluster-first rule made
+  // the market unreachable by click at all. Drilling projects is the job of
+  // the market view.
+  if(mapMarket==='US'){ const st=mapStateAt(mx,my); if(st) setMapMarket(st.abbr); return; }
+  const z=mapNearest(mx,my);
   if(!z) return;
-  openDrill(z.zip+' · '+(MAP_STATE_NAMES[z.st]||z.st), z.n+' job'+(z.n!==1?'s':'')+' in the current view', z.rows);
+  openDrill(mapCityFor(z.zip)+' · '+z.zip, z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st), z.rows);
 });
 
 let _mapRt;
