@@ -477,9 +477,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;padding:0;}
 .map-play:hover{border-color:var(--muted);}
 .map-play svg{fill:currentColor;}
-.map-track{position:relative;flex:1;min-width:0;height:42px;}
+.map-track{position:relative;flex:1;min-width:0;height:52px;}
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
-#map-range{position:absolute;left:0;right:0;bottom:8px;width:100%;margin:0;height:18px;
+#map-range{position:absolute;left:0;right:0;bottom:2px;width:100%;margin:0;height:18px;
   -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;}
 #map-range::-webkit-slider-runnable-track{height:2px;background:var(--border);border-radius:2px;}
 #map-range::-moz-range-track{height:2px;background:var(--border);border-radius:2px;}
@@ -3578,13 +3578,13 @@ function mapCities(){
 const mapCityFor=zip=>mapCities()[zip]||zip;
 
 let mapMarket='US', mapMetric='vol', mapMode='cum', mapDay=null, mapPlaying=false, mapRaf=0;
-let mapHoverZip=null, _mapZips=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
+let mapHoverKey=null, _mapPlaces=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
 let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
 const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
 const MAPGEO={zips:null,states:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
 
-function setMapMarket(v){ mapMarket=v; mapDay=null; mapHoverZip=null; renderMap(); }
+function setMapMarket(v){ mapMarket=v; mapDay=null; mapHoverKey=null; renderMap(); }
 // The toggles are painted once by renderMap, but switching metric or window
 // only redraws the canvas — without this the highlight stays on whatever was
 // selected at the last full render.
@@ -3669,13 +3669,27 @@ function renderMap(){
   const {out:all,unplaced}=ready?mapRows():{out:[],unplaced:0};
 
   // Markets present in the data, so the picker never offers an empty state.
+  // Counts follow every global filter, dates included, and re-sort after — a
+  // dropdown still offering "Pennsylvania (739)" under a 4-week filter is
+  // telling you about data the map is no longer showing.
   const stCount={};
-  if(ready) rows.filter(gfDim).forEach(r=>{ const m=(r.address||'').match(MAP_ZIP_RE); if(m) { const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; } });
-  const markets=Object.entries(stCount).sort((a,b)=>b[1]-a[1]);
+  if(ready) rows.filter(gfDim).forEach(r=>{
+    if(!r.start) return;
+    if(GF.dateFrom&&r.start<GF.dateFrom) return;
+    if(GF.dateTo&&r.start>GF.dateTo) return;
+    const m=(r.address||'').match(MAP_ZIP_RE);
+    if(m&&MAPGEO.zips[m[2]]){ const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; }
+  });
+  const markets=Object.entries(stCount).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
   _mapMarketCounts=stCount;
 
   const b=all.length?mapDayBounds(all):null;
-  if(b&&(mapDay===null||mapDay>b.span)) mapDay=b.span;
+  // Reset to the end whenever the span itself moves — after changing the date
+  // filter a stale index points at an unrelated date, so the map silently
+  // showed a fraction of the range the filter bar says is selected.
+  const bk=b?b.lo+'|'+b.hi:'';
+  if(b&&(mapDay===null||bk!==_mapBoundsKey||mapDay>b.span)) mapDay=b.span;
+  _mapBoundsKey=bk;
 
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
   const wTgl=(v,l)=>`<button class="tgl-btn${mapMode===v?' active':''}" data-mw="${v}" aria-pressed="${mapMode===v}" onclick="setMapMode('${v}')">${l}</button>`;
@@ -3734,7 +3748,7 @@ function renderMap(){
   mapResize(); mapDrawHist(); mapDrawTicks();
 }
 
-let _mapAll=[], _mapBounds=null;
+let _mapAll=[], _mapBounds=null, _mapBoundsKey='';
 
 function mapVisible(){
   if(!_mapBounds) return [];
@@ -3744,13 +3758,20 @@ function mapVisible(){
   return _mapAll.filter(p=>p.r.start>=lo&&p.r.start<=hi);
 }
 
-// One pass per ZIP: volume, and the two averages with their sample counts.
+// Grouped by town, not ZIP. A ZIP is a postal artefact — Glen Allen's two and
+// Fredericksburg's three split one place into several dots and several rows,
+// none of which is the number anyone wants. Position is the job-weighted mean
+// of the constituent ZIP centroids, so a multi-ZIP town lands on its own
+// centre of gravity rather than on whichever ZIP happened to be first.
 function mapGroup(pts){
   const m=new Map();
   pts.forEach(p=>{
-    let e=m.get(p.zip);
-    if(!e){ e={zip:p.zip,st:p.st,ll:p.ll,n:0,rows:[],cts:[],comps:0,defects:0}; m.set(p.zip,e); }
-    e.n++; e.rows.push(p.r);
+    const city=mapCityFor(p.zip);
+    const key=city+'|'+p.st;   // Springfield exists in a dozen states
+    let e=m.get(key);
+    if(!e){ e={key,city,st:p.st,zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,_la:0,_ln:0}; m.set(key,e); }
+    e.n++; e.rows.push(p.r); e.zips.add(p.zip);
+    e._la+=p.ll[0]; e._ln+=p.ll[1];
     if(isComplete(p.r)){
       e.comps++;
       if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
@@ -3758,6 +3779,7 @@ function mapGroup(pts){
     }
   });
   m.forEach(e=>{
+    e.ll=[e._la/e.n,e._ln/e.n];
     e.avgCt=e.cts.length>=MAP_MIN_N?avg(e.cts):null;
     e.rsRate=e.comps>=MAP_MIN_N?Math.round(e.defects/e.comps*100):null;
   });
@@ -3768,6 +3790,28 @@ function mapGeoRings(){
   return mapMarket==='US'
     ? MAPGEO.states.map(s=>s.r)
     : MAPGEO.counties[mapMarket];
+}
+
+// Label anchor for a state: the area centroid of its largest ring, in screen
+// space. Bounding-box centre would drop Michigan's label in Lake Michigan and
+// Florida's in the Gulf.
+function _mapRingCentroid(rings){
+  let big=null,bigA=0;
+  rings.forEach(r=>{
+    let a=0;
+    for(let i=0,j=r.length-1;i<r.length;j=i++) a+=(r[j][0]*r[i][1]-r[i][0]*r[j][1]);
+    a=Math.abs(a/2);
+    if(a>bigA){ bigA=a; big=r; }
+  });
+  if(!big) return null;
+  let a=0,cx=0,cy=0;
+  for(let i=0,j=big.length-1;i<big.length;j=i++){
+    const f=big[j][0]*big[i][1]-big[i][0]*big[j][1];
+    a+=f; cx+=(big[j][0]+big[i][0])*f; cy+=(big[j][1]+big[i][1])*f;
+  }
+  a*=0.5;
+  if(!a) return null;
+  return _mapProj(cx/(6*a),cy/(6*a));
 }
 
 // Redraw when the map actually gains a width, whatever the reason — first
@@ -3824,7 +3868,7 @@ function mapResize(){
         r.forEach(([lon,lat],i)=>{ const [x,y]=_mapProj(lon,lat); i?p.lineTo(x,y):p.moveTo(x,y); });
         p.closePath();
       });
-      _mapStatePaths.push({name:s.n,abbr:MAP_ABBR[s.n],path:p});
+      _mapStatePaths.push({name:s.n,abbr:MAP_ABBR[s.n],path:p,at:_mapRingCentroid(s.r)});
     });
   }
   mapDraw();
@@ -3853,7 +3897,7 @@ function mapDraw(){
 
   const vis=mapVisible();
   const zips=mapGroup(vis);
-  _mapZips=zips;
+  _mapPlaces=zips;
 
   if(mapMetric==='vol'){
     // Additive density, colour-mapped after compositing. Only honest for counts.
@@ -3894,30 +3938,45 @@ function mapDraw(){
     });
   }
 
-  // Label the strongest clusters only; more than a handful is noise. In a
-  // market that means the town, which is what reads on a map — the ZIP is one
-  // hover away and carries no meaning at a glance.
-  const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,mapMarket==='US'?9:14);
-  ctx.font='600 10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='bottom';
-  const placed=[], seen=new Set();
-  let drawn=0;
-  const cap=mapMarket==='US'?9:8;
-  for(const z of top){
-    if(drawn>=cap) break;
-    const lbl=mapMarket==='US'?z.st:mapCityFor(z.zip);
-    // Glen Allen holds two ZIPs; printing it twice reads as two towns.
-    if(seen.has(lbl)) continue;
-    const [x,y0]=_mapProj(z.ll[1],z.ll[0]); const y=y0-9;
+  const placed=[];
+  const put=(lbl,x,y,col,weight)=>{
+    ctx.font=weight+' 10.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
     const half=ctx.measureText(lbl).width/2+6;
-    if(placed.some(p=>Math.abs(p.x-x)<(p.half+half)&&Math.abs(p.y-y)<13)) continue;
-    placed.push({x,y,half}); seen.add(lbl); drawn++;
+    if(placed.some(p=>Math.abs(p.x-x)<(p.half+half)&&Math.abs(p.y-y)<13)) return false;
+    placed.push({x,y,half});
     ctx.lineWidth=3; ctx.strokeStyle=surf; ctx.strokeText(lbl,x,y);
-    ctx.fillStyle=ink; ctx.fillText(lbl,x,y);
+    ctx.fillStyle=col; ctx.fillText(lbl,x,y);
+    return true;
+  };
+
+  if(mapMarket==='US'){
+    // Every state gets its abbreviation, at the state's own centroid rather
+    // than at a cluster — otherwise only the states we happen to sell most in
+    // are named and the rest of the country is unlabelled. Markets are placed
+    // first so that where two labels collide, the one with jobs survives.
+    const faint=cs.getPropertyValue('--faint').trim();
+    [..._mapStatePaths]
+      .filter(s=>s.abbr&&s.at)
+      .sort((a,b)=>(_mapMarketCounts[b.abbr]||0)-(_mapMarketCounts[a.abbr]||0))
+      .forEach(s=>{
+        const has=!!_mapMarketCounts[s.abbr];
+        put(s.abbr,s.at[0],s.at[1]+4,has?ink:faint,has?'700':'400');
+      });
+  } else {
+    // In a market the label is the town. Strongest first, and capped — beyond
+    // a handful the labels are competing with the data underneath them.
+    const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,16);
+    let drawn=0;
+    for(const z of top){
+      if(drawn>=9) break;
+      const [x,y0]=_mapProj(z.ll[1],z.ll[0]);
+      if(put(z.city,x,y0-9,ink,'600')) drawn++;
+    }
   }
 
-  if(mapHoverZip&&zips.has(mapHoverZip)){
-    const z=zips.get(mapHoverZip); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+  if(mapHoverKey&&zips.has(mapHoverKey)){
+    const z=zips.get(mapHoverKey); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
     ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2);
     ctx.strokeStyle=ink; ctx.lineWidth=1.5; ctx.stroke();
   }
@@ -3950,8 +4009,8 @@ function mapPaintMeta(vis,zips){
   const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   k.innerHTML=
-     `<div class="kcard"><div class="klabel">Jobs in view${kinfo(TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} ZIP${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
-    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(mapCityFor(topZ.zip)):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs · '+topZ.zip:'—')}</div></div>`
+     `<div class="kcard"><div class="klabel">Jobs in view${kinfo(TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
+    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
     +`<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`
     +`<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`;
 
@@ -3969,15 +4028,17 @@ function mapPaintMeta(vis,zips){
     const list=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,12);
     const maxN=Math.max(...list.map(z=>z.n),1);
     document.getElementById('map-top-sub').textContent=
-      zips.size?zips.size+' location'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
+      zips.size?zips.size+' town'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
     tl.innerHTML=list.length?list.map(z=>{
       const val=mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
               :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
               :(z.comps+' completed');
-      const meta=[z.zip+(mapMarket==='US'?' · '+(MAP_STATE_NAMES[z.st]||z.st):''),val].join(' · ');
-      return `<div class="rswk-row drill-tgt" role="button" tabindex="0" onclick="mapDrillZip('${z.zip}')"
-                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mapDrillZip('${z.zip}');}">
-        <div class="rswk-wk">${esc(mapCityFor(z.zip))}</div>
+      const nz=z.zips.size;
+      const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):(nz===1?[...z.zips][0]:nz+' ZIPs')),val].join(' · ');
+      const k=esc(z.key).replace(/'/g,"\\'");
+      return `<div class="rswk-row drill-tgt" role="button" tabindex="0" onclick="mapDrillPlace('${k}')"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mapDrillPlace('${k}');}">
+        <div class="rswk-wk">${esc(z.city)}</div>
         <div class="rswk-barwrap"><div class="rswk-bar" style="width:${Math.max(z.n/maxN*100,4)}%;"></div></div>
         <div class="rswk-n">${z.n}</div>
         <div class="rswk-meta">${esc(meta)}</div>
@@ -4004,7 +4065,7 @@ function mapDrawHist(){
   const weeks=Math.max(1,Math.ceil((_mapBounds.span+1)/7));
   const bins=new Array(weeks).fill(0);
   _mapAll.forEach(p=>{ const i=Math.floor((dDiff(_mapBounds.lo,p.r.start)??0)/7); if(i>=0&&i<weeks) bins[i]++; });
-  const max=Math.max(...bins,1), bh=h-14, bw=w/weeks;
+  const max=Math.max(...bins,1), bh=h-24, bw=w/weeks;
   const cur=mapDay??_mapBounds.span;
   for(let i=0;i<weeks;i++){
     if(!bins[i]) continue;
@@ -4033,9 +4094,14 @@ function mapDrawTicks(){
 
 function mapScrubTo(v){ mapDay=+v; mapStop(); mapDraw(); }
 
-function mapDrillZip(zip){
-  const z=_mapZips.get(zip); if(!z) return;
-  openDrill(mapCityFor(z.zip)+' · '+z.zip, z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st), z.rows);
+function mapPlaceSub(z){
+  const nz=z.zips.size;
+  return z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st)
+    +' · '+(nz===1?[...z.zips][0]:nz+' ZIPs');
+}
+function mapDrillPlace(key){
+  const z=_mapPlaces.get(key); if(!z) return;
+  openDrill(z.city, mapPlaceSub(z), z.rows);
 }
 
 function mapStop(){
@@ -4066,7 +4132,7 @@ function mapTogglePlay(){
 
 function mapNearest(mx,my){
   let best=null,bd=mapMetric==='vol'?24:20;
-  _mapZips.forEach(z=>{ const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+  _mapPlaces.forEach(z=>{ const [x,y]=_mapProj(z.ll[1],z.ll[0]);
     const d=Math.hypot(x-mx,y-my); if(d<bd){ bd=d; best=z; } });
   return best;
 }
@@ -4087,10 +4153,10 @@ document.addEventListener('mousemove',e=>{
   const r=cv.getBoundingClientRect();
   const mx=e.clientX-r.left,my=e.clientY-r.top;
   const tip=document.getElementById('map-tip');
-  if(mx<0||my<0||mx>r.width||my>r.height){ if(mapHoverZip){mapHoverZip=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
+  if(mx<0||my<0||mx>r.width||my>r.height){ if(mapHoverKey){mapHoverKey=null;tip.classList.remove('on');cv.classList.remove('hot');mapDraw();} return; }
   const z=mapNearest(mx,my);
   if(!z){
-    if(mapHoverZip){mapHoverZip=null;mapDraw();}
+    if(mapHoverKey){mapHoverKey=null;mapDraw();}
     // Fall back to the state under the cursor so the national view reads as
     // clickable even between clusters.
     const st=mapStateAt(mx,my);
@@ -4104,13 +4170,14 @@ document.addEventListener('mousemove',e=>{
     } else { tip.classList.remove('on'); cv.classList.remove('hot'); }
     return;
   }
-  if(z.zip!==mapHoverZip){ mapHoverZip=z.zip; cv.classList.add('hot'); mapDraw(); }
+  if(z.key!==mapHoverKey){ mapHoverKey=z.key; cv.classList.add('hot'); mapDraw(); }
   const val=mapMetric==='cycle'
       ? (z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
       : mapMetric==='rs'
         ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
         : '';
-  tip.innerHTML=`<b>${esc(mapCityFor(z.zip))}</b> <span class="mz">${z.zip}${mapMarket==='US'?' &middot; '+z.st:''}</span><br>`
+  const nz=z.zips.size;
+  tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${nz===1?[...z.zips][0]:nz+' ZIPs'}${mapMarket==='US'?' &middot; '+z.st:''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
     +(val?`<div class="mv">${val}</div>`:'')
     +`<div class="mv" style="opacity:.6;">${mapMarket==='US'?'Click to open '+esc(MAP_STATE_NAMES[z.st]||z.st):'Click for the project list'}</div>`;
@@ -4132,7 +4199,7 @@ document.addEventListener('click',e=>{
   if(mapMarket==='US'){ const st=mapStateAt(mx,my); if(st) setMapMarket(st.abbr); return; }
   const z=mapNearest(mx,my);
   if(!z) return;
-  openDrill(mapCityFor(z.zip)+' · '+z.zip, z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st), z.rows);
+  openDrill(z.city, mapPlaceSub(z), z.rows);
 });
 
 let _mapRt;
