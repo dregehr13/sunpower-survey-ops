@@ -21,6 +21,11 @@ const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'geo');
 const TMP = path.join(OUT, '.src');
 
+// Reference cities for orientation. The map is unreadable as geography if the
+// only labelled places are the towns we happen to sell in — you need Dallas and
+// Denver to know where you are. Population doubles as the tie-break when two
+// labels collide: keep the one a reader is more likely to recognise.
+const CITIES_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/us-cities-top-1k.csv';
 const ZCTA_URL = 'https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip';
 const STATES_URL = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
 const COUNTIES_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json';
@@ -84,6 +89,7 @@ const kb = s => Math.round(s.length / 1024) + 'KB';
   await get(ZCTA_URL, path.join(TMP, 'zcta.zip'));
   await get(STATES_URL, path.join(TMP, 'us-states.json'));
   await get(COUNTIES_URL, path.join(TMP, 'us-counties.json'));
+  await get(CITIES_URL, path.join(TMP, 'cities1k.csv'));
 
   // ── ZIP centroids ──────────────────────────────────────────────────────
   const gazTxt = path.join(TMP, '2023_Gaz_zcta_national.txt');
@@ -108,6 +114,35 @@ const kb = s => Math.round(s.length / 1024) + 'KB';
   const statesJson = JSON.stringify(states);
   fs.writeFileSync(path.join(OUT, 'states.json'), statesJson);
   console.log('geo/states.json       ', states.length, 'states', kb(statesJson));
+
+  // ── reference cities ───────────────────────────────────────────────────
+  const NAME2ABBR = Object.fromEntries(Object.entries({
+    Alabama:'AL',Arizona:'AZ',Arkansas:'AR',California:'CA',Colorado:'CO',Connecticut:'CT',
+    Delaware:'DE','District of Columbia':'DC',Florida:'FL',Georgia:'GA',Idaho:'ID',Illinois:'IL',
+    Indiana:'IN',Iowa:'IA',Kansas:'KS',Kentucky:'KY',Louisiana:'LA',Maine:'ME',Maryland:'MD',
+    Massachusetts:'MA',Michigan:'MI',Minnesota:'MN',Mississippi:'MS',Missouri:'MO',Montana:'MT',
+    Nebraska:'NE',Nevada:'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY',
+    'North Carolina':'NC','North Dakota':'ND',Ohio:'OH',Oklahoma:'OK',Oregon:'OR',Pennsylvania:'PA',
+    'Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD',Tennessee:'TN',Texas:'TX',Utah:'UT',
+    Vermont:'VT',Virginia:'VA',Washington:'WA','West Virginia':'WV',Wisconsin:'WI',Wyoming:'WY',
+  }));
+  const csv = fs.readFileSync(path.join(TMP, 'cities1k.csv'), 'utf8').split('\n').slice(1);
+  const cities = [];
+  csv.forEach(line => {
+    // Plain split is safe here: no field in this file contains a comma.
+    const c = line.split(',');
+    if (c.length < 5) return;
+    const st = NAME2ABBR[c[1].trim()];
+    const pop = +c[2], la = +c[3], ln = +c[4];
+    if (!st || SKIP_ABBR.has(st) || !pop || isNaN(la) || isNaN(ln)) return;
+    cities.push({ n: c[0].trim(), s: st, p: pop, ll: [+la.toFixed(4), +ln.toFixed(4)] });
+  });
+  cities.sort((a, b) => b.p - a.p);
+  const citiesJson = JSON.stringify(cities);
+  fs.writeFileSync(path.join(OUT, 'cities.json'), citiesJson);
+  console.log('geo/cities.json      ', cities.length, 'cities', kb(citiesJson),
+              '· largest', cities[0].n, '· smallest', cities[cities.length - 1].n,
+              '(' + cities[cities.length - 1].p.toLocaleString() + ')');
 
   // ── per-state counties (market view, fetched on demand) ────────────────
   const countiesSrc = JSON.parse(fs.readFileSync(path.join(TMP, 'us-counties.json'), 'utf8'));

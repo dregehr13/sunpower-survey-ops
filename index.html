@@ -3570,7 +3570,7 @@ let mapMarket='US', mapMetric='vol';
 let mapHoverKey=null, _mapPlaces=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
 let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
 const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
-const MAPGEO={zips:null,states:null,counties:{}};
+const MAPGEO={zips:null,states:null,cities:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
 
 function setMapMarket(v){ mapMarket=v; mapHoverKey=null; renderMap(); }
@@ -3591,6 +3591,7 @@ function mapEnsureGeo(){
   const need=[];
   if(!MAPGEO.zips)   need.push(fetch('geo/zips.json').then(r=>r.json()).then(j=>MAPGEO.zips=j));
   if(!MAPGEO.states) need.push(fetch('geo/states.json').then(r=>r.json()).then(j=>MAPGEO.states=j));
+  if(!MAPGEO.cities) need.push(fetch('geo/cities.json').then(r=>r.json()).then(j=>MAPGEO.cities=j));
   if(mapMarket!=='US'&&!MAPGEO.counties[mapMarket]){
     const st=mapMarket;
     need.push(fetch('geo/counties/'+st+'.json').then(r=>r.json()).then(j=>MAPGEO.counties[st]=j));
@@ -3617,6 +3618,10 @@ function mapRows(){
   const out=[]; let unplaced=0;
   for(const r of src){
     if(!r.start) continue;
+    // The date range used to be applied by the scrubber; with that gone the
+    // filter bar is the only thing selecting a period, so it has to bite here.
+    if(GF.dateFrom&&r.start<GF.dateFrom) continue;
+    if(GF.dateTo&&r.start>GF.dateTo) continue;
     const m=(r.address||'').match(MAP_ZIP_RE);
     if(!m){ unplaced++; continue; }
     const st=m[1].toUpperCase(), zip=m[2];
@@ -3628,11 +3633,10 @@ function mapRows(){
   return {out,unplaced};
 }
 
+// Rows are already inside the filter bar's range by the time they get here.
 function mapDayBounds(all){
   const ds=all.map(p=>p.r.start).sort();
-  let lo=ds[0], hi=ds[ds.length-1];
-  if(GF.dateFrom&&GF.dateFrom>lo) lo=GF.dateFrom;
-  if(GF.dateTo&&GF.dateTo<hi) hi=GF.dateTo;
+  const lo=ds[0], hi=ds[ds.length-1];
   return {lo,hi,span:Math.max(dDiff(lo,hi)??0,0)};
 }
 const mapDateAt=(lo,i)=>{ const [y,m,d]=lo.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); };
@@ -3649,7 +3653,7 @@ function renderMap(){
            .then(()=>{ _mapLoading=false; renderMap(); });
   }
 
-  const ready=MAPGEO.zips&&MAPGEO.states&&(mapMarket==='US'||MAPGEO.counties[mapMarket]);
+  const ready=MAPGEO.zips&&MAPGEO.states&&MAPGEO.cities&&(mapMarket==='US'||MAPGEO.counties[mapMarket]);
   const {out:all,unplaced}=ready?mapRows():{out:[],unplaced:0};
 
   // Markets present in the data, so the picker never offers an empty state.
@@ -3761,6 +3765,47 @@ function mapGroup(pts){
     e.avgOpen=e.opens.length?avg(e.opens):null;
   });
   return m;
+}
+
+// Label set for the current view: recognisable cities first, ordered by
+// population, then our own towns by job count. A city we also sell in is one
+// label, not two — drawn as ours, anchored on our weighted centre.
+function mapLabelCandidates(zips){
+  const mine=new Map();
+  zips.forEach(z=>mine.set(z.city.toLowerCase()+'|'+z.st,z));
+  const nat=mapMarket==='US';
+  // Nationally, rank markets above non-markets before falling back to size.
+  // Straight population gives Phoenix and Jacksonville, where we do nothing,
+  // while dropping Denver at roughly 19th — and Denver is a market.
+  const ranked=(MAPGEO.cities||[])
+    .filter(c=>nat||c.s===mapMarket)
+    .sort((a,b)=>nat?((_mapMarketCounts[b.s]?1:0)-(_mapMarketCounts[a.s]?1:0))||b.p-a.p:b.p-a.p);
+  // Cap per state nationally, or Texas and California take a third of the
+  // labels on population alone and the Mountain West goes unnamed. Three is
+  // the number that keeps Dallas (3rd in Texas) while still reaching Denver.
+  const pool=[];
+  if(nat){
+    const per={};
+    for(const c of ranked){
+      if((per[c.s]||0)>=3) continue;
+      per[c.s]=(per[c.s]||0)+1; pool.push(c);
+      if(pool.length>=22) break;
+    }
+  } else pool.push(...ranked.slice(0,9));
+  const out=[], used=new Set();
+  pool.forEach(c=>{
+    const k=c.n.toLowerCase()+'|'+c.s;
+    const ours=mine.get(k);
+    out.push({label:c.n,ll:ours?ours.ll:c.ll,ours:!!ours});
+    if(ours) used.add(k);
+  });
+  [...zips.values()].sort((a,b)=>b.n-a.n).slice(0,14).forEach(z=>{
+    const k=z.city.toLowerCase()+'|'+z.st;
+    if(used.has(k)) return;
+    used.add(k);
+    out.push({label:z.city,ll:z.ll,ours:true});
+  });
+  return out;
 }
 
 function mapGeoRings(){
@@ -3940,17 +3985,25 @@ function mapDraw(){
         const has=!!_mapMarketCounts[s.abbr];
         put(s.abbr,s.at[0],s.at[1]+4,has?ink:faint,has?'700':'400');
       });
-  } else {
-    // In a market the label is the town. Strongest first, and capped — beyond
-    // a handful the labels are competing with the data underneath them.
-    const top=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,16);
-    let drawn=0;
-    for(const z of top){
-      if(drawn>=9) break;
-      const [x,y0]=_mapProj(z.ll[1],z.ll[0]);
-      if(put(z.city,x,y0-9,ink,'600')) drawn++;
-    }
   }
+
+  // Place labels: well-known cities first, then our own towns in whatever room
+  // is left. The order is the point — a map whose only named places are the
+  // towns we happen to sell in is not readable as geography, so Dallas and
+  // Denver get named whether or not we work there, and when two labels collide
+  // the recognisable one survives.
+  const faintC=cs.getPropertyValue('--faint').trim();
+  mapLabelCandidates(zips).forEach(c=>{
+    const [x,y0]=_mapProj(c.ll[1],c.ll[0]);
+    if(!put(c.label,x,y0-11,c.ours?ink:faintC,c.ours?'600':'400')) return;
+    // Mark the spot the label names: without it the text floats over a blob
+    // and you cannot tell which point it belongs to. On a multi-ZIP town the
+    // anchor is our weighted centre, not any one ZIP. Halo first so the dot
+    // stays legible over dark heat.
+    ctx.beginPath(); ctx.arc(x,y0,3.4,0,Math.PI*2); ctx.fillStyle=surf; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y0,c.ours?2:1.5,0,Math.PI*2);
+    ctx.fillStyle=c.ours?ink:faintC; ctx.fill();
+  });
 
   if(mapHoverKey&&zips.has(mapHoverKey)){
     const z=zips.get(mapHoverKey); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
