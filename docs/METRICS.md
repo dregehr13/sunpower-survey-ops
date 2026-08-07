@@ -112,8 +112,8 @@ the most likely next source of drift:
 | Proj Age | `index.html` WIP page | `start → today`, inline |
 | Queue status pills | `index.html` `wipQueueStatus()` | classified from schedule date + last review subject |
 | Attention rules | `index.html` `attnItems()` | aging >7d, schedule passed, no review >5d, resurvey unscheduled >3d |
-| Cohort / FPY splits | `index.html` Resurveys page | built on `hasResurveySig` |
-| Resurvey population | `index.html` `renderResurvey()` | **One definition: `hasResurveySig`.** The page previously also ran a local `isResurveyRow` requiring a resurvey date or an Open/Holding list state, so "Total Resurveys" read 385 while FPY counted 434 defects on the same screen — the gap being rows flagged `reopened_by_design` or carrying a reason that resolved without dates. Quality sections measure over completions in the filter bar's range; the queue section is a live snapshot and is deliberately not date-filtered |
+| Cohort / FPY splits | `index.html` Resurveys page | yield is built on `isResurveyDefect`; cohorts and drill segments stay on `hasResurveySig` |
+| Resurvey population | `index.html` `renderResurvey()` | **One definition, `isResurveyDefect`, everywhere on the page.** It previously also ran a local `isResurveyRow` requiring a resurvey date or an Open/Holding list state, so "Total Resurveys" read 385 while FPY counted 434 defects on the same screen. Quality sections measure over completions in the filter bar's range; the queue section is a live snapshot and is deliberately not date-filtered |
 | `RS_MATURE_DAYS` | `index.html` Resurveys page | 21 days. A completion keeps collecting resurveys long after it closes: only 57% arrive within 7 days, p75 is 18 and p90 is 41, so recent weeks read high until they mature. Weeks younger than this are hollow on the chart and excluded from the rolling line. 30 was more defensible statistically and useless in practice — it stopped the rolling line five weeks short of the data and hid the July recovery |
 | Rep resurvey rate | `index.html` Resurveys page | Their-fault resurveys ÷ completions. Ones attributed to Customer or Design are shown but not charged to the rep: 38 of the rep-attributed defects are one of those, and the pill bands at 10% and 20%, so charging them can move someone across a band unfairly |
 | `resurvey_reason` | `index.html` Resurveys page | The picklist on the request, 96% populated — better coverage than `resurvey_attributed` at 84%, and the field that says *what to fix* rather than *who*. Multi-select, so shares sum past 100%. **66% of all resurveys are "Survey Incomplete"**; `resurvey_details` carries the specifics on 92% of those |
@@ -132,6 +132,10 @@ the most likely next source of drift:
 
 ```
 node scripts/build-fixture.cjs      # rebuild the test fixture from data.json
+node scripts/build-geo.cjs          # rebuild geo/ (ZIPs, states, cities, counties)
 UPDATE_SNAPSHOT=1 npm test          # accept intentional metric changes
 npm test                            # all three suites
 ```
+
+`build-geo.cjs` downloads its sources into `geo/.src` (gitignored) and only
+needs rerunning when a market opens in a state with no counties file yet.
