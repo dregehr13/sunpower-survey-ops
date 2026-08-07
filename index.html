@@ -456,20 +456,29 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rswk-meta b{color:var(--red);font-weight:700;}
 
 /* Resurveys requested — the day rows reuse .rswk-row above; these style the
-   requests that expand underneath one. */
+   requests that expand underneath one.
+   A Current column runs past 1000px on a large monitor, which the Resurveys
+   page's own layout never has to survive: the bar stretches into a 700px
+   hairline and the count drifts an inch away from the day it belongs to. Cap
+   the bar and pull the count in behind it so a day row stays one object. */
+.rsreq-day .rswk-row{grid-template-columns:118px minmax(60px,240px) 30px 1fr;
+  grid-template-areas:"wk bar n ." ". meta meta meta";}
 .rsreq-day.open{background:var(--bg);}
 .rsreq-cr{display:inline-block;width:12px;color:var(--muted);font-size:10px;}
 .rsreq-rel{color:var(--faint);font-size:10px;margin-left:4px;}
-.rsreq-items{margin:0 0 8px 14px;padding-left:10px;border-left:2px solid var(--border-lt);}
-.rsreq-item{padding:5px 0;border-bottom:1px dotted var(--border-lt);}
+.rsreq-items{margin:2px 0 10px 16px;padding:0 16px 0 12px;border-left:2px solid var(--border-lt);}
+.rsreq-item{padding:7px 0;border-bottom:1px dotted var(--border-lt);}
 .rsreq-item:last-child{border-bottom:0;}
 .rsreq-item.dim{opacity:.6;}
-.rsreq-top{display:flex;align-items:baseline;gap:6px;}
+.rsreq-top{display:flex;align-items:baseline;gap:12px;}
 .rsreq-proj{flex:1;min-width:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.rsreq-attr{font-size:10px;font-weight:700;white-space:nowrap;}
+/* Right-aligned on a floor width so the attributions read down a column
+   instead of landing wherever each project name happens to end. */
+.rsreq-attr{font-size:10px;font-weight:700;white-space:nowrap;min-width:64px;text-align:right;}
 /* Request details run long; two lines is enough to recognise the job, and the
-   full text stays on the title attribute. */
-.rsreq-why{font-size:10px;color:var(--muted);line-height:1.45;margin-top:2px;
+   full text stays on the title attribute. The measure cap keeps a wide column
+   from turning each one into a single 160-character line. */
+.rsreq-why{font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px;max-width:96ch;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .rsreq-why b{color:var(--text);font-weight:600;}
 
