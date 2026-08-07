@@ -1956,10 +1956,8 @@ function attnItems(){
 // Compact strip on Current — the full working view lives on the WIP page
 function openAttnView(){ wipView='attn'; nav('wip'); }
 function renderNeedsAttn(){
-  const items=attnItems();
-  const projects=new Set(items.map(it=>it.r.task_id||it.r.id)).size;
   const b=document.getElementById('wip-attn-badge');
-  if(b){ b.textContent=projects||''; b.style.display=projects?'inline-flex':'none'; }
+  if(b){ const openWip=rows.filter(r=>isWIP(r)).length; b.textContent=openWip||''; b.style.display=openWip?'inline-flex':'none'; }
 }
 
 function trailing4WeekPace(){
