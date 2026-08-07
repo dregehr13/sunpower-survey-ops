@@ -651,12 +651,35 @@ body{padding-left:180px;}
 /* Phones: sidebar collapses back to a top bar */
 @media(max-width:860px){
   body{padding-left:0;}
-  .nav{position:sticky;top:0;left:auto;bottom:auto;width:auto;height:48px;flex-direction:row;align-items:center;padding:0 20px;gap:0;overflow-x:auto;overflow-y:hidden;}
-  .brand{padding:0;margin:0 20px 0 0;border-bottom:none;letter-spacing:-.01em;text-transform:none;font-weight:600;}
-  .ntab{height:48px;padding:0 11px;margin:0;border-left:none;border-radius:0;border-bottom:2px solid transparent;}
-  .ntab.active{background:transparent;border-left:none;border-bottom-color:var(--accent);padding-left:11px;}
-  .nav-r{margin:0 0 0 auto;flex-direction:row;align-items:center;padding:0;border-top:none;}
+  .nav{position:sticky;top:0;left:auto;bottom:auto;width:auto;height:46px;flex-direction:row;align-items:center;padding:0 12px;gap:0;overflow-x:auto;overflow-y:hidden;}
+  .nav::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,rgba(17,17,17,0),rgba(17,17,17,1));pointer-events:none;z-index:10;}
+  .brand{padding:0;margin:0 10px 0 0;border-bottom:none;letter-spacing:-.01em;text-transform:none;font-weight:600;font-size:12px;white-space:nowrap;}
+  .brand span{font-size:11px;}
+  .ntab{height:46px;padding:0 8px;margin:0;border-left:none;border-radius:0;border-bottom:2px solid transparent;font-size:11px;white-space:nowrap;}
+  .ntab.active{background:transparent;border-left:none;border-bottom-color:var(--accent);padding-left:8px;}
+  .ntab[data-page="resurvey"],.ntab[data-page="map"]{display:none;}
+  .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#777;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
+  .nmenu-more:hover{color:#bbb;}
+  .nmenu-more.active{color:#fff;border-bottom-color:var(--accent);}
+  .nmenu-dropdown{display:none;position:absolute;top:46px;right:0;background:#111;border:1px solid #333;border-radius:0 0 6px 6px;z-index:300;min-width:120px;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .nmenu-dropdown.open{display:block;}
+  .nmenu-item{display:block;padding:8px 12px;color:#999;font-size:11px;cursor:pointer;border-bottom:1px solid #222;white-space:nowrap;}
+  .nmenu-item:hover{color:#fff;background:#1a1a1a;}
+  .nmenu-item:last-child{border-bottom:none;}
+  .nav-r{margin:0 0 0 auto;flex-direction:row;align-items:center;padding:0;border-top:none;gap:4px;}
+  .nbadge{display:none;}
   .nav-ts{display:none;}
+  .nload{padding:4px 6px;font-size:11px;}
+  .nsettings{width:28px;height:28px;}
+}
+
+@media(max-width:480px){
+  .nav{padding:0 8px;}
+  .brand{margin-right:6px;font-size:11px;}
+  .ntab{padding:0 6px;font-size:10px;}
+  .nload{display:none;}
+  .nmenu-more{padding:0 4px;}
+  .nmenu-item{padding:6px 10px;font-size:10px;}
 }
 </style>
 </head>
@@ -670,6 +693,12 @@ body{padding-left:180px;}
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-attn-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
+  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0" onclick="toggleMobileMenu()">More ▼
+    <div class="nmenu-dropdown" id="mobileMoreMenu">
+      <div class="nmenu-item" onclick="nav('resurvey')">Resurveys</div>
+      <div class="nmenu-item" onclick="nav('map')">Map</div>
+    </div>
+  </div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge">766 projects</span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -1486,11 +1515,29 @@ function nav(page){
   saveFilterState();
   applyFilter();
   renderPage(page);
+  closeMobileMenu();
+}
+function toggleMobileMenu(){
+  const menu=document.getElementById('mobileMoreMenu');
+  const btn=document.getElementById('mobileMoreBtn');
+  if(menu&&btn){
+    menu.classList.toggle('open');
+    btn.classList.toggle('active');
+  }
+}
+function closeMobileMenu(){
+  const menu=document.getElementById('mobileMoreMenu');
+  const btn=document.getElementById('mobileMoreBtn');
+  if(menu&&btn){
+    menu.classList.remove('open');
+    btn.classList.remove('active');
+  }
 }
 document.querySelectorAll('.ntab').forEach(t=>{
   t.addEventListener('click',()=>nav(t.dataset.page));
   t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav(t.dataset.page); } });
 });
+document.getElementById('mobileMoreBtn')?.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleMobileMenu(); } });
 
 // Keyboard: Escape closes overlays; Enter/Space activates sortable headers
 document.addEventListener('keydown',e=>{
