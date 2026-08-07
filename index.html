@@ -153,6 +153,10 @@ tr:hover td{background:#fafaf8;}
 .pam{background:var(--amber-bg);color:var(--amber);}
 .pr{background:var(--red-bg);color:var(--red);}
 .pna{color:var(--faint);font-size:12px;}
+/* --faint measures 2.5:1 on the card surface, which is fine for a bare em-dash
+   but not for a sample size — in the Resurveys breakdowns "n=4" IS the value in
+   most rows. --muted is 5.7:1 and clears AA. */
+.pna-n{color:var(--muted);font-size:12px;}
 .barcell{display:flex;align-items:center;gap:5px;justify-content:flex-end;}
 .minibar{height:4px;border-radius:2px;background:var(--c2);opacity:.35;flex-shrink:0;}
 .pctbar{display:inline-block;width:36px;height:3px;background:var(--border);border-radius:2px;vertical-align:middle;margin-left:4px;overflow:hidden;}
@@ -1439,13 +1443,16 @@ const SPRING='cubic-bezier(.22,.68,0,1.2)';
 const EASE_OUT='cubic-bezier(.25,.46,.45,.94)';
 
 function countUp(el){
-  // Parse text like "~109", "6.8d", "52%", "35d", "1,857"
+  // Parse text like "~109", "6.8d", "52%", "35d", "1,857", "+6.1d"
+  // A leading sign belongs in the prefix, not the number: without + and - in
+  // both classes below, sfxIdx lands on index 0 for "+6.1d", the whole string
+  // becomes the suffix, and every frame renders "0.0+6.1d".
   const raw=el.textContent.trim();
-  const prefix=raw.match(/^[~<>≤≥]/)?.[0]||'';
+  const prefix=raw.match(/^[~<>≤≥+-]/)?.[0]||'';
   const numStr=raw.replace(/[^0-9.]/g,'');
   const num=parseFloat(numStr);
   if(isNaN(num)||num===0) return;
-  const sfxIdx=raw.search(/[^0-9.~<>≤≥,]/);
+  const sfxIdx=raw.search(/[^0-9.~<>≤≥,+-]/);
   const suffix=sfxIdx>=0?raw.slice(sfxIdx):'';
   const decimals=(numStr.includes('.'))?1:0;
   const dur=Math.min(800, 300+num*1.5);
@@ -1596,6 +1603,11 @@ function recalc(r){
 function pctTgt(a,t){ t=t||S.targetAvg; const v=a.filter(x=>x!=null&&x>=0); return v.length?Math.round(v.filter(x=>x<=t).length/v.length*100):null; }
 function getState(r){ return r?(r.split(' ')[0]):''; }
 function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+// For a value going inside a single-quoted JS string inside an HTML attribute:
+// esc() leaves apostrophes alone, so a bare esc() closes the string early and
+// the handler dies with a SyntaxError. Sales offices are full of them
+// ("Solar's Dead" - CTRL) and rep names have them too (C'Jay Fuller).
+function escAttrJs(v){ return esc(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(tip)}">i</span>`; }
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
@@ -1656,10 +1668,9 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 
 // ═══ DRILL DRAWER ════════════════════════════════════════
 let _drillRows=[];
-let _rsDefects=[];
 let _lastWeekSrc=[];
 let _thisWeekSrc=[];
-function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys',_rsDefects,{groupBy:'resource'}); }
+function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys',rsDefectPool(),{groupBy:'resource'}); }
 const _DRILL_RES_COL={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
 function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
@@ -1782,14 +1793,13 @@ function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+re
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
 function drillOpenResurveys(){ const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)); openDrill('Open Resurveys',src.length+' awaiting completion',src,{mode:'resurvey'}); }
 function drillResGroup(val){
-  const key=rsGroupBy==='office'?'sales_office':'region';
-  const view=rsDefectPool().filter(r=>(r[key]||'')===val);
-  openDrill('Resurveys · '+(val||'No '+(rsGroupBy==='office'?'office':'region')),view.length+' resurveys in view',view,{mode:'resurvey'});
+  const view=rsDefectPool().filter(r=>(r[rsGroupKey]||'')===val);
+  openDrill('Resurveys · '+(val||'No '+(rsGroupKey==='sales_office'?'office':'region')),view.length+' resurveys in view',view,{mode:'resurvey'});
 }
 function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
 function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
-function drillRsReason(reason){ const view=rsDefectPool().filter(r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 // Which date anchors an open resurvey to a week. The two answer different
 // questions and genuinely disagree: 'complete' asks "of the surveys we closed
 // that week, which bounced back", 'request' asks "how long has this resurvey
@@ -1807,10 +1817,21 @@ function drillRsWeek(wk){
 // accountable, where Sales Region is closer to a geography label. Across
 // offices with 25+ completions yield runs 71% to 94%, a wider and more
 // actionable spread than the same cut by region.
-let rsGroupBy='office';   // 'office' | 'region'
+let rsGroupBy='office';   // 'office' | 'region' — what the toggle asked for
+// What the table actually grouped by. Not the same thing: exports predating
+// 2026-08-06 carry no sales_office, so renderResurvey falls back to region
+// while rsGroupBy still says 'office'. The drill must follow the fallback or
+// it filters on an empty field and opens an empty drawer on every row.
+let rsGroupKey='sales_office';
 function setRsGroupBy(v){ rsGroupBy=v; renderResurvey(); }
 let rsRepsExpanded=false;
 function toggleRsReps(){ rsRepsExpanded=!rsRepsExpanded; renderResurvey(); }
+// Both breakdown tables show a leading slice by default, like the Performance
+// rep table — the office cut alone is 168 rows, 130 of them below the sample
+// floor and rendered as "n=4" rather than a rate.
+const RS_TABLE_LIMIT=10;
+let rsGroupExpanded=false;
+function toggleRsGroups(){ rsGroupExpanded=!rsGroupExpanded; renderResurvey(); }
 
 function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
@@ -3482,7 +3503,6 @@ function renderResurvey(){
   // so they are out of this page entirely, not merely out of the yield figure.
   // Counted only to say so once in the note under the reasons.
   const dismissed=completions.filter(r=>hasResurveySig(r)&&!isResurveyDefect(r)).length;
-  _rsDefects=defects;
   const fpy=completions.length?((completions.length-defects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
@@ -3580,6 +3600,7 @@ function renderResurvey(){
   // region on older data rather than rendering an empty table.
   const hasOfficeData=completions.some(r=>(r.sales_office||'').trim());
   const grpKey=(rsGroupBy==='office'&&hasOfficeData)?'sales_office':'region';
+  rsGroupKey=grpKey;   // the drills follow the resolved key, not the toggle
   const grpLabel=grpKey==='sales_office'?'Sales office':'Region';
   const regionData=[...new Set(completions.map(r=>r[grpKey]).filter(Boolean))].map(reg=>{
     const comps=completions.filter(r=>r[grpKey]===reg);
@@ -3595,7 +3616,7 @@ function renderResurvey(){
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
   const grpTgl=(v,l)=>`<button class="tgl-btn${grpKey===(v==='office'?'sales_office':'region')?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
   const cellPill=c=>c.n===0?'<span class="pna">—</span>'
-    :c.n<RS_MIN_CELL?`<span class="pna" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
+    :c.n<RS_MIN_CELL?`<span class="pna-n" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
     :fpyPill(c.fpy);
 
   // ── by sales rep ──────────────────────────────────────────────────────
@@ -3651,7 +3672,7 @@ function renderResurvey(){
     </div>
     <div class="kcard">
       <div class="klabel">Cost of a resurvey${kinfo(TIP.rsPenalty)}</div>
-      <div class="kval ${penalty!=null?(penalty>=4?'kr-c':penalty>=2?'ka-c':''):''}">${penalty!=null?'+'+penalty.toFixed(1)+'d':'—'}</div>
+      <div class="kval ${penalty!=null?(penalty>=4?'kr-c':penalty>=2?'ka-c':''):''}">${penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—'}</div>
       <div class="ksub">${cleanCt!=null?cleanCt.toFixed(1)+'d clean → '+dirtyCt.toFixed(1)+'d resurveyed':'—'}</div>
       <div class="ktgt">against a ${S.targetAvg}d target</div>
     </div>
@@ -3689,8 +3710,8 @@ function renderResurvey(){
       <div class="ssub">Reason recorded on ${defects.length-noReason} of ${defects.length} · a resurvey can carry more than one</div></div></div>
     <div class="rswk-rows">
       ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" role="button" tabindex="0"
-           onclick="drillRsReason('${esc(k).replace(/'/g,"\\'")}')"
-           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillRsReason('${esc(k).replace(/'/g,"\\'")}');}">
+           onclick="drillRsReason('${escAttrJs(k)}')"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillRsReason('${escAttrJs(k)}');}">
         <div class="rswk-wk" style="width:auto;">${esc(k)}</div>
         <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
         <div class="rswk-n">${v}</div>
@@ -3705,11 +3726,11 @@ function renderResurvey(){
     <div class="shead"><div><div class="stitle">Who is at fault</div>
       <div class="ssub">${defects.length} resurveys${noAttr?` · ${Math.round(noAttr/defects.length*100)}% unattributed`:''}</div></div></div>
     <div class="attr-bar">
-      ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg drill-tgt" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}" onclick="drillAttribution('${esc(k)}')"></div>`).join('')}
+      ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg drill-tgt" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}" onclick="drillAttribution('${escAttrJs(k)}')"></div>`).join('')}
     </div>
     <div class="attr-legend">
       ${attrEntries.map(([k,v])=>`
-      <div class="attr-legend-item drill-tgt" onclick="drillAttribution('${esc(k)}')">
+      <div class="attr-legend-item drill-tgt" onclick="drillAttribution('${escAttrJs(k)}')">
         <div class="attr-legend-dot" style="background:${ATTR_COLOR[k]||'#e2e8f0'};"></div>
         <span class="attr-legend-name">${k==='—'?'No attribution':k}</span>
         <span class="attr-legend-count">${v}</span>
@@ -3719,6 +3740,7 @@ function renderResurvey(){
     ${noAttr?`<div class="note">${noAttr} resurveys have no cause recorded, so every share above is of the ${defects.length} total rather than of the ${defects.length-noAttr} attributed ones.</div>`:''}
   </div>`:''}
 
+  ${resData.length?`
   <div class="sec">
     <div class="shead"><div><div class="stitle">By resource</div><div class="ssub">Yield by who ran the original survey</div></div></div>
     <div class="res-cards" style="margin-bottom:0;gap:12px;">
@@ -3735,11 +3757,15 @@ function renderResurvey(){
         </div>
       </div>`).join('')}
     </div>
-  </div>
+  </div>`:''}
 
+  ${regionData.length?(()=>{
+    const shownGroups=rsGroupExpanded?regionData:regionData.slice(0,RS_TABLE_LIMIT);
+    const moreGroups=regionData.length-shownGroups.length;
+    return `
   <div class="sec">
     <div class="shead">
-      <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
+      <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
       ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
     </div>
     <div style="overflow-x:auto;"><table><thead><tr>
@@ -3752,7 +3778,7 @@ function renderResurvey(){
       <th class="r" style="color:#8677b8;">Radicl</th>
       <th class="r" style="color:#64748b;">SPWR</th>
     </tr></thead><tbody>
-      ${regionData.map(d=>`<tr class="drill-tgt" onclick="drillResGroup('${esc(d.reg).replace(/'/g,"\\'")}')">
+      ${shownGroups.map(d=>`<tr class="drill-tgt" onclick="drillResGroup('${escAttrJs(d.reg)}')">
         <td>
           <div style="font-weight:500;font-size:12px;">${esc(d.reg)}</div>
           <div class="rs-region-bar" style="width:80px;">
@@ -3761,23 +3787,27 @@ function renderResurvey(){
         </td>
         <td class="r">${d.count} <span style="color:var(--faint);font-size:10px;">/ ${d.comps}</span></td>
         <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
-        <td class="r">${d.comps>=RS_MIN_CELL?fpyPill(d.fpy):`<span class="pna">n=${d.comps}</span>`}</td>
+        <td class="r">${d.comps>=RS_MIN_CELL?fpyPill(d.fpy):`<span class="pna-n">n=${d.comps}</span>`}</td>
         <td class="r">${fmtCt(d.avgCt)}</td>
         <td class="r">${cellPill(d.sr)}</td>
         <td class="r">${cellPill(d.rd)}</td>
         <td class="r">${cellPill(d.sp)}</td>
       </tr>`).join('')}
     </tbody></table></div>
-  </div>
+    ${moreGroups||rsGroupExpanded?`<div style="padding:10px 0 4px;text-align:center;"><button class="drill-seg-btn" onclick="toggleRsGroups()">${rsGroupExpanded?`Show top ${RS_TABLE_LIMIT} only`:`Show all ${regionData.length} ${grpKey==='sales_office'?'offices':'regions'}`}</button></div>`:''}
+  </div>`;})():''}
 
   ${salesRepData.length?(()=>{
-    const repsWithRs=salesRepData.filter(d=>d.resurveys>0);
-    const zeroReps=salesRepData.length-repsWithRs.length;
-    const shownReps=rsRepsExpanded?salesRepData:repsWithRs;
+    // One expander over the whole list, like the Performance rep table. The
+    // old toggle only added the reps with 0 resurveys; under a top-N cap that
+    // is a no-op, because rate sorts them to the bottom either way.
+    const zeroReps=salesRepData.filter(d=>d.resurveys===0).length;
+    const shownReps=rsRepsExpanded?salesRepData:salesRepData.slice(0,RS_TABLE_LIMIT);
+    const moreReps=salesRepData.length-shownReps.length;
     const anyExcused=salesRepData.some(d=>d.resurveys>d.own);
     return `
   <div class="sec">
-    <div class="shead"><div><div class="stitle">By sales rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions · rate counts only what was theirs to control</div></div></div>
+    <div class="shead"><div><div class="stitle">By sales rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions${moreReps?` · worst ${shownReps.length} of ${salesRepData.length} by rate`:''} · rate counts only what was theirs to control</div></div></div>
     <div style="overflow-x:auto;"><table><thead><tr>
       <th>Sales Rep</th>
       <th>Region</th>
@@ -3785,9 +3815,9 @@ function renderResurvey(){
       <th class="r">Resurveys</th>
       <th class="r">Their fault</th>
       <th class="r">Rate</th>
-      <th style="width:110px;"></th>
+      <th style="width:110px;" aria-label="Rate, relative"></th>
     </tr></thead><tbody>
-      ${shownReps.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${esc(d.name)}')">
+      ${shownReps.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${escAttrJs(d.name)}')">
         <td style="font-weight:500;">${esc(d.name)}</td>
         <td style="color:var(--muted);font-size:12px;">${esc(d.primaryRegion)}</td>
         <td class="r">${d.comps}</td>
@@ -3798,7 +3828,7 @@ function renderResurvey(){
       </tr>`).join('')}
     </tbody></table></div>
     ${anyExcused?`<div class="note">Rate is their-fault resurveys ÷ completions. Ones attributed to the customer or to design are shown in the column but not charged to the rep.</div>`:''}
-    ${zeroReps?`<div style="padding:10px 0 4px;text-align:center;"><button onclick="toggleRsReps()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${rsRepsExpanded?'Hide reps with 0 resurveys':`Show all ${salesRepData.length} reps (${zeroReps} with 0 resurveys)`}</button></div>`:''}
+    ${moreReps||rsRepsExpanded?`<div style="padding:10px 0 4px;text-align:center;"><button class="drill-seg-btn" onclick="toggleRsReps()">${rsRepsExpanded?`Show worst ${RS_TABLE_LIMIT} only`:`Show all ${salesRepData.length} reps${zeroReps?` (${zeroReps} with 0 resurveys)`:''}`}</button></div>`:''}
   </div>`;})():''}
 
   ${openRs.length?`
