@@ -455,6 +455,24 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rswk-meta{grid-area:meta;font-size:10px;color:var(--muted);}
 .rswk-meta b{color:var(--red);font-weight:700;}
 
+/* Resurveys requested — the day rows reuse .rswk-row above; these style the
+   requests that expand underneath one. */
+.rsreq-day.open{background:var(--bg);}
+.rsreq-cr{display:inline-block;width:12px;color:var(--muted);font-size:10px;}
+.rsreq-rel{color:var(--faint);font-size:10px;margin-left:4px;}
+.rsreq-items{margin:0 0 8px 14px;padding-left:10px;border-left:2px solid var(--border-lt);}
+.rsreq-item{padding:5px 0;border-bottom:1px dotted var(--border-lt);}
+.rsreq-item:last-child{border-bottom:0;}
+.rsreq-item.dim{opacity:.6;}
+.rsreq-top{display:flex;align-items:baseline;gap:6px;}
+.rsreq-proj{flex:1;min-width:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rsreq-attr{font-size:10px;font-weight:700;white-space:nowrap;}
+/* Request details run long; two lines is enough to recognise the job, and the
+   full text stays on the title attribute. */
+.rsreq-why{font-size:10px;color:var(--muted);line-height:1.45;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.rsreq-why b{color:var(--text);font-weight:600;}
+
 /* ═══ MAP ═══ */
 .map-wrap{position:relative;background:var(--bg);border:1px solid var(--border);
   border-radius:var(--radius);overflow:hidden;}
@@ -2037,6 +2055,7 @@ function renderLastWeek(){
       ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk')}
       ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn')}
     </div>`:''}
+    <div id="rsreq-wrap"></div>
     </div>
     <div class="cur-col">
     <div class="sec">
@@ -2046,6 +2065,8 @@ function renderLastWeek(){
     </div>
     </div>
     </div>`;
+
+  renderRsReq(lw.from,lw.to);
 
   const dist=distBuckets(src);
   dc('lw-dist');
@@ -2199,6 +2220,7 @@ function renderThisWeek(){
         </tr>`).join('')}
       </tbody></table></div>
     </div>`:''}
+    <div id="rsreq-wrap"></div>
     </div>
     <div class="cur-col">
     ${completedTW.length?`
@@ -2219,6 +2241,8 @@ function renderThisWeek(){
     </div>
     </div>`;
 
+  renderRsReq(tw.from,tw.to);
+
   dc('tw-daily');
   CH['tw-daily']=new Chart(document.getElementById('tw-daily'),{
     type:'bar',
@@ -2238,6 +2262,109 @@ function renderThisWeek(){
         x:{stacked:true,grid:{display:false},ticks:{color:'#83838c',font:{size:11}}},
         y:{stacked:true,min:0,grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#83838c',stepSize:1}}}}
   });
+}
+
+// ═══ RESURVEYS REQUESTED — daily intake on the Current page ══════════
+// Anchors on resurvey_requested. Everything else on this page anchors on
+// complete or scheduled, which is why this is its own section rather than a
+// column on an existing table: the request that landed yesterday usually
+// belongs to a survey that closed weeks ago.
+// It lives here and not on the Resurveys page because that page deliberately
+// has no time control of its own — the filter bar owns time there.
+// Requests later dismissed as unnecessary are kept and marked. The Resurveys
+// page drops them because nothing was re-surveyed, but this is the inbox, and
+// a request that should not have been raised is still something to go and tag.
+const RSREQ_ATTR_COLOR={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
+let _rsReqWin=null, _rsReqOpenDays=null;
+function toggleRsReqDay(d){
+  if(!_rsReqOpenDays) _rsReqOpenDays=new Set();
+  _rsReqOpenDays.has(d)?_rsReqOpenDays.delete(d):_rsReqOpenDays.add(d);
+  renderRsReq();
+}
+function drillRsRequested(){
+  const w=_rsReqWin; if(!w) return;
+  const v=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=w.from&&r.resurvey_requested<=w.to);
+  openDrill('Resurveys requested',fmtDate(w.from)+' — '+fmtDate(w.to),v,{mode:'resurvey'});
+}
+// from/to are passed on a fresh week render and remembered for the expand toggle.
+function renderRsReq(from,to){
+  if(from&&to&&(!_rsReqWin||_rsReqWin.from!==from)){ _rsReqWin={from,to}; _rsReqOpenDays=null; }
+  const el=document.getElementById('rsreq-wrap'), w=_rsReqWin;
+  if(!el||!w) return;
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
+  const reqs=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=w.from&&r.resurvey_requested<=w.to);
+
+  // Mon–Sun, stopping at the export date so the current week does not render
+  // four empty days that read as "nothing came in".
+  const days=[];
+  const [fy,fm,fd]=w.from.split('-').map(Number);
+  for(let i=0;i<7;i++){
+    const iso=localISO(new Date(fy,fm-1,fd+i));
+    if(iso>w.to||iso>today) break;
+    days.push(iso);
+  }
+  const byDay={}; days.forEach(d=>byDay[d]=[]);
+  reqs.forEach(r=>{ (byDay[r.resurvey_requested]=byDay[r.resurvey_requested]||[]).push(r); });
+  const ordered=[...new Set([...days,...Object.keys(byDay)])].sort().reverse();
+  // Newest day with anything in it opens by default — that is the "what came
+  // in yesterday" read, without a click.
+  if(_rsReqOpenDays===null){
+    const latest=ordered.find(d=>byDay[d].length);
+    _rsReqOpenDays=new Set(latest?[latest]:[]);
+  }
+
+  const openN=reqs.filter(isOpenResurvey).length;
+  const unschedN=reqs.filter(r=>isOpenResurvey(r)&&!r.resurvey_scheduled).length;
+  const dismissedN=reqs.filter(r=>!isResurveyDefect(r)).length;
+  const dayMax=Math.max(...ordered.map(d=>byDay[d].length),1);
+  const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const relLabel=d=>{ const g=dDiff(d,today); return g===0?'today':g===1?'yesterday':''; };
+
+  el.innerHTML=`
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Resurveys requested</div>
+          <div class="ssub">${reqs.length} request${reqs.length===1?'':'s'}${openN?` · ${openN} still open`:''}${unschedN?` · ${unschedN} unscheduled`:''}</div></div>
+        ${reqs.length?`<button class="fbtn" onclick="drillRsRequested()" style="font-size:11px;">All ${reqs.length} ↗</button>`:''}
+      </div>
+      ${reqs.length?`<div class="rswk-rows">
+        ${ordered.map(d=>{
+          const gr=[...byDay[d]].sort((a,b)=>(a.project||'').localeCompare(b.project||''));
+          const open=_rsReqOpenDays.has(d)&&gr.length;
+          const mix=['Surveyor','Customer','Design'].map(k=>[k,gr.filter(r=>r.resurvey_attributed===k).length]).filter(x=>x[1]);
+          const un=gr.filter(r=>!r.resurvey_attributed).length;
+          const meta=gr.length?[...mix.map(([k,n])=>`<span style="color:${RSREQ_ATTR_COLOR[k]};">${n} ${k}</span>`),
+                                ...(un?[`${un} unattributed`]:[])].join(' · '):'';
+          return `<div class="rsreq-day${open?' open':''}">
+            <div class="rswk-row${gr.length?' drill-tgt':''}" ${gr.length?`role="button" tabindex="0" onclick="toggleRsReqDay('${d}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRsReqDay('${d}');}"`:''}>
+              <div class="rswk-wk"><span class="rsreq-cr">${gr.length?(open?'▾':'▸'):''}</span>${DAY[new Date(d+'T12:00:00').getDay()]} ${fmtDateShort(d)}${relLabel(d)?`<span class="rsreq-rel">${relLabel(d)}</span>`:''}</div>
+              <div class="rswk-barwrap">${gr.length?`<div class="rswk-bar" style="width:${Math.max(gr.length/dayMax*100,4)}%;"></div>`:''}</div>
+              <div class="rswk-n">${gr.length||'<span class="pna">0</span>'}</div>
+              ${meta?`<div class="rswk-meta">${meta}</div>`:''}
+            </div>
+            ${open?`<div class="rsreq-items">
+              ${gr.map(r=>{
+                const det=(r.resurvey_details||'').replace(/\s*\n\s*/g,' · ').replace(/^\s*(RESURVEY (EXPLANATION|REQUIRED)|REQUEST DETAILS)\s*:?\s*/i,'').trim();
+                const reason=rsReasons(r).join(' · ');
+                const dud=!isResurveyDefect(r);
+                const attr=r.resurvey_attributed;
+                const stat=isOpenResurvey(r)&&!r.resurvey_scheduled?'<span class="rs-unsched-pill">Unscheduled</span>':'';
+                return `<div class="rsreq-item${dud?' dim':''}">
+                  <div class="rsreq-top">
+                    <span class="rsreq-proj" title="${esc(r.project||r.address||'')}">${projLink(r)}</span>
+                    ${stat}
+                    ${attr?`<span class="rsreq-attr" style="color:${RSREQ_ATTR_COLOR[attr]||'var(--muted)'};">${esc(attr)}</span>`:'<span class="rsreq-attr" style="color:var(--faint);">unattributed</span>'}
+                  </div>
+                  <div class="rsreq-why" title="${esc(r.resurvey_details||'')}">${reason?`<b>${esc(reason)}</b>`:'<b>No reason recorded</b>'}${det?' · '+esc(det):''}</div>
+                </div>`;
+              }).join('')}
+            </div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="note">By the date the resurvey was requested, not the date the original survey closed — most of these belong to surveys that finished weeks ago.${dismissedN?` ${dismissedN} ${dismissedN===1?'is':'are'} tagged Unnecessary Request and shown greyed: they are excluded from the Resurveys page entirely, since nothing was re-surveyed.`:''}</div>`
+      :`<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No resurveys requested ${fmtDate(w.from)} — ${fmtDate(w.to)}.</div>`}
+    </div>`;
 }
 
 // ═══ PERFORMANCE ═════════════════════════════════════════

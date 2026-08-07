@@ -52,6 +52,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
   - The yield chart marks weeks under `RS_MATURE_DAYS` (21) as provisional. Defects keep arriving for weeks — only 57% within 7 days, p90 41 — so recent weeks read high. A single trend arrow was tried and removed: it reported "down 7.7 pts" during the clearest improvement in the data
   - `resurvey_reason` is the actionable field (96% populated; 66% is "Survey Incomplete"), and `resurvey_details` names the specific missing photo or measurement on 92% of those
   - Default breakdown is **sales office**, toggleable to region
+  - **Daily intake lives on Current, not here** (`renderRsReq()`, added 2026-08-07): "Resurveys requested", left column, Mon–Sun by request date, expandable per day to the reason + `resurvey_details`, following the Last Week / This Week toggle. It anchors on `resurvey_requested` — the only thing on Current that does — and it keeps Unnecessary Request rows, greyed, because it is an inbox rather than a yield measure
   - Per-survey resource still only covers the initial survey — future SF survey objects will fix that (see memory "Come back to" list)
 - **Map page** (added 2026-08-06). All markets by town, four modes (Volume / Open WIP / Cycle / Resurvey), click a state nationally to open that market:
   - Location comes from the **ZIP in `address`, never `region`** — region is a sales territory, not a place, and reading the address also places the ~71 rows whose region is blank
