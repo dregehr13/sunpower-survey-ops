@@ -121,7 +121,9 @@ allData.slice(headerRowIdx + 1).forEach((row, i) => {
   if (!r.resource && r.complete) r.resource = 'Sales Rep';
   r.ct_s2r      = dDiff(r.start, r.requested);
   r.ct_r2s      = dDiff(r.requested, r.scheduled);
-  r.ct_total    = dDiff(r.start, r.complete);
+  // effectiveComplete, not r.complete: a re-signed account carries a real
+  // survey date from the previous deal, months before the new agreement.
+  r.ct_total    = dDiff(r.start, OpsMetrics.effectiveComplete(r));
   if (r.ct_total === null && !r.requested && r.field_survey_complete)
     r.ct_total  = dDiff(r.start, subtractDays(r.field_survey_complete, 2));
   if (r.ct_total != null && r.ct_total < 0) r.ct_total = 0;
@@ -141,8 +143,14 @@ const sample = (arr, fmt, n = 3) => arr.slice(0, n).map(fmt).join('; ') + (arr.l
 const label = r => r.project || r.address || r.task_id || 'row ' + r.id;
 
 // Complete before start / negative resurvey cycle (raw dates — ct_total is clamped to 0 later)
-const backwards = rows.filter(r => r.start && r.complete && r.complete < r.start);
-if (backwards.length) warnings.push(`${backwards.length} row(s) complete before start: ${sample(backwards, r => `${label(r)} (${r.start} → ${r.complete})`)}`);
+// Survey completed before the agreement was signed. Not the same as "before
+// project start": 41 rows complete a day before start simply because the rep
+// signed and surveyed the same day and the project record is created the next
+// morning, which is a workflow, not a mistake. Warning on those was noise
+// every single morning. What is worth a look is a survey predating the sale,
+// which is normally a cancelled account re-signed with its old survey reused.
+const backwards = rows.filter(r => r.agreement_signed && r.complete && r.complete < r.agreement_signed);
+if (backwards.length) warnings.push(`${backwards.length} row(s) surveyed before the agreement was signed (re-signed account reusing an old survey?): ${sample(backwards, r => `${label(r)} (signed ${r.agreement_signed}, surveyed ${r.complete})`)}`);
 const rsBackwards = rows.filter(r => r.resurvey_requested && r.resurvey_complete && r.resurvey_complete < r.resurvey_requested);
 if (rsBackwards.length) warnings.push(`${rsBackwards.length} row(s) resurvey complete before requested: ${sample(rsBackwards, r => `${label(r)} (${r.resurvey_requested} → ${r.resurvey_complete})`)}`);
 

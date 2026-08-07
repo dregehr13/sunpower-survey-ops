@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
@@ -30,6 +30,18 @@ test('isWIP is started-and-not-complete', () => {
   // complete date without list status: still WIP (matches isComplete)
   assert.equal(isWIP({ start: '2026-06-01', complete: '2026-06-05', list: 'In Progress' }), true);
   assert.equal(isWIP({ start: '', complete: '', list: '' }), false);
+});
+
+test('effectiveComplete reuses the agreement date when the survey predates it', () => {
+  // Cancelled account re-signed months later, old survey still good.
+  assert.equal(effectiveComplete({ complete: '2025-08-18', agreement_signed: '2026-04-06' }), '2026-04-06');
+  // Rep signed and surveyed the same day — nothing to shift.
+  assert.equal(effectiveComplete({ complete: '2026-07-11', agreement_signed: '2026-07-11' }), '2026-07-11');
+  // The normal case is untouched.
+  assert.equal(effectiveComplete({ complete: '2026-07-15', agreement_signed: '2026-07-10' }), '2026-07-15');
+  // Degrades safely where the field is absent, as in already-deployed data.
+  assert.equal(effectiveComplete({ complete: '2026-07-15', agreement_signed: '' }), '2026-07-15');
+  assert.equal(effectiveComplete({ complete: '', agreement_signed: '2026-07-10' }), '');
 });
 
 // ── wipAgeFrom: resurvey request → completion +2 days → project start ──
