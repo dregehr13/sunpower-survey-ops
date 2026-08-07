@@ -97,11 +97,20 @@ function dDiff(a, b) {
   return Math.round((new Date(by, bm-1, bd) - new Date(ay, am-1, ad)) / 86400000 * 10) / 10;
 }
 
+// The report carries HTML entities in free-text fields — sales offices come
+// through as "Solar&#39;s Dead" - Dragons — which then render literally in
+// every table and dropdown that shows them.
+const ENTITIES = { '&#39;': "'", '&quot;': '"', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' };
+function decodeEntities(t) {
+  return t.replace(/&#39;|&quot;|&amp;|&lt;|&gt;|&nbsp;|&#(\d+);/g,
+    (m, num) => num ? String.fromCharCode(+num) : ENTITIES[m]);
+}
+
 function normalizeCell(val) {
   // Excel exports booleans as TRUE/FALSE strings; normalize to 1/0
   if (val === true  || val === 'TRUE'  || val === 'True')  return '1';
   if (val === false || val === 'FALSE' || val === 'False') return '0';
-  return String(val || '').replace(/\s+/g, ' ').trim();
+  return decodeEntities(String(val || '').replace(/\s+/g, ' ').trim());
 }
 
 const rows = [];

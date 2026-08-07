@@ -885,7 +885,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
 const PAGES = ['week','performance','trends','wip','resurvey','map','data'];
-const defaultF = () => ({dateFrom:'',dateTo:'',region:[],type:'all',resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
+const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],type:'all',resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
 const GF = defaultF();
@@ -1000,6 +1000,7 @@ function applyFilter(){
 // Global filter pieces for pages that don't go through `filtered` (Resurveys)
 function gfDim(r){
   if(Array.isArray(GF.region)&&GF.region.length&&!GF.region.includes(r.region)) return false;
+  if(Array.isArray(GF.office)&&GF.office.length&&!GF.office.includes(r.sales_office)) return false;
   if(GF.type!=='all'&&r.type!==GF.type) return false;
   if(GF.resource&&GF.resource!=='all'&&r.resource!==GF.resource) return false;
   return true;
@@ -1011,6 +1012,7 @@ let customDatesOpen=false;
 function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
 function buildFBar(page){
   const f = GF;
+  const offices=[...new Set(rows.map(r=>r.sales_office).filter(Boolean))].sort();
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
   const catDropdowns = catFields.map(fd=>{
     const vals = [...new Set(rows.map(r=>r[fd.key]).filter(Boolean))].sort();
@@ -1039,11 +1041,18 @@ function buildFBar(page){
   const regArr=Array.isArray(f.region)?f.region:[];
   const regLabel='Region'+(regArr.length?' · '+regArr.length:''); // chips show the actual selection
   const panelOpen=rgDropOpenPage===page;
+  // Sales office only exists in exports taken after 2026-08-06; hide the
+  // control entirely rather than offering an empty dropdown on older data.
+  const offArr=Array.isArray(f.office)?f.office:[];
+  const offLabel='Office'+(offArr.length?' · '+offArr.length:'');
+  const offPanelOpen=offDropOpenPage===page;
+  const hasOffices=offices.length>0;
 
   // Chips only for state the bar doesn't already show: region picks
   // (hidden inside the dropdown) and the outlier setting (lives in Settings)
   const chips=[];
   regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
+  offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
   if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
 
   return `<div class="fbar">
@@ -1068,6 +1077,14 @@ function buildFBar(page){
         ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
       </div>
     </div>
+    ${hasOffices?`<div class="fsep"></div>
+    <div class="rgdrop offdrop">
+      <button class="rgdrop-btn${offArr.length?' active':''}" aria-label="Filter by sales office" aria-expanded="${offPanelOpen}" onclick="toggleOfficeDrop('${page}',event)">${esc(offLabel)}<span class="rg-caret">&#9660;</span></button>
+      <div class="rgdrop-panel offdrop-panel${offPanelOpen?' open':''}">
+        ${offArr.length?`<button class="rgdrop-clear" onclick="onOfficeClear('${page}',event)">Clear selection</button>`:''}
+        ${offices.map(o=>`<label class="rgdrop-item"><input type="checkbox"${offArr.includes(o)?' checked':''} onchange="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',this.checked,event)"><span>${esc(o)}</span></label>`).join('')}
+      </div>
+    </div>`:''}
     <div class="fsep"></div>
     ${(()=>{
       const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
@@ -1097,16 +1114,23 @@ function toggleOutliers(page){
 let rgDropOpenPage=null;
 let statusDropOpen=false;
 let wipStatusDropOpen=false;
+let offDropOpenPage=null;
 function toggleRegionDrop(page,ev){
   ev&&ev.stopPropagation();
   rgDropOpenPage=rgDropOpenPage===page?null:page;
-  if(rgDropOpenPage) statusDropOpen=false;
+  if(rgDropOpenPage){ statusDropOpen=false; offDropOpenPage=null; }
+  renderFBars();
+}
+function toggleOfficeDrop(page,ev){
+  ev&&ev.stopPropagation();
+  offDropOpenPage=offDropOpenPage===page?null:page;
+  if(offDropOpenPage){ statusDropOpen=false; rgDropOpenPage=null; }
   renderFBars();
 }
 function toggleStatusDrop(ev){
   ev&&ev.stopPropagation();
   statusDropOpen=!statusDropOpen;
-  if(statusDropOpen) rgDropOpenPage=null;
+  if(statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; }
   renderFBars();
 }
 function toggleWipStatusDrop(ev){
@@ -1136,6 +1160,18 @@ function onRegion(page,region,checked,ev){
 function onRegionClear(page,ev){
   ev&&ev.stopPropagation();
   pageF[page].region=[];
+  saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
+}
+function onOffice(page,office,checked,ev){
+  ev&&ev.stopPropagation();
+  let arr=Array.isArray(pageF[page].office)?[...pageF[page].office]:[];
+  if(checked){if(!arr.includes(office))arr.push(office);}else arr=arr.filter(o=>o!==office);
+  pageF[page].office=arr;
+  saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
+}
+function onOfficeClear(page,ev){
+  ev&&ev.stopPropagation();
+  pageF[page].office=[];
   saveFilterState();applyFilter();renderFBars();renderPage(currentPage);
 }
 
@@ -1434,7 +1470,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     closeDrill();
     closeUpdateModal();
-    if(rgDropOpenPage!==null){ rgDropOpenPage=null; renderFBars(); }
+    if(rgDropOpenPage!==null||offDropOpenPage!==null){ rgDropOpenPage=null; offDropOpenPage=null; renderFBars(); }
     if(wipRgDropOpen){ wipRgDropOpen=false; const el=document.getElementById('wip-rgpanel'); if(el) el.classList.remove('open'); }
   }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('th[onclick]')){
@@ -1666,7 +1702,11 @@ function copyDrillTable(){
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
 function drillOpenResurveys(){ const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)); openDrill('Open Resurveys',src.length+' awaiting completion',src,{mode:'resurvey'}); }
-function drillResRegion(reg){ const view=rsDefectPool().filter(r=>r.region===reg); openDrill('Resurveys · '+reg,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillResGroup(val){
+  const key=rsGroupBy==='office'?'sales_office':'region';
+  const view=rsDefectPool().filter(r=>(r[key]||'')===val);
+  openDrill('Resurveys · '+(val||'No '+(rsGroupBy==='office'?'office':'region')),view.length+' resurveys in view',view,{mode:'resurvey'});
+}
 function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
 function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
@@ -1684,6 +1724,12 @@ function drillRsWeek(wk){
   const lbl=fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))});
   openDrill('Open resurveys · '+lbl,(rsWeekAnchor==='complete'?'Completed':'Requested')+' that week · '+src.length+' still open',src,{mode:'resurvey'});
 }
+// Sales office is the default cut: it is a real org unit with someone
+// accountable, where Sales Region is closer to a geography label. Across
+// offices with 25+ completions yield runs 71% to 94%, a wider and more
+// actionable spread than the same cut by region.
+let rsGroupBy='office';   // 'office' | 'region'
+function setRsGroupBy(v){ rsGroupBy=v; renderResurvey(); }
 let rsRepsExpanded=false;
 function toggleRsReps(){ rsRepsExpanded=!rsRepsExpanded; renderResurvey(); }
 
@@ -3348,18 +3394,24 @@ function renderResurvey(){
   // fewer than 10 completions, each rendered as a confident coloured pill.
   // Cells under the floor now read as a sample size instead.
   const RS_MIN_CELL=10;
-  const regionData=[...new Set(completions.map(r=>r.region).filter(Boolean))].map(reg=>{
-    const comps=completions.filter(r=>r.region===reg);
+  // Office is only present in exports taken after 2026-08-06; fall back to
+  // region on older data rather than rendering an empty table.
+  const hasOfficeData=completions.some(r=>(r.sales_office||'').trim());
+  const grpKey=(rsGroupBy==='office'&&hasOfficeData)?'sales_office':'region';
+  const grpLabel=grpKey==='sales_office'?'Sales office':'Region';
+  const regionData=[...new Set(completions.map(r=>r[grpKey]).filter(Boolean))].map(reg=>{
+    const comps=completions.filter(r=>r[grpKey]===reg);
     const defs=comps.filter(isResurveyDefect);
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     const cell=res=>{ const c=comps.filter(r=>r.resource===res);
       return {n:c.length, fpy:c.length?((c.length-c.filter(isResurveyDefect).length)/c.length*100):null}; };
     return {reg, comps:comps.length, count:defs.length,
-            open:openRs.filter(r=>r.region===reg).length, avgCt:avg(cts),
+            open:openRs.filter(r=>r[grpKey]===reg).length, avgCt:avg(cts),
             fpy:comps.length?((comps.length-defs.length)/comps.length*100):null,
             sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
   }).filter(d=>d.comps>0).sort((a,b)=>b.count-a.count||b.comps-a.comps);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
+  const grpTgl=(v,l)=>`<button class="tgl-btn${grpKey===(v==='office'?'sales_office':'region')?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
   const cellPill=c=>c.n===0?'<span class="pna">—</span>'
     :c.n<RS_MIN_CELL?`<span class="pna" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
     :fpyPill(c.fpy);
@@ -3504,9 +3556,12 @@ function renderResurvey(){
   </div>
 
   <div class="sec">
-    <div class="shead"><div><div class="stitle">By region</div><div class="ssub">Sorted by resurvey volume · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div></div>
+    <div class="shead">
+      <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
+      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+    </div>
     <div style="overflow-x:auto;"><table><thead><tr>
-      <th>Region</th>
+      <th>${grpLabel}</th>
       <th class="r">Resurveys</th>
       <th class="r">Open</th>
       <th class="r">FPY</th>
@@ -3515,9 +3570,9 @@ function renderResurvey(){
       <th class="r" style="color:#8677b8;">Radicl</th>
       <th class="r" style="color:#64748b;">SPWR</th>
     </tr></thead><tbody>
-      ${regionData.map(d=>`<tr class="drill-tgt" onclick="drillResRegion('${esc(d.reg)}')">
+      ${regionData.map(d=>`<tr class="drill-tgt" onclick="drillResGroup('${esc(d.reg).replace(/'/g,"\\'")}')">
         <td>
-          <div style="font-weight:500;font-size:12px;">${d.reg}</div>
+          <div style="font-weight:500;font-size:12px;">${esc(d.reg)}</div>
           <div class="rs-region-bar" style="width:80px;">
             <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
           </div>
@@ -4756,6 +4811,10 @@ document.addEventListener('click',function(e){
   if(rgDropOpenPage!==null&&!e.target.closest('.rgdrop')){
     rgDropOpenPage=null;
     PAGES.forEach(p=>{const el=document.querySelector('#fb-'+p+' .rgdrop-panel');if(el)el.classList.remove('open');});
+  }
+  if(offDropOpenPage!==null&&!e.target.closest('.offdrop')){
+    offDropOpenPage=null;
+    PAGES.forEach(p=>{const el=document.querySelector('#fb-'+p+' .offdrop-panel');if(el)el.classList.remove('open');});
   }
   if(wipRgDropOpen&&!e.target.closest('.rgdrop')){
     wipRgDropOpen=false;
