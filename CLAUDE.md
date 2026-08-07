@@ -65,6 +65,22 @@ ticket is resolved.
 active in the FIELDS registry in index.html. FPY, attribution, and resource
 breakdowns are built and shipping on the dashboard (Resurveys + Performance pages).
 
+Added 2026-08-06 (Doug widened the SF report): `agreement_signed`,
+`sales_office`, `m1a_approved`. Parsed and registered; no UI reads them yet.
+- **`agreement_signed` does NOT become the cycle-time anchor.** Cycle time stays
+  on Project Start because that is when the job enters the Site Survey queue,
+  which is what this team is accountable for. Agreement Signed is *context*:
+  100% populated, same day as start on 87% of rows, and never later than it.
+  Its job is explaining the 42 rows whose survey completes one day **before**
+  project start — on 40 of those 42 the agreement was signed the same day the
+  rep surveyed, and the project record starts the next morning. Those are not
+  data errors and must not be "fixed". Only 3 rows are genuinely backwards
+  (175–231 days). The concept does not apply to resurveys at all.
+- `sales_office` is 142 distinct values against 58 sales regions, and unlike
+  `region` it is a real org unit rather than a geography stand-in.
+- `m1a_approved` is a downstream approval, not a booking date: median 0 days
+  from project start and *earlier* than start on 43% of rows.
+
 ## Targets (Spec 12744)
 - Median: 3 days | Avg: 4 days
 - Cycle times are **calendar days**, not business days (confirmed by Doug 2026-06-10)

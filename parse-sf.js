@@ -19,10 +19,15 @@ const FIELDS = [
   { key:'project',              sfCol:'Project Name',                                            type:'text' },
   { key:'address',              sfCol:'Installation Address',                                    type:'text' },
   { key:'region',               sfCol:'Sales Region',                                            type:'text' },
+  { key:'sales_office',        sfCol:'Sales Office Name',                                       type:'text' },
   { key:'type',                 sfCol:'Project Installation Type',                               type:'text' },
   { key:'sales_rep',            sfCol:'Sales Rep Name',                                          type:'text' },
   { key:'sales_rep_phone',      sfCol:'Project Event : Opportunity : Sales Rep Mobile Number',   type:'text' },
   { key:'sales_rep_email',      sfCol:'Project Event : Opportunity : Sales Rep Email',           type:'text' },
+  // Agreement Signed is the customer's commitment; Project Start is when the
+  // job lands in the Site Survey queue. They are the same day on 87% of rows
+  // and start is never earlier. Context only — cycle time stays on start.
+  { key:'agreement_signed',    sfCol:'Agreement Signed',                                        type:'date' },
   { key:'start',                sfCol:'Project Start Date',                                      type:'date' },
   { key:'requested',            sfCol:'Site Survey Requested',                                   type:'date' },
   { key:'scheduled',            sfCol:'Site Survey Scheduled',                                   type:'date' },
@@ -45,6 +50,7 @@ const FIELDS = [
   { key:'resurvey_details',    sfCol:'Resurvey Request Details',                                 type:'text' },
   { key:'field_survey_scheduled', sfCol:'Field Site Survey Scheduled',                           type:'date' },
   { key:'field_survey_complete',  sfCol:'Field Site Survey Complete',                            type:'date' },
+  { key:'m1a_approved',        sfCol:'M1A Approved',                                            type:'date' },
 ];
 
 const workbook = XLSX.readFile(file);

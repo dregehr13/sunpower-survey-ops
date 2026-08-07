@@ -24,6 +24,7 @@ status for five months; a colour band that disagreed with the number beside it).
 | metric | definition | trap |
 |---|---|---|
 | `DATA_CUTOFF` | `2025-12-29`; all charts and row filters start here | — |
+| `agreement_signed` | the customer's signature date, 100% populated | **Not the cycle-time anchor** — `ct_total` stays on `start`, which is when the job reaches the SS queue. Same day as `start` on 87% of rows and never later. Explains the 42 rows completing a day before start: the rep signed and surveyed the same day, and the project record starts the next morning. Meaningless for resurveys |
 | `inScope(r)` | started ≥ cutoff **and** (complete **or** project active) | a finished survey counts even on an At-Risk/Canceled project; a *non-finished* one on such a project does not |
 | `filterRows(raw)` | `inScope` + `normalizeName` on `sales_rep` | the only correct entry point — never filter raw rows by hand |
 | `isComplete(r)` | completion date **AND** `list === 'Complete'` | **48 rows carry a date but are Holding/Reopened.** A bare `r.complete` test counts them as finished |
