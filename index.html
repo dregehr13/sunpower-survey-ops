@@ -3438,7 +3438,13 @@ function renderResurvey(){
   ${fpyWeeks.length>2?`
   <div class="sec">
     <div class="shead"><div><div class="stitle">First pass yield over time${kinfo(TIP.fpyTrend)}</div>
-      <div class="ssub">By the week the survey completed · heavy line is a 4-week rolling rate · the last ${RS_MATURE_DAYS} days are provisional</div></div></div>
+      <div class="ssub">By the week the survey completed</div></div></div>
+    <div class="leg">
+      <span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
+      <span class="li"><span class="ld" style="background:var(--c2);height:2px;border-radius:2px;"></span>Weekly</span>
+      <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>
+      <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>95% target</span>
+    </div>
     <div class="cw" style="height:210px;"><canvas id="rs-fpy"></canvas></div>
     <div class="note">A completion keeps collecting resurveys for weeks — only 57% arrive within 7 days of the survey closing, and 1 in 7 takes more than a month. Recent weeks therefore read high until they mature, so they are drawn hollow and left out of the trend above.</div>
   </div>`:''}
@@ -3613,21 +3619,25 @@ function renderResurvey(){
     dc('rs-fpy');
     const cs=getComputedStyle(document.documentElement);
     const green=cs.getPropertyValue('--green').trim(), faint=cs.getPropertyValue('--faint').trim();
+    // Two lines, two jobs, so two weights. Both were drawn in the same green
+    // with the legend off, which left no way to tell the noisy weekly series
+    // from the rolling rate that is meant to carry the trend.
+    const weekly=cs.getPropertyValue('--c2').trim();
     CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
       type:'line',
       data:{labels:fpyWeeks.map(w=>fmtDateShort(w.wk)),datasets:[
-        {label:'FPY',data:fpyWeeks.map(w=>w.fpy),borderColor:green,backgroundColor:'transparent',
-         tension:.3,borderWidth:2,
+        {label:'Weekly',data:fpyWeeks.map(w=>w.fpy),borderColor:weekly,backgroundColor:'transparent',
+         tension:.3,borderWidth:1.25,
          // Immature weeks are hollow and dashed: their defects have not all
          // arrived yet, so the value is real but not yet final.
-         pointRadius:fpyWeeks.map(w=>w.n>=10?3.5:2),
-         pointBackgroundColor:fpyWeeks.map(w=>w.mature?green:cs.getPropertyValue('--surface').trim()),
-         pointBorderColor:fpyWeeks.map(w=>w.mature?green:faint),
+         pointRadius:fpyWeeks.map(w=>w.n>=10?3:1.8),
+         pointBackgroundColor:fpyWeeks.map(w=>w.mature?weekly:cs.getPropertyValue('--surface').trim()),
+         pointBorderColor:fpyWeeks.map(w=>w.mature?weekly:faint),
          segment:{borderDash:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?[4,3]:undefined,
-                  borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:green},
-         borderWidth:1.5,order:2},
+                  borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:weekly},
+         order:2},
         {label:'4-week rolling',data:fpyRoll,borderColor:green,backgroundColor:'transparent',
-         tension:.35,borderWidth:2.75,pointRadius:0,spanGaps:false,order:1},
+         tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
         onClick:(evt,els)=>{ if(!els.length) return; const w=fpyWeeks[els[0].index];
