@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isOpenResurvey, avg, med, pct,
+  wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
@@ -97,6 +97,20 @@ test('hasResurveySig detects any resurvey signal', () => {
   assert.equal(hasResurveySig({ reopened_by_design: '1' }), true);
   assert.equal(hasResurveySig({ reopened_by_design: '0' }), false);
   assert.equal(hasResurveySig({}), false);
+});
+
+test('isResurveyDefect excludes requests dismissed as unnecessary', () => {
+  const real = { resurvey_requested: '2026-07-01', resurvey_reason: 'Survey Incomplete' };
+  assert.equal(isResurveyDefect(real), true);
+  // Nothing was re-surveyed, so the survey did not fail.
+  assert.equal(isResurveyDefect({ ...real, resurvey_reason: 'Unnecessary Request' }), false);
+  // Multi-select: dismissed wins even alongside a real-sounding reason, because
+  // the picklist is the team's own verdict on the request.
+  assert.equal(isResurveyDefect({ ...real, resurvey_reason: 'Survey Incomplete; Unnecessary Request' }), false);
+  // A row with no resurvey signal at all is not a defect either way.
+  assert.equal(isResurveyDefect({}), false);
+  // Every defect is still a resurvey signal; the reverse no longer holds.
+  assert.equal(hasResurveySig({ resurvey_reason: 'Unnecessary Request' }), true);
 });
 
 test('isOpenResurvey needs list to have left Complete, not just a blank date', () => {

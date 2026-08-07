@@ -85,6 +85,9 @@ Added 2026-08-06 (Doug widened the SF report): `agreement_signed`,
 - Median: 3 days | Avg: 4 days
 - Cycle times are **calendar days**, not business days (confirmed by Doug 2026-06-10)
 - FPY = (Completions – Internal Defects) / Completions
+- A resurvey logged as **"Unnecessary Request"** is not a defect and is excluded
+  from the Resurveys page entirely (`isResurveyDefect` in lib/metrics.cjs) —
+  nothing was re-surveyed, so the survey did not fail. Doug's call 2026-08-06.
 - Internal defects = Resurvey Attributed to SunPower Field or Radicl Agent
 
 ## Email generator password

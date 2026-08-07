@@ -779,7 +779,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, isOpenResurvey, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1515,7 +1515,7 @@ const TIP={
   resourceMix:'Share of completions in view by who performed the survey: sales rep, Radicl, or a SunPower surveyor.',
 
   // ── Resurveys ──
-  fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. Any completed account with a resurvey (requested, completed, reason, or reopened by design) counts as a defect — including ones later marked unnecessary, which is the stricter reading.',
+  fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded: nothing was re-surveyed, so the survey did not fail. They are left out of this page entirely, not just out of the percentage.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land. Twenty-one days is about the 79th percentile of that lag.',
   rsReason:'The reason picklist on the resurvey request, recorded on 96% of them. A request can carry more than one reason, so the shares add to more than 100%. This is the field that says what to fix, where attribution only says who.',
   rsPenalty:'Average calendar days from Project Start to a clean Site Survey Complete, against the same figure for a survey that had to be redone (start → complete → resurvey complete). The gap is what one resurvey costs, and it is measured against the Spec 12744 target rather than in the abstract.',
@@ -1668,7 +1668,7 @@ function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; open
 function drillOpenResurveys(){ const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)); openDrill('Open Resurveys',src.length+' awaiting completion',src,{mode:'resurvey'}); }
 function drillResRegion(reg){ const view=rsDefectPool().filter(r=>r.region===reg); openDrill('Resurveys · '+reg,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
-function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&hasResurveySig(r)); }
+function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
 function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 function drillRsReason(reason){ const view=rsDefectPool().filter(r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys in view',view,{mode:'resurvey'}); }
 // Which date anchors an open resurvey to a week. The two answer different
@@ -1934,12 +1934,12 @@ function renderLastWeek(){
   const rgDisplay=rStats.map(r=>r.start_to_complete!=null?Math.min(r.start_to_complete,rgCap):null);
   const rgOutliers=new Set(rStats.map((r,i)=>r.start_to_complete>rgCap?i:-1).filter(i=>i>=0));
 
-  // FPY for last week — hasResurveySig (lib/metrics.cjs), not a local
-  // reimplementation: a resurvey counts as a defect the moment it's
-  // requested, not only once it's been scheduled or completed.
-  const lwDefects=src.filter(hasResurveySig);
+    // FPY counts isResurveyDefect, not every resurvey signal: a request
+    // dismissed as unnecessary, or a bare reopened-by-design flag with
+    // nothing behind it, is not a survey failure. See lib/metrics.cjs.
+  const lwDefects=src.filter(isResurveyDefect);
   const lwFpy=src.length?Math.round((src.length-lwDefects.length)/src.length*100):null;
-  const pwDefects=pwSrc.filter(hasResurveySig);
+  const pwDefects=pwSrc.filter(isResurveyDefect);
   const pwFpy=pwSrc.length?Math.round((pwSrc.length-pwDefects.length)/pwSrc.length*100):null;
   const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
   const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
@@ -3234,9 +3234,10 @@ function renderAgingWIP(){
 const RS_MATURE_DAYS=21;
 // Reasons are a Salesforce multi-select: "Survey Incomplete; Re-Roof".
 const rsReasons=r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).filter(Boolean);
+// "Unnecessary Request" is deliberately absent: those rows never reach this
+// chart, because a dismissed request is not a resurvey.
 const RS_REASON_HINT={
   'Survey Incomplete':'the survey came back missing something',
-  'Unnecessary Request':'the resurvey was not actually needed',
 };
 
 function renderResurvey(){
@@ -3248,7 +3249,11 @@ function renderResurvey(){
 
   // ── quality population ────────────────────────────────────────────────
   const completions=scoped.filter(r=>isComplete(r)&&gfDateIn(r.complete));
-  const defects=completions.filter(hasResurveySig);
+  const defects=completions.filter(isResurveyDefect);
+  // Requests dismissed as unnecessary are not resurveys — nothing was redone —
+  // so they are out of this page entirely, not merely out of the yield figure.
+  // Counted only to say so once in the note under the reasons.
+  const dismissed=completions.filter(r=>hasResurveySig(r)&&!isResurveyDefect(r)).length;
   _rsDefects=defects;
   const fpy=completions.length?((completions.length-defects.length)/completions.length*100):null;
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
@@ -3270,7 +3275,7 @@ function renderResurvey(){
   // ── what a resurvey costs ─────────────────────────────────────────────
   // The case for caring about FPY at all, in one number: a resurveyed job
   // takes this much longer end to end, against a 4-day Spec 12744 target.
-  const cleanCt=avg(completions.filter(r=>!hasResurveySig(r)).map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
+  const cleanCt=avg(completions.filter(r=>!isResurveyDefect(r)).map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   const dirtyCt=avg(defects.map(r=>r.ct_full).filter(x=>x!=null&&x>=0));
   const penalty=(cleanCt!=null&&dirtyCt!=null)?dirtyCt-cleanCt:null;
 
@@ -3280,7 +3285,7 @@ function renderResurvey(){
     completions.forEach(r=>{
       const wk=weekOf(r.complete); if(!wk) return;
       if(!m[wk]) m[wk]={wk,n:0,d:0};
-      m[wk].n++; if(hasResurveySig(r)) m[wk].d++;
+      m[wk].n++; if(isResurveyDefect(r)) m[wk].d++;
     });
     // Three rows carry a completion date earlier than their start (parse-sf.js
     // flags these as backwards dates). Left in, they add phantom 2025 weeks
@@ -3331,7 +3336,7 @@ function renderResurvey(){
   const RES_ORDER=['Sales Rep','Radicl Services','SunPower Surveyor'];
   const resData=RES_ORDER.map(res=>{
     const comps=completions.filter(r=>r.resource===res);
-    const defs=comps.filter(hasResurveySig);
+    const defs=comps.filter(isResurveyDefect);
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     return {res,comps:comps.length,count:defs.length,
             open:openRs.filter(r=>r.resource===res).length,
@@ -3345,10 +3350,10 @@ function renderResurvey(){
   const RS_MIN_CELL=10;
   const regionData=[...new Set(completions.map(r=>r.region).filter(Boolean))].map(reg=>{
     const comps=completions.filter(r=>r.region===reg);
-    const defs=comps.filter(hasResurveySig);
+    const defs=comps.filter(isResurveyDefect);
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     const cell=res=>{ const c=comps.filter(r=>r.resource===res);
-      return {n:c.length, fpy:c.length?((c.length-c.filter(hasResurveySig).length)/c.length*100):null}; };
+      return {n:c.length, fpy:c.length?((c.length-c.filter(isResurveyDefect).length)/c.length*100):null}; };
     return {reg, comps:comps.length, count:defs.length,
             open:openRs.filter(r=>r.region===reg).length, avgCt:avg(cts),
             fpy:comps.length?((comps.length-defs.length)/comps.length*100):null,
@@ -3366,7 +3371,7 @@ function renderResurvey(){
   const MIN_REP_COMPS=3;
   const salesRepData=[...new Set(completions.filter(r=>r.resource==='Sales Rep').map(r=>r.sales_rep).filter(Boolean))].map(name=>{
     const comps=completions.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep');
-    const resur=comps.filter(hasResurveySig);
+    const resur=comps.filter(isResurveyDefect);
     const own=resur.filter(r=>!['Customer','Design'].includes(r.resurvey_attributed));
     const regCounts={}; comps.forEach(r=>{ if(r.region) regCounts[r.region]=(regCounts[r.region]||0)+1; });
     return {name, comps:comps.length, resurveys:resur.length, own:own.length,
@@ -3447,12 +3452,12 @@ function renderResurvey(){
            onclick="drillRsReason('${esc(k).replace(/'/g,"\\'")}')"
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillRsReason('${esc(k).replace(/'/g,"\\'")}');}">
         <div class="rswk-wk" style="width:auto;">${esc(k)}</div>
-        <div class="rswk-barwrap"><div class="rswk-bar${k==='Unnecessary Request'?'':' stale'}" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
+        <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
         <div class="rswk-n">${v}</div>
         <div class="rswk-meta">${Math.round(v/defects.length*100)}% of resurveys${RS_REASON_HINT[k]?' · '+RS_REASON_HINT[k]:''}</div>
       </div>`).join('')}
     </div>
-    <div class="note">${reasonRows[0]?`<strong>${esc(reasonRows[0][0])}</strong> accounts for ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}${reasonCounts['Unnecessary Request']?`<strong>${reasonCounts['Unnecessary Request']}</strong> were logged as unnecessary; they still count against yield, which costs ${(100*reasonCounts['Unnecessary Request']/completions.length).toFixed(1)} points.`:''}</div>
+    <div class="note">${reasonRows[0]?`<strong>${esc(reasonRows[0][0])}</strong> accounts for ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}${dismissed?`A further <strong>${dismissed}</strong> request${dismissed===1?' was':'s were'} dismissed as unnecessary and ${dismissed===1?'is':'are'} excluded from this page entirely, since nothing was re-surveyed.`:''}</div>
   </div>`:''}
 
   ${attrEntries.length?`
@@ -3626,7 +3631,7 @@ function renderResurvey(){
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
         onClick:(evt,els)=>{ if(!els.length) return; const w=fpyWeeks[els[0].index];
-          const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&hasResurveySig(r));
+          const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
           openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
@@ -3892,7 +3897,7 @@ function mapGroup(pts){
     if(isComplete(p.r)){
       e.comps++;
       if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
-      if(hasResurveySig(p.r)) e.defects++;
+      if(isResurveyDefect(p.r)) e.defects++;
     }
   });
   m.forEach(e=>{
@@ -4170,7 +4175,7 @@ function mapPaintMeta(vis,zips){
   const k=document.getElementById('map-kpis'); if(!k) return;
   const comps=vis.filter(p=>isComplete(p.r));
   const cts=comps.map(p=>p.r.ct_total).filter(x=>x!=null&&x>=0);
-  const defects=comps.filter(p=>hasResurveySig(p.r)).length;
+  const defects=comps.filter(p=>isResurveyDefect(p.r)).length;
   const avgCt=avg(cts);
   const rate=comps.length?Math.round(defects/comps.length*100):null;
   const byMkt={}; vis.forEach(p=>{byMkt[p.st]=(byMkt[p.st]||0)+1;});
