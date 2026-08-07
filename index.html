@@ -176,6 +176,23 @@ tr:hover td{background:#fafaf8;}
 .esearch{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;width:190px;outline:none;height:28px;}
 .esearch:focus{border-color:#8f8f98;}
 .ewrap{overflow:auto;max-height:500px;border:1px solid var(--border);border-radius:8px;}
+/* Horizontally scrollable table with an edge shadow that appears only when
+   there is actually more table off-screen, and fades out at each end. The two
+   `local` layers are opaque covers that scroll with the content and sit over
+   the two fixed `scroll` shadows, so a table that fits shows nothing at all.
+   On a phone the office table is 492px inside a 315px card and gave no hint
+   the three resource columns existed. */
+.xscroll{
+  overflow-x:auto;
+  background:
+    linear-gradient(to right, var(--surface) 30%, rgba(255,255,255,0)) left center,
+    linear-gradient(to left,  var(--surface) 30%, rgba(255,255,255,0)) right center,
+    radial-gradient(farthest-side at 0 50%, rgba(20,20,25,.13), rgba(20,20,25,0)) left center,
+    radial-gradient(farthest-side at 100% 50%, rgba(20,20,25,.13), rgba(20,20,25,0)) right center;
+  background-repeat:no-repeat;
+  background-size:34px 100%, 34px 100%, 12px 100%, 12px 100%;
+  background-attachment:local, local, scroll, scroll;
+}
 .etable{width:100%;border-collapse:collapse;font-size:12px;}
 .etable th{background:var(--bg);position:sticky;top:0;z-index:5;font-size:10px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
 .etable td{padding:3px 5px;border-bottom:1px solid #f5f5f2;}
@@ -386,6 +403,9 @@ select:focus,input[type=date]:focus,input[type=text]:focus,input[type=password]:
 }
 .ntab:focus-visible{outline:2px solid #4da6ff;outline-offset:-2px;color:#fff;}
 th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:3px;}
+/* Divs made keyboard-operable by drillAttrs() — otherwise they fall back to the
+   UA ring, which is the one focus style in the app nobody chose. */
+[role=button]:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:3px;}
 
 /* TOAST */
 
@@ -564,6 +584,10 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
   .res-cards{grid-template-columns:1fr;}
   .page{padding:12px;}
+  /* Section headers wrap instead of squeezing the subtitle beside a toggle:
+     "By sales office" left its .ssub 148px wide and three lines tall. */
+  .shead{flex-wrap:wrap;}
+  .shead>.toggle-group{margin-left:auto;}
   /* 5-card grids wrap 2+2+1 — let the 5th card span the row instead of orphaning */
   .kg5>.kcard:nth-child(5),.exec-kpis>.ekcard:nth-child(5){grid-column:1/-1;}
   /* Verdict wraps on phones so the numbers survive instead of ellipsizing */
@@ -1608,6 +1632,18 @@ function esc(v){ return(v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&q
 // the handler dies with a SyntaxError. Sales offices are full of them
 // ("Solar's Dead" - CTRL) and rep names have them too (C'Jay Fuller).
 function escAttrJs(v){ return esc(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+// Attributes that make a non-button element behave like one. Emitted from one
+// place so a keyboard handler can't be attached to one .rswk-row and not the
+// identical one two sections down, which is how the open queue ended up
+// mouse-only while "Why they come back" was not.
+//
+// Deliberately NOT applied to the breakdown table rows: those are ~170 rows
+// whose numbers are all already on screen, and 170 extra tab stops between the
+// section heading and the next control makes keyboard nav worse, not better.
+// The drill is an enhancement there, not the only way to the data.
+function drillAttrs(call){
+  return `role="button" tabindex="0" onclick="${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${call}}"`;
+}
 function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(tip)}">i</span>`; }
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
@@ -1647,7 +1683,7 @@ const TIP={
   rsReason:'The reason picklist on the resurvey request, recorded on 96% of them. A request can carry more than one reason, so the shares add to more than 100%. This is the field that says what to fix, where attribution only says who.',
   rsPenalty:'Average calendar days from Project Start to a clean Site Survey Complete, against the same figure for a survey that had to be redone (start → complete → resurvey complete). The gap is what one resurvey costs, and it is measured against the Spec 12744 target rather than in the abstract.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
-  rsOpen:'Resurveys requested but not yet complete, as of the latest export.',
+  rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
   mapLocation:'Position comes from the ZIP in the installation address, not the Sales Region. Region is a sales territory, not a place: 317 of Virginia\'s rows are tagged "VA Richmond" while the addresses run from Burke to King George. Reading the address also places the rows whose Region is blank, which no other view can show.',
@@ -3668,7 +3704,7 @@ function renderResurvey(){
 
   el.innerHTML=`
   <div class="kg kg4">
-    <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
+    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillFPYDefects()')}>
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
       <div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>
       <div class="ksub">${defects.length} of ${completions.length} completions came back</div>
@@ -3680,7 +3716,7 @@ function renderResurvey(){
       <div class="ksub">${cleanCt!=null?cleanCt.toFixed(1)+'d clean → '+dirtyCt.toFixed(1)+'d resurveyed':'—'}</div>
       <div class="ktgt">against a ${S.targetAvg}d target</div>
     </div>
-    <div class="kcard" style="cursor:pointer;" onclick="drillOpenResurveys()">
+    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillOpenResurveys()')}>
       <div class="klabel">Open now${kinfo(TIP.rsOpen)}</div>
       <div class="kval ${openRs.length>0?'kr-c':''}">${openRs.length}</div>
       <div class="ksub">${openRs.filter(r=>r.resurvey_scheduled).length} scheduled · ${openRs.filter(r=>!r.resurvey_scheduled).length} awaiting</div>
@@ -3700,7 +3736,7 @@ function renderResurvey(){
       <div class="ssub">By the week the survey completed</div></div></div>
     <div class="leg">
       <span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
-      <span class="li"><span class="ld" style="background:var(--c2);height:2px;border-radius:2px;"></span>Weekly</span>
+      <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
       <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>
       <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>95% target</span>
     </div>
@@ -3713,9 +3749,7 @@ function renderResurvey(){
     <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsReason)}</div>
       <div class="ssub">Reason recorded on ${defects.length-noReason} of ${defects.length} · a resurvey can carry more than one</div></div></div>
     <div class="rswk-rows">
-      ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" role="button" tabindex="0"
-           onclick="drillRsReason('${escAttrJs(k)}')"
-           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillRsReason('${escAttrJs(k)}');}">
+      ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsReason('${escAttrJs(k)}')`)}>
         <div class="rswk-wk" style="width:auto;">${esc(k)}</div>
         <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
         <div class="rswk-n">${v}</div>
@@ -3772,7 +3806,7 @@ function renderResurvey(){
       <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
       ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
     </div>
-    <div style="overflow-x:auto;"><table><thead><tr>
+    <div class="xscroll"><table><thead><tr>
       <th>${grpLabel}</th>
       <th class="r">Resurveys</th>
       <th class="r">Open</th>
@@ -3812,7 +3846,7 @@ function renderResurvey(){
     return `
   <div class="sec">
     <div class="shead"><div><div class="stitle">By sales rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions${moreReps?` · worst ${shownReps.length} of ${salesRepData.length} by rate`:''} · rate counts only what was theirs to control</div></div></div>
-    <div style="overflow-x:auto;"><table><thead><tr>
+    <div class="xscroll"><table><thead><tr>
       <th>Sales Rep</th>
       <th>Region</th>
       <th class="r">Completions</th>
@@ -3839,7 +3873,7 @@ function renderResurvey(){
   <div class="sec">
     <div class="shead">
       <div><div class="stitle">The open queue</div>
-        <div class="ssub">${openRs.length} awaiting completion · ${rsWeekAnchor==='complete'?'grouped by the week the original survey closed':'grouped by the week the resurvey was requested'}</div></div>
+        <div class="ssub">${openRs.length} awaiting completion · ${rsWeekAnchor==='complete'?'grouped by the week the original survey closed':'grouped by the week the resurvey was requested'} · <b>live, not affected by the date filter</b></div></div>
       <div class="toggle-group">${rsAnchorTgl('complete','Complete wk')}${rsAnchorTgl('request','Request wk')}</div>
     </div>
     ${rsWeeks.length?`<div class="rswk-rows">
@@ -3848,7 +3882,7 @@ function renderResurvey(){
         const meta=[rsWeekAnchor==='complete'&&w.comps?`of ${w.comps} done`:null,
                     w.unsched?`${w.unsched} unscheduled`:null,
                     w.oldest!=null?`oldest ${stale?`<b>${w.oldest}d</b>`:w.oldest+'d'}`:null].filter(Boolean).join(' · ');
-        return `<div class="rswk-row drill-tgt" onclick="drillRsWeek('${w.wk}')">
+        return `<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsWeek('${w.wk}')`)}>
           <div class="rswk-wk">${w.label}</div>
           <div class="rswk-barwrap"><div class="rswk-bar${stale?' stale':''}" style="width:${Math.max(w.n/rsWkMax*100,4)}%;"></div></div>
           <div class="rswk-n">${w.n}</div>
@@ -3890,10 +3924,12 @@ function renderResurvey(){
     dc('rs-fpy');
     const cs=getComputedStyle(document.documentElement);
     const green=cs.getPropertyValue('--green').trim(), faint=cs.getPropertyValue('--faint').trim();
-    // Two lines, two jobs, so two weights. Both were drawn in the same green
-    // with the legend off, which left no way to tell the noisy weekly series
-    // from the rolling rate that is meant to carry the trend.
-    const weekly=cs.getPropertyValue('--c2').trim();
+    // Two lines, two jobs, so two weights AND two hues. They were both green
+    // (--green vs --c2) which differ mainly in lightness — at legend-swatch
+    // size that reads as one colour, and the legend cannot lean on line weight
+    // the way the chart can. Grey is the raw weekly noise; green is the
+    // rolling rate that carries the trend and the one to read.
+    const weekly=cs.getPropertyValue('--muted').trim();
     CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
       type:'line',
       data:{labels:fpyWeeks.map(w=>fmtDateShort(w.wk)),datasets:[
