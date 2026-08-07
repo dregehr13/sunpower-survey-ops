@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
@@ -123,6 +123,37 @@ test('isResurveyDefect excludes requests dismissed as unnecessary', () => {
   assert.equal(isResurveyDefect({}), false);
   // Every defect is still a resurvey signal; the reverse no longer holds.
   assert.equal(hasResurveySig({ resurvey_reason: 'Unnecessary Request' }), true);
+});
+
+test('fpy is completions-minus-defects over completions', () => {
+  const clean = { complete: '2026-07-01', list: 'Complete' };
+  const bad = { ...clean, resurvey_requested: '2026-07-05', resurvey_reason: 'Survey Incomplete' };
+  assert.equal(fpy([clean, clean, clean, bad]), 75);
+  assert.equal(fpy([clean]), 100);
+  assert.equal(fpy([bad]), 0);
+  // A dismissed request is not a defect, so it must not move yield.
+  const dismissed = { ...bad, resurvey_reason: 'Unnecessary Request' };
+  assert.equal(fpy([clean, dismissed]), 100);
+});
+
+test('fpy returns null on an empty set, never 0 or 100', () => {
+  // "No completions in this range" is not "perfect yield" — every surface
+  // renders null as an em-dash, and 0 would colour the card red.
+  assert.equal(fpy([]), null);
+  assert.equal(fpy(null), null);
+  assert.equal(fpy(undefined), null);
+});
+
+test('fpy over a window is weighted, not a mean of weekly rates', () => {
+  const clean = { complete: '2026-07-01', list: 'Complete' };
+  const bad = { ...clean, resurvey_requested: '2026-07-05', resurvey_reason: 'Survey Incomplete' };
+  // Two weeks: a 2-row week at 50% and a 98-row week at 100%.
+  const thin = [clean, bad];
+  const fat = Array.from({ length: 98 }, () => clean);
+  // Averaging the two rates would say 75%. Pooling the rows says 99%, which is
+  // what the rolling line on the Resurveys page must show.
+  assert.equal((fpy(thin) + fpy(fat)) / 2, 75);
+  assert.equal(fpy([...thin, ...fat]), 99);
 });
 
 test('isOpenResurvey needs list to have left Complete, not just a blank date', () => {

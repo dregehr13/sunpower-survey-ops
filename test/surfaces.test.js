@@ -79,6 +79,30 @@ test('shared definitions are imported, not redefined, on every surface', () => {
   assert.deepEqual(bad, [], bad.join('\n'));
 });
 
+test('first pass yield is never computed inline', () => {
+  // FPY had six hand-written copies of (n - defects) / n * 100 inside
+  // renderResurvey alone, which is how "Total Resurveys" once read 385 while
+  // FPY counted 434 on the same screen. It is fpy() in lib/metrics.cjs now.
+  //
+  // Structural, not name-based: an earlier name-matching version missed
+  // (w.n - w.d) and (c.length - c.filter(isResurveyDefect).length) — two of
+  // the six — and name-matching is what let two more copies hide on the
+  // Current page as lwFpy/pwFpy. This matches the shape instead: a
+  // parenthesised subtraction, divided, scaled to 100.
+  const SHAPE = /\((?:[^()]|\([^()]*\))*-(?:[^()]|\([^()]*\))*\)\s*\/[^;*]*\*\s*100/;
+  // A subtraction-over-total percentage is not always FPY — the Current page
+  // computes a week-over-week volume change the same way. Only flag lines
+  // whose subtrahend is a defect/resurvey count.
+  const DEFECTISH = /def|resur|fpy|yield/i;
+  const bad = [];
+  for (const f of SURFACES) {
+    linesMatching(read(f), SHAPE)
+      .filter(({ line }) => DEFECTISH.test(line))
+      .forEach(({ n, line }) => bad.push(`${f}:${n}  ${line.slice(0, 90)}`));
+  }
+  assert.deepEqual(bad, [], `use fpy() from lib/metrics.cjs:\n${bad.join('\n')}`);
+});
+
 test('metrics.cjs exports everything the surfaces destructure from it', () => {
   // A surface destructuring a name that metrics.cjs does not export gets
   // undefined and fails at call time, not load time — so it survives a smoke test.

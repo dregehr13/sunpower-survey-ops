@@ -843,7 +843,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2082,9 +2082,12 @@ function renderLastWeek(){
     // dismissed as unnecessary, or a bare reopened-by-design flag with
     // nothing behind it, is not a survey failure. See lib/metrics.cjs.
   const lwDefects=src.filter(isResurveyDefect);
-  const lwFpy=src.length?Math.round((src.length-lwDefects.length)/src.length*100):null;
   const pwDefects=pwSrc.filter(isResurveyDefect);
-  const pwFpy=pwSrc.length?Math.round((pwSrc.length-pwDefects.length)/pwSrc.length*100):null;
+  // Same fpy() the Resurveys page uses, rounded to whole points because this
+  // card shows an integer and a week-over-week delta between two of them.
+  const rnd=v=>v==null?null:Math.round(v);
+  const lwFpy=rnd(fpy(src));
+  const pwFpy=rnd(fpy(pwSrc));
   const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
   const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
   const fpyBarW=lwFpy!=null?lwFpy:0;
@@ -3503,7 +3506,7 @@ function renderResurvey(){
   // so they are out of this page entirely, not merely out of the yield figure.
   // Counted only to say so once in the note under the reasons.
   const dismissed=completions.filter(r=>hasResurveySig(r)&&!isResurveyDefect(r)).length;
-  const fpy=completions.length?((completions.length-defects.length)/completions.length*100):null;
+  const pageFpy=fpy(completions);
   const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
   const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
 
@@ -3532,18 +3535,20 @@ function renderResurvey(){
     const m={};
     completions.forEach(r=>{
       const wk=weekOf(r.complete); if(!wk) return;
-      if(!m[wk]) m[wk]={wk,n:0,d:0};
-      m[wk].n++; if(isResurveyDefect(r)) m[wk].d++;
+      (m[wk]=m[wk]||[]).push(r);
     });
     // Three rows carry a completion date earlier than their start (parse-sf.js
     // flags these as backwards dates). Left in, they add phantom 2025 weeks
     // that compress the real year into the right-hand third of the chart.
     // Same guard the Trends page applies to its weekly series.
     return Object.keys(m).filter(wk=>wk>=DATA_CUTOFF).sort().map(wk=>{
-      const w=m[wk];
+      const comps=m[wk];
       const [y,mo,d]=wk.split('-').map(Number);
       const end=localISO(new Date(y,mo-1,d+6));
-      return {...w, end, fpy:w.n?((w.n-w.d)/w.n*100):null,
+      // The week keeps its rows, not just its counts: the rolling line below
+      // pools them so fpy() can weight by volume in one call.
+      return {wk, comps, n:comps.length, d:comps.filter(isResurveyDefect).length,
+              end, fpy:fpy(comps),
               mature:(dDiff(end,today)??0)>=RS_MATURE_DAYS};
     });
   })();
@@ -3556,8 +3561,7 @@ function renderResurvey(){
     if(!w.mature) return null;
     const win=fpyWeeks.slice(Math.max(0,i-3),i+1).filter(x=>x.mature&&x.n);
     if(win.length<3) return null;
-    const n=win.reduce((s,x)=>s+x.n,0), d=win.reduce((s,x)=>s+x.d,0);
-    return n?((n-d)/n*100):null;   // weighted by volume, not a mean of rates
+    return fpy(win.flatMap(x=>x.comps));   // weighted by volume, not a mean of rates
   });
 
   // ── why they happen ───────────────────────────────────────────────────
@@ -3588,7 +3592,7 @@ function renderResurvey(){
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     return {res,comps:comps.length,count:defs.length,
             open:openRs.filter(r=>r.resource===res).length,
-            avgCt:avg(cts), fpy:comps.length?((comps.length-defs.length)/comps.length*100):null};
+            avgCt:avg(cts), fpy:fpy(comps)};
   }).filter(d=>d.comps>0);
 
   // ── by region ─────────────────────────────────────────────────────────
@@ -3607,10 +3611,10 @@ function renderResurvey(){
     const defs=comps.filter(isResurveyDefect);
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     const cell=res=>{ const c=comps.filter(r=>r.resource===res);
-      return {n:c.length, fpy:c.length?((c.length-c.filter(isResurveyDefect).length)/c.length*100):null}; };
+      return {n:c.length, fpy:fpy(c)}; };
     return {reg, comps:comps.length, count:defs.length,
             open:openRs.filter(r=>r[grpKey]===reg).length, avgCt:avg(cts),
-            fpy:comps.length?((comps.length-defs.length)/comps.length*100):null,
+            fpy:fpy(comps),
             sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
   }).filter(d=>d.comps>0).sort((a,b)=>b.count-a.count||b.comps-a.comps);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
@@ -3666,7 +3670,7 @@ function renderResurvey(){
   <div class="kg kg4">
     <div class="kcard" style="cursor:pointer;" onclick="drillFPYDefects()">
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
-      <div class="kval ${fpyKCls(fpy)}">${fpy!=null?fpy.toFixed(1)+'%':'—'}</div>
+      <div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>
       <div class="ksub">${defects.length} of ${completions.length} completions came back</div>
       <div class="ktgt">target 95%</div>
     </div>
