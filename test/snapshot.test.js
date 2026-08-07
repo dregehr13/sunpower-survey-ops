@@ -23,8 +23,8 @@ const SNAP_PATH = path.join(HERE, 'fixtures/snapshot.json');
 const {
   filterRows, isComplete, isWIP, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace,
   hasResurveySig, avg, med, pct, normalizeName,
-  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd,
-  ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm, floorAlarm,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
+  ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, trendLabel,
 } = OpsMetrics;
@@ -95,14 +95,13 @@ function computeAll() {
   };
 
   // ── flow & alarms ──
-  const floors = [3, 2, 1, 0].map(i => wipOn(rows, isoAdd(weekEnd, 1 - 7 * i)));
+  const floors = [3, 2, 1, 0].map(i => weeklyFloor(rows, isoAdd(weekEnd, -7 * i)));
   const clearSeries = [3, 2, 1, 0].map(i => round(rollingClearance(rows, isoAdd(weekEnd, -7 * i), 4)));
   const flow = {
     rollingClearance4wk: clearSeries[clearSeries.length - 1],
     clearSeries,
     weeklyFloors: floors,
     clearanceAlarm: clearanceAlarm(clearSeries),
-    floorAlarm: floorAlarm(floors),
   };
 
   // ── projection inputs ──

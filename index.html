@@ -839,7 +839,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, floorAlarm, floorBaseline, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1619,7 +1619,7 @@ const TIP={
 
   // ── Flow ──
   clearance:'Surveys completed ÷ surveys started, for the last full week. Above 100% the backlog is shrinking, below 100% it is growing, regardless of how much volume comes in.',
-  weeklyFloor:'Open WIP once each week\'s weekend buildup has drained (currently the day after Monday). The weekend peak is expected; if this floor climbs week over week, backlog is genuinely growing.',
+  weeklyFloor:'The lowest daily WIP count seen during the week (Mon–Sun). If this floor climbs week over week, backlog is genuinely growing — it isn\'t draining back down even on the week\'s best day.',
 
   // ── Trends ──
   trend3wk:'Direction of the 3-week rolling average cycle time versus the 3 weeks before it. Stable means the change is inside a 0.1 day dead band.',
@@ -2881,20 +2881,19 @@ function renderTrends(){
     // Clearance/floor/alarms stay on `out` (current-truth) on purpose; only
     // the displayed Completed stat switches with the toggle.
     const outFirst=trendSrc.filter(r=>everCompleted(r)&&r.complete>=from&&r.complete<=end).length;
-    // The floor is only real once that Monday has fully elapsed — the export
-    // runs in the morning, before the day's clearing.
-    const mon=isoAddD(end,1);
-    flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:mon<flowEnd?weeklyFloor(trendSrc,end):null});
+    flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:weeklyFloor(trendSrc,end)});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
-  // Backlog alarms. The SS ratio is deliberately not one of these — see
-  // lib/metrics.cjs. The floor moved a month before the ratio did last time.
+  // Backlog alarm. The SS ratio is deliberately not one of these — see
+  // lib/metrics.cjs. The floor alarm (trailing-median multiplier) was dropped
+  // 2026-08-07: it assumed a stable baseline with occasional spikes, but a
+  // sustained multi-month climb makes the trailing median chase the trend,
+  // so the alarm flickered true/false with no real change in trajectory.
   const clearSeries=flowWeeks.map(w=>rollingClearance(trendSrc,w.end,4));
   const floorSeries=flowWeeks.map(w=>w.floor).filter(v=>v!=null);
   const clear4=clearSeries[clearSeries.length-1];
-  const aClear=clearanceAlarm(clearSeries), aFloor=floorAlarm(floorSeries);
-  const floorMed=floorBaseline(floorSeries);
+  const aClear=clearanceAlarm(clearSeries);
 
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
@@ -2902,24 +2901,21 @@ function renderTrends(){
     const clColor=cl==null?'#8a8571':aClear?'#b3402e':cl<90?'#8a6413':'#2e7a52';
     const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
     const inDelta=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
-    const floorCls=aFloor?'color:var(--red);':'';
-    const floorColor=aFloor?'#b3402e':'#8a8571';
     const clearSpark=miniSpark(clearSeries.map(v=>v==null?null:Math.round(v*100)),{thresh:90,color:clColor});
-    const floorSpark=miniSpark(floorSeries,{thresh:floorMed,color:floorColor});
+    const floorSpark=miniSpark(floorSeries,{color:'#8a8571'});
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
       +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
-      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;${floorCls}">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">${floorMed!=null?'baseline '+floorMed+' · alarm above '+Math.round(floorMed*1.5):'WIP after each week\'s buildup drains'}</div>${floorSpark}</div>`;
+      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
   }
   const aEl=document.getElementById('tr-alarm');
   if(aEl){
     const msgs=[];
-    if(aFloor) msgs.push(`<strong>Weekly floor is ${floorSeries[floorSeries.length-1]}</strong>, more than 1.5× its ${floorMed} baseline — the queue is not draining back to where it used to. This is the early signal; it moved a month before the SS ratio did last time.`);
     if(aClear) msgs.push(`<strong>4-week clearance is ${Math.round(clear4*100)}%</strong>, under 90% for a second reading running — completions are not keeping up with intake, independent of volume.`);
     aEl.innerHTML=msgs.length
       ? `<div style="padding:10px 13px;border-radius:var(--radius);background:#fdf0ee;border:1px solid #e8b4aa;font-size:12px;color:#7a2f22;line-height:1.55;">${msgs.join('<br><br>')}</div>`
-      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">Backlog alarms clear — weekly floor is within its normal band and 4-week clearance is holding at or above 90%.</div>`;
+      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">4-week clearance is holding at or above 90%.</div>`;
   }
   dc('tr-flow');
   if(trFlowView==='daily'){

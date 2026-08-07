@@ -68,13 +68,18 @@ every open row while the denominator averages in a barely-started week.
 | metric | definition | notes |
 |---|---|---|
 | `rollingClearance(rows, weekEnd, 4)` | completions ÷ starts over 4 weeks | volume-normalised; the 1-week version is noise (under 100% in 12 of 20 weeks) |
-| `weeklyFloor(rows, weekEnd)` | WIP after the weekend buildup drains (currently the day after Monday) | robust to the Fri/Sat rhythm by construction |
-| `floorBaseline(series, 16)` | median of the prior 16 floors | long window on purpose — a short one absorbs a regime shift and the alarm silences itself |
+| `weeklyFloor(rows, weekEnd)` | lowest daily WIP across the week (Mon–Sun) | used to assume Monday was always the low point (day after weekend buildup drains); a sustained backlog climb broke that — WIP now often keeps rising all week, so Monday could sit above the real minimum. Fixed 2026-08-07 to take the actual min |
 | `clearanceAlarm(series)` | 4-wk clearance <90% twice running | confirmation |
-| `floorAlarm(series)` | floor > 1.5× baseline | early warning; moved a month before the ratio did |
 
-Thresholds are fit to this team's own 20-week history — they encode "unusual for
-us", not an industry standard. Revisit after a quarter.
+`floorAlarm`/`floorBaseline` (trailing 16-week median × 1.5) were dropped from
+the UI 2026-08-07 — the design assumed a stable baseline with occasional
+spikes, but against a multi-month sustained climb the trailing median chases
+the trend and the alarm flickered true/false with no real change in
+trajectory. Functions remain in `lib/metrics.cjs` (tested) pending a redesign
+that detects sustained direction instead of a threshold vs. recent history.
+
+The clearance threshold is fit to this team's own 20-week history — it encodes
+"unusual for us", not an industry standard. Revisit after a quarter.
 
 ### Cycle time & projection
 

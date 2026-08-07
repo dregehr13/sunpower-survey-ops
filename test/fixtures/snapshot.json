@@ -65,11 +65,10 @@
   "weeklyFloors": [
    4,
    4,
-   18,
-   32
+   4,
+   18
   ],
-  "clearanceAlarm": true,
-  "floorAlarm": false
+  "clearanceAlarm": true
  },
  "projection": {
   "recentCompletions": 51,
