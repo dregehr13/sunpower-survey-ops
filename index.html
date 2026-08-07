@@ -399,6 +399,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .upd-drophere{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:var(--muted);margin-top:8px;transition:border-color .15s,background .15s;}
 .upd-drophere.drag-over{border-color:#2563eb;background:#eff6ff;color:#2563eb;}
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
+.drag-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(37,99,235,.08);border:2px solid #2563eb;pointer-events:none;z-index:300;animation:dragPulse .9s ease infinite;display:none;}
+.drag-overlay.active{display:block;}
 .upd-or{font-size:10px;color:var(--faint);text-align:center;margin:6px 0;}
 .sf-link{color:inherit;text-decoration:none;}.sf-link:hover{text-decoration:underline;color:var(--c1);}
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:12px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
@@ -661,7 +663,7 @@ body{padding-left:180px;}
   .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#777;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
   .nmenu-more:hover{color:#bbb;}
   .nmenu-more.active{color:#fff;border-bottom-color:var(--accent);}
-  .nmenu-dropdown{display:none;position:absolute;top:46px;right:0;background:#111;border:1px solid #333;border-radius:0 0 6px 6px;z-index:300;min-width:120px;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .nmenu-dropdown{display:none;position:fixed;top:46px;right:12px;background:#111;border:1px solid #333;border-radius:6px;z-index:300;min-width:120px;box-shadow:0 4px 12px rgba(0,0,0,.3);}
   .nmenu-dropdown.open{display:block;}
   .nmenu-item{display:block;padding:8px 12px;color:#999;font-size:11px;cursor:pointer;border-bottom:1px solid #222;white-space:nowrap;}
   .nmenu-item:hover{color:#fff;background:#1a1a1a;}
@@ -693,7 +695,7 @@ body{padding-left:180px;}
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-attn-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
-  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0" onclick="toggleMobileMenu()">More ▼
+  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
     <div class="nmenu-dropdown" id="mobileMoreMenu">
       <div class="nmenu-item" onclick="nav('resurvey')">Resurveys</div>
       <div class="nmenu-item" onclick="nav('map')">Map</div>
@@ -725,6 +727,8 @@ body{padding-left:180px;}
 
 
 <!-- UPDATE MODAL -->
+<div class="drag-overlay" id="dragOverlay"></div>
+
 <div class="mback hidden" id="updateModal">
   <div class="modal" style="width:520px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -738,7 +742,7 @@ body{padding-left:180px;}
       <div class="upd-num">1</div>
       <div class="upd-body">
         <div class="upd-title">Open your Salesforce report</div>
-        <div class="upd-desc">Click the button below to go directly to your report. If the link isn't configured yet, set it in <strong>Settings → Salesforce Connection</strong>.</div>
+        <div class="upd-desc">Click the button below to go directly to your report.</div>
         <div class="upd-action">
           <button class="upd-sfbtn" onclick="openSFFromUpdate()">⬡ Open report in Salesforce ↗</button>
         </div>
@@ -1537,6 +1541,7 @@ document.querySelectorAll('.ntab').forEach(t=>{
   t.addEventListener('click',()=>nav(t.dataset.page));
   t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nav(t.dataset.page); } });
 });
+document.getElementById('mobileMoreBtn')?.addEventListener('click',toggleMobileMenu);
 document.getElementById('mobileMoreBtn')?.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleMobileMenu(); } });
 
 // Keyboard: Escape closes overlays; Enter/Space activates sortable headers
@@ -4951,13 +4956,41 @@ function openSFFromUpdate(){
 
 // Drag and drop
 const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover',e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave',()=>{ dropZone.classList.remove('drag-over'); });
-dropZone.addEventListener('drop',e=>{
-  e.preventDefault(); dropZone.classList.remove('drag-over');
+const dragOverlay = document.getElementById('dragOverlay');
+let dragCounter = 0;
+
+// Track dragover on document when modal is open
+document.addEventListener('dragover',e=>{
+  const modal=document.getElementById('updateModal');
+  if(modal.classList.contains('hidden')) return;
+  e.preventDefault();
+  dragCounter++;
+  dragOverlay.classList.add('active');
+  dropZone.classList.add('drag-over');
+},false);
+
+document.addEventListener('dragleave',e=>{
+  dragCounter--;
+  if(dragCounter===0){
+    dragOverlay.classList.remove('active');
+    dropZone.classList.remove('drag-over');
+  }
+},false);
+
+document.addEventListener('drop',e=>{
+  const modal=document.getElementById('updateModal');
+  if(modal.classList.contains('hidden')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter=0;
+  dragOverlay.classList.remove('active');
+  dropZone.classList.remove('drag-over');
   const file=e.dataTransfer.files[0]; if(!file) return;
   loadFile(file);
-});
+},false);
+
+// Also keep local dropZone click handler
+dropZone.onclick=()=>{ document.getElementById('fileInput').click(); };
 
 // ═══ SAVE TO SERVER ══════════════════════════════════════
 let lastParsedRows = null;
