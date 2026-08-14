@@ -212,7 +212,7 @@ tr:hover td{background:#fafaf8;}
 .outlier-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);font-weight:600;margin-left:4px;}
 
 /* WIP QUEUE STATUS COUNTS */
-.qs-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 16px 0 16px;}
+.qs-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 16px 14px 16px;}
 .qs-chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11px;font-weight:600;line-height:1;padding:5px 9px;border:1px solid transparent;border-radius:99px;cursor:pointer;transition:opacity .15s,border-color .15s,box-shadow .15s;}
 .qs-chip:hover{border-color:currentColor;}
 .qs-chip.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(20,20,25,.08);}
@@ -3300,6 +3300,9 @@ function setWipView(v){ wipView=v; renderAgingWIP(); }
 function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
 function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
 function toggleWipQs(k){ if(wipQsSel.has(k)){wipQsSel.delete(k);}else{wipQsSel.add(k);} renderAgingWIP(); }
+// Clears only the status chips — the age bar above them is a separate control
+// and clearing it from here would undo a selection the user can still see.
+function clearWipQs(){ wipQsSel.clear(); renderAgingWIP(); }
 function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
@@ -3386,6 +3389,18 @@ function renderAgingWIP(){
   if(wipAgeSel.size>0)
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
   if(wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
+
+  // Queue status is a second-degree filter: it narrows whatever the age bar
+  // and schedule status have already selected. Counting the whole open queue
+  // instead advertised statuses that aren't in the current selection — "<5d"
+  // plus "Missing UB · 2" filtered down to no rows at all.
+  const qsPool=wip;
+  const qsCounts={}; qsPool.forEach(r=>{const k=wipQueueStatus(r).key;qsCounts[k]=(qsCounts[k]||0)+1;});
+  const qsShown=QS_ORDER.filter(k=>qsCounts[k]);
+  // A status that just left the selection takes its chip with it, so drop the
+  // selection too rather than stranding the table on an unreachable filter.
+  [...wipQsSel].forEach(k=>{ if(!qsCounts[k]) wipQsSel.delete(k); });
+  const qsNarrowed=wipAgeSel.size>0||wipStatusSel;
   if(wipQsSel.size>0) wip=wip.filter(r=>wipQsSel.has(wipQueueStatus(r).key));
   // Filtered summary stats (for strip below age bar)
   const _totalWipCount=rows.filter(r=>isWIP(r)).length;
@@ -3600,20 +3615,11 @@ function renderAgingWIP(){
           <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
         </div>
       </div>
-      ${(()=>{
-        // Counts for the Status column. Taken from the whole open queue rather
-        // than the visible rows, so selecting one status doesn't collapse every
-        // other count to zero. Click to filter; click again to clear.
-        const pool=rows.filter(r=>isWIP(r));
-        const n={}; pool.forEach(r=>{const k=wipQueueStatus(r).key;n[k]=(n[k]||0)+1;});
-        const shown=QS_ORDER.filter(k=>n[k]);
-        if(!shown.length) return '';
-        return `<div class="qs-strip">
-          ${shown.map(k=>{const q=QS[k],sel=wipQsSel.has(k);return `<button class="qs-chip${sel?' on':''}" aria-pressed="${sel}" onclick="toggleWipQs('${k}')" style="background:${q.bg};color:${q.fg};">${q.label}<span class="qs-n">${n[k]}</span></button>`;}).join('')}
-          <span class="qs-total">${pool.length} open</span>
-          ${wipQsSel.size?`<button class="qs-clear" onclick="clearWipAgeFilter()">Clear ×</button>`:''}
-        </div>`;
-      })()}
+      ${qsShown.length?`<div class="qs-strip">
+        ${qsShown.map(k=>{const q=QS[k],sel=wipQsSel.has(k);return `<button class="qs-chip${sel?' on':''}" aria-pressed="${sel}" onclick="toggleWipQs('${k}')" style="background:${q.bg};color:${q.fg};">${q.label}<span class="qs-n">${qsCounts[k]}</span></button>`;}).join('')}
+        <span class="qs-total">${qsPool.length} ${qsNarrowed?'in selection':'open'}</span>
+        ${wipQsSel.size?`<button class="qs-clear" onclick="clearWipQs()">Clear ×</button>`:''}
+      </div>`:''}
       ${wip.length?`<div class="wip-wrap"><table>
         <thead><tr>
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
