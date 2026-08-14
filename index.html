@@ -218,6 +218,15 @@ tr:hover td{background:#fafaf8;}
 .wip-expand{font-size:10px;color:var(--faint);margin-right:7px;display:inline-block;transition:transform .15s;vertical-align:middle;}
 .wip-row-open .wip-expand{transform:rotate(90deg);}
 .wip-detail td{padding:0!important;border-bottom:2px solid var(--border)!important;}
+/* The panel opens by animating a grid track from 0fr to 1fr rather than a
+   max-height guess — the row is three variable-length panels, so any fixed
+   max-height either clips a long review note or spends the tail of the
+   transition animating empty space. The clip div must stay overflow:hidden
+   for the collapsed track to actually hide it. */
+.wip-detail-clip{display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s cubic-bezier(.4,0,.2,1);}
+.wip-detail.open .wip-detail-clip{grid-template-rows:1fr;}
+.wip-detail-clip>.wip-detail-inner{overflow:hidden;min-height:0;opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .24s cubic-bezier(.4,0,.2,1);}
+.wip-detail.open .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;transition-delay:.04s;}
 .wip-detail-inner{padding:12px 16px 14px 16px;background:#f5f5f2;}
 .wip-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;gap:0;}
 .wip-panel-label{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;}
@@ -381,6 +390,10 @@ td{transition:background .12s;}
 .wip-row:hover .wip-expand{transform:translateX(2px);}
 .wip-expand{transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
 .wip-row-open .wip-expand{transform:rotate(90deg)!important;}
+@media (prefers-reduced-motion:reduce){
+  .wip-detail-clip,.wip-detail-clip>.wip-detail-inner,.wip-expand{transition:none!important;}
+  .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;}
+}
 
 /* PILLS */
 .pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s;}
@@ -1451,12 +1464,79 @@ function fmtReviewDate(s){
   if(!s) return '';
   try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; }
 }
-function toggleWipRow(rowEl, id){
-  const detail=document.getElementById('wip-detail-'+id);
-  if(!detail) return;
-  const isOpen=detail.style.display!=='none';
-  detail.style.display=isOpen?'none':'';
-  rowEl.classList.toggle('wip-row-open',!isOpen);
+// ── WIP row expansion ─────────────────────────────────────────────────────
+// One panel open at a time. Detail rows stay display:none while closed rather
+// than sitting collapsed in the layout: the queue can run several hundred rows
+// and each panel is a three-column grid, so leaving them all laid out costs a
+// visible pause on every sort and filter.
+const reduceMotion=()=>window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+const wipDetailOf=rowEl=>{const n=rowEl.nextElementSibling;return n&&n.classList.contains('wip-detail')?n:null;};
+
+function collapseWipRow(rowEl,instant){
+  const d=wipDetailOf(rowEl); if(!d) return;
+  rowEl.classList.remove('wip-row-open');
+  rowEl.setAttribute('aria-expanded','false');
+  d.classList.remove('open');
+  const clip=d.querySelector('.wip-detail-clip');
+  if(instant||reduceMotion()||!clip){ d.style.display='none'; return; }
+  // Hide only once the track has finished collapsing, or the panel would blink
+  // out at full height. The timeout is the backstop for a transitionend that
+  // never fires (background tab, or the row re-rendered mid-animation).
+  let done=false;
+  const finish=e=>{
+    if(done||(e&&e.target!==clip)) return;
+    done=true; clip.removeEventListener('transitionend',finish);
+    if(!d.classList.contains('open')) d.style.display='none';
+  };
+  clip.addEventListener('transitionend',finish);
+  setTimeout(finish,400);
+}
+
+function expandWipRow(rowEl){
+  const d=wipDetailOf(rowEl); if(!d) return;
+  d.style.display='';
+  rowEl.classList.add('wip-row-open');
+  rowEl.setAttribute('aria-expanded','true');
+  const clip=d.querySelector('.wip-detail-clip');
+  if(!clip||reduceMotion()){ d.classList.add('open'); return; }
+  void clip.offsetHeight;              // commit the 0fr frame before opening
+  requestAnimationFrame(()=>d.classList.add('open'));
+  // Scroll the panel into the scroller if it opened below the fold — but never
+  // far enough to push the row itself under the sticky header.
+  const wrap=rowEl.closest('.wip-wrap');
+  if(wrap) setTimeout(()=>{
+    if(!d.classList.contains('open')) return;
+    const wr=wrap.getBoundingClientRect();
+    const over=d.getBoundingClientRect().bottom-wr.bottom+8;
+    if(over<=0) return;
+    const head=wrap.querySelector('thead')?.offsetHeight||0;
+    const room=rowEl.getBoundingClientRect().top-wr.top-head;
+    if(room>4) wrap.scrollTo({top:wrap.scrollTop+Math.min(over,room),behavior:'smooth'});
+  },270);
+}
+
+function toggleWipRow(rowEl,ev){
+  if(ev&&ev.target.closest('a,button')) return;  // let the SF link and Reviewed ✓ through
+  const wrap=rowEl.closest('.wip-wrap')||document;
+  const open=rowEl.classList.contains('wip-row-open');
+  const other=wrap.querySelector('.wip-row-open');
+  if(other&&other!==rowEl){
+    // A panel closing *above* the clicked row drags that row up under the
+    // cursor mid-animation. Close that one instantly instead and absorb the
+    // height into scrollTop, so the row stays exactly where it was clicked.
+    const above=!!(other.compareDocumentPosition(rowEl)&Node.DOCUMENT_POSITION_FOLLOWING);
+    if(above&&wrap.scrollTo){
+      const y0=rowEl.getBoundingClientRect().top;
+      collapseWipRow(other,true);
+      wrap.scrollTop+=rowEl.getBoundingClientRect().top-y0;
+    } else collapseWipRow(other,false);
+  }
+  if(open) collapseWipRow(rowEl,false); else expandWipRow(rowEl);
+}
+
+function wipRowKey(rowEl,ev){
+  if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggleWipRow(rowEl,null); return; }
+  if(ev.key==='Escape'&&rowEl.classList.contains('wip-row-open')){ ev.preventDefault(); collapseWipRow(rowEl,false); }
 }
 
 // ═══ NAV ══════════════════════════════════════════════════
@@ -3319,7 +3399,7 @@ function renderAgingWIP(){
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
     return `<td colspan="9" style="padding:0;">
-      <div class="wip-detail-inner">
+      <div class="wip-detail-clip"><div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
 
           <div class="wip-panel">
@@ -3369,14 +3449,14 @@ function renderAgingWIP(){
           </div>
 
         </div>
-      </div>
+      </div></div>
     </td>`;
   }
 
   const tableRows=wip.map((r,i)=>{
     const ag=wipView==='attn'?attnMap[r.task_id||r.id]:null;
     return `
-    <tr class="wip-row" onclick="toggleWipRow(this,'${i}')" style="${ageRowBg(r.daysOpen)}">
+    <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)" style="${ageRowBg(r.daysOpen)}">
       <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason"><span class="attn-reason-text">${ag.texts.filter(Boolean).join(' · ')||'overdue'}</span><button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
       <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
