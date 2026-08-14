@@ -317,17 +317,16 @@ function computeStats(){
       const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
       const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
       const weekCompl=ROWS.filter(r=>isComplete(r)&&r.complete>=wS&&r.complete<=wE).length;
-      const wipEow=ROWS.filter(r=>r.start&&r.start<=wE&&(!isComplete(r)||r.complete>wE)).length;
-      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,wipEow});
+      // Shared definition — see lib/metrics.cjs. The line under the SS RATIO
+      // card used to be computed here as end-of-week WIP ÷ a 3-week completion
+      // average: the definition ssRatioForWeek() was written to replace, since
+      // a Sunday snapshot samples the weekly maximum. Card and line disagreed
+      // by up to 38% (week of 2026-08-02: card 1.02, line 1.41).
+      allTrend.push({label:fmtShort(wS),med:weekMedCycle(wS,wE),onTgt:weekOnTargetPct(wS,wE),count:weekCompl,cohortComplete,cohortActive,pipeRatio:ssRatioForWeek(ROWS,wE)});
     }
     for(let i=0;i<allTrend.length;i++){
       const ms=[allTrend[i-2]?.med,allTrend[i-1]?.med,allTrend[i].med].filter(x=>x!=null&&x>=0);
       allTrend[i].roll3=ms.length===3?ms.reduce((a,b)=>a+b,0)/3:null;
-      // Spencer formula: EOW WIP ÷ avg completions (this week + 2 prior)
-      if(i>=2){
-        const avgC=(allTrend[i].count+allTrend[i-1].count+allTrend[i-2].count)/3;
-        allTrend[i].pipeRatio=avgC>0?Math.round(allTrend[i].wipEow/avgC*100)/100:null;
-      }
     }
     const weeklyTrend=allTrend.slice(-5);
     const medW1=allTrend[4].med,medW2=allTrend[5].med,medW3=med(cts);

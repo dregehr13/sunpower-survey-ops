@@ -12,7 +12,7 @@ via CDN) plus a handful of Vercel serverless functions. Data is baked into stati
 files until the Salesforce API integration lands.
 
 ```
-index.html            Dashboard — Current / Performance / Trends / WIP / Resurveys / Data / Settings
+index.html            Dashboard — Current / Performance / Trends / WIP / Resurveys / Map / Data / Settings
 compose/index.html    Email + Teams card generator
 data.js               const RAW = [...] — the dataset the browser pages load
 data.json             Same rows as plain JSON — read by /api/morning-card
@@ -47,17 +47,47 @@ Alternative: the **Update data** button in the dashboard nav accepts a dropped
 
 ## Metric definitions
 
-- **Row scope:** `project_status` ∈ {In Progress, Change Order} and `start ≥ DATA_CUTOFF` (2025-12-29).
+**[`docs/METRICS.md`](docs/METRICS.md) is the register** — every displayed number,
+its definition, and which surfaces read it. The summary below is a pointer, not a
+second source of truth; when the two disagree, the register and `lib/metrics.cjs`
+win. (They have disagreed: this section carried the pre-2026 SS ratio for months,
+and compose grew a copy of it.)
+
+- **Row scope (`inScope`):** `start ≥ DATA_CUTOFF` (2025-12-29) **and** either the
+  survey is complete — which counts even on an At-Risk or Canceled project, since
+  the survey still happened — or the project is In Progress / Change Order.
 - **Cycle time (`ct_total`):** Project Start Date → Site Survey Complete, calendar days.
   Intermediate dates (requested/scheduled) exist but are unreliable — not featured.
+  `agreement_signed` is context, never the anchor.
 - **Complete:** requires *both* a Site Survey Complete date *and* `List = 'Complete'`.
 - **WIP:** has a start date and is not complete.
-- **WIP age:** from `resurvey_requested` if present, else `complete + 2 days`, else `start`.
+- **Two age metrics, never interchangeable:** `wipAgeFrom` is the cycle-time anchor
+  (resurvey request → completion + 2 days → start); `ssDaysOpen` is queue triage,
+  the same anchor minus one rep grace day.
 - **Targets:** median 3 days, average 4 days (Spec 12744).
-- **SS / pipeline ratio:** end-of-week WIP ÷ average completions of the 3 most recent
-  full weeks — "weeks of backlog". Above 1.0 is a concern.
+- **SS ratio — two variants on purpose:** `ssRatioForWeek` (the reported weekly
+  number: **7-day mean WIP** across the week ÷ completions of the 3 most recent
+  complete weeks) and `ssRatioLive` (open WIP right now, for the WIP page card).
+  The numerator is a mean, not a Sunday close — intake keeps arriving Fri/Sat
+  while the team is off, so a week-close snapshot samples the weekly maximum.
+  Bands: **≤1.0 healthy · 1–2 the normal operating range, deliberately uncoloured
+  · 2.0+ the alarm.**
 - **`ct_full`:** `ct_total + ct_resurvey`.
-- **FPY (pending SF fields):** (Completions − internal defects) / Completions, where
-  internal defects are resurveys attributed to SunPower Field or Radicl agents.
+- **FPY:** (Completions − internal defects) / Completions. Internal defects are
+  resurveys attributed to SunPower Field or Radicl agents. A request logged as
+  "Unnecessary Request" is not a defect — nothing was re-surveyed.
 
 Full field registry and parsing rules: `FIELDS` in `index.html` and `parse-sf.js`.
+
+## Tests
+
+```
+npm test                     # three suites, node:test — run before changing any metric
+UPDATE_SNAPSHOT=1 npm test   # accept an intentional metric change, deliberately
+```
+
+- `test/metrics.test.js` — each function against hand-written cases.
+- `test/snapshot.test.js` — every metric against a frozen real-data fixture; a
+  definition change fails with a value diff.
+- `test/surfaces.test.js` — static cross-surface guards (no surface reimplements
+  a shared definition, bands are never inline, no stale `TIP` entries).

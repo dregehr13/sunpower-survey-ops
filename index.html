@@ -910,7 +910,12 @@ const FIELDS = [
   {key:'address',              sfCol:'Installation Address',                                       label:'Address',          type:'text',     filterable:false, editable:false},
   {key:'region',               sfCol:'Sales Region',                                               label:'Sales Region',     type:'category', filterable:true,  editable:true},
   {key:'sales_office',         sfCol:'Sales Office Name',                                          label:'Sales Office',     type:'category', filterable:false, editable:false},
-  {key:'type',                 sfCol:'Project Installation Type',                                  label:'Install Type',     type:'category', filterable:true,  editable:true},
+  // filterable:false on purpose. The global bar has never rendered an Install
+  // Type control, but the filter kept living in GF, in gfDim/applyFilter and in
+  // the URL as ?type= — so a shared link could filter every page with nothing
+  // on screen to show it or clear it. The WIP page keeps its own Type control,
+  // which is separate state (wipF.type) and unaffected.
+  {key:'type',                 sfCol:'Project Installation Type',                                  label:'Install Type',     type:'category', filterable:false, editable:true},
   {key:'sales_rep',            sfCol:'Sales Rep Name',                                             label:'Sales Rep',        type:'text',     filterable:false, editable:false},
   {key:'sales_rep_phone',      sfCol:'Project Event : Opportunity : Sales Rep Mobile Number',      label:'Sales Rep Phone',  type:'text',     filterable:false, editable:false},
   {key:'sales_rep_email',      sfCol:'Project Event : Opportunity : Sales Rep Email',              label:'Sales Rep Email',  type:'text',     filterable:false, editable:false},
@@ -1002,7 +1007,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
 const PAGES = ['week','performance','trends','wip','resurvey','map','data'];
-const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],type:'all',resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
+const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
 const GF = defaultF();
@@ -1012,7 +1017,16 @@ PAGES.forEach(p => pageF[p] = GF);
 // Rebuild the scoped view (`rows`) from the full set based on GF.statuses.
 // A completed survey counts under the 'Complete' bucket even if the project
 // is At-Risk/Cancelled — the survey happened; it just never shows as open WIP.
-function scopeRows(){ const s=GF&&GF.statuses; rows = (s&&s.length) ? allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r))) : allRows.slice(); }
+// An empty status list means "nothing selected", not "no filter". It used to
+// fall through to allRows, so unchecking every box WIDENED the scope from 2,448
+// to 2,538 — pulling in At-Risk and Canceled — while the button read
+// "Status · 0" and highlighted as active. Only a missing or malformed
+// GF.statuses falls back to the full set.
+function scopeRows(){
+  const s=GF&&GF.statuses;
+  if(!Array.isArray(s)){ rows=allRows.slice(); return; }
+  rows = allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
+}
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
 scopeRows();
@@ -1033,7 +1047,11 @@ function saveFilterState(){
 }
 
 // ═══ URL STATE — filters reflected in the hash so views are shareable ═══
-const URL_PAGES=['week','performance','trends','wip','resurvey','data','settings'];
+// Must list every page nav() can land on, or that page's hash is written but
+// never read back: #map round-tripped into the URL while applyURLState()
+// rejected it, so a reload — and the /va-map redirect in vercel.json — landed
+// on whatever page localStorage had saved instead.
+const URL_PAGES=['week','performance','trends','wip','resurvey','map','data','settings'];
 function syncURL(){
   const f=pageF[currentPage];
   const q=new URLSearchParams();
@@ -1041,7 +1059,7 @@ function syncURL(){
     if(f.dateFrom) q.set('from',f.dateFrom);
     if(f.dateTo) q.set('to',f.dateTo);
     if(Array.isArray(f.region)&&f.region.length) q.set('region',f.region.join('|'));
-    if(f.type&&f.type!=='all') q.set('type',f.type);
+    if(Array.isArray(f.office)&&f.office.length) q.set('office',f.office.join('|'));
     if(f.resource&&f.resource!=='all') q.set('resource',f.resource);
     if(f.removeOutliers) q.set('outliers','1');
   }
@@ -1063,7 +1081,7 @@ function applyURLState(){
     if(q.has('from')){ f.dateFrom=q.get('from'); hadDates=true; }
     if(q.has('to')){ f.dateTo=q.get('to'); hadDates=true; }
     if(q.has('region')) f.region=q.get('region').split('|').filter(Boolean);
-    if(q.has('type')) f.type=q.get('type');
+    if(q.has('office')) f.office=q.get('office').split('|').filter(Boolean);
     if(q.has('resource')) f.resource=q.get('resource');
     if(q.has('outliers')) f.removeOutliers=q.get('outliers')==='1';
   }
@@ -1106,7 +1124,10 @@ function applyFilter(){
     if(f.dateFrom && r.complete < f.dateFrom) return false;
     if(f.dateTo   && r.complete > f.dateTo)   return false;
     if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
-    if(f.type   !== 'all' && r.type   !== f.type)     return false;
+    // Office has to bite here as well as in gfDim(). It only ever lived in
+    // gfDim, so Trends/Resurveys/Map narrowed while Performance — which reads
+    // `filtered` — showed an active button, a chip, and identical numbers.
+    if(Array.isArray(f.office)&&f.office.length&&!f.office.includes(r.sales_office)) return false;
     if(f.resource && f.resource !== 'all' && r.resource !== f.resource) return false;
     if(f.removeOutliers && r.ct_total!=null && r.ct_total > S.outlierDays) return false;
     return true;
@@ -1119,7 +1140,6 @@ function applyFilter(){
 function gfDim(r){
   if(Array.isArray(GF.region)&&GF.region.length&&!GF.region.includes(r.region)) return false;
   if(Array.isArray(GF.office)&&GF.office.length&&!GF.office.includes(r.sales_office)) return false;
-  if(GF.type!=='all'&&r.type!==GF.type) return false;
   if(GF.resource&&GF.resource!=='all'&&r.resource!==GF.resource) return false;
   return true;
 }
@@ -1340,10 +1360,13 @@ function clearF(page){
 }
 
 // ═══ AGING WIP FILTER HELPERS ════════════════════════════
-function wipFiltered(){
+// The page's dimension filter over EVERY scoped row, open or closed. The SS
+// ratio needs it: its denominator is completions, so filtering the numerator to
+// a region while the denominator stayed national produced a ratio of two
+// different populations.
+function wipScoped(){
   const regArr=Array.isArray(wipF.region)?wipF.region:[];
   return rows.filter(r=>{
-    if(!r.start||isComplete(r)) return false;
     if(regArr.length&&!regArr.includes(r.region)) return false;
     if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
@@ -1351,6 +1374,11 @@ function wipFiltered(){
     return true;
   });
 }
+// The open queue within that filter — what the table, the age bar and the KPI
+// cards all describe. They used to disagree: only the table read this, so
+// filtering to one region left 1 row in the queue under a 113-open KPI row and
+// a 113-row age bar whose bands, when clicked, filtered a 1-row table.
+function wipFiltered(){ return wipScoped().filter(r=>r.start&&!isComplete(r)); }
 
 function buildWIPFBar(){
   const regions=[...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
@@ -1564,11 +1592,23 @@ const SPRING='cubic-bezier(.22,.68,0,1.2)';
 const EASE_OUT='cubic-bezier(.25,.46,.45,.94)';
 
 function countUp(el){
+  // Re-entrancy guard. The target string used to be read straight out of live
+  // DOM text every call, so a second pass over an element that was already
+  // animating captured a PARTIAL FRAME as its target and settled there for
+  // good: the Resurveys "Cost of a resurvey" card sat on "+0.3d" while its own
+  // subtitle read "4.0d clean → 9.3d resurveyed" (the real figure was +5.3d).
+  // Two animateSections() runs on the same nodes a frame or two apart is all it
+  // takes, and a backgrounded tab makes it stick because rAF stops firing.
+  //
+  // The true string is stashed on the element on first sight and read back from
+  // there afterwards; a run already in flight is left alone.
+  if(el.dataset.cuRun==='1') return;
+  const raw=el.dataset.cuRaw!==undefined?el.dataset.cuRaw:el.textContent.trim();
+  el.dataset.cuRaw=raw;
   // Parse text like "~109", "6.8d", "52%", "35d", "1,857", "+6.1d"
   // A leading sign belongs in the prefix, not the number: without + and - in
   // both classes below, sfxIdx lands on index 0 for "+6.1d", the whole string
   // becomes the suffix, and every frame renders "0.0+6.1d".
-  const raw=el.textContent.trim();
   const prefix=raw.match(/^[~<>≤≥+-]/)?.[0]||'';
   const numStr=raw.replace(/[^0-9.]/g,'');
   const num=parseFloat(numStr);
@@ -1585,7 +1625,8 @@ function countUp(el){
   // restoring `raw` also avoids toLocaleString/toFixed drifting from the text
   // the renderer actually produced.
   let settled=false;
-  const settle=()=>{ if(settled) return; settled=true; el.textContent=raw; };
+  el.dataset.cuRun='1';
+  const settle=()=>{ if(settled) return; settled=true; el.textContent=raw; delete el.dataset.cuRun; };
   const tick=now=>{
     const p=Math.min((now-t0)/dur,1);
     if(p>=1) return settle();
@@ -1711,7 +1752,10 @@ function subtractDays(dateStr,n){
 }
 function recalc(r){
   r.ct_s2r=dDiff(r.start,r.requested); r.ct_r2s=dDiff(r.requested,r.scheduled);
-  r.ct_total=dDiff(r.start,r.complete);
+  // effectiveComplete, matching parse-sf.js. Editing a date in the source
+  // editor used to swap the row onto a second cycle-time formula: the parser
+  // measures a re-signed account's cycle to its agreement date, this did not.
+  r.ct_total=dDiff(r.start,OpsMetrics.effectiveComplete(r));
   if(r.ct_total===null&&!r.requested&&r.field_survey_complete)
     r.ct_total=dDiff(r.start,subtractDays(r.field_survey_complete,2));
   if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0;
@@ -2174,9 +2218,13 @@ function renderLastWeek(){
     else qualStr=`cycle <span class="brief-bad">${vsBaseline.toFixed(1)}d above</span> the 3-wk avg`;
   }
   document.getElementById('lw-brief').innerHTML=`${volStr}${qualStr?' — '+qualStr:''}.`;
-  const wip=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to)).length;
-  const curWipProjects=rows.filter(r=>isWIP(r));
-  const avgAge=avg(curWipProjects.map(r=>dDiff(r.start,localISO(new Date()))));
+  // WIP as the week closed, aged as the week closed. Both halves of this card
+  // used to disagree: the count was last Sunday's WIP while the age was the
+  // *currently* open rows measured as Proj Age off the wall clock, so it read
+  // ~12.6d beside the 4.8d that This Week, the WIP page and the Map all show.
+  const lwWipRows=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to));
+  const wip=lwWipRows.length;
+  const avgAge=avg(lwWipRows.map(r=>ssDaysOpen(r,lw.to)));
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.firstComplete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
@@ -2225,10 +2273,13 @@ function renderLastWeek(){
   const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
   const fpyBarW=lwFpy!=null?lwFpy:0;
 
-  // Still open from last week
-  const todayISO=localISO(new Date());
+  // Still open from last week. Ages are queue ages against the export date, not
+  // Proj Age against the wall clock — the bands are labelled "on track / at
+  // risk / needs attn", which is the WIP page's question, and a stale export
+  // used to drift every row upward a band per day.
+  const soAsOf=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
   const stillOpen=rows.filter(r=>r.start&&r.start>=lw.from&&r.start<=lw.to&&!isComplete(r));
-  const soAge=r=>dDiff(r.start,todayISO);
+  const soAge=r=>ssDaysOpen(r,soAsOf);
   const so1=stillOpen.filter(r=>soAge(r)<=S.targetAvg);
   const so2=stillOpen.filter(r=>soAge(r)>S.targetAvg&&soAge(r)<=(S.targetAvg+3));
   const so3=stillOpen.filter(r=>soAge(r)>(S.targetAvg+3));
@@ -2597,6 +2648,10 @@ function renderPerformance(){
   const kclsBands=(v,tgt)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,tgt)]||'');
   const kclsAvg=v=>kclsBands(v,S.targetAvg);
   const kclsMed=v=>kclsBands(v,S.targetMedian);
+  // The resource cards band through the same kclsAvg/kclsMed the KPI row above
+  // them uses. They used to band inline, with median amber at ≤targetAvg+2
+  // instead of bandFor's ≤targetMedian+2 — so Radicl's 6.0d median read amber
+  // on the card and red on the "Median total" card 40px above it.
   const typeColors={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
   const spCount=src.filter(r=>r.resource==='SunPower Surveyor').length;
   const srCount=src.filter(r=>r.resource==='Sales Rep').length;
@@ -2610,8 +2665,8 @@ function renderPerformance(){
       <div class="res-card-title"><span class="res-dot" style="background:${typeColors[rt]||'#8f8f98'};"></span>${rt}</div>
       <div class="res-card-count">${rsrc.length} surveys</div>
       <div class="res-stats">
-        <div class="res-stat-row"><span class="rlabel">Avg</span><span class="rval ${rAvg!=null?(rAvg<=S.targetAvg?'kg-c':rAvg<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rAvg!=null?rAvg.toFixed(1)+'d':'—'}</span></div>
-        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${rMed!=null?(rMed<=S.targetMedian?'kg-c':rMed<=(S.targetAvg+2)?'ka-c':'kr-c'):''}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
+        <div class="res-stat-row"><span class="rlabel">Avg</span><span class="rval ${kclsAvg(rAvg)}">${rAvg!=null?rAvg.toFixed(1)+'d':'—'}</span></div>
+        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${kclsMed(rMed)}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
         <div class="res-stat-row"><span class="rlabel">On target</span><span class="rval">${rOnTgt!=null?rOnTgt+'%':'—'}</span></div>
       </div>
     </div>`;
@@ -3314,7 +3369,9 @@ function renderAgingWIP(){
   // Needs-attention groups keyed by project (task_id or id)
   const attnMap={};
   attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
-  const attnTotal=Object.keys(attnMap).length;
+  // Counted within the page's filter, so the toggle's badge matches the rows it
+  // produces rather than advertising the national figure.
+  const attnTotal=wipFiltered().filter(r=>attnMap[r.task_id||r.id]).length;
   const wipSchedDate=r=>isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
@@ -3402,8 +3459,9 @@ function renderAgingWIP(){
   [...wipQsSel].forEach(k=>{ if(!qsCounts[k]) wipQsSel.delete(k); });
   const qsNarrowed=wipAgeSel.size>0||wipStatusSel;
   if(wipQsSel.size>0) wip=wip.filter(r=>wipQsSel.has(wipQueueStatus(r).key));
-  // Filtered summary stats (for strip below age bar)
-  const _totalWipCount=rows.filter(r=>isWIP(r)).length;
+  // Filtered summary stats (for strip below age bar). "Total" here means the
+  // page's own filter, which is what the age bar and KPI cards now show too.
+  const _totalWipCount=wipFiltered().length;
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
   const selAvg=selDays.length?Math.round(selDays.reduce((a,b)=>a+b,0)/selDays.length*10)/10:null;
   const selPct=wip.length?Math.round(wip.filter(r=>r.projectedCt<=S.targetAvg).length/wip.length*100):null;
@@ -3430,15 +3488,19 @@ function renderAgingWIP(){
     note:r.last_comment||'',
   }));
 
-  // Stats from full unfiltered WIP
-  const allWip=rows.filter(r=>isWIP(r)).map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r)}));
+  // Stats over the filtered queue, before the age-band / schedule / status
+  // chips narrow it further — those three are selections within this set.
+  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r)}));
+  const wipUnfilteredCount=rows.filter(r=>isWIP(r)).length;
+  const wipDimFiltered=allWip.length!==wipUnfilteredCount;
   const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
   const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
   const sortedAges=[...allAges].sort((a,b)=>a-b);
   const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
-  const pipeRatio=ssRatioLive(rows,today);
+  // Both sides of the ratio come from the same filtered population.
+  const pipeRatio=ssRatioLive(wipScoped(),today);
   const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
   const totalWip=allWip.length;
 
@@ -3531,7 +3593,7 @@ function renderAgingWIP(){
 
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">All open surveys</div></div>
+      <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">${wipDimFiltered?'of '+wipUnfilteredCount+' open · current filter':'All open surveys'}</div></div>
       <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge+' '+TIP.ssDaysOpen)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
       <div class="kcard"><div class="klabel">Median age${kinfo(TIP.medAge)}</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d${kinfo(TIP.onTrackWip())}</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
@@ -3551,7 +3613,9 @@ function renderAgingWIP(){
       ];
       const STATUS_COLORS={scheduled:'#3b82f6',pastdue:'#f87171',unscheduled:'#9ca3af'};
       const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
-      const paWip=rows.filter(r=>isWIP(r)&&r.start).map(r=>{
+      // Same filtered queue the table and the KPI cards read, so a band's count
+      // is the number of rows clicking it actually produces.
+      const paWip=wipFiltered().filter(r=>r.start).map(r=>{
         const age=dDiff(r.start,today)??0;
         const s=isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
         const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';

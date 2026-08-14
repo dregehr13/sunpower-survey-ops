@@ -33,7 +33,13 @@ function buildPrompt(stats, mode, observations, manualNote) {
     if (stats.trend) lines.push(`3-week median trend: ${stats.trend} (rolling median: ${stats.rollingMed != null ? stats.rollingMed.toFixed(1)+'d' : 'n/a'})`);
     if (stats.weeklyTrend) lines.push(`4-week cycle trend: ${stats.weeklyTrend.map(w=>`${w.label}: ${w.med!=null?w.med.toFixed(1)+'d':'no data'} (${w.count} completions)`).join(' → ')}`);
     if (stats.onTargetPct != null) lines.push(`On target (≤4d): ${stats.onTargetPct}%`);
-    if (stats.pipelineRatio != null) lines.push(`Pipeline ratio: ${stats.pipelineRatio.toFixed(2)}× (${stats.wip} open ÷ ${stats.prAvg.toFixed(1)} avg completions/wk last 3 weeks — ratio >1 is a concern)`);
+    // Numerator is the week's MEAN WIP (stats.meanWip), not the Sunday close —
+    // this used to pass stats.wip, which is a different number from the one the
+    // ratio was built out of. Band per ssRatioBand(): under 1 is healthy, 1–2
+    // is the normal operating range (intake keeps arriving over the weekend
+    // while the team is off), 2+ is the alarm. It previously said ">1 is a
+    // concern", which had the model calling an ordinary week a problem.
+    if (stats.pipelineRatio != null) lines.push(`SS ratio: ${stats.pipelineRatio.toFixed(2)}× weeks of backlog (${stats.meanWip} avg WIP across the week ÷ ${stats.prAvg.toFixed(1)} avg completions/wk over this week and the 2 prior). Under 1.0 is healthy, 1–2 is the normal operating range, 2.0+ is the alarm.`);
   } else {
     lines.push(`Mode: Daily recap`);
     lines.push(`Yesterday (${stats.yesterday}): ${stats.completedYesterday} completed, ${stats.newInYesterday} new in`);
