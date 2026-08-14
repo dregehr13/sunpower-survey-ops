@@ -211,6 +211,16 @@ tr:hover td{background:#fafaf8;}
 /* OUTLIER TABLE */
 .outlier-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);font-weight:600;margin-left:4px;}
 
+/* WIP QUEUE STATUS COUNTS */
+.qs-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 16px 0 16px;}
+.qs-chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11px;font-weight:600;line-height:1;padding:5px 9px;border:1px solid transparent;border-radius:99px;cursor:pointer;transition:opacity .15s,border-color .15s,box-shadow .15s;}
+.qs-chip:hover{border-color:currentColor;}
+.qs-chip.on{border-color:currentColor;box-shadow:0 0 0 2px rgba(20,20,25,.08);}
+.qs-strip:has(.qs-chip.on) .qs-chip:not(.on){opacity:.4;}
+.qs-n{font-weight:700;font-variant-numeric:tabular-nums;padding-left:6px;border-left:1px solid currentColor;opacity:.75;}
+.qs-total{font-size:11px;color:var(--faint);margin-left:2px;}
+.qs-clear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0 4px;}
+
 /* WIP EXPANDABLE ROWS */
 .wip-row{cursor:pointer;}
 .wip-row:hover td{background:#f5f5f0!important;}
@@ -223,7 +233,13 @@ tr:hover td{background:#fafaf8;}
    max-height either clips a long review note or spends the tail of the
    transition animating empty space. The clip div must stay overflow:hidden
    for the collapsed track to actually hide it. */
-.wip-detail-clip{display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s cubic-bezier(.4,0,.2,1);}
+/* width:0 + min-width:100% keeps the panel out of the table's auto column
+   sizing. The detail cell spans all nine columns, so its intrinsic width gets
+   distributed back across them: opening a row squeezed Project 212px→180px and
+   wrapped every name onto a second line, growing every row in the table. The
+   zero width contributes nothing to that calculation; min-width fills the row
+   back out once the columns have settled. */
+.wip-detail-clip{display:grid;grid-template-rows:0fr;width:0;min-width:100%;transition:grid-template-rows .24s cubic-bezier(.4,0,.2,1);}
 .wip-detail.open .wip-detail-clip{grid-template-rows:1fr;}
 .wip-detail-clip>.wip-detail-inner{overflow:hidden;min-height:0;opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .24s cubic-bezier(.4,0,.2,1);}
 .wip-detail.open .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;transition-delay:.04s;}
@@ -1009,6 +1025,7 @@ let wipRgDropOpen = false;
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
 let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — only applies when exactly one band selected
+let wipQsSel = new Set();  // selected queue-status keys (QS in renderAgingWIP), multi-select
 
 function saveFilterState(){
   try{ localStorage.setItem('ops_filters', JSON.stringify({pageF, currentPage})); }catch(e){}
@@ -3282,7 +3299,8 @@ let wipView='all'; // 'all' | 'attn'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
 function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
 function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
-function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; renderAgingWIP(); }
+function toggleWipQs(k){ if(wipQsSel.has(k)){wipQsSel.delete(k);}else{wipQsSel.add(k);} renderAgingWIP(); }
+function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildWIPFBar();
@@ -3309,21 +3327,46 @@ function renderAgingWIP(){
     const est=_isoAdd(wipAgeFrom(r),Math.round(_expCt(r)));
     return est>today?est:today;
   };
+  // The queue-status vocabulary. One entry per pill, shared by the status
+  // column and the counts strip so a colour or wording change lands on both.
+  // `sort` is the table's status sort order, not display order.
+  const QS={
+    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eff6ff',       fg:'#3b82f6',     sort:0},
+    pastdue:     {key:'pastdue',     label:'Past due',          bg:'var(--red-bg)', fg:'var(--red)',  sort:1},
+    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#f3efff',       fg:'#7c3aed',     sort:3},
+    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'var(--amber-bg)',fg:'var(--amber)',sort:4},
+    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#edf3f8',       fg:'#4f7fae',     sort:5},
+    likelyCancel:{key:'likelyCancel',label:'Likely Cancel',     bg:'#fef3e7',       fg:'#b45309',     sort:6},
+    new:         {key:'new',         label:'New',               bg:'#ffffff',       fg:'var(--muted)',sort:7},
+    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f1f1ee',       fg:'var(--muted)',sort:8},
+  };
+  const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+
   // Queue status: what is this survey waiting on?
-  // Returns {label, bg, fg, sort} rendered as a pill in the WIP table status column.
+  // Returns one of QS below, rendered as a pill in the WIP table status column
+  // and counted in the strip above the table. Order of the tests is the
+  // priority order — a Radicl job whose review says the utility bill is
+  // missing is blocked on the bill, not on Radicl.
   const wipQueueStatus=r=>{
     const sched=wipSchedDate(r);
-    if(sched&&sched>=today) return {label:'Scheduled',bg:'#eff6ff',fg:'#3b82f6',sort:0};
-    if(sched&&sched<today) return {label:'Past due',bg:'var(--red-bg)',fg:'var(--red)',sort:1};
+    if(sched&&sched>=today) return QS.scheduled;
+    if(sched&&sched<today) return QS.pastdue;
     // Unscheduled — classify by last review subject
     const subj=(r.last_reviewed_subject||'').toUpperCase();
     const comm=(r.last_comment||'').toUpperCase();
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return {label:'Likely Cancel',bg:'#fef3e7',fg:'#b45309',sort:6};
-    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return {label:'Missing UB',bg:'var(--amber-bg)',fg:'var(--amber)',sort:4};
-    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return {label:'Radicl scheduling',bg:'#f3efff',fg:'#7c3aed',sort:3};
-    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return {label:'Awaiting rep',bg:'#edf3f8',fg:'#4f7fae',sort:5};
-    if(!r.last_reviewed_date) return {label:'New',bg:'#ffffff',fg:'var(--muted)',sort:7};
-    return {label:'Unscheduled',bg:'#f1f1ee',fg:'var(--muted)',sort:8};
+    const any=re=>re.test(subj)||re.test(comm);
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return QS.likelyCancel;
+    // Reviewers write both "MISSING UB" and "MISSING UTILITY BILL"; matching
+    // only the abbreviation left four of these reading Unscheduled.
+    if(any(/MISSING (UB|UTILITY BILL)/)) return QS.missingUb;
+    // "RADICL RESCHEDULING WITH CUSTOMER" is the same waiting state as
+    // "RADICL SCHEDULING", and "INITIAL SITE SURVEY - RADICL" is the subject
+    // used when a job is handed to Radicl for booking — its comments read
+    // "Submitted to Radicl for scheduling". All three are waiting on Radicl.
+    if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))) return QS.radicl;
+    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return QS.awaitingRep;
+    if(!r.last_reviewed_date) return QS.new;
+    return QS.unscheduled;
   };
 
   let wip=wipFiltered().map(r=>({
@@ -3343,6 +3386,7 @@ function renderAgingWIP(){
   if(wipAgeSel.size>0)
     wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
   if(wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
+  if(wipQsSel.size>0) wip=wip.filter(r=>wipQsSel.has(wipQueueStatus(r).key));
   // Filtered summary stats (for strip below age bar)
   const _totalWipCount=rows.filter(r=>isWIP(r)).length;
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
@@ -3556,6 +3600,20 @@ function renderAgingWIP(){
           <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
         </div>
       </div>
+      ${(()=>{
+        // Counts for the Status column. Taken from the whole open queue rather
+        // than the visible rows, so selecting one status doesn't collapse every
+        // other count to zero. Click to filter; click again to clear.
+        const pool=rows.filter(r=>isWIP(r));
+        const n={}; pool.forEach(r=>{const k=wipQueueStatus(r).key;n[k]=(n[k]||0)+1;});
+        const shown=QS_ORDER.filter(k=>n[k]);
+        if(!shown.length) return '';
+        return `<div class="qs-strip">
+          ${shown.map(k=>{const q=QS[k],sel=wipQsSel.has(k);return `<button class="qs-chip${sel?' on':''}" aria-pressed="${sel}" onclick="toggleWipQs('${k}')" style="background:${q.bg};color:${q.fg};">${q.label}<span class="qs-n">${n[k]}</span></button>`;}).join('')}
+          <span class="qs-total">${pool.length} open</span>
+          ${wipQsSel.size?`<button class="qs-clear" onclick="clearWipAgeFilter()">Clear ×</button>`:''}
+        </div>`;
+      })()}
       ${wip.length?`<div class="wip-wrap"><table>
         <thead><tr>
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
