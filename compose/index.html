@@ -314,8 +314,12 @@ function computeStats(){
     for(let i=6;i>=0;i--){
       const wS=toISO(addDays(new Date(period.from+'T12:00:00'),-7*i));
       const wE=toISO(addDays(new Date(wS+'T12:00:00'),6));
-      const cohortComplete=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list==='Complete').length;
-      const cohortActive=ROWS.filter(r=>r.start>=wS&&r.start<=wE&&r.list&&r.list!=='Complete'&&r.list!=='Not Required').length;
+      // isComplete(), not a bare list check — a Holding or Reopened row carries
+      // a completion date but is not done, and the two bars have to partition
+      // the cohort between them.
+      const inWeek=ROWS.filter(r=>r.start>=wS&&r.start<=wE);
+      const cohortComplete=inWeek.filter(isComplete).length;
+      const cohortActive=inWeek.filter(r=>!isComplete(r)&&r.list&&r.list!=='Not Required').length;
       const weekCompl=ROWS.filter(r=>isComplete(r)&&r.complete>=wS&&r.complete<=wE).length;
       // Shared definition — see lib/metrics.cjs. The line under the SS RATIO
       // card used to be computed here as end-of-week WIP ÷ a 3-week completion

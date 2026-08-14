@@ -40,12 +40,47 @@ byte-identical to the pre-change baseline.
 **Deferred out of batch 1, deliberately:**
 
 - **W2** (WIP's separate filter bar) — severity "wrong" but the axis is
-  Organization and the fix is structural; batch 2.
+  Organization and the fix is structural; done in batch 2.
 - **A1** (unauthenticated `/api/send-teams`, `/api/team-opener`) — every available
   fix is theatre, a UX change, or a rewrite of the card path. See the note under
   the API table.
 
 ---
+
+## Batch 2 — applied (organization + logic clarity)
+
+`npm test` 65/65, snapshot unchanged. Net −144/+90 lines in `index.html`.
+
+| finding | now |
+|---|---|
+| W2 WIP's private filter bar | Deleted (`buildWIPFBar` and its five handlers, −144 lines). One bar for every page: Region / Office / Status / Resource are shared, so a region picked on Performance carries to WIP and the global Office filter reaches it for the first time. **Sales Rep and Install Type stay WIP-only extras** — nothing else cuts by either. WIP shows no date range at all, because it is a live snapshot and an inert date picker is worse than none; the hint says so: "113 of 113 open · live, not date-filtered" |
+| C3 nav badge | reads the attention count (**42**) instead of total WIP (113), matching the WIP page's own toggle, with a title attribute. Renamed `renderNeedsAttn` → `renderWipAttnBadge` and wired into `nav()` so it follows every page, not just Current. Dead `openAttnView()` deleted |
+| G6 landing page list | Map added — it was the one page you couldn't start on |
+| T1 Trends tooltip | "Weekly avg cycle time" now carries `TIP.cycle`; `TIP.ssRatioWeek` moved onto the SS-ratio legend entry, where the ratio actually is |
+| R1 Resurveys headline FPY | under `RS_MIN_CELL` completions it prints `n=8` and "under 10 completions", the same standard the breakdown table already held itself to |
+| P2 region sections split apart | reordered to Volume by region → Avg cycle by region → Region detail → Sales rep cycle time. **Charts not merged** — they answer different questions; the real problem was that the rep table sat between them, interleaving rep content with region content |
+| P3 rep table subtitle | follows the toggle: "Surveys the rep did themselves · slowest first" vs "Surveys the rep sold, surveyed by Radicl Services · slowest first" |
+| X4 compose cohort bars | `isComplete()` instead of a bare `list === 'Complete'`, so the two bars partition the cohort |
+| — (found while fixing W2) | **Escape closed two of the three filter dropdowns.** Status was never in the handler's list. Fixed |
+
+### G8 — attempted, reverted
+
+Clamping the auto "All" range to `DATA_CUTOFF` (so the Custom date input stops
+showing 2025-08-08) turned out to have two consequences a cosmetic fix has no
+business having:
+
+1. It **dropped 3 rows from every date-filtered population** — Performance
+   2,335 → 2,332, the Resurveys FPY denominator likewise. Those three are
+   exactly the re-signed accounts CLAUDE.md says are correct data: `457AMAMM`,
+   `920HHEND`, `2504RIOS-1`, each with a completion months before its start and
+   a `ct_total` of 0 via `effectiveComplete()`.
+2. The default view stopped showing **All** as the active preset and showed
+   **Custom** instead, because `isAll` tests `dateFrom === fullFrom`.
+
+Reverted. Every remaining fix either changes that population by 3 rows or makes
+the `autoDateRange` setting a no-op, so **this one is yours to call**: should the
+default view include the three re-signed accounts, or not? It is a one-line
+change once decided.
 
 ## Global — filter bar, nav, routing, animation
 

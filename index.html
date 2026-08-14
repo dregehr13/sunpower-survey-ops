@@ -1034,8 +1034,9 @@ let filtered = [];
 let dataTimestamp = null;
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
-let wipF = {region:[], resource:'all', type:'all', sales_rep:'all'};
-let wipRgDropOpen = false;
+// WIP-only extras. Region / office / resource / status live in GF with every
+// other page — see buildFBar().
+let wipF = {type:'all', sales_rep:'all'};
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
 let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — only applies when exactly one band selected
@@ -1133,7 +1134,9 @@ function applyFilter(){
     return true;
   });
   document.getElementById('navBadge').textContent = rows.length+' projects';
-  PAGES.forEach(p=>{ const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
+  // WIP counts open surveys, not date-filtered completions — buildFBar owns
+  // that hint. Overwriting it here would put "2335 of 2448 shown" on the queue.
+  PAGES.forEach(p=>{ if(p==='wip') return; const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
 }
 
 // Global filter pieces for pages that don't go through `filtered` (Resurveys)
@@ -1148,8 +1151,16 @@ function gfDateIn(d){ if(GF.dateFrom&&d<GF.dateFrom) return false; if(GF.dateTo&
 // ═══ FILTER BAR — one global bar, preset-first dates, active-filter chips ═══
 let customDatesOpen=false;
 function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
+// One bar for every page. WIP used to render its own (buildWIPFBar) against a
+// private wipF: its Region was not GF.region, so a region picked on Performance
+// did not carry over, and it had no Office control at all, which meant the
+// global Office filter could not reach the page. Region / Office / Status /
+// Resource are shared now; Sales Rep and Install Type stay WIP-only extras
+// because only the queue has a use for them. WIP shows no date range — it is a
+// live snapshot, and an inert date picker is worse than none.
 function buildFBar(page){
   const f = GF;
+  const isWip = page==='wip';
   const offices=[...new Set(rows.map(r=>r.sales_office).filter(Boolean))].sort();
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
   const catDropdowns = catFields.map(fd=>{
@@ -1191,10 +1202,13 @@ function buildFBar(page){
   const chips=[];
   regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
   offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
-  if(f.removeOutliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
+  // The outlier filter tests ct_total, which an open survey does not have — so
+  // it is neither offered nor advertised on the live queue.
+  if(f.removeOutliers&&!isWip){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
 
   return `<div class="fbar">
-    <div class="fbtn-group" role="group" aria-label="Date range">
+    ${isWip?''
+    :`<div class="fbtn-group" role="group" aria-label="Date range">
       <button class="fbtn${isAll?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','','')">All</button>
       <button class="fbtn${isR13?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${r13.from}','${r13.to}')">13w</button>
       <button class="fbtn${isR4?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${r4.from}','${r4.to}')">4w</button>
@@ -1206,7 +1220,7 @@ function buildFBar(page){
       <input type="date" aria-label="Completed from date" value="${f.dateFrom}" onchange="onF('${page}','dateFrom',this.value)">
       <span style="color:var(--faint);font-size:10px;">–</span>
       <input type="date" aria-label="Completed to date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
-    </div>`:''}
+    </div>`:''}`}
     <div class="fsep"></div>
     <div class="rgdrop">
       <button class="rgdrop-btn${regArr.length?' active':''}" aria-label="Filter by region" aria-expanded="${panelOpen}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
@@ -1236,12 +1250,28 @@ function buildFBar(page){
       </div>`;
     })()}
     ${catDropdowns}
+    ${isWip?wipExtraControls():''}
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
-      <span class="fhint" id="fb-hint-${page}">${filtered.length} of ${rows.length} shown</span>
+      <span class="fhint" id="fb-hint-${page}">${isWip
+        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open <span title="The WIP page is a live snapshot of the queue, so the date range does not apply to it.">· live, not date-filtered</span>'
+        : filtered.length+' of '+rows.length+' shown'}</span>
     </div>
   </div>`;
+}
+
+// Sales Rep and Install Type: WIP-only, because chasing a specific rep's open
+// jobs is a queue question and no analytics page cuts by either.
+function wipExtraControls(){
+  const salesReps=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
+  const types=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.type).filter(Boolean))].sort();
+  const sel=(key,label,vals)=>vals.length?`<div class="fsep"></div><span class="flabel">${label}</span>
+    <select class="${wipF[key]&&wipF[key]!=='all'?'fsel-on':''}" aria-label="Filter by ${esc(label)}" onchange="onWipF('${key}',this.value)">
+      <option value="all">All</option>
+      ${vals.map(v=>`<option value="${esc(v)}"${wipF[key]===v?' selected':''}>${esc(v)}</option>`).join('')}
+    </select>`:'';
+  return sel('sales_rep','Sales Rep',salesReps)+sel('type','Type',types);
 }
 
 function toggleOutliers(page){
@@ -1251,7 +1281,6 @@ function toggleOutliers(page){
 
 let rgDropOpenPage=null;
 let statusDropOpen=false;
-let wipStatusDropOpen=false;
 let offDropOpenPage=null;
 function toggleRegionDrop(page,ev){
   ev&&ev.stopPropagation();
@@ -1270,12 +1299,6 @@ function toggleStatusDrop(ev){
   statusDropOpen=!statusDropOpen;
   if(statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; }
   renderFBars();
-}
-function toggleWipStatusDrop(ev){
-  ev&&ev.stopPropagation();
-  wipStatusDropOpen=!wipStatusDropOpen;
-  if(wipStatusDropOpen) wipRgDropOpen=false;
-  renderAgingWIP();
 }
 function onStatusF(status,checked,ev){
   ev&&ev.stopPropagation();
@@ -1315,7 +1338,7 @@ function onOfficeClear(page,ev){
 
 function renderFBars(){
   PAGES.forEach(p=>{
-    if(p==='wip'||p==='week') return; // WIP has its own bar; Current is fixed-week
+    if(p==='week') return; // Current is fixed-week and has no bar
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -1353,6 +1376,7 @@ function clearF(page){
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
   Object.assign(GF, def); // global filter — mutate in place, pageF keys alias it
+  clearWipF();            // and the WIP-only extras, so Reset means Reset there too
   customDatesOpen=false;
   scopeRows();
   saveFilterState();
@@ -1365,10 +1389,8 @@ function clearF(page){
 // a region while the denominator stayed national produced a ratio of two
 // different populations.
 function wipScoped(){
-  const regArr=Array.isArray(wipF.region)?wipF.region:[];
   return rows.filter(r=>{
-    if(regArr.length&&!regArr.includes(r.region)) return false;
-    if(wipF.resource&&wipF.resource!=='all'&&r.resource!==wipF.resource) return false;
+    if(!gfDim(r)) return false;   // region / office / resource, shared with every page
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
     if(wipF.sales_rep&&wipF.sales_rep!=='all'&&r.sales_rep!==wipF.sales_rep) return false;
     return true;
@@ -1380,104 +1402,11 @@ function wipScoped(){
 // a 113-row age bar whose bands, when clicked, filtered a 1-row table.
 function wipFiltered(){ return wipScoped().filter(r=>r.start&&!isComplete(r)); }
 
-function buildWIPFBar(){
-  const regions=[...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
-  const regArr=Array.isArray(wipF.region)?wipF.region:[];
-  const regLabel=!regArr.length?'All':regArr.length===1?regArr[0]:regArr.length+' regions';
-
-  // Install Type
-  const types=[...new Set(rows.map(r=>r.type).filter(Boolean))].sort();
-  const typeCtrl=types.length
-    ?`<div class="fsep"></div><span class="flabel">Type</span>
-      <select onchange="onWipF('type',this.value)">
-        <option value="all">All</option>
-        ${types.map(v=>`<option value="${v}"${wipF.type===v?' selected':''}>${esc(v)}</option>`).join('')}
-      </select>`
-    :'';
-
-  // Sales Rep
-  const salesReps=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
-  const salesRepCtrl=salesReps.length
-    ?`<div class="fsep"></div><span class="flabel">Sales Rep</span>
-      <select onchange="onWipF('sales_rep',this.value)">
-        <option value="all">All</option>
-        ${salesReps.map(v=>`<option value="${v}"${wipF.sales_rep===v?' selected':''}>${esc(v)}</option>`).join('')}
-      </select>`
-    :'';
-
-  // Resource — pending until SF field is live
-  const resources=[...new Set(rows.map(r=>r.resource).filter(Boolean))].sort();
-  const resourceCtrl=resources.length
-    ?`<div class="fsep"></div><span class="flabel">Resource</span>
-      <select onchange="onWipF('resource',this.value)">
-        <option value="all">All</option>
-        ${resources.map(v=>`<option value="${v}"${wipF.resource===v?' selected':''}>${esc(v)}</option>`).join('')}
-      </select>`
-    :'';
-
-  const totalOpen=rows.filter(r=>isWIP(r)).length;
-
-  return `<div class="fbar">
-    <div class="fgroup">
-      <span class="flabel">Region</span>
-      <div class="rgdrop">
-        <button class="rgdrop-btn${regArr.length?' active':''}" onclick="toggleWipRegionDrop(event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
-        <div class="rgdrop-panel${wipRgDropOpen?' open':''}" id="wip-rgpanel">
-          ${regArr.length?`<button class="rgdrop-clear" onclick="clearWipRegion(event)">Clear selection</button>`:''}
-          ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onWipRegion('${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="fgroup">
-      ${(()=>{
-        const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
-        const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
-        const isDefault=sel.length===DEFAULT_STATUSES.length&&DEFAULT_STATUSES.every(s=>sel.includes(s));
-        return `<div class="status-drop-wip rgdrop">
-          <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleWipStatusDrop(event)">Status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
-          <div class="rgdrop-panel${wipStatusDropOpen?' open':''}" id="wip-status-panel">
-            ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
-          </div>
-        </div>`;
-      })()}
-    </div>
-    ${salesRepCtrl}
-    ${resourceCtrl}
-    ${regArr.length?`<div class="fsep"></div><div class="fchips">${regArr.map(r=>`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onWipRegion('${esc(r)}',false,event)">×</button></span>`).join('')}</div>`:''}
-    <div class="fgroup" style="margin-left:auto;">
-      <button class="fbtn" onclick="clearWipF()">Reset</button>
-      <span class="fhint">${wipFiltered().length} of ${totalOpen} open surveys</span>
-    </div>
-  </div>`;
-}
-
 function onWipF(key,value){
   wipF[key]=value;
-  renderAgingWIP();
+  renderFBars(); renderAgingWIP();
 }
-function onWipRegion(region,checked,ev){
-  ev&&ev.stopPropagation();
-  let arr=Array.isArray(wipF.region)?[...wipF.region]:[];
-  if(checked){if(!arr.includes(region))arr.push(region);}else arr=arr.filter(r=>r!==region);
-  wipF.region=arr;
-  renderAgingWIP();
-}
-function clearWipRegion(ev){
-  ev&&ev.stopPropagation();
-  wipF.region=[];
-  renderAgingWIP();
-}
-function toggleWipRegionDrop(ev){
-  ev&&ev.stopPropagation();
-  wipRgDropOpen=!wipRgDropOpen;
-  if(wipRgDropOpen) wipStatusDropOpen=false;
-  const panel=document.getElementById('wip-rgpanel');
-  if(panel) panel.classList.toggle('open',wipRgDropOpen);
-}
-function clearWipF(){
-  wipF={region:[],resource:'all',type:'all',sales_rep:'all'};
-  renderAgingWIP();
-}
+function clearWipF(){ wipF={type:'all',sales_rep:'all'}; }
 function wipSortBy(k){
   if(wipSortKey===k) wipSortAsc=!wipSortAsc; else{wipSortKey=k;wipSortAsc=false;}
   renderAgingWIP();
@@ -1688,6 +1617,7 @@ function nav(page){
   saveFilterState();
   applyFilter();
   renderPage(page);
+  renderWipAttnBadge();  // the badge is in the nav, so it follows every page
   closeMobileMenu();
 }
 function toggleMobileMenu(){
@@ -1718,8 +1648,9 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     closeDrill();
     closeUpdateModal();
-    if(rgDropOpenPage!==null||offDropOpenPage!==null){ rgDropOpenPage=null; offDropOpenPage=null; renderFBars(); }
-    if(wipRgDropOpen){ wipRgDropOpen=false; const el=document.getElementById('wip-rgpanel'); if(el) el.classList.remove('open'); }
+    // Status was never in this list, so Escape closed two of the three filter
+    // dropdowns and left the third open.
+    if(rgDropOpenPage!==null||offDropOpenPage!==null||statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; statusDropOpen=false; renderFBars(); }
   }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('th[onclick]')){
     e.preventDefault(); e.target.click();
@@ -2123,7 +2054,7 @@ function renderWeek(){
       </div>
       <div id="week-inner"></div>
     </div>`;
-  renderNeedsAttn();
+  renderWipAttnBadge();
   weekView==='last' ? renderLastWeek() : renderThisWeek();
 }
 function setWeekView(v){ weekView=v; renderWeek(); }
@@ -2133,7 +2064,7 @@ function setWeekView(v){ weekView=v; renderWeek(); }
 // so an item stays hidden across data uploads until its condition escalates.
 function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('ops_dismissed')||'[]')); }catch(e){ return new Set(); } }
 function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
-function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderNeedsAttn(); if(currentPage==='wip') renderAgingWIP(); }
+function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderWipAttnBadge(); if(currentPage==='wip') renderAgingWIP(); }
 function attnItems(){
   // Anchor to the export date so attention flags match the WIP page ages.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
@@ -2151,11 +2082,16 @@ function attnItems(){
   const dis=getDismissed();
   return items.filter(it=>!dis.has(attnKey(it)));
 }
-// Compact strip on Current — the full working view lives on the WIP page
-function openAttnView(){ wipView='attn'; nav('wip'); }
-function renderNeedsAttn(){
+// The nav badge beside "WIP". It counts what needs attention, not how much WIP
+// exists — it is styled as an alert pill, and it read the full open-queue count
+// (113) while the WIP page's own "Needs attention" toggle read 42.
+function renderWipAttnBadge(){
   const b=document.getElementById('wip-attn-badge');
-  if(b){ const openWip=rows.filter(r=>isWIP(r)).length; b.textContent=openWip||''; b.style.display=openWip?'inline-flex':'none'; }
+  if(!b) return;
+  const n=new Set(attnItems().map(it=>it.r.task_id||it.r.id)).size;
+  b.textContent=n||'';
+  b.title=n?n+' open surveys need attention':'';
+  b.style.display=n?'inline-flex':'none';
 }
 
 function trailing4WeekPace(){
@@ -2700,13 +2636,6 @@ function renderPerformance(){
       <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">Sales rep cycle time</div><div class="ssub">Slowest first</div></div>
-        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
-      </div>
-      <div id="rep-table-wrap"></div>
-    </div>
-    <div class="sec">
       <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
@@ -2724,6 +2653,13 @@ function renderPerformance(){
         <tbody id="pf-tbody"></tbody>
       </table></div>
       <div class="note">Pills share one scale: green ≤${S.targetMedian}d · amber ≤${S.targetAvg+2}d · red >${S.targetAvg+2}d. KPI cards grade against their own target. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
+    </div>
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Sales rep cycle time</div><div class="ssub" id="rep-sub">Slowest first</div></div>
+        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
+      </div>
+      <div id="rep-table-wrap"></div>
     </div>`;
 
   document.getElementById('pf-rg-wrap').style.height=rh+'px';
@@ -2806,6 +2742,13 @@ function renderRepTable(){
   const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
   const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
   const resLabel=resMap[repView];
+  // The toggle silently changed what the table measures — under "w/ Radicl"
+  // these are Radicl's cycle times, listed against the rep who sold the job —
+  // while the heading and subtitle never moved. Say which population it is.
+  const sub=document.getElementById('rep-sub');
+  if(sub) sub.textContent=repView==='self'
+    ? 'Surveys the rep did themselves · slowest first'
+    : `Surveys the rep sold, surveyed by ${resLabel} · slowest first`;
   const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
   const repMap={};
   src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
@@ -2963,10 +2906,10 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly avg cycle time${kinfo(TIP.ssRatioWeek)}</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
+      <div class="shead"><div><div class="stitle">Weekly avg cycle time${kinfo(TIP.cycle)}</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
-        <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>SS ratio</span>
+        <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>SS ratio${kinfo(TIP.ssRatioWeek)}</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 48px;height:290px;"><canvas id="tr-wf-yL" width="48" height="290"></canvas></div>
@@ -3361,7 +3304,7 @@ function clearWipQs(){ wipQsSel.clear(); renderAgingWIP(); }
 function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
-  if(fbEl) fbEl.innerHTML=buildWIPFBar();
+  if(fbEl) fbEl.innerHTML=buildFBar('wip');
 
   // Anchor all WIP ages and schedule status to the export date, not the wall
   // clock — a stale export otherwise inflates every age and mislabels schedules.
@@ -3914,9 +3857,14 @@ function renderResurvey(){
   <div class="kg kg4">
     <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillFPYDefects()')}>
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
-      <div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>
+      ${completions.length>=RS_MIN_CELL
+        ? `<div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>`
+        // The breakdown table below refuses to rate a cell under RS_MIN_CELL
+        // completions; the headline held itself to no such standard and would
+        // print a confident "75.0%" off n=8 under a narrow filter.
+        : `<div class="kval pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>`}
       <div class="ksub">${defects.length} of ${completions.length} completions came back</div>
-      <div class="ktgt">target 95%</div>
+      <div class="ktgt">${completions.length>=RS_MIN_CELL?'target 95%':'under '+RS_MIN_CELL+' completions'}</div>
     </div>
     <div class="kcard">
       <div class="klabel">Cost of a resurvey${kinfo(TIP.rsPenalty)}</div>
@@ -4891,7 +4839,9 @@ window.addEventListener('resize',()=>{
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'}];
+  // Every page the nav can reach, so the landing-page setting can name any of
+  // them. Map was missing, which made it the one page you could not start on.
+  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'},{v:'map',l:'Map'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
   const pendingFields = FIELDS.filter(f=>f.pending);
   // Extract pending from comments for display
@@ -5304,17 +5254,9 @@ document.addEventListener('click',function(e){
     offDropOpenPage=null;
     PAGES.forEach(p=>{const el=document.querySelector('#fb-'+p+' .offdrop-panel');if(el)el.classList.remove('open');});
   }
-  if(wipRgDropOpen&&!e.target.closest('.rgdrop')){
-    wipRgDropOpen=false;
-    const el=document.getElementById('wip-rgpanel');if(el)el.classList.remove('open');
-  }
   if(statusDropOpen&&!e.target.closest('.status-drop')){
     statusDropOpen=false;
     const el=document.getElementById('status-panel');if(el)el.classList.remove('open');
-  }
-  if(wipStatusDropOpen&&!e.target.closest('.status-drop-wip')){
-    wipStatusDropOpen=false;
-    const el=document.getElementById('wip-status-panel');if(el)el.classList.remove('open');
   }
 });
 
