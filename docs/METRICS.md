@@ -13,9 +13,10 @@ status for five months; a colour band that disagreed with the number beside it).
 
 | surface | file | what it renders |
 |---|---|---|
-| Dashboard | `index.html` | Current / Performance / Trends / WIP / Resurveys / Map |
+| Dashboard | `index.html` | Current / Performance / Trends / WIP / Resurveys / Map / Data / Settings |
 | Compose | `compose/index.html` | Monday recap + daily email |
 | Morning card | `api/morning-card.js` | Teams card (not adopted — see CLAUDE.md) |
+| Queues | `queues/index.html` | **Undocumented and unaudited.** A live route (`vercel.json`) with its own Supabase pipeline via `api/upload-data.js` and its own copy of the field registry, untouched since 2026-06-23. Nothing here describes its numbers. Document it or retire it |
 
 ## The metrics
 
@@ -116,6 +117,11 @@ the most likely next source of drift:
 | number | where | note |
 |---|---|---|
 | Proj Age | `index.html` WIP page | `start → today`, inline |
+| On target ≤Nd | `index.html` `pctTgt()` | Share of a set whose `ct_total` is ≤ `S.targetAvg`. On Current, Performance, the region table and the rep table. Not banded by `bandFor` — it is a percentage, and its card bands at 75/50 |
+| Cost of a resurvey | `index.html` Resurveys page | `avg(ct_full of defects) − avg(ct_total of clean completions)`. What one resurvey costs end to end. Currently +5.3d against a 4d target |
+| Queue-age band | `index.html` `agePill` / `ageRowBg` / `attnItems` / WIP Avg age card | Green ≤`targetAvg`, amber ≤7d, red >7d. **The 7-day threshold is the page's real aging rule and has no home in `lib/metrics.cjs`** — it is written out inline in four places. Candidate for a shared `queueAgeBand()`; not done, because adding it is a definition change |
+| Pill scale | `index.html` `pillV()` | Green ≤`targetMedian`, amber ≤`targetAvg+2`, red beyond. One scale across the region and rep tables, stated in the note under each. Deliberately *not* `bandFor`, which bands against whichever target its card owns |
+| IQR outlier fence | `compose/index.html` `iqrFence()` | `q3 + 1.5·IQR` over all completions, used to flag Monday-recap outliers and the "slow account" note. Compose only — the dashboard uses the flat `S.outlierDays` instead |
 | Queue status pills | `index.html` `wipQueueStatus()` | classified from schedule date + last review subject |
 | Attention rules | `index.html` `attnItems()` | aging >7d, schedule passed, no review >5d, resurvey unscheduled >3d |
 | Cohort / FPY splits | `index.html` Resurveys page + Current page | every yield figure calls `fpy()` from `lib/metrics.cjs`; cohorts and drill segments stay on `hasResurveySig` |

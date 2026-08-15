@@ -61,7 +61,6 @@ html,body{overflow-x:clip;}
 
 /* FILTER BAR */
 .fbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
-.flabel{font-size:10px;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;}
 /* Single-select filters read as the same kind of control as the Region /
    Office / Status pill buttons beside them: one bordered unit with a
    sentence-case label inside it, not an uppercase word floating next to a
@@ -87,8 +86,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .fbtn-group .fbtn:first-child{border-radius:6px 0 0 6px;}
 .fbtn-group .fbtn:last-child{border-radius:0 6px 6px 0;border-right-width:1px;}
 .fgroup{display:flex;align-items:center;gap:7px;flex-shrink:0;}
-.fglobal{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;}
-.fglobal input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);}
 .fhint{font-size:10px;color:var(--faint);}
 .rgdrop{position:relative;}
 .rgdrop-btn{font-size:12px;padding:4px 8px 4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;height:28px;white-space:nowrap;display:flex;align-items:center;gap:5px;}
@@ -102,15 +99,11 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .rgdrop-item input[type=checkbox]{accent-color:var(--blue);width:13px;height:13px;flex-shrink:0;cursor:pointer;}
 .rgdrop-clear{display:block;font-size:10px;color:var(--faint);padding:5px 12px 6px;border-bottom:1px solid var(--border);cursor:pointer;background:none;border-left:none;border-top:none;border-right:none;width:100%;text-align:left;}
 .rgdrop-clear:hover{color:var(--muted);}
-.fsel-on{border-color:var(--text)!important;background:var(--surface)!important;font-weight:600;}
 .fchips{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
 .fchip{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 4px 2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-weight:500;white-space:nowrap;}
 .fchip-amber{background:var(--amber-bg);border-color:#f0d9a8;color:var(--amber);}
 .fchip-x{background:none;border:none;cursor:pointer;color:var(--faint);font-size:12px;line-height:1;padding:1px 4px;border-radius:50%;}
 .fchip-x:hover{color:var(--red);background:var(--red-bg);}
-.outlier-ctrl{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);}
-.outlier-ctrl input[type=range]{width:80px;accent-color:var(--target);cursor:pointer;}
-.outlier-badge{font-size:10px;padding:2px 7px;border-radius:99px;background:var(--red-bg);color:var(--red);font-weight:500;white-space:nowrap;}
 .surveyor-coming{font-size:10px;color:var(--faint);font-style:italic;padding:4px 8px;border:1px dashed var(--border);border-radius:6px;}
 
 /* KPI GRID */
@@ -122,10 +115,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .kval{font-size:24px;font-weight:600;line-height:1.1;}
 .ksub{font-size:10px;color:var(--faint);margin-top:3px;}
 .ktgt{font-size:10px;color:var(--faint);margin-top:4px;padding-top:4px;border-top:1px solid #f0f0ec;}
-.rolling{font-size:10px;margin-top:5px;padding:3px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-weight:500;}
-.roll-up{background:#e6f4d7;color:var(--green);}
-.roll-dn{background:var(--red-bg);color:var(--red);}
-.roll-flat{background:#f0f0ec;color:var(--muted);}
 .kg-c{color:var(--green);} .ka-c{color:var(--amber);} .kr-c{color:var(--red);}
 
 /* METRIC INFO TOOLTIP */
@@ -143,8 +132,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .shead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;gap:8px;}
 .stitle{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
 .ssub{font-size:10px;color:var(--faint);margin-top:2px;}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
 
 /* LEGEND */
 .leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px;align-items:center;}
@@ -152,7 +139,6 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .ld{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
 .ldash{width:14px;height:2px;border-radius:1px;flex-shrink:0;}
 .ltgt{color:var(--target);}
-.lroll{color:var(--blue);}
 
 /* TABLE */
 table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -171,10 +157,6 @@ tr:hover td{background:#fafaf8;}
    but not for a sample size — in the Resurveys breakdowns "n=4" IS the value in
    most rows. --muted is 5.7:1 and clears AA. */
 .pna-n{color:var(--muted);font-size:12px;}
-.barcell{display:flex;align-items:center;gap:5px;justify-content:flex-end;}
-.minibar{height:4px;border-radius:2px;background:var(--c2);opacity:.35;flex-shrink:0;}
-.pctbar{display:inline-block;width:36px;height:3px;background:var(--border);border-radius:2px;vertical-align:middle;margin-left:4px;overflow:hidden;}
-.pctfill{height:100%;background:var(--c2);border-radius:2px;}
 .note{font-size:10px;color:var(--faint);margin-top:8px;line-height:1.6;}
 .sarr{font-size:10px;opacity:.3;margin-left:2px;}
 .sarr-up::after{content:"↑";opacity:.8;}
@@ -221,9 +203,6 @@ tr:hover td{background:#fafaf8;}
 .epbtn:hover{background:var(--bg);}
 .epbtn:disabled{opacity:.4;cursor:default;}
 .chg{font-size:10px;color:var(--blue);font-weight:600;}
-
-/* OUTLIER TABLE */
-.outlier-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);font-weight:600;margin-left:4px;}
 
 /* WIP QUEUE STATUS COUNTS */
 .qs-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 16px 14px 16px;}
@@ -279,26 +258,7 @@ tr:hover td{background:#fafaf8;}
 .wip-review-note{font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-wrap;margin:0;}
 .wip-no-review{font-size:12px;color:var(--faint);font-style:italic;}
 
-/* VERDICT BAND — the one element allowed to interrupt; state decides how loud */
-.verdict{display:flex;align-items:center;gap:14px;border-radius:var(--radius-lg);padding:12px 18px;margin-bottom:14px;cursor:pointer;font-size:12px;border:1px solid transparent;transition:box-shadow .15s;}
-.verdict:hover{box-shadow:var(--shadow);}
-.verdict-word{font-size:13px;font-weight:700;letter-spacing:-.01em;flex-shrink:0;}
-.verdict-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.verdict-text b{font-weight:700;}
-.verdict-ok .verdict-text b{color:#177245;}
-.verdict-warn .verdict-text b{color:#9a5b13;}
-.verdict-bad .verdict-text b{color:#b42323;}
-.vsep{opacity:.4;margin:0 1px;}
-.verdict-go{font-weight:600;font-size:12px;flex-shrink:0;}
-.verdict-ok{background:var(--green-bg);border-color:#cbe5d3;}
-.verdict-ok .verdict-word,.verdict-ok .verdict-go{color:var(--green);}
-.verdict-ok .verdict-text{color:#41684e;}
-.verdict-warn{background:var(--amber-bg);border-color:#eedab0;}
-.verdict-warn .verdict-word,.verdict-warn .verdict-go{color:var(--amber);}
-.verdict-warn .verdict-text{color:#7c5c26;}
-.verdict-bad{background:var(--red-bg);border-color:#f0c6c6;}
-.verdict-bad .verdict-word,.verdict-bad .verdict-go{color:var(--red);}
-.verdict-bad .verdict-text{color:#8c3f3f;}
+/* Needs-attention row controls (WIP queue) */
 .attn-dismiss{font-size:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
 .attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
 .wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;justify-content:space-between;font-weight:400;}
@@ -312,7 +272,6 @@ tr:hover td{background:#fafaf8;}
 /* Hero — single navy treatment, the page's one dark anchor */
 .exec-hero{background:linear-gradient(135deg,var(--navy1) 0%,var(--navy2) 100%);border-radius:var(--radius-lg);padding:26px 28px;margin-bottom:14px;}
 .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
-.exec-sub{font-size:12px;color:#7eb3e0;margin-bottom:20px;}
 .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .ekcard{background:rgba(255,255,255,.08);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.12);}
 .eklabel{font-size:10px;color:#7eb3e0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
@@ -337,10 +296,6 @@ tr:hover td{background:#fafaf8;}
 .set-control select,.set-control input[type=number]{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;width:120px;}
 .set-control input[type=number]{width:80px;}
 .set-control input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;}
-.field-status{display:grid;grid-template-columns:1fr;gap:6px;}
-.fs-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:6px;background:var(--bg);font-size:12px;}
-.fs-active{color:var(--green);font-size:10px;font-weight:600;padding:2px 7px;background:var(--green-bg);border-radius:99px;}
-.fs-pending{color:var(--amber);font-size:10px;font-weight:600;padding:2px 7px;background:var(--amber-bg);border-radius:99px;}
 .set-sf-row{display:flex;gap:8px;align-items:center;}
 .set-sf-row input{flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;}
 .set-sf-row input:focus{border-color:#8f8f98;}
@@ -355,22 +310,8 @@ tr:hover td{background:#fafaf8;}
 .modal{background:var(--surface);border-radius:var(--radius-lg);padding:22px 24px;width:480px;max-width:95vw;border:1px solid var(--border);}
 .modal h2{font-size:14px;font-weight:600;margin-bottom:3px;}
 .msub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
-.msteps{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 13px;margin-bottom:14px;}
-.msteps ol{padding-left:15px;font-size:12px;color:#1e40af;line-height:2.2;}
-.mfield{margin-bottom:11px;}
-.mfield label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
-.mfield input{width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;}
-.mfield input:focus{border-color:#8f8f98;}
-.mhint{font-size:10px;color:var(--faint);margin-top:3px;line-height:1.5;}
-.mhint code{font-family:monospace;background:var(--bg);padding:1px 4px;border-radius:3px;font-size:10px;border:1px solid var(--border);}
-.mprev{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:10px;font-family:monospace;color:var(--muted);word-break:break-all;margin-top:9px;display:none;line-height:1.6;}
-.mprev.on{display:block;}
-.macts{display:flex;gap:7px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid #f0f0ec;}
 .mbtn{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;}
 .mbtn:hover{background:var(--bg);}
-.mbtn-sf{background:var(--sf);color:#fff;border-color:var(--sf);}
-.mbtn-sf:hover{background:#005fb2;}
-.mbtn-sf:disabled{opacity:.5;cursor:default;}
 
 /* ANIMATIONS */
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -398,7 +339,7 @@ tr:hover td{background:#fafaf8;}
 /* BUTTON INTERACTIONS */
 button{transition:background .12s,color .12s,border-color .12s,opacity .12s,transform .12s cubic-bezier(.34,1.56,.64,1),box-shadow .12s;}
 button:active:not(:disabled){transform:scale(.94)!important;transition-duration:.06s!important;}
-.fbtn:active,.mbtn:active,.tbtn:active,.epbtn:active,.set-save-btn:active{transform:scale(.94)!important;transition-duration:.06s!important;}
+.fbtn:active,.mbtn:active,.epbtn:active,.set-save-btn:active{transform:scale(.94)!important;transition-duration:.06s!important;}
 .tgl-btn{transition:background .15s,color .15s,border-color .15s,box-shadow .15s,transform .12s cubic-bezier(.34,1.56,.64,1);}
 .tgl-btn:hover:not(.active){background:#f5f4f0;}
 .tgl-btn.active{box-shadow:0 1px 4px rgba(0,0,0,.08);}
@@ -454,8 +395,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    UA ring, which is the one focus style in the app nobody chose. */
 [role=button]:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:3px;}
 
-/* TOAST */
-
 /* UPDATE MODAL */
 .upd-step{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0ec;}
 .upd-step:last-child{border-bottom:none;}
@@ -472,7 +411,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
 .drag-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(37,99,235,.08);border:2px solid #2563eb;pointer-events:none;z-index:300;animation:dragPulse .9s ease infinite;display:none;}
 .drag-overlay.active{display:block;}
-.upd-or{font-size:10px;color:var(--faint);text-align:center;margin:6px 0;}
 .sf-link{color:inherit;text-decoration:none;}.sf-link:hover{text-decoration:underline;color:var(--c1);}
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:12px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
 .toast.on{opacity:1;transform:translateY(0);}
@@ -484,13 +422,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .tgl-btn:last-child{border-radius:0 6px 6px 0;border-right-width:1px;}
 .tgl-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
 .tgl-btn:hover:not(.active){background:var(--bg);}
-
-/* RESOURCE SPLIT BAR */
-.res-split-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;margin:8px 0 10px;}
-.res-split-bar>div{min-width:2px;}
-.res-split-legend{display:flex;gap:18px;flex-wrap:wrap;}
-.res-split-legend span{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);}
-.res-split-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}
 
 /* RESOURCE COMPARISON CARDS */
 .res-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
@@ -582,7 +513,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-back{font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border:1px solid var(--border);
   border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;}
 .map-back:hover{color:var(--text);border-color:var(--muted);}
-.rs-sched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--amber-bg);color:var(--amber);font-weight:500;}
 .rs-unsched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--faint);border:1px solid var(--border);}
 
 /* DRILL DRAWER */
@@ -627,7 +557,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
-  .g2,.g3,.settings-grid{grid-template-columns:1fr;}
+  .settings-grid{grid-template-columns:1fr;}
   .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
   .res-cards{grid-template-columns:1fr;}
   .page{padding:12px;}
@@ -637,9 +567,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .shead>.toggle-group{margin-left:auto;}
   /* 5-card grids wrap 2+2+1 — let the 5th card span the row instead of orphaning */
   .kg5>.kcard:nth-child(5),.exec-kpis>.ekcard:nth-child(5){grid-column:1/-1;}
-  /* Verdict wraps on phones so the numbers survive instead of ellipsizing */
-  .verdict{flex-wrap:wrap;gap:6px 14px;}
-  .verdict-text{white-space:normal;flex-basis:100%;order:3;}
 }
 
 /* WIP QUEUE — scroll within the card, header stays visible */
@@ -680,7 +607,6 @@ body{padding-left:180px;}
 /* Exec hero — light briefing panel instead of navy */
 .exec-hero{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);padding:24px 26px 18px;}
 .exec-title{color:var(--text);font-size:23px;letter-spacing:-.015em;}
-.exec-sub{color:var(--muted);}
 .exec-kpis{gap:0;border-top:1px solid var(--border);}
 .ekcard{background:transparent;border:none;border-right:1px solid var(--border);border-radius:0;padding:14px 18px 6px 0;}
 .ekcard+.ekcard{padding-left:18px;}
@@ -700,13 +626,6 @@ body{padding-left:180px;}
 .ssub{color:var(--faint);}
 .klabel{color:var(--muted);}
 .kval{font-weight:700;letter-spacing:-.02em;}
-
-/* Verdict — briefing style: white card, colored left rail, loud word */
-.verdict{background:var(--surface)!important;border:1px solid var(--border)!important;border-left-width:4px!important;box-shadow:var(--shadow);}
-.verdict-ok{border-left-color:var(--green)!important;}
-.verdict-warn{border-left-color:#e0a33c!important;}
-.verdict-bad{border-left-color:var(--red)!important;}
-.verdict .verdict-text{color:var(--muted)!important;}
 
 /* WIP attention badge in nav */
 #wip-attn-badge{display:none;align-items:center;justify-content:center;background:#4f7fae;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;line-height:1.4;}
@@ -777,7 +696,7 @@ body{padding-left:180px;}
     </div>
   </div>
   <div class="nav-r">
-    <span class="nbadge" id="navBadge">766 projects</span>
+    <span class="nbadge" id="navBadge"></span>
     <span class="nav-ts" id="nav-ts"></span>
     <button class="nload" onclick="openUpdateModal()" title="Update data">↑ Update data</button>
     <input type="file" id="fileInput" accept=".xls,.html,.htm" style="display:none;">
@@ -999,7 +918,7 @@ function setSetting(key, value){
   S[key] = value;
   saveSettings();
   // Propagate changes that affect live state
-  if(key==='dataCutoff'){ DATA_CUTOFF=value; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); }
+  if(key==='dataCutoff'){ DATA_CUTOFF=value; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
@@ -1057,7 +976,7 @@ let dataTimestamp = null;
 let wipF = {type:'all', sales_rep:'all'};
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
-let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — only applies when exactly one band selected
+let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — narrows the age-bar selection
 let wipQsSel = new Set();  // selected queue-status keys (QS in renderAgingWIP), multi-select
 
 function saveFilterState(){
@@ -1130,8 +1049,6 @@ function loadFilterState(){
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
 }
-
-function clearFenceCache(){}
 
 function getF(){ return pageF[currentPage]; }
 
@@ -1366,8 +1283,6 @@ function renderFBars(){
 }
 
 function localISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-
-// Seeded LCG — deterministic dummy rows for Jan/Feb Trends demo
 
 function recentRange(n){ return {from:weekRange(-n).from, to:weekRange(-1).to}; }
 function weekRange(offsetWeeks){
@@ -2113,21 +2028,6 @@ function renderWipAttnBadge(){
   b.textContent=n||'';
   b.title=n?n+' open surveys need attention':'';
   b.style.display=n?'inline-flex':'none';
-}
-
-function trailing4WeekPace(){
-  const today=new Date(); today.setHours(12,0,0,0);
-  const dow=today.getDay()||7;
-  const thisMonday=new Date(today); thisMonday.setDate(today.getDate()-dow+1);
-  const counts=[];
-  for(let i=1;i<=4;i++){
-    const sunEnd=new Date(thisMonday); sunEnd.setDate(thisMonday.getDate()-7*(i-1)-1);
-    const monStart=new Date(sunEnd); monStart.setDate(sunEnd.getDate()-6);
-    const from=localISO(monStart), to=localISO(sunEnd);
-    counts.push(rows.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=to).length);
-  }
-  const total=counts.reduce((a,b)=>a+b,0);
-  return total>0?Math.round(total/4*10)/10:null;
 }
 
 function renderLastWeek(){
@@ -4366,7 +4266,7 @@ function renderMap(){
   mapResize(); mapDrawHist(); mapDrawTicks();
 }
 
-let _mapAll=[], _mapBounds=null, _mapBoundsKey='';
+let _mapAll=[], _mapBounds=null;
 
 // Time is the filter bar's job — the map shows whatever it selected. The one
 // scope the map adds is Open WIP, which is a different question from a date
@@ -4870,9 +4770,6 @@ function renderSettings(){
   // them. Map was missing, which made it the one page you could not start on.
   const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'},{v:'map',l:'Map'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
-  const pendingFields = FIELDS.filter(f=>f.pending);
-  // Extract pending from comments for display
-  const pendingList = ['surveyor_name','survey_type','resurvey_reason','resurvey_attributed'];
 
   document.getElementById('settings-content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
@@ -5075,11 +4972,11 @@ function renderEditor(){
 
 function debounceSearch(){ clearTimeout(eSearchTimer); eSearchTimer=setTimeout(()=>{ePageNum=0;renderEditor();},220); }
 function updR(id,f,v){ const r=allRows.find(x=>x.id===id); if(!r) return; r[f]=v; if(['start','requested','scheduled','complete'].includes(f)) recalc(r); changedIds.add(id); const el=document.getElementById('ect-'+id); if(el) el.textContent=r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'; const cb=document.getElementById('chg-b'); if(changedIds.size){cb.style.display='';cb.textContent=changedIds.size+' unsaved';}else cb.style.display='none'; }
-function delRow(id){ if(!confirm('Delete row?')) return; allRows=allRows.filter(r=>r.id!==id); scopeRows(); changedIds.delete(id); clearFenceCache(); renderEditor(); toast('Row deleted.'); }
-function addRow(){ const mx=Math.max(...allRows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null,project_status:'In Progress'}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); allRows.push(nr); scopeRows(); clearFenceCache(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
+function delRow(id){ if(!confirm('Delete row?')) return; allRows=allRows.filter(r=>r.id!==id); scopeRows(); changedIds.delete(id); renderEditor(); toast('Row deleted.'); }
+function addRow(){ const mx=Math.max(...allRows.map(r=>r.id),0); const nr={id:mx+1,ct_s2r:null,ct_r2s:null,ct_total:null,project_status:'In Progress'}; FIELDS.filter(f=>f.editable&&!f.computed).forEach(f=>nr[f.key]=''); allRows.push(nr); scopeRows(); ePageNum=Math.ceil(rows.length/EP)-1; renderEditor(); }
 function ePg(d){ ePageNum+=d; renderEditor(); }
-function applyEdits(){ changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
-function resetEdits(){ if(!confirm('Reset all changes?')) return; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); clearFenceCache(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
+function applyEdits(){ changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); toast('Changes applied.'); }
+function resetEdits(){ if(!confirm('Reset all changes?')) return; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); applyFilter(); renderFBars(); renderEditor(); toast('Reset.'); }
 function exportCSV(){
   const q=(document.getElementById('esearch')||{}).value||'';
   const st=(document.getElementById('estate')||{}).value||'';
@@ -5308,7 +5205,6 @@ window.addEventListener('load',()=>{
   const urlState=applyURLState();
 
   // Set date range — autoDateRange always wins over saved dates, but not over URL dates
-  clearFenceCache();
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length&&!(urlState&&urlState.hadDates)){
     GF.dateFrom=dates[0]; GF.dateTo=dates[dates.length-1];

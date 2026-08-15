@@ -111,6 +111,47 @@ The WIP bar carries seven controls and wraps Reset + the hint onto a second row
 shrinking the selects to fit an arbitrary width; no horizontal overflow at any
 size, including 375px.
 
+---
+
+## Batch 4 — applied (code health)
+
+`npm test` 65/65, snapshot unchanged. **−176/+62 lines** across six files.
+
+| finding | now |
+|---|---|
+| G12 orphaned CSS | **Zero orphaned classes**, down from 40. Removed whole components: the `.verdict` band (21 rules, superseded by the `.brief-*` hero), the old SF modal (`msteps`/`mfield`/`mhint`/`mprev`/`macts`/`mbtn-sf`), the Settings `field-status` block, the outlier slider and tag, `res-split-*`, `roll-*` + `.rolling`, plus `g2`/`g3`/`pctbar`/`pctfill`/`minibar`/`barcell`/`fglobal`/`lroll`/`tbtn`/`upd-or`/`rs-sched-pill`/`exec-sub`/`vsep`. Also `.flabel` and `.fsel-on`, which batch 3 orphaned. Pruned `.tbtn:active` and `.g2,.g3` out of two grouped selectors rather than deleting the rules |
+| G10 dead JS | `trailing4WeekPace()`, `_mapBoundsKey`, `pendingFields`/`pendingList` deleted. `clearFenceCache()` was an empty function called from **6** sites — function and all calls gone |
+| G11 stale comments/markup | The "Seeded LCG — deterministic dummy rows" comment above nothing, the empty `/* TOAST */` marker, the hardcoded `766 projects` in the nav badge, and `wipStatusSel`'s comment claiming it only applied under a single age band |
+| A2 duplicated prompt | The 15-line opener prompt lived verbatim in two API files. Extracted to `api/_opener-prompt.js` with the model and token budget beside it; both callers import it |
+| A4 morning-card timezone | `computeStats` ran on the server's UTC clock while every date in the data is Mountain, so after 17:00 MT "yesterday" was already today and Monday's Friday-lookback fired on the wrong day. Anchored on the Mountain date throughout |
+| N2 README gaps | File map now lists `docs/`, `test/`, `scripts/`, `geo/`, `queues/`, `api/upload-data.js` and the shared prompt |
+| N3 METRICS.md gaps | Added the six numbers the register didn't cover: `pctTgt` (On target), Cost of a resurvey, the **queue-age band** (green ≤target / amber ≤7d / red >7d — written inline in four places and the strongest candidate for W3), the `pillV` scale, compose's `iqrFence`, and `/queues` as an undocumented surface |
+| CLAUDE.md | Recorded the decisions that changed: one filter bar for every page, no global Install Type, WIP KPIs follow the page filter, the nav badge is the attention count, office bites in `applyFilter`, and compose's chart line uses `ssRatioForWeek` |
+
+Verified after the CSS purge: all eight pages render at the same content volume,
+no element references a removed class, no console errors, and Current reads
+identically to the pre-cleanup baseline (79 · ~143 · 24 · 7.2d · 113).
+
+**Not done — Q1/A3, `/queues`.** Deleting a live route, its page, its Supabase
+pipeline and a dependency is not code-health cleanup, and its third copy of the
+field registry (`api/upload-data.js`) only matters if the surface stays. Flagged
+in the README and the register instead. **Your call.**
+
+---
+
+## Still open after four batches
+
+Everything below needs a decision, not a cleanup pass:
+
+| # | what | why it's yours |
+|---|---|---|
+| A1 | `/api/send-teams` + `/api/team-opener` have no auth | Every in-code fix is theatre; the real answers are Vercel Deployment Protection or building the Teams card server-side |
+| Q1 / A3 | `/queues` is a live, undocumented surface with its own data path | Document it or retire it |
+| W3 | The `>7d` queue-age band is written inline in four places | Naming it in `lib/metrics.cjs` is a definition change |
+| G8 | The default range starts before the cutoff because of 3 re-signed accounts | Any fix moves those 3 rows in or out of every date-filtered population |
+| X5 | compose's password gate runs after 2,538 customer rows are already loaded | Product tradeoff for an internal tool |
+| P4 | `pillV` and `pctTgt` band inline, on purpose | Now documented in the register; promote to shared definitions only if you want them uniform |
+
 ## Global — filter bar, nav, routing, animation
 
 | # | axis | what I observed | severity | proposed fix | risk |

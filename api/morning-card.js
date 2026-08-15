@@ -2,31 +2,32 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import OpsMetrics from '../lib/metrics.cjs';
+import { openerPrompt, OPENER_MODEL, OPENER_MAX_TOKENS } from './_opener-prompt.js';
 
 const client = new Anthropic();
 
+// YYYY-MM-DD in Mountain Time. Every date in the data is Mountain; this runs
+// on Vercel in UTC, so a bare toLocaleDateString rolls over seven hours early
+// and "yesterday" becomes today for anything after 17:00 MT.
 function toDateStr(d) {
-  return d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+}
+
+// Shift a YYYY-MM-DD by n days without going through a timezone again.
+function addDaysISO(iso, n) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().slice(0, 10);
 }
 
 function computeStats(rows) {
-  const now = new Date();
-  const dow = now.getDay(); // 0=Sun, 1=Mon
+  // Anchor the whole calculation on the Mountain date, not the server's.
+  const today = toDateStr(new Date());
+  const dow = new Date(today + 'T12:00:00Z').getUTCDay(); // 0=Sun, 1=Mon
 
   // Monday morning → look back to Friday; otherwise → yesterday
-  let refDate;
-  let refLabel;
-  if (dow === 1) {
-    const fri = new Date(now);
-    fri.setDate(fri.getDate() - 3);
-    refDate = toDateStr(fri);
-    refLabel = 'Friday';
-  } else {
-    const yest = new Date(now);
-    yest.setDate(yest.getDate() - 1);
-    refDate = toDateStr(yest);
-    refLabel = 'Yesterday';
-  }
+  const refDate = addDaysISO(today, dow === 1 ? -3 : -1);
+  const refLabel = dow === 1 ? 'Friday' : 'Yesterday';
 
   const filtered = OpsMetrics.filterRows(rows);
   const isComplete = OpsMetrics.isComplete;
@@ -42,29 +43,10 @@ function computeStats(rows) {
 }
 
 async function generateOpener(stats) {
-  const now = new Date();
-  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-  const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-
-  const prompt = `Write a short morning greeting for a small remote ops team (3 people: schedulers and account managers at SunPower, a solar company). It goes into a Teams message from their manager Doug to kick off the day.
-
-Rules:
-- 2–3 sentences max
-- Warm, light-hearted, human — this is about connection, not metrics
-- Include something topical: a sports score, a day-of-week observation, something seasonal, a gentle joke, or a pop culture reference — whatever feels natural for ${dayName}
-- Do NOT restate the stats — they appear separately in the card below the opener
-- Do NOT sign off — Doug's name is already shown in the card header
-- Sound like a real person, not a bot or a corporate newsletter
-- Today is ${dayName}, ${dateStr}
-
-Stats for tone context only (don't repeat them): ${stats.completed} surveys completed ${stats.refLabel.toLowerCase()}, ${stats.wip} open, ${stats.unscheduled} unscheduled.
-
-Return only the greeting text, no quotes, no labels.`;
-
   const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 120,
-    messages: [{ role: 'user', content: prompt }],
+    model: OPENER_MODEL,
+    max_tokens: OPENER_MAX_TOKENS,
+    messages: [{ role: 'user', content: openerPrompt(stats) }],
   });
   return message.content[0].text.trim();
 }
