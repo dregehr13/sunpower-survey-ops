@@ -62,6 +62,20 @@ html,body{overflow-x:clip;}
 /* FILTER BAR */
 .fbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
 .flabel{font-size:10px;color:var(--muted);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;}
+/* Single-select filters read as the same kind of control as the Region /
+   Office / Status pill buttons beside them: one bordered unit with a
+   sentence-case label inside it, not an uppercase word floating next to a
+   box. Kept as a native <select> on purpose — Sales Rep runs to ~200 entries
+   and type-ahead plus the platform picker beat a hand-rolled panel. */
+.fselgrp{display:inline-flex;align-items:center;height:28px;padding-left:9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);flex-shrink:0;transition:border-color .12s,background .12s;}
+.fselgrp:hover{background:var(--bg);}
+.fselgrp .fsel-label{font-size:12px;color:var(--muted);white-space:nowrap;}
+.fselgrp select{border:none;background:transparent;height:26px;padding:0 2px 0 4px;font-size:12px;color:var(--text);max-width:168px;}
+.fselgrp select:focus{border:none!important;box-shadow:none!important;}
+.fselgrp:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.fselgrp.on{border-color:var(--text);}
+.fselgrp.on .fsel-label{color:var(--text);}
+.fselgrp.on select{font-weight:600;}
 select,input[type=date],input[type=text]{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;height:28px;}
 select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;}
 .fsep{width:1px;height:18px;background:var(--border);flex-shrink:0;}
@@ -389,10 +403,14 @@ button:active:not(:disabled){transform:scale(.94)!important;transition-duration:
 .tgl-btn:hover:not(.active){background:#f5f4f0;}
 .tgl-btn.active{box-shadow:0 1px 4px rgba(0,0,0,.08);}
 
-/* CARD HOVER */
+/* CARD HOVER — the lift is an affordance, so only cards that actually open
+   something get it. Every KPI card used to rise and shadow on hover while only
+   the .drill-tgt ones did anything, which promised a click on most of the page
+   that was not there. Non-drillable cards get a flat border tint instead. */
 .kcard{transition:box-shadow .22s cubic-bezier(.25,.46,.45,.94),transform .22s cubic-bezier(.34,1.56,.64,1),border-color .2s;}
-.kcard:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);border-color:rgba(0,0,0,.13);}
-.kcard:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07);}
+.kcard:hover{border-color:rgba(0,0,0,.13);}
+.kcard.drill-tgt:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);}
+.kcard.drill-tgt:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07);}
 .sec{transition:box-shadow .2s ease;}
 .sec:hover{box-shadow:0 3px 16px rgba(0,0,0,.06);}
 
@@ -1169,11 +1187,12 @@ function buildFBar(page){
       if(fd.pending !== false) return `<div class="fsep"></div><span class="surveyor-coming">${fd.label}: pending export</span>`;
       return '';
     }
-    return `<div class="fsep"></div><span class="flabel">${fd.label}</span>
-    <select class="${f[fd.key]&&f[fd.key]!=='all'?'fsel-on':''}" aria-label="Filter by ${esc(fd.label)}" onchange="onF('${page}','${fd.key}',this.value)">
+    const on=f[fd.key]&&f[fd.key]!=='all';
+    return `<div class="fsep"></div><span class="fselgrp${on?' on':''}"><span class="fsel-label">${esc(fd.label)}</span>
+    <select aria-label="Filter by ${esc(fd.label)}" onchange="onF('${page}','${fd.key}',this.value)">
       <option value="all">All</option>
-      ${vals.map(v=>`<option value="${v}"${f[fd.key]===v?' selected':''}>${v}</option>`).join('')}
-    </select>`;
+      ${vals.map(v=>`<option value="${esc(v)}"${f[fd.key]===v?' selected':''}>${esc(v)}</option>`).join('')}
+    </select></span>`;
   }).join('');
 
   const regions = [...new Set(rows.map(r=>r.region).filter(Boolean))].sort();
@@ -1266,11 +1285,11 @@ function buildFBar(page){
 function wipExtraControls(){
   const salesReps=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
   const types=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.type).filter(Boolean))].sort();
-  const sel=(key,label,vals)=>vals.length?`<div class="fsep"></div><span class="flabel">${label}</span>
-    <select class="${wipF[key]&&wipF[key]!=='all'?'fsel-on':''}" aria-label="Filter by ${esc(label)}" onchange="onWipF('${key}',this.value)">
+  const sel=(key,label,vals)=>vals.length?`<div class="fsep"></div><span class="fselgrp${wipF[key]&&wipF[key]!=='all'?' on':''}"><span class="fsel-label">${esc(label)}</span>
+    <select aria-label="Filter by ${esc(label)}" onchange="onWipF('${key}',this.value)">
       <option value="all">All</option>
       ${vals.map(v=>`<option value="${esc(v)}"${wipF[key]===v?' selected':''}>${esc(v)}</option>`).join('')}
-    </select>`:'';
+    </select></span>`:'';
   return sel('sales_rep','Sales Rep',salesReps)+sel('type','Type',types);
 }
 
@@ -1764,6 +1783,8 @@ const TIP={
   mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
   mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a town for its average days open.',
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
+  mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
+  mapTopLocation:'The town holding the most jobs in view. Towns are grouped by name, not by ZIP — a town spanning several ZIPs is one place here.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -3055,11 +3076,17 @@ function renderTrends(){
     const cl=clear4!=null?Math.round(clear4*100):null;
     const clColor=cl==null?'#8a8571':aClear?'#b3402e':cl<90?'#8a6413':'#2e7a52';
     const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
-    const inDelta=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
+    // The week-over-week intake move is the biggest number on this strip and
+    // used to render as unstyled grey caption text, quieter than the Clearance
+    // figure beside it. Rising intake is the pressure signal, so colour it the
+    // same way clearance is: up is bad here, down is good.
+    const inDeltaRaw=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
+    const inDelta=inDeltaRaw==null?null
+      :`<span style="color:${inDeltaRaw>=10?'var(--red)':inDeltaRaw<=-10?'var(--green)':'inherit'};font-weight:${Math.abs(inDeltaRaw)>=10?'600':'400'};">${inDeltaRaw>=0?'+':''}${inDeltaRaw}%</span> vs prior week`;
     const clearSpark=miniSpark(clearSeries.map(v=>v==null?null:Math.round(v*100)),{thresh:90,color:clColor});
     const floorSpark=miniSpark(floorSeries,{color:'#8a8571'});
     fEl.innerHTML=
-      stat('Intake',fw.inn,(inDelta!=null?(inDelta>=0?'+':'')+inDelta+'% vs prior week':'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
+      stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
       +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
       +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
@@ -3537,7 +3564,7 @@ function renderAgingWIP(){
   document.getElementById('ol-content').innerHTML=`
     <div class="kg kg5" style="margin-bottom:14px;">
       <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">${wipDimFiltered?'of '+wipUnfilteredCount+' open · current filter':'All open surveys'}</div></div>
-      <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge+' '+TIP.ssDaysOpen)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
+      <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
       <div class="kcard"><div class="klabel">Median age${kinfo(TIP.medAge)}</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
       <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d${kinfo(TIP.onTrackWip())}</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
@@ -4656,7 +4683,7 @@ function mapPaintMeta(vis,zips){
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   k.innerHTML=
      `<div class="kcard"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
-    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
+    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
     +(mapMetric==='wip'
       ? (()=>{ const ages=vis.map(p=>ssDaysOpen(p.r,_mapToday())).filter(x=>x!=null&&x>=0); const a=avg(ages);
           return `<div class="kcard"><div class="klabel">Avg days open${kinfo(TIP.ssDaysOpen)}</div><div class="kval ${a!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(a,S.targetAvg)]+'-c':''}">${a!=null?a.toFixed(1)+'d':'—'}</div><div class="ksub">in the Site Survey queue</div></div>`; })()

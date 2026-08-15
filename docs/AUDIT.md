@@ -82,6 +82,35 @@ the `autoDateRange` setting a no-op, so **this one is yours to call**: should th
 default view include the three re-signed accounts, or not? It is a one-line
 change once decided.
 
+---
+
+## Batch 3 — applied (aesthetics, motion, feel)
+
+`npm test` 65/65, snapshot unchanged. `index.html` only, +41/−14.
+
+| finding | now |
+|---|---|
+| G7 two control vocabularies in one bar | Single-select filters are `.fselgrp` — one bordered unit, 28px like the pill buttons, sentence-case label inside it, active state matching `.rgdrop-btn.active`. Kept as native `<select>` deliberately: Sales Rep runs to ~50 names here and type-ahead plus the platform picker beat a hand-rolled panel |
+| G9 every card advertised a click | The lift and shadow are `.kcard.drill-tgt:hover` now; non-drillable cards get a flat border tint. Only cards that open a drawer behave like they do |
+| W4 concatenated tooltip | Avg age carries `TIP.avgAge` alone — 134 chars, down from ~400. "Days Open in SS" is already defined on the column header |
+| M1 Map "Top market" had no info dot | Added, with two new TIP entries (`mapTopMarket`, `mapTopLocation`) explaining that position comes from the address ZIP and that towns group by name, not ZIP |
+| T3 intake delta was a grey caption | Banded like the Clearance figure beside it — rising intake red, falling green, bold past ±10%. Currently reads **−45%** in green |
+
+### T2 — withdrawn, not a real finding
+
+I reported the first Trends render at 1.77 s "measured once". Re-measured on a
+cold load: **138 ms**, and 74 ms warm. The 1.77 s reading was the Browser pane
+being `document.hidden`, which stops `requestAnimationFrame` — the same
+condition that produced several blank screenshots during the audit. The app was
+never slow here. Nothing to fix.
+
+### Known, not fixed
+
+The WIP bar carries seven controls and wraps Reset + the hint onto a second row
+**below about 1400px**. One row at 1512px, two at 1280. Left alone rather than
+shrinking the selects to fit an arbitrary width; no horizontal overflow at any
+size, including 375px.
+
 ## Global — filter bar, nav, routing, animation
 
 | # | axis | what I observed | severity | proposed fix | risk |
