@@ -612,10 +612,16 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-leg.dim{opacity:.45;}
 .wip-leg-sw{width:8px;height:8px;border-radius:2px;margin-right:5px;flex-shrink:0;}
 .wip-leg-sw.on{box-shadow:0 0 0 1.5px var(--text);}
-.wip-leg-set{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 13px;padding:3px 10px;background:var(--bg);border:1px solid var(--border-lt);border-radius:6px;min-width:0;}
-.wip-leg-grp{font-weight:600;color:var(--text);}
-.wip-leg-grp::after{content:'';width:1px;align-self:stretch;background:var(--border);margin-left:11px;}
-.wip-leg-grp.on{text-decoration:underline;text-underline-offset:3px;}
+/* The unscheduled bracket — grouping on the bar, so the legend below stays
+   one uniform run of chips with no odd box on one of its lines. */
+.wip-bar-stack{width:430px;flex-shrink:0;}
+.wip-brk-row{display:flex;margin-top:3px;}
+.wip-brk{font:inherit;font-size:10px;color:var(--faint);background:none;padding:3px 0 0;cursor:pointer;
+  border:1px solid var(--border);border-top:0;border-radius:0 0 3px 3px;
+  display:flex;justify-content:center;line-height:1;transition:color .15s,border-color .15s;min-width:0;}
+.wip-brk span{background:var(--surface);padding:0 5px;margin-top:-7px;white-space:nowrap;}
+.wip-brk:hover{color:var(--muted);border-color:var(--faint);}
+.wip-brk.on{color:var(--text);border-color:var(--text);font-weight:600;}
 .wip-frow-hint{margin-top:-2px;}
 .wip-fhint{font-size:11px;color:var(--faint);}
 .wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0 0 0 6px;}
@@ -633,7 +639,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    and the legend drops under it rather than squeezing both. */
 @media(max-width:1100px){
   .wip-frow{flex-wrap:wrap;}
-  .wip-bar{width:100%;flex:1 1 100%;order:2;}
+  .wip-bar,.wip-bar-stack{width:100%;flex:1 1 100%;order:2;}
   .wip-legs{order:3;flex:1 1 100%;}
   .wip-flabel{order:1;width:auto;text-align:left;}
   .wip-frow-hint .wip-flabel{display:none;}
@@ -3664,6 +3670,31 @@ function renderAgingWIP(){
             style="flex:${it.n};background:${it.color};border-radius:${r0} ${r1} ${r1} ${r0};"></div>`;
         }).join('')}</div>`;
       };
+      // A bracket under the run of unscheduled segments, spanning exactly them.
+      // The grouping lives on the bar rather than in the legend: a box around
+      // five of eight legend chips made one wrapped line look like a different
+      // kind of thing, and the bracket also shows HOW MUCH of the queue is
+      // unscheduled, which a legend box cannot.
+      //
+      // Aligned by calc rather than by a matching flex row, because the bar's
+      // 2px gaps are fixed while its segments are proportional: the bracket
+      // starts after N whole gaps and spans its own internal ones.
+      const bracket=(shown,items,sel,onclick,label)=>{
+        if(!items.length||!shown.length) return '';
+        const total=shown.reduce((t,it)=>t+it.n,0)||1;
+        const keys=new Set(items.map(it=>it.key));
+        const grpSegs=shown.filter(it=>keys.has(it.key));
+        if(!grpSegs.length) return '';
+        const before=shown.slice(0,shown.findIndex(it=>keys.has(it.key)));
+        const G=(shown.length-1)*2, nB=before.length, nG=grpSegs.length;
+        const share=a=>a.reduce((t,it)=>t+it.n,0)/total;
+        const on=grpSegs.every(it=>sel.has(it.key));
+        const n=grpSegs.reduce((t,it)=>t+it.n,0);
+        return `<div class="wip-brk-row"><button class="wip-brk${on?' on':''}" aria-pressed="${on}"
+          title="Select every survey with no booking"
+          onclick="${onclick(grpSegs.map(it=>it.key))}"
+          style="margin-left:calc(${share(before)} * (100% - ${G}px) + ${nB*2}px);width:calc(${share(grpSegs)} * (100% - ${G}px) + ${(nG-1)*2}px);"><span>${label} ${n}</span></button></div>`;
+      };
       const swatch=(c,on)=>`<span class="wip-leg-sw${on?' on':''}" style="background:${c};"></span>`;
 
       const ageItems=PA_BANDS.map((b,i)=>({...b,key:i,n:ageCounts[i]}));
@@ -3682,22 +3713,10 @@ function renderAgingWIP(){
         const on=wipQsSel.has(it.key);
         return `<button class="wip-leg${wipQsSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipQs('${it.key}')">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
       };
-      const bookedLeg=qsItems.filter(it=>!QS_UNSCHED.includes(it.key)).map(legFor).join('');
+      const qsLeg=qsItems.map(legFor).join('');
       const unschedItems=qsItems.filter(it=>QS_UNSCHED.includes(it.key));
-      const unschedKeys=unschedItems.map(it=>it.key);
-      const unschedOn=unschedKeys.length&&unschedKeys.every(k=>wipQsSel.has(k));
-      // Counted within the age selection like every other chip, so the group
-      // total always equals the five beside it.
-      const unschedN=unschedItems.reduce((t,it)=>t+it.n,0);
-      // The five sit INSIDE their own box rather than after a divider. On a
-      // narrow row the legend wraps, and a divider only marks the group's
-      // first line — "New" and "Unscheduled" landed on line two reading as if
-      // they belonged to the booked statuses on the left. A container carries
-      // the grouping down every line it wraps onto.
-      const unschedLeg=unschedItems.length?`<span class="wip-leg-set">
-        <button class="wip-leg wip-leg-grp${unschedOn?' on':''}" aria-pressed="${unschedOn}"
-          title="Select every survey with no booking" onclick="toggleWipUnscheduled('${unschedKeys.join(',')}')">All unscheduled <b>${unschedN}</b></button>
-        ${unschedItems.map(legFor).join('')}</span>`:'';
+      const qsShownSegs=qsItems.filter(it=>it.n);
+      const qsBrk=bracket(qsShownSegs,unschedItems,wipQsSel,ks=>`toggleWipUnscheduled('${ks.join(',')}')`,'Unscheduled');
 
       const anyFilter=wipAgeSel.size>0||wipQsSel.size>0;
       return `<div class="wip-filters">
@@ -3706,10 +3725,10 @@ function renderAgingWIP(){
           ${ageBar}
           <div class="wip-legs">${ageLeg}</div>
         </div>
-        <div class="wip-frow">
+        <div class="wip-frow wip-frow-brk">
           <div class="wip-flabel">Status</div>
-          ${qsBar}
-          <div class="wip-legs">${bookedLeg}${unschedLeg}</div>
+          <div class="wip-bar-stack">${qsBar}${qsBrk}</div>
+          <div class="wip-legs">${qsLeg}</div>
         </div>
         <div class="wip-frow wip-frow-hint">
           <div class="wip-flabel"></div>
