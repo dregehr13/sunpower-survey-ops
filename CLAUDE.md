@@ -178,6 +178,12 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
   one place that carries contacts, because that is the page you work from
 - Charts that drill share `drillHover` for the pointer cursor. Half of them
   were clickable with no cue
+- **Not everything gets a drill.** Best week on Trends was built and removed
+  the same day: "which surveys were in our highest-volume week" drives no
+  decision, and that week's completions are already one click away in the
+  Weekly detail table. Trend (3wk) and Avg weekly pace have no single
+  population to open. A drill costs a hover-lift, which this app spends only
+  on things worth opening
 
 ## Change list (next build)
 - **Pick a yield-chart form on Quality** (Bars vs Trend) and delete the other,

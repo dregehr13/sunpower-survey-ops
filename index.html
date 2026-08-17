@@ -571,8 +571,10 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 
 /* Search: a text cut inside the drawer, since a 290-row region drill has no
    other way to reach one account. */
-.drill-tools{display:flex;align-items:center;gap:8px;padding:0 16px 9px;background:var(--bg);}
-.drill-seg+.drill-tools{padding-top:9px;}
+/* One padding rule, not a sibling override: .drill-seg:empty is display:none,
+   so a drill with no segment chips gave the input no top padding at all and it
+   sat flush against the header rule. */
+.drill-tools{display:flex;align-items:center;gap:8px;padding:13px 16px 11px;background:var(--bg);}
 .drill-search{flex:1;min-width:0;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;}
 .drill-search::placeholder{color:var(--faint);}
 .drill-search-clr{font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
@@ -1014,7 +1016,7 @@ body{padding-left:180px;}
   <div class="drill-seg" id="drill-seg"></div>
   <div class="drill-seg-note" id="drill-seg-note"></div>
   <div class="drill-tools">
-    <input type="text" class="drill-search" id="drill-search" placeholder="Filter these rows — project, region, rep, reason…" aria-label="Filter rows" oninput="setDrillQuery(this.value)">
+    <input type="text" class="drill-search" id="drill-search" placeholder="Search anything…" aria-label="Search these rows" oninput="setDrillQuery(this.value)">
     <button class="drill-search-clr" id="drill-search-clr" onclick="setDrillQuery('',true)" style="display:none;">Clear</button>
   </div>
   <div class="drill-count" id="drill-count"></div>
@@ -3239,7 +3241,6 @@ function renderRepTable(){
 // Populations the Trends cards and the weekly table drill into, kept for the
 // inline handlers the same way _curD is on the Current page.
 const _trD={};
-function drillTr(k,title,sub,opts){ openDrill(title,sub,_trD[k]||[],opts||{sort:'days'}); }
 // A percentile card is a question about the tail: which surveys are out there.
 function drillTrTail(p,val){
   const dr=(_trD.done||[]).filter(r=>r.ct_total!=null&&r.ct_total>=val);
@@ -3299,9 +3300,6 @@ function renderTrends(){
   const wkCounts=doneWeeks.map(w=>w.count);
   const avgWkPace=avg(wkCounts),bestWk=wkCounts.length?Math.max(...wkCounts):null;
   _trD.done=trendDone; _trD.src=trendSrc;
-  const bestWkObj=bestWk!=null?doneWeeks.find(w=>w.count===bestWk):null;
-  const bestWkLbl=bestWkObj?fmtWeekLabel(bestWkObj)+' · '+bestWk+' completions':'';
-  _trD.best=bestWkObj?trendDone.filter(r=>weekOf(r.complete)===bestWkObj.week):[];
   const recentWks=doneWeeks.slice(-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const prevWks=doneWeeks.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const recentAvgCycle=avg(recentWks),prevAvgCycle=avg(prevWks);
@@ -3345,7 +3343,10 @@ function renderTrends(){
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
       <div class="kcard"><div class="klabel">Avg weekly pace${kinfo(TIP.pace)}</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
-      <div class="kcard${bestWk!=null?' drill-tgt':''}" ${bestWk!=null?drillAttrs('drillTr(\'best\',\'Best week\',\''+escAttrJs(bestWkLbl)+'\',{mode:\'byDate\'})'):''}><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
+      <!-- Best week does not drill: "which surveys were in our highest-volume
+           week" drives nothing, and that week's completions are already one
+           click away in the Weekly detail table below, same as any other week. -->
+      <div class="kcard"><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
       <div class="kcard${p75!=null?' drill-tgt':''}" ${p75!=null?drillAttrs('drillTrTail(75,'+p75+')'):''}><div class="klabel">P75 cycle${kinfo(TIP.p75)}</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
       <div class="kcard${p90!=null?' drill-tgt':''}" ${p90!=null?drillAttrs('drillTrTail(90,'+p90+')'):''}><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
     </div>
