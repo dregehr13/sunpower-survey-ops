@@ -587,7 +587,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-queue{padding:0;overflow:hidden;}
 .wip-queue-head{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
 .wip-queue-title{font-size:14px;font-weight:700;color:var(--text);}
-.wip-queue-n{font-size:12px;font-weight:400;color:var(--muted);margin-left:9px;font-variant-numeric:tabular-nums;}
 .wip-viewtgl{display:flex;flex-shrink:0;}
 .wip-viewtgl button{font:inherit;font-size:11.5px;padding:5px 12px;background:var(--surface);color:var(--muted);border:1px solid var(--border);cursor:pointer;white-space:nowrap;}
 .wip-viewtgl button:first-child{border-radius:6px 0 0 6px;}
@@ -624,14 +623,13 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-brk.on{color:var(--text);border-color:var(--text);font-weight:600;}
 .wip-frow-hint{margin-top:-2px;}
 .wip-fhint{font-size:11px;color:var(--faint);}
-.wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0 0 0 6px;}
+.wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;}
 .wip-sel{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;margin-top:2px;padding-top:10px;border-top:1px solid var(--border-lt);font-size:12px;color:var(--muted);}
 .wip-sel b{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
 .wip-sel-of{color:var(--faint);}
 .wip-foot{padding:11px 18px 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
 .wip-foot b{color:var(--text);font-variant-numeric:tabular-nums;}
 .wip-foot-a{font:inherit;font-size:11.5px;background:none;border:none;color:var(--blue);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
-.wip-queue>.note{padding:0 18px 14px;margin-top:0;}
 .wip-queue .wip-wrap{border:none;border-radius:0;max-height:70vh;}
 .wip-table th{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px 8px;}
 .wip-table th:first-child{padding-left:18px;} .wip-table th:last-child{padding-right:18px;}
@@ -647,12 +645,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .wip-flabel{order:1;width:auto;text-align:left;}
   .wip-frow-hint .wip-flabel{display:none;}
 }
-/* The caption is an aside, not data — below this it breaks mid-phrase under
-   the number ("live · not date-" / "filtered"), so it goes rather than wraps. */
-@media(max-width:1250px){ .wip-rail-sub{display:none;} }
 @media(max-width:860px){
   .wip-rail{flex-wrap:wrap;padding:0 14px;}
-  .wip-rail-sub{display:inline;}
   .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
   .wip-rail-lead{flex:1 0 100%;border-bottom:1px solid var(--border);}
   /* An odd cell count leaves the last one orphaned half-width — let it span. */
@@ -1298,7 +1292,7 @@ function buildFBar(page){
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
       <span class="fhint" id="fb-hint-${page}">${isWip
-        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open <span title="The WIP page is a live snapshot of the queue, so the date range does not apply to it.">· live, not date-filtered</span>'
+        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open'
         : filtered.length+' of '+rows.length+' shown'}</span>
     </div>
   </div>`;
@@ -3606,7 +3600,7 @@ function renderAgingWIP(){
     <div class="wip-rail">
       <div class="wip-rail-cell wip-rail-lead">
         <div class="klabel">Open now${kinfo(TIP.wip)}</div>
-        <div class="wip-rail-val">${totalWip}<span class="wip-rail-sub">${wipDimFiltered?'of '+wipUnfilteredCount+' · current filter':'live · not date-filtered'}</span></div>
+        <div class="wip-rail-val">${totalWip}${wipDimFiltered?`<span class="wip-rail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
       </div>
       <div class="wip-rail-cell">
         <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
@@ -3636,8 +3630,7 @@ function renderAgingWIP(){
     <div class="sec wip-queue">
       <div class="wip-queue-head">
         <div>
-          <div class="wip-queue-title">WIP queue<span class="wip-queue-n">${wip.length===viewPool.length?`${wip.length} open`:`${wip.length} of ${viewPool.length}`}</span></div>
-          <div class="ssub">Rows expand for account and review detail · green &le;${S.targetAvg}d, amber &gt;${S.targetAvg}d, red &gt;7d in SS</div>
+          <div class="wip-queue-title">WIP queue</div>
         </div>
         <div class="wip-viewtgl">
           <button class="${wipView==='all'?'on':''}" onclick="setWipView('all')">All</button>
@@ -3734,10 +3727,10 @@ function renderAgingWIP(){
           <div class="wip-bar-stack">${qsBar}${qsBrk}</div>
           <div class="wip-legs">${qsLeg}</div>
         </div>
-        <div class="wip-frow wip-frow-hint">
+        ${anyFilter?`<div class="wip-frow wip-frow-hint">
           <div class="wip-flabel"></div>
-          <div class="wip-fhint">Click any band or label to filter · they combine${anyFilter?` <button class="wip-fclear" onclick="clearWipFilters()">Clear ×</button>`:''}</div>
-        </div>
+          <div class="wip-fhint"><button class="wip-fclear" onclick="clearWipFilters()">Clear filters ×</button></div>
+        </div>`:''}
         <div class="wip-sel">
           <span><b>${wip.length}</b> ${anyFilter?'selected':(wipView==='openrs'?'open resurveys':'open')}</span>
           ${selAvg!=null?`<span>avg <b style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};">${selAvg}d</b></span>`:''}
@@ -3765,7 +3758,6 @@ function renderAgingWIP(){
       ${wip.length?`<div class="wip-foot">
         <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>
       </div>`:''}
-      <div class="note">Proj age = days since Project Start Date · Open in SS = time in the Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
     </div>`;
 }
 
