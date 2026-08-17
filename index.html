@@ -574,11 +574,14 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
    five figures carry in about a sixth of the vertical space and, sharing one
    surface, stop implying they are five equally important things. */
-.wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 20px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
+/* Cell padding is uniform and the panel supplies only the outer 2px. Trimming
+   the first and last cell's inner padding — as the handoff draws it — makes
+   those two 18px narrower than the rest: flex-basis:0 sizes the CONTENT box,
+   so padding is added on top of an equal share rather than taken out of it.
+   Uniform padding is the only way the dividers land evenly. */
+.wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 2px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
 .wip-rail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
-.wip-rail-cell:first-child{padding-left:0;}
-.wip-rail-cell:last-child{padding-right:0;border-right:none;}
-.wip-rail-lead{flex:1.5;}
+.wip-rail-cell:last-child{border-right:none;}
 .wip-rail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .wip-rail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
 
@@ -615,12 +618,14 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    one uniform run of chips with no odd box on one of its lines. */
 .wip-bar-stack{width:430px;flex-shrink:0;}
 .wip-brk-row{display:flex;margin-top:3px;}
-.wip-brk{font:inherit;font-size:10px;color:var(--faint);background:none;padding:3px 0 0;cursor:pointer;
-  border:1px solid var(--border);border-top:0;border-radius:0 0 3px 3px;
-  display:flex;justify-content:center;line-height:1;transition:color .15s,border-color .15s;min-width:0;}
-.wip-brk span{background:var(--surface);padding:0 5px;margin-top:-7px;white-space:nowrap;}
-.wip-brk:hover{color:var(--muted);border-color:var(--faint);}
-.wip-brk.on{color:var(--text);border-color:var(--text);font-weight:600;}
+.wip-brk{font:inherit;background:none;border:0;padding:0;cursor:pointer;min-width:0;
+  display:flex;flex-direction:column;align-items:center;}
+.wip-brk-line{width:100%;height:4px;border:1px solid var(--border);border-top:0;border-radius:0 0 3px 3px;transition:border-color .15s;}
+.wip-brk-lbl{font-size:10px;line-height:1;color:var(--faint);margin-top:3px;white-space:nowrap;transition:color .15s;}
+.wip-brk:hover .wip-brk-line{border-color:var(--faint);}
+.wip-brk:hover .wip-brk-lbl{color:var(--muted);}
+.wip-brk.on .wip-brk-line{border-color:var(--text);}
+.wip-brk.on .wip-brk-lbl{color:var(--text);font-weight:600;}
 .wip-frow-hint{margin-top:-2px;}
 .wip-fhint{font-size:11px;color:var(--faint);}
 .wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;}
@@ -646,9 +651,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .wip-frow-hint .wip-flabel{display:none;}
 }
 @media(max-width:860px){
-  .wip-rail{flex-wrap:wrap;padding:0 14px;}
+  .wip-rail{flex-wrap:wrap;padding:0 12px;}
   .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
-  .wip-rail-lead{flex:1 0 100%;border-bottom:1px solid var(--border);}
+  .wip-rail-cell:first-child{flex:1 0 100%;border-bottom:1px solid var(--border);}
   /* An odd cell count leaves the last one orphaned half-width — let it span. */
   .wip-rail-cell:last-child:nth-child(odd){flex:1 0 100%;}
   .wip-rail-val{font-size:24px;}
@@ -3598,7 +3603,7 @@ function renderAgingWIP(){
 
   document.getElementById('ol-content').innerHTML=`
     <div class="wip-rail">
-      <div class="wip-rail-cell wip-rail-lead">
+      <div class="wip-rail-cell">
         <div class="klabel">Open now${kinfo(TIP.wip)}</div>
         <div class="wip-rail-val">${totalWip}${wipDimFiltered?`<span class="wip-rail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
       </div>
@@ -3688,9 +3693,9 @@ function renderAgingWIP(){
         const on=grpSegs.every(it=>sel.has(it.key));
         const n=grpSegs.reduce((t,it)=>t+it.n,0);
         return `<div class="wip-brk-row"><button class="wip-brk${on?' on':''}" aria-pressed="${on}"
-          title="Select every survey with no booking"
+          title="Select every survey with no booking" aria-label="${esc(label)}: ${n}"
           onclick="${onclick(grpSegs.map(it=>it.key))}"
-          style="margin-left:calc(${share(before)} * (100% - ${G}px) + ${nB*2}px);width:calc(${share(grpSegs)} * (100% - ${G}px) + ${(nG-1)*2}px);"><span>${label} ${n}</span></button></div>`;
+          style="margin-left:calc(${share(before)} * (100% - ${G}px) + ${nB*2}px);width:calc(${share(grpSegs)} * (100% - ${G}px) + ${(nG-1)*2}px);"><span class="wip-brk-line"></span><span class="wip-brk-lbl">${esc(label)}</span></button></div>`;
       };
       const swatch=(c,on)=>`<span class="wip-leg-sw${on?' on':''}" style="background:${c};"></span>`;
 
