@@ -691,6 +691,25 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 2px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
 .wip-rail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
 .wip-rail-cell:last-child{border-right:none;}
+/* Three of the six cells filter the queue below. Padding stays uniform across
+   all six — flex-basis:0 sizes the content box, so a border or a padding change
+   on one cell makes that cell a different width. State rides on background and
+   an inset rule, neither of which touches layout. */
+.wip-rail-cell.rail-f{cursor:pointer;transition:background .16s,box-shadow .16s;}
+.wip-rail-cell.rail-f .klabel{transition:color .16s;}
+.wip-rail-cell.rail-f:hover{background:var(--bg);}
+.wip-rail-cell.rail-f:hover .klabel{color:var(--text);}
+.wip-rail-cell.rail-f:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
+.wip-rail-cell.rail-f.on{background:var(--bg);box-shadow:inset 0 -3px 0 var(--text);}
+.wip-rail-cell.rail-f.on .klabel{color:var(--text);font-weight:700;}
+/* The cue that a cell is a filter, not a readout: a hairline that fills in on
+   hover and stays filled while the filter is on. */
+.rail-cue{display:inline-block;width:12px;height:2px;border-radius:1px;background:var(--border);margin-left:7px;vertical-align:middle;transition:background .16s,width .16s;}
+.wip-rail-cell.rail-f:hover .rail-cue{background:var(--muted);width:16px;}
+.wip-rail-cell.rail-f.on .rail-cue{background:var(--text);width:16px;}
+@media (prefers-reduced-motion:reduce){
+  .wip-rail-cell.rail-f,.rail-cue{transition:none;}
+}
 .wip-rail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .wip-rail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
 
@@ -3815,6 +3834,18 @@ function toggleWipUnscheduled(keys){
   ks.forEach(k=>allOn?wipQsSel.delete(k):wipQsSel.add(k));
   renderAgingWIP();
 }
+// The rail's aging cell selects the age bands at or above its threshold, so the
+// number and the filter cannot disagree: the cell counts projectAge >=
+// PA_MINS[WIP_OVER_BANDS[0]] and the click selects exactly those bands. Moving
+// the threshold means moving this list to another band boundary — a cell
+// reading "over 20 days" would have no band to select and would filter to
+// something other than what it counted.
+const WIP_OVER_BANDS=[2,3,4,5];   // 15–30, 30–60, 60–90, >90
+function toggleWipOverAge(){
+  const allOn=WIP_OVER_BANDS.every(i=>wipAgeSel.has(i));
+  WIP_OVER_BANDS.forEach(i=>allOn?wipAgeSel.delete(i):wipAgeSel.add(i));
+  renderAgingWIP();
+}
 function clearWipFilters(){ wipAgeSel.clear(); wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
@@ -3971,8 +4002,11 @@ function renderAgingWIP(){
   const avgAge=railAges.length?Math.round(railAges.reduce((a,b)=>a+b,0)/railAges.length*10)/10:null;
   // Project age, the same clock the age bar runs on — not Days Open in SS.
   // The two answer different questions and the bar directly below this rail is
-  // the one a reader will check the number against.
-  const railOver30=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=30).length;
+  // the one a reader will check the number against. The threshold is read off
+  // the band table rather than written twice, so the count and the filter the
+  // cell applies are the same set of rows by construction.
+  const OVER_MIN=PA_MINS[WIP_OVER_BANDS[0]];
+  const railOverAge=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=OVER_MIN).length;
   const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
   const railOpenRs=wipScoped().filter(isOpenResurvey).length;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
@@ -4087,18 +4121,33 @@ function renderAgingWIP(){
         <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
         <div class="wip-rail-val" style="color:${avgAge==null?'var(--text)':avgAge<=S.targetAvg?'var(--green)':avgAge<=7?'var(--amber)':'var(--red)'};">${avgAge!=null?avgAge+'d':'—'}</div>
       </div>
-      <div class="wip-rail-cell">
-        <div class="klabel">Over 30 days${kinfo(TIP.projAge)}</div>
-        <div class="wip-rail-val" style="color:${railOver30?'var(--amber)':'var(--text)'};">${railOver30}</div>
-      </div>
-      <div class="wip-rail-cell">
-        <div class="klabel">Unscheduled</div>
-        <div class="wip-rail-val">${railUnsched}</div>
-      </div>
-      <div class="wip-rail-cell">
-        <div class="klabel">Open resurveys${kinfo(TIP.rsOpen)}</div>
-        <div class="wip-rail-val" style="color:${railOpenRs?'var(--amber)':'var(--text)'};">${railOpenRs}</div>
-      </div>
+      ${(()=>{
+        // Three filter cells. Each mirrors a control that already exists below
+        // — the age bands, the Unscheduled bracket, the view toggle — so the
+        // rail is a shortcut into the queue rather than a fourth vocabulary.
+        const overOn=WIP_OVER_BANDS.every(i=>wipAgeSel.has(i));
+        // Only the unscheduled statuses that actually have rows, which is the
+        // same list the bracket under the status bar drives — and the list
+        // line 3958 prunes wipQsSel down to. Testing all of QS_UNSCHED meant
+        // the cell could never light up: Likely cancel is empty most days, so
+        // "every key selected" was unreachable.
+        const unschedKeys=QS_UNSCHED.filter(k=>qsCounts[k]);
+        const unschedOn=unschedKeys.length>0&&unschedKeys.every(k=>wipQsSel.has(k));
+        const rsOn=wipView==='openrs';
+        const cell=(on,call,label,tip,val,color,hint)=>`
+      <div class="wip-rail-cell rail-f${on?' on':''}" role="button" tabindex="0" aria-pressed="${on}"
+           title="${esc(on?'Showing only these — click to clear':hint)}"
+           onclick="${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${call}}">
+        <div class="klabel">${label}${tip}<span class="rail-cue"></span></div>
+        <div class="wip-rail-val"${color?` style="color:${color};"`:''}>${val}</div>
+      </div>`;
+        return cell(overOn,'toggleWipOverAge()','Over '+OVER_MIN+' days',kinfo(TIP.projAge),railOverAge,
+                    railOverAge?'var(--amber)':'var(--text)','Filter the queue to surveys '+OVER_MIN+' days old and over')
+          +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
+                    'Filter the queue to everything with no booking')
+          +cell(rsOn,`setWipView('${wipView==='openrs'?'all':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
+                    railOpenRs?'var(--amber)':'var(--text)','Show only the open resurveys');
+      })()}
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
         const band=ssRatioBand(pipeRatio);
         const c=band==='good'?'var(--green)':band==='bad'?'var(--red)':'var(--text)';
