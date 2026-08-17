@@ -571,6 +571,54 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;}
 .wip-wrap th{position:sticky;top:0;background:var(--surface);z-index:5;}
 
+/* ═══ QUALITY PAGE ═══ */
+.q-top{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:stretch;margin-bottom:14px;}
+.q-top>.sec{margin-bottom:0;}
+.q-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+.q-two>.sec{margin-bottom:14px;}
+.q-hero{display:flex;flex-direction:column;padding:18px 20px 20px;}
+.q-hero-val{font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums;}
+.q-hero-say{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px;text-wrap:pretty;}
+.q-hero-say b{color:var(--red);font-weight:600;}
+.q-track{height:7px;background:var(--border-lt);border-radius:4px;margin-top:14px;position:relative;overflow:hidden;}
+.q-track-fill{height:100%;border-radius:4px;}
+/* The target sits ON the track, not at its end — at 95% the gap between the
+   fill and the mark IS the shortfall, which is the thing to read. */
+.q-track-tgt{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--target);}
+.q-track-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px;}
+.q-dl{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-lt);display:flex;flex-direction:column;gap:9px;}
+.q-dl-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.q-dl-row span{font-size:12px;color:var(--muted);}
+.q-dl-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.q-hero-link{font:inherit;font-size:11.5px;color:var(--blue);background:none;border:none;padding:0;margin-top:auto;padding-top:16px;cursor:pointer;text-align:left;}
+.q-hero-link:hover{text-decoration:underline;text-underline-offset:2px;}
+.q-chart{margin-bottom:0;}
+
+.q-rate{display:grid;grid-template-columns:1fr 1fr;gap:9px 28px;}
+.q-rate-row{display:flex;align-items:center;gap:11px;min-width:0;}
+.q-rate-name{width:150px;flex-shrink:0;text-align:right;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.q-rate-track{flex:1;height:17px;background:var(--border-lt);border-radius:3px;position:relative;min-width:0;}
+.q-rate-fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;}
+.q-rate-ceil{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--target);}
+.q-rate-val{width:38px;flex-shrink:0;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+.q-rate-n{width:44px;flex-shrink:0;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;}
+.q-rate-n::before{content:'n=';}
+/* A reference, not a performer — neutral so it never ranks against the rest. */
+.q-rate-all .q-rate-name{color:var(--muted);}
+.q-rate-key{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--faint);margin-top:13px;}
+.q-rate-keyline{width:14px;height:2px;background:var(--target);flex-shrink:0;}
+
+@media(max-width:1100px){
+  .q-top{grid-template-columns:1fr;}
+  .q-rate{grid-template-columns:1fr;}
+}
+@media(max-width:860px){
+  .q-two{grid-template-columns:1fr;}
+  .q-hero-val{font-size:42px;}
+  .q-rate-name{width:88px;}
+  .q-rate-n{display:none;}
+}
+
 /* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
    five figures carry in about a sixth of the vertical space and, sharing one
    surface, stop implying they are five equally important things. */
@@ -794,11 +842,11 @@ body{padding-left:180px;}
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
-  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
+  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
     <div class="nmenu-dropdown" id="mobileMoreMenu">
-      <div class="nmenu-item" onclick="nav('resurvey')">Resurveys</div>
+      <div class="nmenu-item" onclick="nav('resurvey')">Quality</div>
       <div class="nmenu-item" onclick="nav('map')">Map</div>
     </div>
   </div>
@@ -1279,7 +1327,7 @@ function buildFBar(page){
         ${offices.map(o=>`<label class="rgdrop-item"><input type="checkbox"${offArr.includes(o)?' checked':''} onchange="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',this.checked,event)"><span>${esc(o)}</span></label>`).join('')}
       </div>
     </div>`:''}
-    <div class="fsep"></div>
+    ${page==='resurvey'?'':`<div class="fsep"></div>
     ${(()=>{
       const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
       const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
@@ -1290,7 +1338,7 @@ function buildFBar(page){
           ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
         </div>
       </div>`;
-    })()}
+    })()}`}
     ${catDropdowns}
     ${isWip?wipExtraControls():''}
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
@@ -1959,6 +2007,12 @@ function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r)
 // that week, which bounced back", 'request' asks "how long has this resurvey
 // been sitting". Completion-week scatters the aging signal — a single 54-day-
 // old resurvey lands on whatever week its original survey closed.
+// The yield chart exists in two forms while the shape is being chosen: the
+// handoff's weekly bars, and the line with its 4-week rolling average. Weekly
+// yield swings ~15 points on volume noise alone, which is why the rolling line
+// was added in the first place; the bars read cleaner but carry no trend.
+let rsChartMode='bars'; // 'bars' | 'line'
+function setRsChartMode(v){ rsChartMode=v; renderResurvey(); }
 let rsWeekAnchor='complete'; // 'complete' | 'request'
 function setRsWeekAnchor(v){ rsWeekAnchor=v; renderResurvey(); }
 function drillRsWeek(wk){
@@ -3922,6 +3976,31 @@ function renderResurvey(){
             sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
   }).filter(d=>d.comps>0).sort((a,b)=>b.count-a.count||b.comps-a.comps);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
+
+  // ── resurvey rate by group ────────────────────────────────────────────
+  // The inverse of FPY, which the table below already carries. It earns its
+  // place by being the ranked view: the table is sorted by volume and is read
+  // cell by cell, while these bars answer "who do I call" in one look. Same
+  // population, same rsGroupKey, so the two can never disagree.
+  //
+  // Banded as the mirror of fpyPill (95 / 85): under 5% green, 5–15% amber,
+  // 15%+ red. Against a 95% target most groups land red — that is the honest
+  // reading of a 15.6% national rate, not a scale problem.
+  const rateBand=v=>v<5?'var(--green)':v<15?'var(--amber)':'var(--red)';
+  const RS_CEILING=100-95;
+  // No "worst office per region" column. The handoff has one, but on this data
+  // only 2 of 28 regions contain an office clearing the 10-completion floor —
+  // the column would be blank on most rows, and filling it from n=3 would name
+  // a real org unit off noise. Grouping BY office is the default toggle state,
+  // so the panel still names something to call.
+  const RS_RATE_LIMIT=12;
+  const rateAll=regionData
+    .filter(d=>d.comps>=RS_MIN_CELL)   // same floor the table's pills use
+    .map(d=>({reg:d.reg,comps:d.comps,rate:d.count/d.comps*100}))
+    .sort((a,b)=>b.rate-a.rate);
+  const rateRows=rateAll.slice(0,RS_RATE_LIMIT);
+  const allRate=completions.length?defects.length/completions.length*100:null;
+  const rateMax=Math.max(...rateAll.map(d=>d.rate),RS_CEILING*2,1);
   const grpTgl=(v,l)=>`<button class="tgl-btn${grpKey===(v==='office'?'sales_office':'region')?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
   const cellPill=c=>c.n===0?'<span class="pna">—</span>'
     :c.n<RS_MIN_CELL?`<span class="pna-n" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
@@ -3971,52 +4050,78 @@ function renderResurvey(){
   }
 
   el.innerHTML=`
-  <div class="kg kg4">
-    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillFPYDefects()')}>
+  <div class="q-top">
+    ${(()=>{
+      const thin=completions.length<RS_MIN_CELL;
+      const c=pageFpy==null?'var(--text)':pageFpy>=95?'var(--green)':pageFpy>=85?'var(--amber)':'var(--red)';
+      const dl=(t,v,col,tip)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}</b></div>`;
+      return `<div class="sec q-hero">
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
-      ${completions.length>=RS_MIN_CELL
-        ? `<div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>`
-        // The breakdown table below refuses to rate a cell under RS_MIN_CELL
-        // completions; the headline held itself to no such standard and would
-        // print a confident "75.0%" off n=8 under a narrow filter.
-        : `<div class="kval pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>`}
-      <div class="ksub">${defects.length} of ${completions.length} completions came back</div>
-      <div class="ktgt">${completions.length>=RS_MIN_CELL?'target 95%':'under '+RS_MIN_CELL+' completions'}</div>
-    </div>
-    <div class="kcard">
-      <div class="klabel">Cost of a resurvey${kinfo(TIP.rsPenalty)}</div>
-      <div class="kval ${penalty!=null?(penalty>=4?'kr-c':penalty>=2?'ka-c':''):''}">${penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—'}</div>
-      <div class="ksub">${cleanCt!=null?cleanCt.toFixed(1)+'d clean → '+dirtyCt.toFixed(1)+'d resurveyed':'—'}</div>
-      <div class="ktgt">against a ${S.targetAvg}d target</div>
-    </div>
-    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillOpenResurveys()')}>
-      <div class="klabel">Open now${kinfo(TIP.rsOpen)}</div>
-      <div class="kval ${openRs.length>0?'kr-c':''}">${openRs.length}</div>
-      <div class="ksub">${openRs.filter(r=>r.resurvey_scheduled).length} scheduled · ${openRs.filter(r=>!r.resurvey_scheduled).length} awaiting</div>
-      <div class="ktgt">${(()=>{const a=avg(openRs.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0));return a!=null?'avg '+a.toFixed(1)+'d open':'—';})()}</div>
-    </div>
-    <div class="kcard">
-      <div class="klabel">Resurvey cycle${kinfo(TIP.rsCycle)}</div>
-      <div class="kval">${fmtCt(avgRsCt)}</div>
-      <div class="ksub">median ${fmtCt(medRsCt)}</div>
-      <div class="ktgt">${ctVals.length} of ${defects.length} have both dates</div>
-    </div>
-  </div>
-
+      ${thin
+        ? `<div class="q-hero-val pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>
+           <div class="q-hero-say">Under ${RS_MIN_CELL} completions in range — too few to rate.</div>`
+        : `<div class="q-hero-val" style="color:${c};">${pageFpy.toFixed(1)}%</div>
+           <div class="q-hero-say">${completions.length-defects.length} of ${completions.length} completions closed without a resurvey. <b>${defects.length} defect${defects.length===1?'':'s'}.</b></div>
+           <div class="q-track"><div class="q-track-fill" style="width:${Math.max(0,Math.min(100,pageFpy))}%;background:${c};"></div><div class="q-track-tgt" style="left:95%;"></div></div>
+           <div class="q-track-ax"><span>0%</span><span>95% target</span></div>`}
+      <div class="q-dl">
+        ${dl('Cost of a resurvey',penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—',penalty!=null&&penalty>=2?'var(--red)':null,TIP.rsPenalty)}
+        ${dl('Resurvey cycle',fmtCt(avgRsCt),null,TIP.rsCycle)}
+        ${dl('Median',fmtCt(medRsCt))}
+      </div>
+      ${defects.length?`<button class="q-hero-link" onclick="drillFPYDefects()">See the ${defects.length} defect${defects.length===1?'':'s'} &rarr;</button>`:''}
+    </div>`;})()}
   ${fpyWeeks.length>2?`
-  <div class="sec">
-    <div class="shead"><div><div class="stitle">First pass yield over time${kinfo(TIP.fpyTrend)}</div>
-      <div class="ssub">By the week the survey completed</div></div></div>
+  <div class="sec q-chart">
+    <div class="shead">
+      <div><div class="stitle">Yield by completion week${kinfo(TIP.fpyTrend)}</div>
+      <div class="ssub">${rsChartMode==='bars'?`Hollow bars are younger than ${RS_MATURE_DAYS} days — their defects have not all arrived yet`:'Weeks younger than '+RS_MATURE_DAYS+' days are provisional and left out of the rolling line'}</div></div>
+      <div class="toggle-group">
+        <button class="tgl-btn${rsChartMode==='bars'?' active':''}" onclick="setRsChartMode('bars')">Bars</button>
+        <button class="tgl-btn${rsChartMode==='line'?' active':''}" onclick="setRsChartMode('line')">Trend</button>
+      </div>
+    </div>
     <div class="leg">
-      <span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
-      <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
-      <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>
+      ${rsChartMode==='bars'
+        ? `<span class="li"><span class="ld" style="background:var(--c1);"></span>Settled</span>
+           <span class="li"><span class="ld" style="background:var(--surface);border:1.5px solid var(--c1);"></span>Still landing</span>`
+        : `<span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
+           <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
+           <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>`}
       <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>95% target</span>
     </div>
     <div class="cw" style="height:210px;"><canvas id="rs-fpy"></canvas></div>
-    <div class="note">A completion keeps collecting resurveys for weeks — only 57% arrive within 7 days of the survey closing, and 1 in 7 takes more than a month. Recent weeks therefore read high until they mature, so they are drawn hollow and left out of the trend above.</div>
+  </div>`:''}
+  </div>
+
+  ${rateRows.length?`
+  <div class="sec">
+    <div class="shead">
+      <div><div class="stitle">Resurvey rate by ${grpLabel.toLowerCase()}</div>
+        <div class="ssub">Share of completions that came back · ${rateAll.length>RS_RATE_LIMIT?`worst ${RS_RATE_LIMIT} of ${rateAll.length} with `:''}${RS_MIN_CELL}+ completions</div></div>
+      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+    </div>
+    <div class="q-rate">
+      ${rateRows.map(d=>{
+        const c=rateBand(d.rate);
+        return `<div class="q-rate-row drill-tgt" ${drillAttrs(`drillResGroup('${escAttrJs(d.reg)}')`)}>
+          <div class="q-rate-name">${esc(d.reg)}</div>
+          <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(d.rate/rateMax*100,100)}%;background:${c};"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
+          <div class="q-rate-val" style="color:${c};">${d.rate.toFixed(0)}%</div>
+          <div class="q-rate-n">${d.comps}</div>
+        </div>`;
+      }).join('')}
+      ${allRate!=null?`<div class="q-rate-row q-rate-all">
+        <div class="q-rate-name">All ${grpKey==='sales_office'?'offices':'regions'}</div>
+        <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(allRate/rateMax*100,100)}%;background:var(--faint);"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
+        <div class="q-rate-val" style="color:var(--muted);">${allRate.toFixed(1)}%</div>
+        <div class="q-rate-n">${completions.length}</div>
+      </div>`:''}
+    </div>
+    <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling &mdash; the mirror of the 95% yield target</div>
   </div>`:''}
 
+  <div class="q-two">
   ${reasonRows.length?`
   <div class="sec">
     <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsReason)}</div>
@@ -4049,7 +4154,9 @@ function renderResurvey(){
       </div>`).join('')}
     </div>
     ${noAttr?`<div class="note">${noAttr} resurveys have no cause recorded, so every share above is of the ${defects.length} total rather than of the ${defects.length-noAttr} attributed ones.</div>`:''}
+    <div class="note">Attribution says who. The reason list says what to fix — it is the more useful of the two, which is why it sits on the left where reading starts.</div>
   </div>`:''}
+  </div>
 
   ${resData.length?`
   <div class="sec">
@@ -4076,8 +4183,7 @@ function renderResurvey(){
     return `
   <div class="sec">
     <div class="shead">
-      <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
-      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+      <div><div class="stitle">${grpLabel} detail</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
     </div>
     <div class="xscroll"><table><thead><tr>
       <th>${grpLabel}</th>
@@ -4192,58 +4298,93 @@ function renderResurvey(){
   </div>`:''}
   `;
 
-  // ── FPY trend chart ───────────────────────────────────────────────────
+  // ── Yield by completion week ──────────────────────────────────────────
+  // Two forms behind the panel toggle. Both read the same fpyWeeks, both mark
+  // immature weeks, both draw the 95% target — they differ only in whether the
+  // trend is drawn for you (line) or left to the eye (bars).
   if(fpyWeeks.length>2){
     dc('rs-fpy');
     const cs=getComputedStyle(document.documentElement);
     const green=cs.getPropertyValue('--green').trim(), faint=cs.getPropertyValue('--faint').trim();
-    // Two lines, two jobs, so two weights AND two hues. They were both green
-    // (--green vs --c2) which differ mainly in lightness — at legend-swatch
-    // size that reads as one colour, and the legend cannot lean on line weight
-    // the way the chart can. Grey is the raw weekly noise; green is the
-    // rolling rate that carries the trend and the one to read.
+    const surface=cs.getPropertyValue('--surface').trim(), c1=cs.getPropertyValue('--c1').trim();
     const weekly=cs.getPropertyValue('--muted').trim();
-    CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
-      type:'line',
-      data:{labels:fpyWeeks.map(w=>fmtDateShort(w.wk)),datasets:[
-        {label:'Weekly',data:fpyWeeks.map(w=>w.fpy),borderColor:weekly,backgroundColor:'transparent',
-         tension:.3,borderWidth:1.25,
-         // Immature weeks are hollow and dashed: their defects have not all
-         // arrived yet, so the value is real but not yet final.
-         pointRadius:fpyWeeks.map(w=>w.n>=10?3:1.8),
-         pointBackgroundColor:fpyWeeks.map(w=>w.mature?weekly:cs.getPropertyValue('--surface').trim()),
-         pointBorderColor:fpyWeeks.map(w=>w.mature?weekly:faint),
-         segment:{borderDash:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?[4,3]:undefined,
-                  borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:weekly},
-         order:2},
-        {label:'4-week rolling',data:fpyRoll,borderColor:green,backgroundColor:'transparent',
-         tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:false,
-        onClick:(evt,els)=>{ if(!els.length) return; const w=fpyWeeks[els[0].index];
-          const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
-          openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); },
-        plugins:{legend:{display:false},
-          tooltip:{callbacks:{
-            title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
-            label:c=>{ const w=fpyWeeks[c.dataIndex];
-              if(c.datasetIndex===1) return ` 4-week rolling: ${c.parsed.y!=null?c.parsed.y.toFixed(1)+'%':'—'}`;
-              return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still maturing'}`; }
-          }}},
-        scales:{
-          x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10},maxTicksLimit:14}},
-          y:{grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#a9a390',font:{size:10},callback:v=>v+'%'},
-             suggestedMin:Math.max(0,Math.min(...fpyWeeks.map(w=>w.fpy??100))-8), suggestedMax:100}},
-      },
-      plugins:[{id:'fpyTarget',afterDatasetsDraw(ch){
-        const y=ch.scales.y.getPixelForValue(95); if(!isFinite(y)) return;
-        const {left,right}=ch.chartArea; const g=ch.ctx;
-        g.save(); g.strokeStyle='#c9542f'; g.lineWidth=1; g.setLineDash([5,4]);
-        g.beginPath(); g.moveTo(left,y); g.lineTo(right,y); g.stroke();
-        g.setLineDash([]); g.fillStyle='#c9542f'; g.font='10px -apple-system,sans-serif';
-        g.textAlign='right'; g.fillText('95% target',right-4,y-4); g.restore();
-      }}]
-    });
+    const drillWeek=i=>{ const w=fpyWeeks[i];
+      const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
+      openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); };
+    // One rule for both forms, so the target cannot drift between them.
+    const targetLine={id:'fpyTarget',afterDatasetsDraw(ch){
+      const y=ch.scales.y.getPixelForValue(95); if(!isFinite(y)) return;
+      const {left,right}=ch.chartArea; const g=ch.ctx;
+      g.save(); g.strokeStyle='#c9542f'; g.lineWidth=1; g.setLineDash([5,4]);
+      g.beginPath(); g.moveTo(left,y); g.lineTo(right,y); g.stroke();
+      g.setLineDash([]); g.fillStyle='#c9542f'; g.font='10px Archivo,-apple-system,sans-serif';
+      g.textAlign='right'; g.fillText('95% target',right-4,y-4); g.restore();
+    }};
+    const yScale=rsChartMode==='bars'
+      ? {beginAtZero:true,max:100,grid:{color:'rgba(80,65,40,.06)'},
+         ticks:{color:'#a9a390',font:{size:10},stepSize:20,callback:v=>v+'%'}}
+      : {grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#a9a390',font:{size:10},callback:v=>v+'%'},
+         suggestedMin:Math.max(0,Math.min(...fpyWeeks.map(w=>w.fpy??100))-8), suggestedMax:100};
+    const xScale={grid:{display:false},ticks:{color:'#a9a390',font:{size:10},maxTicksLimit:14}};
+    const labels=fpyWeeks.map(w=>fmtDateShort(w.wk));
+
+    if(rsChartMode==='bars'){
+      // Immature weeks draw hollow. The convention is load-bearing: defects
+      // keep arriving for weeks, so a recent bar reads high until it settles
+      // and must not be mistaken for improvement.
+      CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
+        type:'bar',
+        data:{labels,datasets:[{
+          label:'Yield',
+          data:fpyWeeks.map(w=>w.fpy),
+          backgroundColor:fpyWeeks.map(w=>w.mature?c1:surface),
+          borderColor:c1,
+          borderWidth:fpyWeeks.map(w=>w.mature?0:1.5),
+          borderRadius:2, borderSkipped:'bottom', maxBarThickness:38,
+        }]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{
+              title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
+              label:c=>{ const w=fpyWeeks[c.dataIndex];
+                return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still landing'}`; }
+            }}},
+          scales:{x:xScale,y:yScale}},
+        plugins:[targetLine]
+      });
+    } else {
+      // Two lines, two jobs, so two weights AND two hues. They were both green
+      // (--green vs --c2) which differ mainly in lightness — at legend-swatch
+      // size that reads as one colour. Grey is the raw weekly noise; green is
+      // the rolling rate that carries the trend and the one to read.
+      CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
+        type:'line',
+        data:{labels,datasets:[
+          {label:'Weekly',data:fpyWeeks.map(w=>w.fpy),borderColor:weekly,backgroundColor:'transparent',
+           tension:.3,borderWidth:1.25,
+           pointRadius:fpyWeeks.map(w=>w.n>=10?3:1.8),
+           pointBackgroundColor:fpyWeeks.map(w=>w.mature?weekly:surface),
+           pointBorderColor:fpyWeeks.map(w=>w.mature?weekly:faint),
+           segment:{borderDash:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?[4,3]:undefined,
+                    borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:weekly},
+           order:2},
+          {label:'4-week rolling',data:fpyRoll,borderColor:green,backgroundColor:'transparent',
+           tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{
+              title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
+              label:c=>{ const w=fpyWeeks[c.dataIndex];
+                if(c.datasetIndex===1) return ` 4-week rolling: ${c.parsed.y!=null?c.parsed.y.toFixed(1)+'%':'—'}`;
+                return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still maturing'}`; }
+            }}},
+          scales:{x:xScale,y:yScale}},
+        plugins:[targetLine]
+      });
+    }
   }
 }
 
@@ -4958,7 +5099,7 @@ window.addEventListener('resize',()=>{
 function renderSettings(){
   // Every page the nav can reach, so the landing-page setting can name any of
   // them. Map was missing, which made it the one page you could not start on.
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'},{v:'map',l:'Map'}];
+  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Quality'},{v:'map',l:'Map'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
 
   document.getElementById('settings-content').innerHTML=`
