@@ -625,6 +625,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-frow-hint{margin-top:-2px;}
 .wip-fhint{font-size:11px;color:var(--faint);}
 .wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0 0 0 6px;}
+.wip-sel{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;margin-top:2px;padding-top:10px;border-top:1px solid var(--border-lt);font-size:12px;color:var(--muted);}
+.wip-sel b{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.wip-sel-of{color:var(--faint);}
 .wip-foot{padding:11px 18px 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
 .wip-foot b{color:var(--text);font-variant-numeric:tabular-nums;}
 .wip-foot-a{font:inherit;font-size:11.5px;background:none;border:none;color:var(--blue);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
@@ -3450,11 +3453,12 @@ function renderAgingWIP(){
   wip=wip.filter(r=>ageOK(r)&&qsOK(r));
   // Filtered summary stats (for strip below age bar). "Total" here means the
   // page's own filter, which is what the age bar and KPI cards now show too.
-  const _totalWipCount=wipFiltered().length;
+  // Selection summary, shown under the bars. The count sat in the table footer
+  // where it was a page down from the controls that change it — it belongs
+  // with the bars, next to the two figures that describe what was selected.
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
   const selAvg=selDays.length?Math.round(selDays.reduce((a,b)=>a+b,0)/selDays.length*10)/10:null;
   const selPct=wip.length?Math.round(wip.filter(r=>r.projectedCt<=S.targetAvg).length/wip.length*100):null;
-  const selFiltered=wip.length<_totalWipCount;
 
   wip.sort((a,b)=>{
     const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey==='scheduled'?'schedEff':wipSortKey;
@@ -3734,6 +3738,12 @@ function renderAgingWIP(){
           <div class="wip-flabel"></div>
           <div class="wip-fhint">Click any band or label to filter · they combine${anyFilter?` <button class="wip-fclear" onclick="clearWipFilters()">Clear ×</button>`:''}</div>
         </div>
+        <div class="wip-sel">
+          <span><b>${wip.length}</b> ${anyFilter?'selected':(wipView==='openrs'?'open resurveys':'open')}</span>
+          ${selAvg!=null?`<span>avg <b style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};">${selAvg}d</b></span>`:''}
+          ${selPct!=null?`<span><b style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};">${selPct}%</b> on track &le;${S.targetAvg}d</span>`:''}
+          ${anyFilter?`<span class="wip-sel-of">of ${viewPool.length} ${wipView==='openrs'?'open resurveys':'open'}</span>`:''}
+        </div>
       </div>`;
       })()}
 
@@ -3752,9 +3762,9 @@ function renderAgingWIP(){
       </table></div>`
       :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${wipView==='openrs'?'open resurveys':'open surveys'} match the current filter.</div>`}
 
-      <div class="wip-foot">
-        <span>Showing <b>${wip.length}</b> of ${viewPool.length}${wip.length?` · <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>`:''}</span>
-      </div>
+      ${wip.length?`<div class="wip-foot">
+        <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>
+      </div>`:''}
       <div class="note">Proj age = days since Project Start Date · Open in SS = time in the Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
     </div>`;
 }
