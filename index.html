@@ -262,10 +262,6 @@ tr:hover td{background:var(--bg);}
 .wip-no-review{font-size:12px;color:var(--faint);font-style:italic;}
 
 /* Needs-attention row controls (WIP queue) */
-.attn-dismiss{font-size:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
-.attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
-.wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;justify-content:space-between;font-weight:400;}
-.attn-reason-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;}
 
 /* STALE DATA BANNER */
 .stale-banner{display:none;background:var(--amber-bg);color:var(--amber);font-size:12px;padding:7px 22px;border-bottom:1px solid #f0d9a8;text-align:center;}
@@ -575,6 +571,104 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;}
 .wip-wrap th{position:sticky;top:0;background:var(--surface);z-index:5;}
 
+/* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
+   five figures carry in about a sixth of the vertical space and, sharing one
+   surface, stop implying they are five equally important things. */
+.wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 20px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
+.wip-rail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
+.wip-rail-cell:first-child{padding-left:0;}
+.wip-rail-cell:last-child{padding-right:0;border-right:none;}
+.wip-rail-lead{flex:1.5;}
+.wip-rail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
+.wip-rail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
+
+/* WIP QUEUE BLOCK — the filters describe the table they sit on top of, so
+   they live inside its panel rather than in a card of their own above it. */
+.wip-queue{padding:0;overflow:hidden;}
+.wip-queue-head{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+.wip-queue-title{font-size:14px;font-weight:700;color:var(--text);}
+.wip-queue-n{font-size:12px;font-weight:400;color:var(--muted);margin-left:9px;font-variant-numeric:tabular-nums;}
+.wip-viewtgl{display:flex;flex-shrink:0;}
+.wip-viewtgl button{font:inherit;font-size:11.5px;padding:5px 12px;background:var(--surface);color:var(--muted);border:1px solid var(--border);cursor:pointer;white-space:nowrap;}
+.wip-viewtgl button:first-child{border-radius:6px 0 0 6px;}
+.wip-viewtgl button:last-child{border-radius:0 6px 6px 0;border-left:0;}
+.wip-viewtgl button:hover:not(.on){border-color:var(--faint);}
+.wip-viewtgl button.on{background:var(--text);color:#fff;border-color:var(--text);font-weight:600;}
+
+.wip-filters{padding:2px 18px 14px;display:flex;flex-direction:column;gap:9px;}
+.wip-frow{display:flex;align-items:center;gap:12px;}
+.wip-flabel{width:64px;flex-shrink:0;text-align:right;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+/* Fixed, and the same on both rows: with a flexed track the age and status
+   bars ended at different x positions because their legends are different
+   widths, which reads as a rendering bug rather than as data. */
+.wip-bar{width:430px;flex-shrink:0;display:flex;gap:2px;height:11px;}
+.wip-bar-seg{min-width:5px;cursor:pointer;transition:opacity .15s,box-shadow .15s;}
+.wip-bar-seg:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.wip-bar-seg.dim{opacity:.45;}
+.wip-bar-seg.on{box-shadow:0 0 0 2px var(--text);}
+.wip-legs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 13px;min-width:0;}
+.wip-leg{font:inherit;font-size:11px;color:var(--muted);background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;white-space:nowrap;transition:opacity .15s;}
+.wip-leg b{color:var(--text);margin-left:4px;font-variant-numeric:tabular-nums;}
+.wip-leg.dim{opacity:.45;}
+.wip-leg-sw{width:8px;height:8px;border-radius:2px;margin-right:5px;flex-shrink:0;}
+.wip-leg-sw.on{box-shadow:0 0 0 1.5px var(--text);}
+.wip-leg-div{width:1px;height:13px;background:var(--border);flex-shrink:0;}
+.wip-leg-grp{font-weight:600;color:var(--text);}
+.wip-leg-grp.on{text-decoration:underline;text-underline-offset:3px;}
+.wip-frow-hint{margin-top:-2px;}
+.wip-fhint{font-size:11px;color:var(--faint);}
+.wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0 0 0 6px;}
+.wip-foot{padding:11px 18px 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
+.wip-foot b{color:var(--text);font-variant-numeric:tabular-nums;}
+.wip-foot-a{font:inherit;font-size:11.5px;background:none;border:none;color:var(--blue);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+.wip-queue>.note{padding:0 18px 14px;margin-top:0;}
+.wip-queue .wip-wrap{border:none;border-radius:0;max-height:70vh;}
+.wip-table th{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px 8px;}
+.wip-table th:first-child{padding-left:18px;} .wip-table th:last-child{padding-right:18px;}
+.wip-table td{padding:7px 8px;border-bottom:1px solid var(--border-lt);}
+.wip-table tr.wip-row>td:first-child{padding-left:18px;} .wip-table tr.wip-row>td:last-child{padding-right:18px;}
+
+/* The filter track cannot hold 430px on a narrow screen — the bar goes fluid
+   and the legend drops under it rather than squeezing both. */
+@media(max-width:1100px){
+  .wip-frow{flex-wrap:wrap;}
+  .wip-bar{width:100%;flex:1 1 100%;order:2;}
+  .wip-legs{order:3;flex:1 1 100%;}
+  .wip-flabel{order:1;width:auto;text-align:left;}
+  .wip-frow-hint .wip-flabel{display:none;}
+}
+@media(max-width:860px){
+  .wip-rail{flex-wrap:wrap;padding:0 14px;}
+  .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
+  .wip-rail-lead{flex:1 0 100%;border-bottom:1px solid var(--border);}
+  /* An odd cell count leaves the last one orphaned half-width — let it span. */
+  .wip-rail-cell:last-child:nth-child(odd){flex:1 0 100%;}
+  .wip-rail-val{font-size:24px;}
+  .wip-queue-head{flex-direction:column;gap:10px;}
+}
+
+/* Phones: eight columns are unreadable at 340px, so each row becomes a
+   two-line stacked item instead of a table that scrolls sideways. */
+@media(max-width:640px){
+  .wip-queue .wip-wrap{max-height:none;overflow:visible;}
+  .wip-table thead{display:none;}
+  .wip-table,.wip-table tbody,.wip-table tr.wip-row,.wip-table tr.wip-row>td{display:block;width:auto;}
+  .wip-table tr.wip-row{padding:9px 14px;border-bottom:1px solid var(--border-lt);position:relative;}
+  .wip-table tr.wip-row>td{border:none;padding:0;text-align:left!important;}
+  .wip-table tr.wip-row>td[data-c="Project"]{font-size:13px;padding-right:110px!important;}
+  /* Status rides the first line, pinned right, so line two is pure identity. */
+  .wip-table tr.wip-row>td[data-c="Status"]{position:absolute;top:9px;right:14px;}
+  .wip-table tr.wip-row>td[data-c="Contact"],
+  .wip-table tr.wip-row>td[data-c="Region"],
+  .wip-table tr.wip-row>td[data-c="Open in SS"]{display:inline-block;font-size:11.5px;margin-top:3px;}
+  .wip-table tr.wip-row>td[data-c="Region"]::before,
+  .wip-table tr.wip-row>td[data-c="Open in SS"]::before{content:'·';color:var(--faint);margin:0 6px;}
+  .wip-table tr.wip-row>td[data-c="Scheduled"],
+  .wip-table tr.wip-row>td[data-c="Last reviewed"],
+  .wip-table tr.wip-row>td[data-c="Proj age"]{display:none;}
+  .wip-table tr.wip-detail>td{padding:0;}
+}
+
 /* ═══════════ REDESIGN SKIN — warm light body · dark sidebar · blue/slate data ═══════════ */
 :root{
   --bg:#faf9f6;--surface:#ffffff;--border:#e4e1d8;--border-lt:#eeece5;
@@ -627,7 +721,8 @@ body{padding-left:180px;}
 .kval{font-weight:700;letter-spacing:-.02em;}
 
 /* WIP attention badge in nav */
-#wip-attn-badge{display:none;align-items:center;justify-content:center;background:#4f7fae;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;line-height:1.4;}
+#wip-count-badge{display:none;align-items:center;justify-content:center;background:#333;color:#ccc;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:auto;line-height:1.4;}
+.ntab[data-page="wip"]{display:flex;align-items:center;}
 
 /* Briefing hero — Current page editorial header */
 .brief-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
@@ -685,7 +780,7 @@ body{padding-left:180px;}
   <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-attn-badge" style="display:none;"></span></div>
+  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
@@ -975,7 +1070,6 @@ let dataTimestamp = null;
 let wipF = {type:'all', sales_rep:'all'};
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
-let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — narrows the age-bar selection
 let wipQsSel = new Set();  // selected queue-status keys (QS in renderAgingWIP), multi-select
 
 function saveFilterState(){
@@ -1371,6 +1465,12 @@ function fmtReviewDate(s){
   if(!s) return '';
   try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; }
 }
+// Date only. last_reviewed_date is a timestamp, not an ISO date, so
+// fmtDateShort() — which splits on '-' — cannot read it.
+function fmtReviewDay(s){
+  if(!s) return '';
+  try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric'}); }catch(e){ return s; }
+}
 // ── WIP row expansion ─────────────────────────────────────────────────────
 // One panel open at a time. Detail rows stay display:none while closed rather
 // than sitting collapsed in the layout: the queue can run several hundred rows
@@ -1550,7 +1650,7 @@ function nav(page){
   saveFilterState();
   applyFilter();
   renderPage(page);
-  renderWipAttnBadge();  // the badge is in the nav, so it follows every page
+  renderWipCountBadge();  // the badge is in the nav, so it follows every page
   closeMobileMenu();
 }
 function toggleMobileMenu(){
@@ -1662,9 +1762,6 @@ const TIP={
   wip:'Surveys that have started but are not yet complete.',
   ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
   projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
-  avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
-  medAge:'Middle value of Days Open in SS across open surveys. Less sensitive than the average to a few very old stragglers.',
-  onTrackWip:()=>`Share of open surveys projected to finish within ${S.targetAvg} days, using each survey's scheduled date where it has one and its expected cycle time where it does not.`,
 
   // ── SS ratio: two variants, on purpose ──
   ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 means roughly a week of work is queued. This reads high on a Monday morning; that is the genuine queue before the day clears it.',
@@ -1989,43 +2086,28 @@ function renderWeek(){
       </div>
       <div id="week-inner"></div>
     </div>`;
-  renderWipAttnBadge();
+  renderWipCountBadge();
   weekView==='last' ? renderLastWeek() : renderThisWeek();
 }
 function setWeekView(v){ weekView=v; renderWeek(); }
 
-// ═══ NEEDS ATTENTION — exceptions surfaced on the daily view ════════
-// Dismissals persist in localStorage keyed by project+rule+severity band,
-// so an item stays hidden across data uploads until its condition escalates.
-function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('ops_dismissed')||'[]')); }catch(e){ return new Set(); } }
-function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
-function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderWipAttnBadge(); if(currentPage==='wip') renderAgingWIP(); }
-function attnItems(){
-  // Anchor to the export date so attention flags match the WIP page ages.
-  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  const items=[];
-  rows.filter(r=>isWIP(r)).forEach(r=>{
-    const d=ssDaysOpen(r,today)??0;
-    if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:''});
-    if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
-    if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
-  });
-  rows.filter(r=>isOpenResurvey(r)&&!r.resurvey_scheduled).forEach(r=>{
-    const d=dDiff(r.resurvey_requested,today)??0;
-    if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:'resurvey unscheduled'});
-  });
-  const dis=getDismissed();
-  return items.filter(it=>!dis.has(attnKey(it)));
-}
-// The nav badge beside "WIP". It counts what needs attention, not how much WIP
-// exists — it is styled as an alert pill, and it read the full open-queue count
-// (113) while the WIP page's own "Needs attention" toggle read 42.
-function renderWipAttnBadge(){
-  const b=document.getElementById('wip-attn-badge');
+// ═══ WIP NAV BADGE ══════════════════════════════════════
+// Counts the open queue. It used to count a "needs attention" rule set —
+// aging, passed schedule date, no review — surfaced as a WIP view with
+// per-row dismissals in localStorage. That was a saved filter dressed as a
+// view: every row it held is reachable from Past due plus the age bands, and
+// the dismissals meant the badge and the table disagreed with Salesforce for
+// anyone who had clicked "Reviewed". The slot went to Open resurveys, which
+// is a genuinely different population with no live home anywhere else.
+//
+// Neutral grey on purpose: an open queue is the normal state, and a red badge
+// on every page load teaches you to ignore red.
+function renderWipCountBadge(){
+  const b=document.getElementById('wip-count-badge');
   if(!b) return;
-  const n=new Set(attnItems().map(it=>it.r.task_id||it.r.id)).size;
+  const n=rows.filter(r=>isWIP(r)).length;
   b.textContent=n||'';
-  b.title=n?n+' open surveys need attention':'';
+  b.title=n?n+' surveys open':'';
   b.style.display=n?'inline-flex':'none';
 }
 
@@ -3219,15 +3301,31 @@ function renderTrends(){
 }
 
 // ═══ WIP HUB ═════════════════════════════════════════════
-let wipView='all'; // 'all' | 'attn'
+// Two filter rows, not three. The handoff drew Age, Schedule and Status as
+// three parallel rows, but Schedule and Status are one hierarchy rather than
+// two dimensions: wipQueueStatus() reads the same wipSchedDate field that
+// schedStatus() does, returns Scheduled and Past due for the same two cases,
+// and then SUBDIVIDES the third. On live data that is Scheduled 55, Past due
+// 1, Unscheduled 57 against chips of 37+2+7+5+6 = 57 — exact, and exact by
+// construction, not coincidence. ANDing the two rows would have returned zero
+// rows for most pairs (Scheduled + Radicl scheduling can never intersect).
+//
+// So there is one status bar carrying the full vocabulary in schedule order,
+// and the coarse "everything unscheduled" cut survives as a group toggle on
+// the legend rather than as a second row.
+let wipView='all'; // 'all' | 'openrs'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
 function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
-function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
 function toggleWipQs(k){ if(wipQsSel.has(k)){wipQsSel.delete(k);}else{wipQsSel.add(k);} renderAgingWIP(); }
-// Clears only the status chips — the age bar above them is a separate control
-// and clearing it from here would undo a selection the user can still see.
-function clearWipQs(){ wipQsSel.clear(); renderAgingWIP(); }
-function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; wipQsSel.clear(); renderAgingWIP(); }
+// The five waiting-reasons as one click. Selecting all of them is identical to
+// the old Schedule row's "Unscheduled", so the coarse cut costs nothing.
+function toggleWipUnscheduled(keys){
+  const ks=keys.split(',');
+  const allOn=ks.every(k=>wipQsSel.has(k));
+  ks.forEach(k=>allOn?wipQsSel.delete(k):wipQsSel.add(k));
+  renderAgingWIP();
+}
+function clearWipFilters(){ wipAgeSel.clear(); wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildFBar('wip');
@@ -3235,12 +3333,6 @@ function renderAgingWIP(){
   // Anchor all WIP ages and schedule status to the export date, not the wall
   // clock — a stale export otherwise inflates every age and mislabels schedules.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  // Needs-attention groups keyed by project (task_id or id)
-  const attnMap={};
-  attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
-  // Counted within the page's filter, so the toggle's badge matches the rows it
-  // produces rather than advertising the national figure.
-  const attnTotal=wipFiltered().filter(r=>attnMap[r.task_id||r.id]).length;
   const wipSchedDate=r=>isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
@@ -3259,17 +3351,28 @@ function renderAgingWIP(){
   // The queue-status vocabulary. One entry per pill, shared by the status
   // column and the counts strip so a colour or wording change lands on both.
   // `sort` is the table's status sort order, not display order.
+  // `bar` is the solid fill in the status bar, `bg`/`fg` the badge and chip.
+  // Scheduled and Past due carry the only judgement here (blue = neutral
+  // state, red = over threshold); the five waiting-reasons are categories of
+  // waiting, not severities, so they stay unsaturated except where the reason
+  // itself is the problem. Awaiting rep takes slate rather than the Scheduled
+  // blue so two different statuses never share a fill.
+  // `sort` is the table's status sort order, and QS_ORDER is schedule order:
+  // booked, overdue, then everything still waiting.
   const QS={
-    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eff6ff',       fg:'#3b82f6',     sort:0},
-    pastdue:     {key:'pastdue',     label:'Past due',          bg:'var(--red-bg)', fg:'var(--red)',  sort:1},
-    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#f3efff',       fg:'#7c3aed',     sort:3},
-    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'var(--amber-bg)',fg:'var(--amber)',sort:4},
-    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#edf3f8',       fg:'#4f7fae',     sort:5},
-    likelyCancel:{key:'likelyCancel',label:'Likely Cancel',     bg:'#fef3e7',       fg:'#b45309',     sort:6},
-    new:         {key:'new',         label:'New',               bg:'#ffffff',       fg:'var(--muted)',sort:7},
-    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f1f1ee',       fg:'var(--muted)',sort:8},
+    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#4f7fae', sort:0},
+    pastdue:     {key:'pastdue',     label:'Past due',          bg:'#f9e7e4', fg:'#b3402e',     bar:'#b3402e', sort:1},
+    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
+    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
+    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
+    likelyCancel:{key:'likelyCancel',label:'Likely cancel',     bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:6},
+    new:         {key:'new',         label:'New',               bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:7},
+    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:8},
   };
   const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+  // Everything after Past due is a survey with no booking — the old Schedule
+  // row's "Unscheduled" segment, reachable in one click from the legend.
+  const QS_UNSCHED=QS_ORDER.slice(2);
 
   // Queue status: what is this survey waiting on?
   // Returns one of QS below, rendered as a pill in the WIP table status column
@@ -3308,26 +3411,31 @@ function renderAgingWIP(){
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
     qsSort:wipQueueStatus(r).sort,
   }));
-  if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
+  // The view is the outermost cut: every count on the page — rail, bands,
+  // chips, footer — is computed within it, not against the national queue.
+  const inView=r=>wipView==='openrs'?isOpenResurvey(r):true;
+  wip=wip.filter(inView);
+  const viewPool=wip;
+
   const PA_MINS=[0,5,15,30,60,90];
   const PA_MAXS=[5,15,30,60,90,Infinity];
-  const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
-  if(wipAgeSel.size>0)
-    wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
-  if(wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
+  const inAgeBand=(age,i)=>age!=null&&age>=PA_MINS[i]&&age<PA_MAXS[i];
 
-  // Queue status is a second-degree filter: it narrows whatever the age bar
-  // and schedule status have already selected. Counting the whole open queue
-  // instead advertised statuses that aren't in the current selection — "<5d"
-  // plus "Missing UB · 2" filtered down to no rows at all.
-  const qsPool=wip;
+  // The two rows narrow each other, so each row's counts are computed against
+  // the OTHER row's selection: the age bands show what the chosen statuses
+  // contain, and the chips show what the chosen bands contain. Counting the
+  // whole queue instead advertised combinations that filter to nothing —
+  // "<5d" alongside "Missing UB · 2" produced an empty table.
+  const ageOK=r=>wipAgeSel.size===0||[...wipAgeSel].some(i=>inAgeBand(r.projectAge,i));
+  const qsOK=r=>wipQsSel.size===0||wipQsSel.has(wipQueueStatus(r).key);
+
+  const agePool=viewPool.filter(qsOK);
+  const qsPool=viewPool.filter(ageOK);
   const qsCounts={}; qsPool.forEach(r=>{const k=wipQueueStatus(r).key;qsCounts[k]=(qsCounts[k]||0)+1;});
-  const qsShown=QS_ORDER.filter(k=>qsCounts[k]);
   // A status that just left the selection takes its chip with it, so drop the
   // selection too rather than stranding the table on an unreachable filter.
   [...wipQsSel].forEach(k=>{ if(!qsCounts[k]) wipQsSel.delete(k); });
-  const qsNarrowed=wipAgeSel.size>0||wipStatusSel;
-  if(wipQsSel.size>0) wip=wip.filter(r=>wipQsSel.has(wipQueueStatus(r).key));
+  wip=wip.filter(r=>ageOK(r)&&qsOK(r));
   // Filtered summary stats (for strip below age bar). "Total" here means the
   // page's own filter, which is what the age bar and KPI cards now show too.
   const _totalWipCount=wipFiltered().length;
@@ -3357,38 +3465,42 @@ function renderAgingWIP(){
     note:r.last_comment||'',
   }));
 
-  // Stats over the filtered queue, before the age-band / schedule / status
-  // chips narrow it further — those three are selections within this set.
-  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r)}));
+  // ── Stat rail ─────────────────────────────────────────────────────────
+  // The whole open queue under the page filter, NOT the view: the rail is the
+  // overview, the view toggle is a lens on the table beneath it. "Open
+  // resurveys" doubles as the pointer to that view.
+  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
   const wipUnfilteredCount=rows.filter(r=>isWIP(r)).length;
   const wipDimFiltered=allWip.length!==wipUnfilteredCount;
-  const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
-  const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
-  const sortedAges=[...allAges].sort((a,b)=>a-b);
-  const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
+  const totalWip=allWip.length;
+  const railPastDue=allWip.filter(r=>wipQueueStatus(r).key==='pastdue').length;
+  // Project age, the same clock the age bar runs on — not Days Open in SS.
+  // The two answer different questions and the bar directly below this rail is
+  // the one a reader will check the number against.
+  const railOver30=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=30).length;
+  const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
+  const railOpenRs=wipScoped().filter(isOpenResurvey).length;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
   // Both sides of the ratio come from the same filtered population.
   const pipeRatio=ssRatioLive(wipScoped(),today);
-  const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
-  const totalWip=allWip.length;
 
   const agePill=(d,inGrace)=>{
-    // Rep still owns it today — the SS clock hasn't started.
-    if(inGrace) return '<span class="pill" style="background:#f1f1ee;color:var(--muted);font-style:italic;" title="Rep has until tomorrow before Site Survey starts working it">Rep day</span>';
+    // Rep still owns it today — the SS clock hasn't started. The handoff's
+    // table spec has no slot for this, but the grace day is a real part of
+    // ssDaysOpen(); printing "0d" instead would misreport whose clock it is.
+    if(inGrace) return '<span class="pill" style="background:#f3f1ea;color:var(--muted);font-style:italic;" title="Rep has until tomorrow before Site Survey starts working it">Rep day</span>';
     if(d==null) return '<span class="pna">—</span>';
-    if(d<=S.targetAvg) return `<span class="pill pg">${Math.round(d)}d</span>`;
-    if(d<=7)           return `<span class="pill pam">${Math.round(d)}d</span>`;
-    return                     `<span class="pill pr">${Math.round(d)}d</span>`;
+    const c=d<=S.targetAvg?'var(--green)':d<=7?'var(--amber)':'var(--red)';
+    return `<span style="font-weight:700;color:${c};">${Math.round(d)}d</span>`;
   };
-  const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
   function detailCell(r){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
-    return `<td colspan="9" style="padding:0;">
+    return `<td colspan="8" style="padding:0;">
       <div class="wip-detail-clip"><div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
 
@@ -3443,135 +3555,173 @@ function renderAgingWIP(){
     </td>`;
   }
 
+  // Reviewer surname-initialled onto the review date: "Aug 14 · S. Mertz".
+  // Two columns became one — the time of day never changed a decision here,
+  // and the width goes to Contact and Region, which is how a row is identified.
+  const reviewedBy=n=>{
+    const p=(n||'').trim().split(/\s+/).filter(Boolean);
+    return p.length<2?(p[0]||''):p[0][0]+'. '+p[p.length-1];
+  };
   const tableRows=wip.map((r,i)=>{
-    const ag=wipView==='attn'?attnMap[r.task_id||r.id]:null;
+    const qs=wipQueueStatus(r);
+    const by=reviewedBy(r.reviewed_by);
+    // Rows are white. The old page tinted at-risk rows amber and red, but the
+    // Days Open figure and the status badge already carry that signal twice —
+    // a third copy made the whole table look uniformly alarmed.
     return `
-    <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)" style="${ageRowBg(r.daysOpen)}">
-      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason"><span class="attn-reason-text">${ag.texts.filter(Boolean).join(' · ')||'overdue'}</span><button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
-      <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
-      <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
-      ${(()=>{const qs=wipQueueStatus(r);return`<td style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>`;})()}
-      <td class="r" style="color:var(--muted);">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'—'}</td>
-      <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
-      <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
-      <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
-      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
+    <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)">
+      <td data-c="Project"><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong></td>
+      <td data-c="Contact" style="color:var(--muted);">${esc(r.contact)||'—'}</td>
+      <td data-c="Region">${r.region?`<span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}`:'<span class="pna">—</span>'}</td>
+      <td data-c="Status" style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>
+      <td data-c="Scheduled" class="r" style="${qs.key==='pastdue'?'color:var(--red);':'color:var(--muted);'}">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'<span class="pna">—</span>'}</td>
+      <td data-c="Last reviewed" style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDay(r.last_reviewed_date)+(by?` · ${esc(by)}`:''):'No review'}</td>
+      <td data-c="Proj age" class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
+      <td data-c="Open in SS" class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:var(--amber);margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
 
   document.getElementById('ol-content').innerHTML=`
-    <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">${wipDimFiltered?'of '+wipUnfilteredCount+' open · current filter':'All open surveys'}</div></div>
-      <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
-      <div class="kcard"><div class="klabel">Median age${kinfo(TIP.medAge)}</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d${kinfo(TIP.onTrackWip())}</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
+    <div class="wip-rail">
+      <div class="wip-rail-cell wip-rail-lead">
+        <div class="klabel">Open now${kinfo(TIP.wip)}</div>
+        <div class="wip-rail-val">${totalWip}<span class="wip-rail-sub">${wipDimFiltered?'of '+wipUnfilteredCount+' · current filter':'live · not date-filtered'}</span></div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Past due</div>
+        <div class="wip-rail-val" style="color:${railPastDue?'var(--red)':'var(--text)'};">${railPastDue}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Over 30 days${kinfo(TIP.projAge)}</div>
+        <div class="wip-rail-val" style="color:${railOver30?'var(--amber)':'var(--text)'};">${railOver30}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Unscheduled</div>
+        <div class="wip-rail-val">${railUnsched}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Open resurveys${kinfo(TIP.rsOpen)}</div>
+        <div class="wip-rail-val" style="color:${railOpenRs?'var(--amber)':'var(--text)'};">${railOpenRs}</div>
+      </div>
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
         const band=ssRatioBand(pipeRatio);
-        const cls=band==='good'?'kg-c':band==='bad'?'kr-c':'';
-        return `<div class="kcard"><div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div><div class="kval ${cls}">${shown!=null?shown.toFixed(1)+'wk':'—'}</div><div class="ksub">of backlog at recent pace</div></div>`;})()}
+        const c=band==='good'?'var(--green)':band==='bad'?'var(--red)':'var(--text)';
+        return `<div class="wip-rail-cell">
+        <div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div>
+        <div class="wip-rail-val" style="color:${c};">${shown!=null?shown.toFixed(1)+'wk':'—'}</div>
+      </div>`;})()}
     </div>
-    ${(()=>{
-      const PA_BANDS=[
-        {label:'<5d', max:5, color:'#7ec488'},
-        {label:'5–15d', max:15, color:'#4a9e6a'},
-        {label:'15–30d', max:30, color:'#d4a843'},
-        {label:'30–60d', max:60, color:'#d97535'},
-        {label:'60–90d', max:90, color:'#c05252'},
-        {label:'>90d', max:Infinity, color:'#7a2e2e'},
-      ];
-      const STATUS_COLORS={scheduled:'#3b82f6',pastdue:'#f87171',unscheduled:'#9ca3af'};
-      const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
-      // Same filtered queue the table and the KPI cards read, so a band's count
-      // is the number of rows clicking it actually produces.
-      const paWip=wipFiltered().filter(r=>r.start).map(r=>{
-        const age=dDiff(r.start,today)??0;
-        const s=isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
-        const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';
-        return{age,status};
-      });
-      const counts=PA_BANDS.map((b,i)=>paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max)).length);
-      const total=counts.reduce((a,b)=>a+b,0)||1;
-      const anySelected=wipAgeSel.size>0;
-      const singleSel=wipAgeSel.size===1?[...wipAgeSel][0]:null;
-      const segs=PA_BANDS.map((b,i)=>{
-        if(!counts[i]) return '';
-        const sel=wipAgeSel.has(i);
-        const dim=anySelected&&!sel;
-        const bandItems=paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max));
-        const subCounts={scheduled:bandItems.filter(d=>d.status==='scheduled').length,pastdue:bandItems.filter(d=>d.status==='pastdue').length,unscheduled:bandItems.filter(d=>d.status==='unscheduled').length};
-        const subBar=`<div style="display:flex;gap:1px;height:10px;margin-top:2px;">${
-          ['scheduled','pastdue','unscheduled'].map(s=>subCounts[s]?`<div onclick="selectWipStatus('${s}',event)" title="${STATUS_LABELS[s]}: ${subCounts[s]}" style="flex:${subCounts[s]};background:${STATUS_COLORS[s]};border-radius:2px;cursor:pointer;${wipStatusSel===s?'outline:2px solid #333;outline-offset:-1px;':wipStatusSel?'opacity:.3;':''}transition:opacity .15s;"></div>`:'').join('')
-        }</div>`;
-        return `<div onclick="toggleWipAgeBand(${i})" title="${b.label}: ${counts[i]}" style="flex:${counts[i]};display:flex;flex-direction:column;cursor:pointer;min-width:4px;opacity:${dim?.25:1};transition:opacity .2s;">
-          <div class="bar-fill-anim" style="height:20px;background:${b.color};border-radius:2px;${sel?'outline:2px solid #444;outline-offset:-2px;':''}"></div>
-          ${subBar}
-        </div>`;
-      }).join('');
-      const legend=PA_BANDS.map((b,i)=>counts[i]?`
-        <span onclick="toggleWipAgeBand(${i})" style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);cursor:pointer;opacity:${anySelected&&!wipAgeSel.has(i)?.35:1};transition:opacity .15s;">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #666;outline-offset:1px;':''}"></span>
-          ${b.label} <strong>${counts[i]}</strong>
-        </span>`:'').join('');
-      const subLegend=(()=>{
-        const visItems=anySelected
-          ? paWip.filter(d=>[...wipAgeSel].some(i=>d.age<PA_BANDS[i].max&&(i===0||d.age>=PA_BANDS[i-1].max)))
-          : paWip;
-        return `<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border);display:inline-flex;align-items:center;gap:10px;">${
-          ['scheduled','pastdue','unscheduled'].map(s=>{
-            const n=visItems.filter(d=>d.status===s).length;
-            return n?`<span onclick="selectWipStatus('${s}',event)" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;opacity:${wipStatusSel&&wipStatusSel!==s?.35:1};color:var(--muted);transition:opacity .15s;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${STATUS_COLORS[s]};flex-shrink:0;"></span>
-              ${STATUS_LABELS[s]} <strong>${n}</strong></span>`:'';
-          }).join('')
-        }</span>`;
-      })();
-      const filterLabel=(anySelected||wipStatusSel)?[[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', '),wipStatusSel?STATUS_LABELS[wipStatusSel]:''].filter(Boolean).join(' · '):'';
-      const clearBtn=(anySelected||wipStatusSel)?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
-      return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">WIP by Age &amp; Schedule Status</div>
-        <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
-        <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
-        ${selFiltered?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:20px;font-size:12px;color:var(--muted);">
-          <span><strong style="color:var(--text);font-size:14px;">${wip.length}</strong> selected</span>
-          ${selAvg!=null?`<span>avg <strong style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};font-size:14px;">${selAvg}d</strong></span>`:''}
-          ${selPct!=null?`<span><strong style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};font-size:14px;">${selPct}%</strong> on track</span>`:''}
-          <span style="color:var(--faint);">of ${_totalWipCount} total</span>
-        </div>`:''}
-      </div>`;
-    })()}
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d · RS = open resurvey</div></div>
-        <div class="toggle-group">
-          <button class="tgl-btn${wipView==='all'?' active':''}" onclick="setWipView('all')">All</button>
-          <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
+
+    <div class="sec wip-queue">
+      <div class="wip-queue-head">
+        <div>
+          <div class="wip-queue-title">WIP queue<span class="wip-queue-n">${wip.length===viewPool.length?`${wip.length} open`:`${wip.length} of ${viewPool.length}`}</span></div>
+          <div class="ssub">Rows expand for account and review detail · green &le;${S.targetAvg}d, amber &gt;${S.targetAvg}d, red &gt;7d in SS</div>
+        </div>
+        <div class="wip-viewtgl">
+          <button class="${wipView==='all'?'on':''}" onclick="setWipView('all')">All</button>
+          <button class="${wipView==='openrs'?'on':''}" onclick="setWipView('openrs')">Open resurveys${railOpenRs?' · '+railOpenRs:''}</button>
         </div>
       </div>
-      ${qsShown.length?`<div class="qs-strip">
-        ${qsShown.map(k=>{const q=QS[k],sel=wipQsSel.has(k);return `<button class="qs-chip${sel?' on':''}" aria-pressed="${sel}" onclick="toggleWipQs('${k}')" style="background:${q.bg};color:${q.fg};">${q.label}<span class="qs-n">${qsCounts[k]}</span></button>`;}).join('')}
-        <span class="qs-total">${qsPool.length} ${qsNarrowed?'in selection':'open'}</span>
-        ${wipQsSel.size?`<button class="qs-clear" onclick="clearWipQs()">Clear ×</button>`:''}
-      </div>`:''}
-      ${wip.length?`<div class="wip-wrap"><table>
+
+      ${(()=>{
+      const PA_BANDS=[
+        {label:'<5d',    color:'#7dc0a0'},
+        {label:'5–15d',  color:'#3f9d6c'},
+        {label:'15–30d', color:'#c0912e'},
+        {label:'30–60d', color:'#d0725c'},
+        {label:'60–90d', color:'#b3402e'},
+        {label:'>90d',   color:'#7c2b1f'},
+      ];
+      const ageCounts=PA_BANDS.map((b,i)=>agePool.filter(r=>inAgeBand(r.projectAge,i)).length);
+      // An age band that empties under the current status selection takes its
+      // segment with it — drop the selection rather than stranding the table.
+      [...wipAgeSel].forEach(i=>{ if(!ageCounts[i]) wipAgeSel.delete(i); });
+
+      // Both bars share one fixed track width so they end at the same x. With a
+      // flexed track the two ended in different places because their legends
+      // are different widths, which reads as a bug rather than as data.
+      const bar=(items,sel,onclick)=>{
+        const shown=items.filter(it=>it.n);
+        const any=sel.size>0;
+        return `<div class="wip-bar">${shown.map((it,ix)=>{
+          const on=sel.has(it.key);
+          const r0=ix===0?'3px':'0', r1=ix===shown.length-1?'3px':'0';
+          return `<div class="wip-bar-seg${any&&!on?' dim':''}${on?' on':''}" role="button" tabindex="0"
+            aria-pressed="${on}" aria-label="${esc(it.label)}: ${it.n}" title="${esc(it.label)}: ${it.n}"
+            onclick="${onclick(it)}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${onclick(it)}}"
+            style="flex:${it.n};background:${it.color};border-radius:${r0} ${r1} ${r1} ${r0};"></div>`;
+        }).join('')}</div>`;
+      };
+      const swatch=(c,on)=>`<span class="wip-leg-sw${on?' on':''}" style="background:${c};"></span>`;
+
+      const ageItems=PA_BANDS.map((b,i)=>({...b,key:i,n:ageCounts[i]}));
+      const ageBar=bar(ageItems,wipAgeSel,it=>`toggleWipAgeBand(${it.key})`);
+      const ageLeg=ageItems.filter(it=>it.n).map(it=>{
+        const on=wipAgeSel.has(it.key);
+        return `<button class="wip-leg${wipAgeSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipAgeBand(${it.key})">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
+      }).join('');
+
+      const qsItems=QS_ORDER.filter(k=>qsCounts[k]).map(k=>({...QS[k],color:QS[k].bar,n:qsCounts[k]}));
+      const qsBar=bar(qsItems,wipQsSel,it=>`toggleWipQs('${it.key}')`);
+      // The legend splits after Past due: everything beyond it is a survey with
+      // no booking, and the group header selects all five at once — the coarse
+      // cut the old Schedule row provided, without a second row to AND against.
+      const legFor=it=>{
+        const on=wipQsSel.has(it.key);
+        return `<button class="wip-leg${wipQsSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipQs('${it.key}')">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
+      };
+      const bookedLeg=qsItems.filter(it=>!QS_UNSCHED.includes(it.key)).map(legFor).join('');
+      const unschedItems=qsItems.filter(it=>QS_UNSCHED.includes(it.key));
+      const unschedKeys=unschedItems.map(it=>it.key);
+      const unschedOn=unschedKeys.length&&unschedKeys.every(k=>wipQsSel.has(k));
+      // Counted within the age selection like every other chip, so the group
+      // total always equals the five beside it.
+      const unschedN=unschedItems.reduce((t,it)=>t+it.n,0);
+      const unschedLeg=unschedItems.length?`<span class="wip-leg-div"></span>
+        <button class="wip-leg wip-leg-grp${unschedOn?' on':''}" aria-pressed="${unschedOn}"
+          title="Select every survey with no booking" onclick="toggleWipUnscheduled('${unschedKeys.join(',')}')">All unscheduled <b>${unschedN}</b></button>
+        ${unschedItems.map(legFor).join('')}`:'';
+
+      const anyFilter=wipAgeSel.size>0||wipQsSel.size>0;
+      return `<div class="wip-filters">
+        <div class="wip-frow">
+          <div class="wip-flabel">Age</div>
+          ${ageBar}
+          <div class="wip-legs">${ageLeg}</div>
+        </div>
+        <div class="wip-frow">
+          <div class="wip-flabel">Status</div>
+          ${qsBar}
+          <div class="wip-legs">${bookedLeg}${unschedLeg}</div>
+        </div>
+        <div class="wip-frow wip-frow-hint">
+          <div class="wip-flabel"></div>
+          <div class="wip-fhint">Click any band or label to filter · they combine${anyFilter?` <button class="wip-fclear" onclick="clearWipFilters()">Clear ×</button>`:''}</div>
+        </div>
+      </div>`;
+      })()}
+
+      ${wip.length?`<div class="wip-wrap"><table class="wip-table">
         <thead><tr>
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('qsSort')">Status<span class="sarr ${arr('qsSort')}"></span></th>
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
-          <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
-          <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="${esc(TIP.projAge)}">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="${esc(TIP.ssDaysOpen)}">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="${esc(TIP.projAge)}">Proj age<span class="sarr ${arr('projectAge')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="${esc(TIP.ssDaysOpen)}">Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
-      :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
-        ${wip.length?`<button id="wip-copy-btn" onclick="copyWipTable()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap;margin-top:6px;" title="Copy the table as filtered and sorted">Copy table</button>`:''}
+      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${wipView==='openrs'?'open resurveys':'open surveys'} match the current filter.</div>`}
+
+      <div class="wip-foot">
+        <span>Showing <b>${wip.length}</b> of ${viewPool.length}${wip.length?` · <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>`:''}</span>
       </div>
+      <div class="note">Proj age = days since Project Start Date · Open in SS = time in the Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
     </div>`;
 }
 
