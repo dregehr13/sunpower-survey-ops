@@ -718,12 +718,10 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .wip-queue{padding:0;overflow:hidden;}
 .wip-queue-head{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
 .wip-queue-title{font-size:14px;font-weight:700;color:var(--text);}
-.wip-viewtgl{display:flex;flex-shrink:0;}
-.wip-viewtgl button{font:inherit;font-size:11.5px;padding:5px 12px;background:var(--surface);color:var(--muted);border:1px solid var(--border);cursor:pointer;white-space:nowrap;}
-.wip-viewtgl button:first-child{border-radius:6px 0 0 6px;}
-.wip-viewtgl button:last-child{border-radius:0 6px 6px 0;border-left:0;}
-.wip-viewtgl button:hover:not(.on){border-color:var(--faint);}
-.wip-viewtgl button.on{background:var(--text);color:#fff;border-color:var(--text);font-weight:600;}
+/* The All / Open resurveys pair is gone — the rail's Open resurveys cell is the
+   one control now, and two controls for one piece of state is how they drift.
+   The lens badge says which view you are in, since the toggle used to. */
+.wip-queue-lens{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border-radius:99px;padding:2px 9px;margin-left:9px;vertical-align:middle;}
 
 .wip-filters{padding:2px 18px 14px;display:flex;flex-direction:column;gap:9px;}
 .wip-frow{display:flex;align-items:center;gap:12px;}
@@ -762,7 +760,22 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .wip-sel-of{color:var(--faint);}
 .wip-foot{padding:11px 18px 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
 .wip-foot b{color:var(--text);font-variant-numeric:tabular-nums;}
-.wip-foot-a{font:inherit;font-size:11.5px;background:none;border:none;color:var(--blue);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+/* Copy sits at the bottom-right of the table it copies, as a real button, on
+   every table that has one. It was an underlined link on WIP and a header
+   button everywhere else — three shapes for one action. */
+.tbl-foot{display:flex;justify-content:flex-end;padding:10px 0 2px;}
+.wip-foot.tbl-foot{padding:10px 18px 4px;}
+.copy-btn{font:inherit;font-size:11.5px;font-weight:600;line-height:1;display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--muted);
+  cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(20,20,25,.04);
+  transition:background .15s,color .15s,border-color .15s,box-shadow .15s;}
+.copy-btn::before{content:'';width:11px;height:11px;flex-shrink:0;border-radius:2px;
+  border:1.5px solid currentColor;box-shadow:2.5px -2.5px 0 -1.5px var(--surface),4px -4px 0 -2.5px currentColor;
+  transition:box-shadow .15s;}
+.copy-btn:hover{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 8px rgba(20,20,25,.12);}
+.copy-btn:hover::before{box-shadow:2.5px -2.5px 0 -1.5px var(--text),4px -4px 0 -2.5px currentColor;}
+.copy-btn.done{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.copy-btn.done::before{display:none;}
 .wip-queue .wip-wrap{border:none;border-radius:0;max-height:70vh;}
 .wip-table th{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px 8px;}
 .wip-table th:first-child{padding-left:18px;} .wip-table th:last-child{padding-right:18px;}
@@ -1584,7 +1597,7 @@ function wipSortBy(k){
   renderAgingWIP();
 }
 let WIP_COPY_ROWS=[];
-function copyWipTable(){
+function copyWipTable(btn){
   const headers=['Project','Contact','Region','Status','Scheduled','Last Reviewed','Reviewed By','Proj Age','Days Open in SS','Last Review Note'];
   const tsv=[headers.join('\t'),...WIP_COPY_ROWS.map(r=>[
     r.project,r.contact,r.region,r.status,
@@ -1595,11 +1608,10 @@ function copyWipTable(){
     r.days_open+'d',
     r.note,
   ].map(v=>String(v??'').replace(/[\t\n\r]+/g,' ')).join('\t'))].join('\n');
-  navigator.clipboard.writeText(tsv).then(()=>{
-    const b=document.getElementById('wip-copy-btn'); if(!b) return;
-    const t=b.textContent; b.textContent='Copied ✓';
-    setTimeout(()=>{b.textContent=t;},1500);
-  });
+  // Shares the drawer's flash so every Copy button in the app confirms the
+  // same way. The old handler looked up #wip-copy-btn, an id that no longer
+  // exists, so the button never acknowledged the click.
+  navigator.clipboard.writeText(tsv).then(()=>_copyFlash(btn,'Copied '+WIP_COPY_ROWS.length+' row'+(WIP_COPY_ROWS.length===1?'':'s')+' to clipboard')).catch(_copyFail);
 }
 function fmtPhone(s){
   if(!s) return '';
@@ -2269,6 +2281,10 @@ document.addEventListener('keydown',e=>{
   if(e.shiftKey&&(document.activeElement===first||document.activeElement===panel)){ e.preventDefault(); last.focus(); }
   else if(!e.shiftKey&&document.activeElement===last){ e.preventDefault(); first.focus(); }
 });
+// Every copy path used to end in a bare .then(). A rejected clipboard write —
+// no focus, no permission, an insecure context — then looked exactly like a
+// successful one: nothing happened and nothing said so.
+function _copyFail(e){ toast('Could not copy — '+(e&&e.name==='NotAllowedError'?'the browser blocked clipboard access':'clipboard unavailable')); }
 function _copyFlash(btn,msg){
   toast(msg);
   if(!btn) return;
@@ -2282,7 +2298,7 @@ function copyDrill(btn){
   const html=rs.map(r=>{const nm=esc(r.project||r.address||'');const url=sfUrl(r);return url?`<a href="${url}">${nm}</a>`:nm;}).join('<br>');
   const plain=rs.map(r=>{const nm=r.project||r.address||'';const url=sfUrl(r);return url?`${nm} — ${url}`:nm;}).join('\n');
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})});
-  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rs.length+' account'+(rs.length===1?'':'s')+' to clipboard'));
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rs.length+' account'+(rs.length===1?'':'s')+' to clipboard')).catch(_copyFail);
 }
 function copyDrillTable(btn){
   const {head,rows:rws,links,projIdx}=_drillCopy;
@@ -2298,7 +2314,7 @@ function copyDrillTable(btn){
       }).join('')+'</tr>').join('')
     +'</tbody></table>';
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
-  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rws.length+' row'+(rws.length===1?'':'s')+' to clipboard'));
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rws.length+' row'+(rws.length===1?'':'s')+' to clipboard')).catch(_copyFail);
 }
 // Generic table copy for the fixed tables that are not drills — the WIP queue
 // had this and nothing else did.
@@ -2308,7 +2324,7 @@ function copyTableEl(id,btn,label){
   const tsv=trs.map(tr=>[...tr.querySelectorAll('th,td')].map(c=>(c.innerText||'').trim().replace(/[\t\n]+/g,' ')).join('\t')).filter(r=>r.replace(/\t/g,'').trim()).join('\n');
   const html='<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">'+t.innerHTML+'</table>';
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
-  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+(label||'table')+' to clipboard'));
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+(label||'table')+' to clipboard')).catch(_copyFail);
 }
 function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · '+drillScopeNote(),filtered.filter(r=>r.region===reg)); }
 function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · '+drillScopeNote(),filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
@@ -2849,8 +2865,7 @@ function renderThisWeek(){
     </div>
     ${atRisk.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div>
-        <button class="fbtn" onclick="copyTableEl('tw-sched-tbl',this,'the schedule')" style="font-size:11px;">Copy table</button></div>
+      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div></div>
       <div style="overflow-x:auto;"><table id="tw-sched-tbl"><thead><tr>
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
@@ -2862,14 +2877,14 @@ function renderThisWeek(){
           <td class="r">${pillV(dDiff(e.openFrom,today))}</td>
         </tr>`).join('')}
       </tbody></table></div>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tw-sched-tbl',this,'the schedule')">Copy table</button></div>
     </div>`:''}
     <div id="rsreq-wrap"></div>
     </div>
     <div class="cur-col">
     ${completedTW.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div>
-        <button class="fbtn" onclick="copyTableEl('tw-done-tbl',this,'the completions')" style="font-size:11px;">Copy table</button></div>
+      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div></div>
       <div style="overflow-x:auto;"><table id="tw-done-tbl"><thead><tr>
         <th>Project</th><th>Region</th><th>Resource</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
@@ -2881,6 +2896,7 @@ function renderThisWeek(){
           <td class="r">${pillV(r.ct_total)}</td>
         </tr>`).join('')}
       </tbody></table></div>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tw-done-tbl',this,'the completions')">Copy table</button></div>
     </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}
     </div>
     </div>`;
@@ -3103,8 +3119,7 @@ function renderPerformance(){
       <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div>
-        <button class="fbtn" onclick="copyTableEl('pf-rtable',this,'the region table')" style="font-size:11px;">Copy table</button></div>
+      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
       <div style="overflow-x:auto;"><table id="pf-rtable">
         <thead><tr>
           <th tabindex="0" onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
@@ -3115,14 +3130,13 @@ function renderPerformance(){
         </tr></thead>
         <tbody id="pf-tbody"></tbody>
       </table></div>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('pf-rtable',this,'the region table')">Copy table</button></div>
       <div class="note">Pills share one scale: green ≤${S.targetMedian}d · amber ≤${S.targetAvg+2}d · red >${S.targetAvg+2}d. KPI cards grade against their own target. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
     </div>
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Sales rep cycle time</div><div class="ssub" id="rep-sub">Slowest first</div></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="fbtn" onclick="copyTableEl('pf-reptable',this,'the rep table')" style="font-size:11px;">Copy table</button>
-        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div></div>
+        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
       </div>
       <div id="rep-table-wrap"></div>
     </div>`;
@@ -3250,6 +3264,7 @@ function renderRepTable(){
       <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>
+  <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('pf-reptable',this,'the rep table')">Copy table</button></div>
   ${hasMore||lowN?`<div style="padding:10px 0 4px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
     ${hasMore?`<button onclick="toggleRepExpand()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repExpanded?'Show fewer':'Show all '+repRows.length+' reps'}</button>`:''}
     ${lowN?`<button onclick="toggleRepMinVol()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repMinVol?`Include ${lowN} rep${lowN===1?'':'s'} with <3 completions`:'Hide reps with <3 completions'}</button>`:''}
@@ -3439,12 +3454,12 @@ function renderTrends(){
       <div id="tr-dow-net" class="note" style="margin-top:8px;"></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly detail</div><div class="ssub">New In, Completed and WIP open their own list</div></div>
-        <button class="fbtn" onclick="copyTableEl('tr-wtable',this,'the weekly table')" style="font-size:11px;">Copy table</button></div>
+      <div class="shead"><div><div class="stitle">Weekly detail</div><div class="ssub">New In, Completed and WIP open their own list</div></div></div>
       <table id="tr-wtable"><thead><tr>
         <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling avg</th><th class="r">On target</th>
       </tr></thead><tbody id="tr-tbody"></tbody></table>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tr-wtable',this,'the weekly table')">Copy table</button></div>
     </div>`;
 
   // Draw a frozen y-axis directly on a 2D canvas using pixel positions read from a Chart.js scale.
@@ -3886,11 +3901,12 @@ function renderAgingWIP(){
     radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
     missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
     awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
-    likelyCancel:{key:'likelyCancel',label:'Likely cancel',     bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:6},
-    new:         {key:'new',         label:'New',               bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:7},
-    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:8},
+    followUp:    {key:'followUp',    label:'Follow-up set',     bg:'#e9f0f0', fg:'#3d6566',     bar:'#5f8a8b', sort:6},
+    likelyCancel:{key:'likelyCancel',label:'Likely cancel',     bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:7},
+    new:         {key:'new',         label:'New',               bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:8},
+    unscheduled: {key:'unscheduled', label:'Unclassified',      bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:9},
   };
-  const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+  const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','followUp','likelyCancel','new','unscheduled'];
   // Everything after Past due is a survey with no booking — the old Schedule
   // row's "Unscheduled" segment, reachable in one click from the legend.
   const QS_UNSCHED=QS_ORDER.slice(2);
@@ -3916,9 +3932,29 @@ function renderAgingWIP(){
     // "RADICL SCHEDULING", and "INITIAL SITE SURVEY - RADICL" is the subject
     // used when a job is handed to Radicl for booking — its comments read
     // "Submitted to Radicl for scheduling". All three are waiting on Radicl.
-    if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))) return QS.radicl;
-    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return QS.awaitingRep;
+    // A handoff to Radicl is also written as prose in the note — "submitted
+    // their information to radicl", "it was sent to radicl" — under subjects
+    // like CUSTOMER CALL and REP CALL that say nothing themselves. Same waiting
+    // state as RADICL SCHEDULING; without this they fell through unclassified.
+    if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))
+       ||any(/(SENT|SUBMITTED|ASSIGNED|OVER)[\s\S]{0,40}?TO RADICL/)) return QS.radicl;
+    // "FOLLOW UP WITH REP 8/17" is the rep-chasing state spelled out — it has
+    // to be tested before the generic follow-up below, or every rep chase
+    // would read as a plain diary entry.
+    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')
+       ||any(/FOLLOW.?UP WITH (THE )?REP/)||any(/\bFUP WITH (THE )?REP/)) return QS.awaitingRep;
+    // The team parks a job against a date when it is waiting on something
+    // outside SS with no other handle on it — a reroof finishing, a date owed
+    // by someone internal. Written as "FOLLOW UP 8/19" or "FUP 8/12". Not the
+    // same as chasing the rep, and not schedulable yet, so it is its own state.
+    if(any(/FOLLOW.?UP\b/)||any(/\bFUP\b/)) return QS.followUp;
     if(!r.last_reviewed_date) return QS.new;
+    // Deliberately kept though it reads 0 today: a review subject nobody has
+    // seen before must land somewhere visible rather than be forced into a
+    // reason it does not belong to. Empty statuses do not render a chip, so an
+    // empty catch-all costs nothing and a non-empty one is a prompt to add a
+    // rule. Labelled "Unclassified", not "Unscheduled" — every status from
+    // Radicl scheduling down is unscheduled, so that name named the group.
     return QS.unscheduled;
   };
 
@@ -4160,11 +4196,7 @@ function renderAgingWIP(){
     <div class="sec wip-queue">
       <div class="wip-queue-head">
         <div>
-          <div class="wip-queue-title">WIP queue</div>
-        </div>
-        <div class="wip-viewtgl">
-          <button class="${wipView==='all'?'on':''}" onclick="setWipView('all')">All</button>
-          <button class="${wipView==='openrs'?'on':''}" onclick="setWipView('openrs')">Open resurveys${railOpenRs?' · '+railOpenRs:''}</button>
+          <div class="wip-queue-title">WIP queue${wipView==='openrs'?' <span class="wip-queue-lens">Open resurveys only</span>':''}</div>
         </div>
       </div>
 
@@ -4285,8 +4317,8 @@ function renderAgingWIP(){
       </table></div>`
       :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${wipView==='openrs'?'open resurveys':'open surveys'} match the current filter.</div>`}
 
-      ${wip.length?`<div class="wip-foot">
-        <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>
+      ${wip.length?`<div class="wip-foot tbl-foot">
+        <button class="copy-btn" onclick="copyWipTable(this)">Copy table</button>
       </div>`:''}
     </div>`;
 }
@@ -4742,10 +4774,7 @@ function renderResurvey(){
       }).join('')}
     </div>
     <div class="note">Red marks one open longer than ${RS_STALE}d, the point 90% of past resurveys had already resolved by${rsWeekAnchor==='complete'?'. On this anchor an old resurvey sits on whatever week its original survey closed, so switch to Request wk to read aging directly':''}.</div>`:''}
-    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-      <button class="fbtn" onclick="copyTableEl('rs-open-tbl',this,'the open queue')" style="font-size:11px;">Copy table</button>
-    </div>
-    <div class="ewrap" style="margin-top:6px;"><table class="etable" id="rs-open-tbl"><thead><tr>
+    <div class="ewrap" style="margin-top:12px;"><table class="etable" id="rs-open-tbl"><thead><tr>
       ${rsqTh('project','Project','')}
       ${rsqTh('region','Region','')}
       ${rsqTh('resource','Resource','')}
@@ -4770,6 +4799,7 @@ function renderResurvey(){
         </tr>`;
       }).join('')}
     </tbody></table></div>
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('rs-open-tbl',this,'the open queue')">Copy table</button></div>
   </div>`:''}
   `;
 
