@@ -839,9 +839,9 @@ body{padding-left:180px;}
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
   <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
+  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
@@ -1098,7 +1098,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','performance','trends','wip','resurvey','map','data'];
+const PAGES = ['week','wip','performance','trends','resurvey','map','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -5099,7 +5099,7 @@ window.addEventListener('resize',()=>{
 function renderSettings(){
   // Every page the nav can reach, so the landing-page setting can name any of
   // them. Map was missing, which made it the one page you could not start on.
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Quality'},{v:'map',l:'Map'}];
+  const allPages = [{v:'week',l:'Current'},{v:'wip',l:'WIP'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'resurvey',l:'Quality'},{v:'map',l:'Map'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
 
   document.getElementById('settings-content').innerHTML=`
