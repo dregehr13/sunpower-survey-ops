@@ -612,8 +612,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-leg.dim{opacity:.45;}
 .wip-leg-sw{width:8px;height:8px;border-radius:2px;margin-right:5px;flex-shrink:0;}
 .wip-leg-sw.on{box-shadow:0 0 0 1.5px var(--text);}
-.wip-leg-div{width:1px;height:13px;background:var(--border);flex-shrink:0;}
+.wip-leg-set{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 13px;padding:3px 10px;background:var(--bg);border:1px solid var(--border-lt);border-radius:6px;min-width:0;}
 .wip-leg-grp{font-weight:600;color:var(--text);}
+.wip-leg-grp::after{content:'';width:1px;align-self:stretch;background:var(--border);margin-left:11px;}
 .wip-leg-grp.on{text-decoration:underline;text-underline-offset:3px;}
 .wip-frow-hint{margin-top:-2px;}
 .wip-fhint{font-size:11px;color:var(--faint);}
@@ -637,8 +638,12 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   .wip-flabel{order:1;width:auto;text-align:left;}
   .wip-frow-hint .wip-flabel{display:none;}
 }
+/* The caption is an aside, not data — below this it breaks mid-phrase under
+   the number ("live · not date-" / "filtered"), so it goes rather than wraps. */
+@media(max-width:1250px){ .wip-rail-sub{display:none;} }
 @media(max-width:860px){
   .wip-rail{flex-wrap:wrap;padding:0 14px;}
+  .wip-rail-sub{display:inline;}
   .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
   .wip-rail-lead{flex:1 0 100%;border-bottom:1px solid var(--border);}
   /* An odd cell count leaves the last one orphaned half-width — let it span. */
@@ -1760,6 +1765,7 @@ const TIP={
 
   // ── The two age metrics — different questions, don't mix them ──
   wip:'Surveys that have started but are not yet complete.',
+  avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
   ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
   projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
 
@@ -3473,7 +3479,11 @@ function renderAgingWIP(){
   const wipUnfilteredCount=rows.filter(r=>isWIP(r)).length;
   const wipDimFiltered=allWip.length!==wipUnfilteredCount;
   const totalWip=allWip.length;
-  const railPastDue=allWip.filter(r=>wipQueueStatus(r).key==='pastdue').length;
+  // Mean Days Open in SS. Past due held this slot and was the weakest cell on
+  // the rail: it reads 0 or 1 most days, and it is one click away as a status
+  // chip directly below. Avg age describes the whole queue instead.
+  const railAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
+  const avgAge=railAges.length?Math.round(railAges.reduce((a,b)=>a+b,0)/railAges.length*10)/10:null;
   // Project age, the same clock the age bar runs on — not Days Open in SS.
   // The two answer different questions and the bar directly below this rail is
   // the one a reader will check the number against.
@@ -3589,8 +3599,8 @@ function renderAgingWIP(){
         <div class="wip-rail-val">${totalWip}<span class="wip-rail-sub">${wipDimFiltered?'of '+wipUnfilteredCount+' · current filter':'live · not date-filtered'}</span></div>
       </div>
       <div class="wip-rail-cell">
-        <div class="klabel">Past due</div>
-        <div class="wip-rail-val" style="color:${railPastDue?'var(--red)':'var(--text)'};">${railPastDue}</div>
+        <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
+        <div class="wip-rail-val" style="color:${avgAge==null?'var(--text)':avgAge<=S.targetAvg?'var(--green)':avgAge<=7?'var(--amber)':'var(--red)'};">${avgAge!=null?avgAge+'d':'—'}</div>
       </div>
       <div class="wip-rail-cell">
         <div class="klabel">Over 30 days${kinfo(TIP.projAge)}</div>
@@ -3679,10 +3689,15 @@ function renderAgingWIP(){
       // Counted within the age selection like every other chip, so the group
       // total always equals the five beside it.
       const unschedN=unschedItems.reduce((t,it)=>t+it.n,0);
-      const unschedLeg=unschedItems.length?`<span class="wip-leg-div"></span>
+      // The five sit INSIDE their own box rather than after a divider. On a
+      // narrow row the legend wraps, and a divider only marks the group's
+      // first line — "New" and "Unscheduled" landed on line two reading as if
+      // they belonged to the booked statuses on the left. A container carries
+      // the grouping down every line it wraps onto.
+      const unschedLeg=unschedItems.length?`<span class="wip-leg-set">
         <button class="wip-leg wip-leg-grp${unschedOn?' on':''}" aria-pressed="${unschedOn}"
           title="Select every survey with no booking" onclick="toggleWipUnscheduled('${unschedKeys.join(',')}')">All unscheduled <b>${unschedN}</b></button>
-        ${unschedItems.map(legFor).join('')}`:'';
+        ${unschedItems.map(legFor).join('')}</span>`:'';
 
       const anyFilter=wipAgeSel.size>0||wipQsSel.size>0;
       return `<div class="wip-filters">
