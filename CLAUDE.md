@@ -147,6 +147,38 @@ context only and no UI reads them.
 ## Email generator password
 Set via `const PASSWORD` in compose/index.html. Currently `sunpower`.
 
+## The drill drawer (rebuilt 2026-08-17)
+One drawer serves ~30 entry points across all six pages. Things not to undo:
+- **Columns come from `drillCols()`, one spec list per mode** — header, sort,
+  cells and copy all read from it. They used to be four separate template
+  strings, which is exactly why nothing could be sorted: there was nothing to
+  sort by. Adding a column means adding one spec, not editing four places
+- **Sorting and grouping are alternatives, not layers.** Picking a column
+  flattens a grouped (byDate / groupBy) view and the count line says so — a
+  sort inside 40 day-groups answers a question nobody asked
+- **Open-resurvey drills swap Cycle for Scheduled + Days open**, and open
+  sorted oldest-first. `ct_resurvey` is null on every open resurvey, so that
+  column was 42 dashes while the two facts you work the queue from were absent
+- **Blanks sink in both sort directions.** A column of dashes at the top is
+  never the answer to "sort by this"
+- Search covers fields the active mode does not show, so the same query finds
+  a rep whether or not Sales Rep is a column; matches highlight with `<mark>`
+- **Copy is built from the specs, not scraped off the DOM.** Grouped views
+  paste with a real Resource/Day column instead of ragged one-cell header rows,
+  and the clamped details cell copies in full
+- It is a real dialog: `role`/`aria-modal`/`aria-sort`, focus in on open and
+  back on close, Tab trapped. Escape already closed it
+- **`drillScopeNote()` states what scoped the population** — some entry points
+  read `filtered` (date range applies), some read live rows (it does not), and
+  that was invisible from inside. It prints "all dates" when the picker holds
+  the dataset's own span, and carries years on cross-year ranges: `fmtDateShort`
+  drops the year, so a 12-month range once printed as "Aug 8 – Aug 14"
+- **No contact details in the drawer** — Doug's call 2026-08-17. The SF link on
+  the project name is the way out to a phone number. The WIP row expand is the
+  one place that carries contacts, because that is the page you work from
+- Charts that drill share `drillHover` for the pointer cursor. Half of them
+  were clickable with no cue
+
 ## Change list (next build)
 - **Pick a yield-chart form on Quality** (Bars vs Trend) and delete the other,
   along with `rsChartMode`. Built both 2026-08-17 so the shape could be judged

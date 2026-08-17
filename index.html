@@ -552,6 +552,65 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .ekcard.drill-tgt{position:relative;}
 .ekcard.drill-tgt::after{content:'↗';position:absolute;top:8px;right:10px;font-size:12px;color:#7eb3e0;opacity:.55;}
 .ekcard.drill-tgt:hover::after{opacity:1;}
+.kcard.drill-tgt,.res-card.drill-tgt{position:relative;}
+.kcard.drill-tgt::after,.res-card.drill-tgt::after{content:'↗';position:absolute;top:9px;right:11px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
+.kcard.drill-tgt:hover::after,.res-card.drill-tgt:hover::after{opacity:1;transform:translate(1px,-1px);}
+
+/* The resurvey table is seven columns; 520px forces a horizontal scroll on
+   every open, so that mode gets a wider drawer instead. */
+.drill-panel.wide{width:min(820px,100vw);}
+
+/* Sortable drawer headers. Same vocabulary as every other table in the app —
+   .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
+   way the Performance and WIP tables already do. */
+.drill-table th.dsort{cursor:pointer;user-select:none;transition:color .15s,background .15s;}
+.drill-table th.dsort:hover{color:var(--text);background:var(--bg);}
+.drill-table th.dsort.on{color:var(--text);font-weight:700;}
+.drill-table th.dsort.on::before{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--blue);}
+.drill-table th.dsort{position:sticky;}
+
+/* Search: a text cut inside the drawer, since a 290-row region drill has no
+   other way to reach one account. */
+.drill-tools{display:flex;align-items:center;gap:8px;padding:0 16px 9px;background:var(--bg);}
+.drill-seg+.drill-tools{padding-top:9px;}
+.drill-search{flex:1;min-width:0;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;}
+.drill-search::placeholder{color:var(--faint);}
+.drill-search-clr{font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
+.drill-search-clr:hover{border-color:var(--muted);color:var(--text);}
+mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-shadow:inset 0 -1px 0 rgba(154,91,19,.35);}
+
+/* Rows fade up as they render. Only the first dozen are staggered — past that
+   the delay would outrun the eye, and a 290-row drill would animate for 3s. */
+.drill-table tbody tr{animation:drillRowIn .26s cubic-bezier(.25,.46,.45,.94) both;}
+.drill-table tbody tr:nth-child(n+13){animation-delay:0s!important;}
+.drill-table tbody tr:nth-child(1){animation-delay:.00s;}
+.drill-table tbody tr:nth-child(2){animation-delay:.015s;}
+.drill-table tbody tr:nth-child(3){animation-delay:.03s;}
+.drill-table tbody tr:nth-child(4){animation-delay:.045s;}
+.drill-table tbody tr:nth-child(5){animation-delay:.06s;}
+.drill-table tbody tr:nth-child(6){animation-delay:.075s;}
+.drill-table tbody tr:nth-child(7){animation-delay:.09s;}
+.drill-table tbody tr:nth-child(8){animation-delay:.105s;}
+.drill-table tbody tr:nth-child(9){animation-delay:.12s;}
+.drill-table tbody tr:nth-child(10){animation-delay:.135s;}
+.drill-table tbody tr:nth-child(11){animation-delay:.15s;}
+.drill-table tbody tr:nth-child(12){animation-delay:.165s;}
+@keyframes drillRowIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.drill-grp{transition:background .15s;}
+.drill-count b{color:var(--text);font-weight:700;}
+.drill-copy-btn.done{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+/* A cell that opens a drill: underline on hover rather than a lift, since a
+   table cell cannot rise out of its row without shifting its neighbours. */
+.dcell{cursor:pointer;position:relative;}
+.dcell:hover{color:var(--blue)!important;}
+.dcell:hover::after{content:'';position:absolute;left:6px;right:6px;bottom:3px;height:1px;background:var(--blue);opacity:.5;}
+.so-row{transition:background .14s,padding-left .14s;border-radius:5px;}
+.so-row:hover{background:var(--bg);padding-left:5px;}
+@media (prefers-reduced-motion:reduce){
+  .drill-table tbody tr{animation:none!important;}
+  .so-row:hover{padding-left:0;}
+  .kcard.drill-tgt:hover,.res-card.drill-tgt:hover{transform:none;}
+}
 
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
@@ -940,24 +999,28 @@ body{padding-left:180px;}
 <div class="toast" id="toast"></div>
 
 <div id="drill-overlay" class="drill-overlay" onclick="closeDrill()"></div>
-<div id="drill-panel" class="drill-panel">
+<div id="drill-panel" class="drill-panel" role="dialog" aria-modal="true" aria-labelledby="drill-title" tabindex="-1">
   <div class="drill-hd">
     <div style="min-width:0;">
       <div class="drill-title" id="drill-title"></div>
       <div class="drill-sub" id="drill-sub"></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button class="drill-copy-btn" onclick="copyDrill()">Copy projects</button>
-      <button class="drill-copy-btn" onclick="copyDrillTable()">Copy table</button>
-      <button class="drill-close" onclick="closeDrill()">×</button>
+      <button class="drill-copy-btn" onclick="copyDrill(this)" title="Copy the project names as Salesforce links — for pasting into an email">Copy projects</button>
+      <button class="drill-copy-btn" onclick="copyDrillTable(this)" title="Copy every column as shown, for pasting into a spreadsheet">Copy table</button>
+      <button class="drill-close" onclick="closeDrill()" aria-label="Close">×</button>
     </div>
   </div>
   <div class="drill-seg" id="drill-seg"></div>
   <div class="drill-seg-note" id="drill-seg-note"></div>
+  <div class="drill-tools">
+    <input type="text" class="drill-search" id="drill-search" placeholder="Filter these rows — project, region, rep, reason…" aria-label="Filter rows" oninput="setDrillQuery(this.value)">
+    <button class="drill-search-clr" id="drill-search-clr" onclick="setDrillQuery('',true)" style="display:none;">Clear</button>
+  </div>
   <div class="drill-count" id="drill-count"></div>
   <div class="drill-table-wrap">
     <table class="drill-table">
-      <thead id="drill-thead"><tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr></thead>
+      <thead id="drill-thead"></thead>
       <tbody id="drill-tbody"></tbody>
     </table>
   </div>
@@ -1824,6 +1887,7 @@ const TIP={
   avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
   ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
   projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
+  drillDays:'Two measurements in one column, because a row is one or the other: a completed survey shows its cycle time (Project Start → Site Survey Complete), and an open one has no cycle time yet, so it shows project age, marked "open". Neither is Days Open in SS — that subtracts the rep grace day and is the WIP page\'s triage number.',
 
   // ── SS ratio: two variants, on purpose ──
   ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 means roughly a week of work is queued. This reads high on a Monday morning; that is the genuine queue before the day clears it.',
@@ -1847,6 +1911,7 @@ const TIP={
   rsReason:'The reason picklist on the resurvey request, recorded on 96% of them. A request can carry more than one reason, so the shares add to more than 100%. This is the field that says what to fix, where attribution only says who.',
   rsPenalty:'Average calendar days from Project Start to a clean Site Survey Complete, against the same figure for a survey that had to be redone (start → complete → resurvey complete). The gap is what one resurvey costs, and it is measured against the Spec 12744 target rather than in the abstract.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
+  rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
@@ -1872,7 +1937,16 @@ function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg
 let _drillRows=[];
 let _lastWeekSrc=[];
 let _thisWeekSrc=[];
-function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys',rsDefectPool(),{groupBy:'resource'}); }
+// Populations the Current page's cards and panels drill into. They are built
+// inside the render and read back from an inline onclick, so they have to
+// outlive it — same pattern as _lastWeekSrc.
+const _curD={};
+function drillCur(k,title,sub,opts){ openDrill(title,sub,_curD[k]||[],opts||{}); }
+// A chart that drills should say so under the cursor. Chart.js has no pointer
+// state of its own, so every drillable chart shares this onHover — half of them
+// were clickable with no cue that they were.
+const drillHover=(e,els,ch)=>{ const c=ch&&ch.canvas; if(c) c.style.cursor=els.length?'pointer':'default'; };
+function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys · '+drillScopeNote('filter'),rsDefectPool(),{groupBy:'resource'}); }
 const _DRILL_RES_COL={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
 function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
@@ -1894,15 +1968,146 @@ const DRILL_SEGS=[
   {k:'rsopen', label:'Open resurvey', test:isOpenResurvey},
 ];
 let _drillAll=[], _drillOpts={}, _drillSeg='all';
+// Sort, search and focus-return are drawer state, not entry-point state: they
+// reset on every open, so a drill never arrives already narrowed by something
+// the drawer isn't showing.
+let _drillSortKey=null, _drillSortAsc=false, _drillQ='', _drillReturn=null;
+let _drillCopy={head:[],rows:[],links:[],projIdx:0};
 function setDrillSeg(k){ _drillSeg=k; _renderDrill(); }
+function drillSortBy(k){
+  if(_drillSortKey===k) _drillSortAsc=!_drillSortAsc; else { _drillSortKey=k; _drillSortAsc=false; }
+  _renderDrill();
+}
+function setDrillQuery(v,clear){
+  _drillQ=(v||'').trim();
+  if(clear){ const i=document.getElementById('drill-search'); if(i){ i.value=''; i.focus(); } }
+  _renderDrill();
+}
+// Case-insensitive highlight over already-escaped text. Searchable cells render
+// through this instead of esc(), so a match shows where it actually landed
+// rather than only shrinking the row count.
+function hl(s){
+  const t=esc(s==null?'':String(s));
+  if(!_drillQ) return t;
+  const q=_drillQ.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return t.replace(new RegExp('('+q+')','ig'),'<mark class="dhl">$1</mark>');
+}
+function drillProjLink(r){
+  const nm=r.project||r.address||'—', url=sfUrl(r);
+  return url?`<a href="${url}" target="_blank" rel="noopener" class="sf-link">${hl(nm)}</a>`:hl(nm);
+}
+// p90 of resurvey turnaround — the point by which 90% of past resurveys had
+// resolved. Both the drawer and the Quality open queue band against it; it used
+// to be computed inline in renderResurvey only.
+function rsStaleDays(pool){
+  return pct((pool||rows).filter(r=>r.resurvey_complete&&r.ct_resurvey!=null&&r.ct_resurvey>=0).map(r=>r.ct_resurvey),90)??14;
+}
+// What scoped this population, said once in the subtitle. Some entry points
+// read `filtered` (the date range applies) and some read the live rows (it does
+// not) — a distinction that was invisible from inside the drawer.
+function drillScopeNote(kind){
+  const bits=[];
+  if(GF.region&&GF.region.length) bits.push(GF.region.length===1?GF.region[0]:GF.region.length+' regions');
+  if(GF.office&&GF.office.length) bits.push(GF.office.length===1?GF.office[0]:GF.office.length+' offices');
+  if(kind==='live') return (bits.length?bits.join(' · ')+' · ':'')+'live — ignores the date range';
+  if(GF.dateFrom&&GF.dateTo){
+    // "All" auto-populates the picker with the dataset's own span, which is not
+    // a narrowing — same test the filter bar's All button uses.
+    const ds=rows.filter(isComplete).map(r=>r.complete).sort();
+    const isAll=GF.dateFrom===(ds[0]||'')&&GF.dateTo===(ds[ds.length-1]||'');
+    // fmtDateShort drops the year, so a 12-month range printed as "Aug 8 – Aug
+    // 14" and read as one week. Cross-year ranges carry their years.
+    if(!isAll) bits.push(GF.dateFrom.slice(0,4)===GF.dateTo.slice(0,4)
+      ? fmtDateShort(GF.dateFrom)+' – '+fmtDateShort(GF.dateTo)
+      : fmtDate(GF.dateFrom)+' – '+fmtDate(GF.dateTo));
+    else bits.push('all dates');
+  }
+  return bits.length?bits.join(' · '):'no filters applied';
+}
+const DRILL_ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
+// "Survey Incomplete" is two thirds of all resurveys and says nothing about what
+// was actually wrong. Resurvey Request Details does, on 92% of them.
+const drillDetText=r=>(r.resurvey_details||'')
+  .replace(/\s*\n\s*/g,' · ')
+  .replace(/^\s*(RESURVEY (EXPLANATION|REQUIRED)|REQUEST DETAILS)\s*:?\s*/i,'').trim();
+
+// One column table per mode, so the header, the sort, the cells and the copy
+// all read from the same list. These were four separate template strings, which
+// is why the drawer could not be sorted: there was nothing to sort by.
+function drillCols(mode,shown,today){
+  const dash='<span class="pna">—</span>';
+  // An open resurvey has no resurvey_complete, so ct_resurvey is null on every
+  // one of them — the Cycle column was 42 dashes. Days open and Scheduled are
+  // the two facts an open queue is actually worked from.
+  const openRs=shown.length>0&&shown.every(isOpenResurvey);
+  const stale=rsStaleDays();
+  const col={
+    proj:{k:'proj',label:'Project',
+      sortVal:r=>(r.project||r.address||'').toLowerCase(), txt:r=>r.project||r.address||'',
+      cell:r=>`<div class="drill-proj" title="${esc(r.project||r.address||'—')}">${drillProjLink(r)}</div>`},
+    region:{k:'region',label:'Region',tdStyle:'white-space:nowrap;color:var(--muted);',
+      sortVal:r=>(r.region||'').toLowerCase(), txt:r=>r.region||'', cell:r=>hl(r.region||'—')},
+    resource:{k:'resource',label:'Resource',
+      sortVal:r=>(r.resource||'').toLowerCase(), txt:r=>r.resource||'', cell:r=>_drillResSpan(r.resource)},
+    rep:{k:'rep',label:'Sales Rep',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>(r.sales_rep||'').toLowerCase(), txt:r=>r.sales_rep||'', cell:r=>hl(r.sales_rep||'—')},
+    start:{k:'start',label:'Start',tdStyle:'white-space:nowrap;color:var(--muted);',
+      sortVal:r=>r.start||'', txt:r=>r.start||'', cell:r=>r.start?fmtDateShort(r.start):dash},
+    complete:{k:'complete',label:'Complete',tdStyle:'white-space:nowrap;color:var(--muted);',
+      sortVal:r=>r.complete||'', txt:r=>r.complete||'', cell:r=>r.complete?fmtDateShort(r.complete):dash},
+    days:{k:'days',label:'Days',cls:'r',th:TIP.drillDays,
+      sortVal:r=>isComplete(r)?(r.ct_total!=null?r.ct_total:null):(r.start?dDiff(r.start,today):null),
+      txt:r=>{const v=isComplete(r)?r.ct_total:(r.start?dDiff(r.start,today):null); return v==null?'':v+'d'+(isComplete(r)?'':' open');},
+      cell:r=>_drillDaysSpan(r,today)},
+    reason:{k:'reason',label:'Reason',tdStyle:'max-width:150px;white-space:normal;font-size:10px;color:var(--muted);',
+      sortVal:r=>(r.resurvey_reason||'').toLowerCase(), txt:r=>r.resurvey_reason||'', cell:r=>hl(r.resurvey_reason||'—')},
+    attr:{k:'attr',label:'Attributed To',tdStyle:'white-space:nowrap;font-weight:600;',
+      // Unattributed sorts last in either direction rather than leading on a
+      // blank — 74 rows still have no cause recorded.
+      sortVal:r=>r.resurvey_attributed?r.resurvey_attributed.toLowerCase():null,
+      txt:r=>r.resurvey_attributed||'',
+      cell:r=>`<span style="color:${DRILL_ATTR_C[r.resurvey_attributed]||'var(--muted)'};">${hl(r.resurvey_attributed||'—')}</span>`},
+    det:{k:'det',label:'What was missing',tdClass:'drill-det',tdTitle:r=>r.resurvey_details||'',
+      sortVal:r=>drillDetText(r).toLowerCase()||null, txt:r=>drillDetText(r),
+      cell:r=>{const d=drillDetText(r); return d?hl(d):dash;}},
+    rsCycle:{k:'rsCycle',label:'Cycle',cls:'r',th:TIP.rsCycle,
+      sortVal:r=>r.ct_resurvey!=null?r.ct_resurvey:null,
+      txt:r=>r.ct_resurvey!=null?r.ct_resurvey+'d':'',
+      cell:r=>r.ct_resurvey!=null?r.ct_resurvey+'d':dash},
+    rsSched:{k:'rsSched',label:'Scheduled',tdStyle:'white-space:nowrap;color:var(--muted);',
+      sortVal:r=>r.resurvey_scheduled||null,
+      txt:r=>r.resurvey_scheduled||'Unscheduled',
+      cell:r=>r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'<span class="rs-unsched-pill">Unscheduled</span>'},
+    rsOpen:{k:'rsOpen',label:'Days open',cls:'r',th:TIP.rsOpenDays,
+      sortVal:r=>dDiff(r.resurvey_requested,today),
+      txt:r=>{const d=dDiff(r.resurvey_requested,today); return d==null?'':d+'d';},
+      cell:r=>{const d=dDiff(r.resurvey_requested,today); if(d==null) return dash;
+        const c=d>stale?'var(--red)':d>=7?'var(--amber)':'var(--muted)';
+        return `<span style="font-weight:700;color:${c};">${d}d</span>`;}},
+  };
+  if(mode==='resurvey') return openRs
+    ? [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
+    : [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsCycle];
+  if(mode==='groupBy')  return [col.proj,col.region,col.reason,col.complete,{...col.days,label:'Cycle'}];
+  if(mode==='byDate')   return [col.proj,col.region,col.resource,col.complete,col.days];
+  return [col.proj,col.region,col.resource,col.start,col.complete,col.days];
+}
 
 function openDrill(title,subtitle,drillRows,opts={}){
   _drillAll=drillRows; _drillOpts=opts; _drillSeg=opts.seg||'all';
+  _drillSortKey=opts.sort||null; _drillSortAsc=!!opts.sortAsc; _drillQ='';
+  const si=document.getElementById('drill-search'); if(si) si.value='';
   document.getElementById('drill-title').textContent=title;
   document.getElementById('drill-sub').textContent=subtitle;
   _renderDrill();
-  document.getElementById('drill-panel').classList.add('open');
+  const panel=document.getElementById('drill-panel');
+  panel.classList.toggle('wide',opts.mode==='resurvey');
+  panel.classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
+  // A modal that never takes focus leaves the keyboard behind it — Tab from the
+  // card you just opened used to walk the page under the overlay.
+  _drillReturn=document.activeElement;
+  requestAnimationFrame(()=>panel.focus());
 }
 
 function _renderDrill(){
@@ -1916,7 +2121,35 @@ function _renderDrill(){
   const showSegs=!opts.groupBy&&counts.rs>0&&(counts.rs<counts.all||counts.rsopen<counts.rs);
   if(!showSegs&&_drillSeg!=='all') _drillSeg='all';
   const seg=DRILL_SEGS.find(s=>s.k===_drillSeg)||DRILL_SEGS[0];
-  const drillRows=seg.test?_drillAll.filter(seg.test):_drillAll;
+  let drillRows=seg.test?_drillAll.filter(seg.test):_drillAll;
+
+  const mode=opts.groupBy?'groupBy':(opts.mode||'default');
+  let cols=drillCols(mode,drillRows,today);
+  // Text search runs over every column plus the fields a mode happens not to
+  // show, so the same query finds a rep whether or not Sales Rep is a column.
+  if(_drillQ){
+    const q=_drillQ.toLowerCase();
+    const extra=r=>[r.project,r.address,r.region,r.sales_rep,r.sales_office,r.resource,r.resurvey_reason,r.contact].filter(Boolean).join(' ');
+    drillRows=drillRows.filter(r=>(cols.map(c=>c.txt(r)).join(' ')+' '+extra(r)).toLowerCase().includes(q));
+    cols=drillCols(mode,drillRows,today);
+  }
+  // An all-open-resurvey view opens on its oldest, which is the order it is
+  // worked in. Marked in the header rather than applied invisibly.
+  if(_drillSortKey===null&&cols.some(c=>c.k==='rsOpen')){ _drillSortKey='rsOpen'; _drillSortAsc=false; }
+  const sortCol=cols.find(c=>c.k===_drillSortKey)||null;
+  if(sortCol){
+    const dir=_drillSortAsc?1:-1;
+    drillRows=[...drillRows].sort((a,b)=>{
+      const av=sortCol.sortVal(a), bv=sortCol.sortVal(b);
+      // Blanks sink in both directions — a column of dashes at the top is never
+      // the answer to "sort by this".
+      if(av==null&&bv==null) return 0;
+      if(av==null) return 1;
+      if(bv==null) return -1;
+      if(typeof av==='string') return dir*av.localeCompare(bv);
+      return dir*(av-bv);
+    });
+  }
   _drillRows=drillRows; // copy buttons act on what is shown
 
   document.getElementById('drill-seg').innerHTML=showSegs
@@ -1928,80 +2161,175 @@ function _renderDrill(){
     (showSegs&&counts.rsopen===0&&opts.basis==='current')
       ? 'No open resurveys can appear here: this view is on the Current completion basis, which drops a survey the moment it is reopened. Switch Intake & flow to First-time to see them.'
       : '';
-  document.getElementById('drill-count').textContent=drillRows.length+' account'+(drillRows.length!==1?'s':'');
+  const clr=document.getElementById('drill-search-clr'); if(clr) clr.style.display=_drillQ?'':'none';
+
   const thead=document.getElementById('drill-thead');
   const tbody=document.getElementById('drill-tbody');
-  if(opts.groupBy){
-    const key=opts.groupBy;
+  // Grouping and sorting are alternatives, not layers: a sort inside 40 day
+  // groups answers a question nobody asked. Picking a column flattens the
+  // table; the group column puts the headers back.
+  const grouped=(mode==='groupBy'||mode==='byDate')&&!sortCol;
+  const total=_drillAll.length;
+  document.getElementById('drill-count').innerHTML=
+    (drillRows.length===total?`<b>${total}</b> account${total!==1?'s':''}`
+      :`<b>${drillRows.length}</b> of ${total} account${total!==1?'s':''}`)
+    +(grouped?` · grouped by ${mode==='groupBy'?'resource':'day'} — sort any column to flatten`:'')
+    +(_drillQ?` · matching “${esc(_drillQ)}”`:'');
+
+  thead.innerHTML='<tr>'+cols.map(c=>{
+    const on=_drillSortKey===c.k;
+    const arrow=on?(_drillSortAsc?'sarr-up':'sarr-dn'):'sarr-no';
+    return `<th class="dsort${c.cls==='r'?' r':''}${on?' on':''}" tabindex="0" role="button"`
+      +` aria-sort="${on?(_drillSortAsc?'ascending':'descending'):'none'}"`
+      +` onclick="drillSortBy('${c.k}')"${c.th?` title="${esc(c.th)}"`:''}>`
+      +`${esc(c.label)}<span class="sarr ${arrow}"></span></th>`;
+  }).join('')+'</tr>';
+
+  const cellFor=(c,r)=>{
+    const cls=[c.cls==='r'?'r':'',c.tdClass||''].filter(Boolean).join(' ');
+    const ttl=c.tdTitle?` title="${esc(c.tdTitle(r))}"`:'';
+    return `<td${cls?` class="${cls}"`:''}${c.tdStyle?` style="${c.tdStyle}"`:''}${ttl}>${c.cell(r)}</td>`;
+  };
+  const rowHtml=r=>'<tr>'+cols.map(c=>cellFor(c,r)).join('')+'</tr>';
+
+  // Copy is built from the same specs rather than scraped off the DOM, so a
+  // grouped view pastes as a real column instead of one-cell header rows, and
+  // the clamped details cell copies in full.
+  const copyHead=[], copyRows=[], copyLinks=[];
+  const pushCopy=(r,grp)=>{ copyRows.push((grp!=null?[grp]:[]).concat(cols.map(c=>c.txt(r)))); copyLinks.push(sfUrl(r)); };
+
+  if(grouped){
+    const key=mode==='groupBy'?opts.groupBy:'complete';
     const groups={},order=[];
-    drillRows.forEach(r=>{ const k=r[key]||'—'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
-    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Reason</th><th>Complete</th><th class="r">Cycle</th></tr>`;
-    tbody.innerHTML=order.map(k=>{
-      const c=_DRILL_RES_COL[k]||'#83838c',lbl=_DRILL_RES_SHORT[k]||k,gr=groups[k];
-      return `<tr><td colspan="5" style="background:${c}18;color:${c};font-weight:700;font-size:12px;padding:7px 10px;border-bottom:2px solid ${c}40;">${lbl} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`+
-        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="max-width:160px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
-    }).join('');
-  } else if(opts.mode==='byDate'){
-    const groups={},order=[];
-    [...drillRows].sort((a,b)=>(a.complete||'').localeCompare(b.complete||'')).forEach(r=>{
-      const k=r.complete||'—';
-      if(!groups[k]){groups[k]=[];order.push(k);}
-      groups[k].push(r);
-    });
+    const src=mode==='byDate'?[...drillRows].sort((a,b)=>(a.complete||'').localeCompare(b.complete||'')):drillRows;
+    src.forEach(r=>{ const k=r[key]||'—'; if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(r); });
     const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Complete</th><th class="r">Days</th></tr>`;
+    copyHead.push(mode==='groupBy'?'Resource':'Day',...cols.map(c=>c.label));
     tbody.innerHTML=order.map(k=>{
       const gr=groups[k];
-      const dayLbl=k!=='—'?DAY[new Date(k+'T12:00:00').getDay()]+' '+fmtDateShort(k):k;
-      return `<tr><td colspan="5" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${dayLbl} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`+
-        gr.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${k!=='—'?fmtDateShort(k):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+      const isRes=mode==='groupBy';
+      const c=isRes?(_DRILL_RES_COL[k]||'#83838c'):null;
+      const lbl=isRes?(_DRILL_RES_SHORT[k]||k)
+        :(k!=='—'?DAY[new Date(k+'T12:00:00').getDay()]+' '+fmtDateShort(k):k);
+      gr.forEach(r=>pushCopy(r,lbl));
+      const head=isRes
+        ? `<tr class="drill-grp"><td colspan="${cols.length}" style="background:${c}18;color:${c};font-weight:700;font-size:12px;padding:7px 10px;border-bottom:2px solid ${c}40;">${esc(lbl)} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`
+        : `<tr class="drill-grp"><td colspan="${cols.length}" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${esc(lbl)} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`;
+      return head+gr.map(rowHtml).join('');
     }).join('');
-  } else if(opts.mode==='resurvey'){
-    const ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
-    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Sales Rep</th><th>Attributed To</th><th>Reason</th><th>What was missing</th><th class="r">Cycle</th></tr>`;
-    // "Survey Incomplete" is two thirds of all resurveys and says nothing about
-    // what was actually wrong. Resurvey Request Details does, and is filled in
-    // on 92% of them — usually a specific photo or measurement that was missed.
-    tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; const ac=ATTR_C[r.resurvey_attributed]||'var(--muted)'; const attrLabel=r.resurvey_attributed||'—';
-      const det=(r.resurvey_details||'').replace(/\s*\n\s*/g,' · ').replace(/^\s*(RESURVEY (EXPLANATION|REQUIRED)|REQUEST DETAILS)\s*:?\s*/i,'').trim();
-      return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td style="white-space:nowrap;color:var(--muted);font-size:10px;">${esc(r.sales_rep||'—')}</td><td style="white-space:nowrap;font-weight:600;color:${ac};">${esc(attrLabel)}</td><td style="max-width:120px;white-space:normal;font-size:10px;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td><td class="drill-det" title="${esc(r.resurvey_details||'')}">${det?esc(det):'<span class="pna">—</span>'}</td><td class="r">${r.ct_resurvey!=null?r.ct_resurvey+'d':'<span class="pna">—</span>'}</td></tr>`; }).join('');
   } else {
-    thead.innerHTML=`<tr><th>Project</th><th>Region</th><th>Resource</th><th>Start</th><th>Complete</th><th class="r">Days</th></tr>`;
-    tbody.innerHTML=drillRows.map(r=>{ const nm=r.project||r.address||'—'; return `<tr><td><div class="drill-proj" title="${esc(nm)}">${projLink(r)}</div></td><td style="white-space:nowrap;color:var(--muted);">${esc(r.region||'—')}</td><td>${_drillResSpan(r.resource)}</td><td style="white-space:nowrap;color:var(--muted);">${r.start?fmtDateShort(r.start):'—'}</td><td style="white-space:nowrap;color:var(--muted);">${r.complete?fmtDateShort(r.complete):'—'}</td><td class="r">${_drillDaysSpan(r,today)}</td></tr>`; }).join('');
+    copyHead.push(...cols.map(c=>c.label));
+    drillRows.forEach(r=>pushCopy(r,null));
+    tbody.innerHTML=drillRows.map(rowHtml).join('');
   }
-  if(!drillRows.length) tbody.innerHTML=`<tr><td colspan="7" style="padding:28px;text-align:center;color:var(--faint);">No projects in this view.</td></tr>`;
+  _drillCopy={head:copyHead,rows:copyRows,links:copyLinks,projIdx:grouped?1:0};
+
+  if(!drillRows.length) tbody.innerHTML=`<tr><td colspan="${cols.length}" style="padding:28px;text-align:center;color:var(--faint);">`
+    +(_drillQ?`Nothing matches “${esc(_drillQ)}”. <button class="drill-search-clr" onclick="setDrillQuery('',true)">Clear the filter</button>`:'No projects in this view.')
+    +`</td></tr>`;
 }
 function closeDrill(){
-  document.getElementById('drill-panel').classList.remove('open');
+  const panel=document.getElementById('drill-panel');
+  panel.classList.remove('open');
   document.getElementById('drill-overlay').classList.remove('open');
+  if(_drillReturn&&document.contains(_drillReturn)&&_drillReturn.focus) _drillReturn.focus();
+  _drillReturn=null;
 }
-function copyDrill(){
+// Keep Tab inside the drawer while it is open. Everything behind the overlay is
+// unclickable already; without this it stayed reachable by keyboard.
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Tab') return;
+  const panel=document.getElementById('drill-panel');
+  if(!panel||!panel.classList.contains('open')) return;
+  const f=[...panel.querySelectorAll('button:not([disabled]),input,a[href],th[tabindex]')]
+    .filter(el=>el.offsetParent!==null||el===document.activeElement);
+  if(!f.length) return;
+  const first=f[0], last=f[f.length-1];
+  if(e.shiftKey&&(document.activeElement===first||document.activeElement===panel)){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&document.activeElement===last){ e.preventDefault(); first.focus(); }
+});
+function _copyFlash(btn,msg){
+  toast(msg);
+  if(!btn) return;
+  const t=btn.dataset.lbl||btn.textContent; btn.dataset.lbl=t;
+  btn.classList.add('done'); btn.textContent='✓ Copied';
+  clearTimeout(btn._ct);
+  btn._ct=setTimeout(()=>{ btn.classList.remove('done'); btn.textContent=t; },1600);
+}
+function copyDrill(btn){
   const rs=_drillRows.filter(r=>r.project||r.address);
   const html=rs.map(r=>{const nm=esc(r.project||r.address||'');const url=sfUrl(r);return url?`<a href="${url}">${nm}</a>`:nm;}).join('<br>');
   const plain=rs.map(r=>{const nm=r.project||r.address||'';const url=sfUrl(r);return url?`${nm} — ${url}`:nm;}).join('\n');
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})});
-  navigator.clipboard.write([item]).then(()=>toast('Copied '+rs.length+' accounts to clipboard'));
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rs.length+' account'+(rs.length===1?'':'s')+' to clipboard'));
 }
-function copyDrillTable(){
-  const table=document.querySelector('#drill-panel .drill-table');
-  if(!table) return;
-  const htmlStr='<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">'+table.innerHTML+'</table>';
-  const trs=Array.from(table.querySelectorAll('tr'));
-  const tsv=trs.map(tr=>Array.from(tr.querySelectorAll('th,td')).map(c=>(c.innerText||'').trim().replace(/\t/g,' ')).join('\t')).filter(r=>r.trim()).join('\n');
-  const item=new ClipboardItem({'text/html':new Blob([htmlStr],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
-  navigator.clipboard.write([item]).then(()=>toast('Copied table to clipboard'));
+function copyDrillTable(btn){
+  const {head,rows:rws,links,projIdx}=_drillCopy;
+  if(!head.length) return;
+  const cell=v=>String(v==null?'':v).replace(/[\t\n]+/g,' ').trim();
+  const tsv=[head.join('\t'),...rws.map(r=>r.map(cell).join('\t'))].join('\n');
+  const html='<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;"><thead><tr>'
+    +head.map(h=>`<th style="text-align:left;padding:4px 8px;border-bottom:1px solid #bbb;">${esc(h)}</th>`).join('')
+    +'</tr></thead><tbody>'
+    +rws.map((r,i)=>'<tr>'+r.map((c,j)=>{
+        const v=esc(cell(c));
+        return `<td style="padding:4px 8px;border-bottom:1px solid #eee;vertical-align:top;">${j===projIdx&&links[i]?`<a href="${links[i]}">${v}</a>`:v}</td>`;
+      }).join('')+'</tr>').join('')
+    +'</tbody></table>';
+  const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+rws.length+' row'+(rws.length===1?'':'s')+' to clipboard'));
 }
-function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · current filter',filtered.filter(r=>r.region===reg)); }
-function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · current filter',filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
-function drillOpenResurveys(){ const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)); openDrill('Open Resurveys',src.length+' awaiting completion',src,{mode:'resurvey'}); }
+// Generic table copy for the fixed tables that are not drills — the WIP queue
+// had this and nothing else did.
+function copyTableEl(id,btn,label){
+  const t=document.getElementById(id); if(!t) return;
+  const trs=[...t.querySelectorAll('tr')];
+  const tsv=trs.map(tr=>[...tr.querySelectorAll('th,td')].map(c=>(c.innerText||'').trim().replace(/[\t\n]+/g,' ')).join('\t')).filter(r=>r.replace(/\t/g,'').trim()).join('\n');
+  const html='<table style="border-collapse:collapse;font-family:sans-serif;font-size:12px;">'+t.innerHTML+'</table>';
+  const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
+  navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+(label||'table')+' to clipboard'));
+}
+function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · '+drillScopeNote(),filtered.filter(r=>r.region===reg)); }
+function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · '+drillScopeNote(),filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
 function drillResGroup(val){
   const view=rsDefectPool().filter(r=>(r[rsGroupKey]||'')===val);
-  openDrill('Resurveys · '+(val||'No '+(rsGroupKey==='sales_office'?'office':'region')),view.length+' resurveys in view',view,{mode:'resurvey'});
+  openDrill('Resurveys · '+(val||'No '+(rsGroupKey==='sales_office'?'office':'region')),view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'});
 }
-function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'); openDrill('Sales Rep · '+name,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep===name&&r.resource==='Sales Rep'); openDrill('Sales Rep · '+name,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
+// Resource here means who ran the ORIGINAL survey, not who reworked it — the
+// card says as much, and the drilled rows are that card's resurveys.
+function drillRsResource(res){ const view=rsDefectPool().filter(r=>(r.resource||'')===res); openDrill('Resurveys · '+res,view.length+' came back · original survey by '+res+' · '+drillScopeNote(),view,{mode:'resurvey'}); }
+// Sort state for the Quality open queue. It defaults to oldest-first, which is
+// the order it is worked in, and was the only fixed order it had.
+let rsqKey='days', rsqAsc=false;
+function rsqSortBy(k){ if(rsqKey===k) rsqAsc=!rsqAsc; else { rsqKey=k; rsqAsc=false; } renderResurvey(); }
+function rsqTh(k,label,cls){
+  const on=rsqKey===k, arrow=on?(rsqAsc?'sarr-up':'sarr-dn'):'sarr-no';
+  return `<th class="${cls}${on?' dsort on':' dsort'}" tabindex="0" role="button" aria-sort="${on?(rsqAsc?'ascending':'descending'):'none'}" onclick="rsqSortBy('${k}')">${esc(label)}<span class="sarr ${arrow}"></span></th>`;
+}
+function rsqSort(list,today){
+  const val={
+    project:r=>(r.project||r.address||'').toLowerCase(),
+    region:r=>(r.region||'').toLowerCase(),
+    resource:r=>(r.resource||'').toLowerCase(),
+    attr:r=>r.resurvey_attributed?r.resurvey_attributed.toLowerCase():null,
+    days:r=>dDiff(r.resurvey_requested,today),
+    requested:r=>r.resurvey_requested||null,
+    scheduled:r=>r.resurvey_scheduled||null,
+    reason:r=>(r.resurvey_reason||'').toLowerCase()||null,
+  }[rsqKey]||(r=>r.resurvey_requested||'');
+  const dir=rsqAsc?1:-1;
+  return [...list].sort((a,b)=>{
+    const av=val(a), bv=val(b);
+    if(av==null&&bv==null) return 0;
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    return typeof av==='string'?dir*av.localeCompare(bv):dir*(av-bv);
+  });
+}
 function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
-function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys in view',view,{mode:'resurvey'}); }
-function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys in view',view,{mode:'resurvey'}); }
+function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
+function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
 // Which date anchors an open resurvey to a week. The two answer different
 // questions and genuinely disagree: 'complete' asks "of the surveys we closed
 // that week, which bounced back", 'request' asks "how long has this resurvey
@@ -2019,7 +2347,7 @@ function drillRsWeek(wk){
   const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)&&weekOf(rsWeekAnchor==='complete'?r.complete:r.resurvey_requested)===wk);
   const [wy,wm,wd]=wk.split('-').map(Number);
   const lbl=fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))});
-  openDrill('Open resurveys · '+lbl,(rsWeekAnchor==='complete'?'Completed':'Requested')+' that week · '+src.length+' still open',src,{mode:'resurvey'});
+  openDrill('Open resurveys · '+lbl,(rsWeekAnchor==='complete'?'Completed':'Requested')+' that week · '+src.length+' still open · '+drillScopeNote('live'),src,{mode:'resurvey'});
 }
 // Sales office is the default cut: it is a real org unit with someone
 // accountable, where Sales Region is closer to a geography label. Across
@@ -2231,12 +2559,15 @@ function renderLastWeek(){
   const lwWipRows=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to));
   const wip=lwWipRows.length;
   const avgAge=avg(lwWipRows.map(r=>ssDaysOpen(r,lw.to)));
+  _curD.lwWip=lwWipRows;
+  // The misses, not the hits: "68% on target" is read to ask which ones blew it.
+  _curD.lwMiss=src.filter(r=>r.ct_total!=null&&r.ct_total>S.targetAvg);
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.firstComplete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
     <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
-    <div class="ekcard"><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
-    <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="ekcard${_curD.lwMiss.length?' drill-tgt':''}" ${_curD.lwMiss.length?`onclick="drillCur('lwMiss','Missed target · last week','${_curD.lwMiss.length} of ${tots.length} took longer than ${S.targetAvg}d',{sort:'days'})"`:''}><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
+    <div class="ekcard drill-tgt" onclick="drillCur('lwWip','WIP at the close of last week','Open as of ${fmtDate(lw.to)} · ${wip} survey${wip===1?'':'s'}',{sort:'days'})"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
@@ -2245,11 +2576,12 @@ function renderLastWeek(){
   const rh=Math.max(180,rStats.length*26+50);
 
   const shortName=t=>t==='SunPower Surveyor'?'SunPower Surveyor':t;
+  typeData.forEach(td=>{ _curD['lwRes_'+td.t]=src.filter(r=>r.resource===td.t); });
   const typeRows=typeData.map(td=>{
     const pct=Math.round(td.n/src.length*100);
     const col=TYPE_COLORS[td.t];
     const avgStr=td.avgCyc!=null?td.avgCyc.toFixed(1)+'d':'—';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
+    return `<div class="so-row drill-tgt" ${drillAttrs(`drillCur('lwRes_${escAttrJs(td.t)}','${escAttrJs(td.t)} · last week','${td.n} completion${td.n===1?'':'s'} · ${fmtDate(lw.from)} — ${fmtDate(lw.to)}',{sort:'days'})`)} style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
       <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></div>
       <div style="flex:1;font-size:12px;color:var(--text);">${td.t}</div>
       <div style="font-size:13px;font-weight:700;color:var(--text);min-width:28px;text-align:right;">${td.n}</div>
@@ -2291,8 +2623,12 @@ function renderLastWeek(){
   const so3=stillOpen.filter(r=>soAge(r)>(S.targetAvg+3));
   const soAvgAge=stillOpen.length?Math.round(avg(stillOpen.map(r=>soAge(r)))*10)/10:null;
 
-  const soRow=(dot,label,items,status)=>items.length===0?'':`
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
+  // Each band opens its own list. "Needs attn" is the most actionable row on
+  // the page and used to be the one thing here you could not click through to.
+  _curD.so1=so1; _curD.so2=so2; _curD.so3=so3;
+  const soRow=(dot,label,items,status,key)=>items.length===0?'':`
+    <div class="so-row drill-tgt" ${drillAttrs(`drillCur('${key}','Still open · ${escAttrJs(status)}','${items.length} started ${escAttrJs(fmtDateShort(lw.from)+' — '+fmtDateShort(lw.to))}, ${escAttrJs(label.toLowerCase())}',{sort:'days'})`)}
+         style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-lt);">
       <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
       <div style="flex:1;font-size:12px;color:var(--text);">${label}</div>
       <div style="font-size:13px;font-weight:700;color:var(--text);min-width:24px;text-align:right;">${items.length}</div>
@@ -2324,9 +2660,9 @@ function renderLastWeek(){
     ${stillOpen.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Still open from last week</div><div class="ssub">${stillOpen.length} survey${stillOpen.length!==1?'s':''} started Mon–Sun, not yet closed${soAvgAge!=null?' · '+soAvgAge+'d avg age':''}</div></div></div>
-      ${soRow('#3f9d6c','Within target (≤'+S.targetAvg+'d)',so1,'on track')}
-      ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk')}
-      ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn')}
+      ${soRow('#3f9d6c','Within target (≤'+S.targetAvg+'d)',so1,'on track','so1')}
+      ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk','so2')}
+      ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn','so3')}
     </div>`:''}
     <div id="rsreq-wrap"></div>
     </div>
@@ -2346,8 +2682,13 @@ function renderLastWeek(){
   CH['lw-dist']=new Chart(document.getElementById('lw-dist'),{
     type:'bar',
     data:{labels:dist.map((_,i)=>i===15?'15+':i+'d'),
-      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#3f9d6c':i<=(S.targetAvg+2)?'#c0912e':'#d94f4e'),borderRadius:3}]},
+      datasets:[{data:dist,backgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#3f9d6c':i<=(S.targetAvg+2)?'#c0912e':'#d94f4e'),borderRadius:3,
+        hoverBackgroundColor:dist.map((_,i)=>i<=S.targetMedian?'#2e7a52':i<=(S.targetAvg+2)?'#a5771f':'#b93b3a')}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      onHover:drillHover,
+      onClick:(evt,els)=>{ if(!els.length) return; const i=els[0].index;
+        const dr=src.filter(r=>r.ct_total!=null&&r.ct_total>=0&&Math.min(Math.floor(r.ct_total),15)===i);
+        openDrill(i===15?'Cycle 15d and over':'Cycle '+i+'d',dr.length+' completion'+(dr.length===1?'':'s')+' last week',dr,{sort:'days'}); },
       scales:{x:{grid:{display:false},ticks:{color:'#8f8f98',font:{size:11}}},y:{grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98'}}}}
   });
 
@@ -2360,6 +2701,12 @@ function renderLastWeek(){
       minBarLength:3,
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#3f9d6c':(r.start_to_complete||0)<=(S.targetAvg+3)?'#c0912e':'#d94f4e'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onHover:drillHover,
+      // The same bar on Performance has drilled since the drawer existed; this
+      // one is the identical chart on a different page.
+      onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region;
+        const dr=src.filter(r=>r.region===reg);
+        openDrill('Region · '+reg,dr.length+' completion'+(dr.length===1?'':'s')+' last week',dr,{sort:'days'}); },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:ctx=>` ${rStats[ctx.dataIndex].start_to_complete!=null?rStats[ctx.dataIndex].start_to_complete.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
         annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#d94f4e',borderWidth:2,borderDash:[5,4]}}}},
@@ -2446,12 +2793,13 @@ function renderThisWeek(){
     <div class="brief-sentence">${paceStr}${qualTWStr}.
     </div>`;
   _thisWeekSrc=completedTW;
+  _curD.twSched=scheduledRem; _curD.twWip=wipProjects;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
     <div class="ekcard"><div class="eklabel">Projected total${kinfo(projTip)}</div><div class="ekval">${daysRem>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${daysRem>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
-    <div class="ekcard"><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
+    <div class="ekcard${scheduledRem.length?' drill-tgt':''}" ${scheduledRem.length?`onclick="drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})"`:''}><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
     <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
-    <div class="ekcard"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="ekcard drill-tgt" onclick="drillCur('twWip','Open right now','${wip} survey${wip===1?'':'s'} in progress as of ${escAttrJs(fmtDate(dataThrough))}',{sort:'days'})"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
@@ -2480,8 +2828,9 @@ function renderThisWeek(){
     </div>
     ${atRisk.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div></div>
-      <div style="overflow-x:auto;"><table><thead><tr>
+      <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div>
+        <button class="fbtn" onclick="copyTableEl('tw-sched-tbl',this,'the schedule')" style="font-size:11px;">Copy table</button></div>
+      <div style="overflow-x:auto;"><table id="tw-sched-tbl"><thead><tr>
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
         ${atRisk.sort((a,b)=>a.sched.localeCompare(b.sched)).map(e=>`<tr>
@@ -2498,8 +2847,9 @@ function renderThisWeek(){
     <div class="cur-col">
     ${completedTW.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div></div>
-      <div style="overflow-x:auto;"><table><thead><tr>
+      <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div>
+        <button class="fbtn" onclick="copyTableEl('tw-done-tbl',this,'the completions')" style="font-size:11px;">Copy table</button></div>
+      <div style="overflow-x:auto;"><table id="tw-done-tbl"><thead><tr>
         <th>Project</th><th>Region</th><th>Resource</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
         ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
@@ -2527,9 +2877,22 @@ function renderThisWeek(){
       {label:'Scheduled',
        data:schedExtra,
        backgroundColor:'rgba(148,163,184,0.35)',
+       hoverBackgroundColor:'rgba(148,163,184,0.6)',
        borderRadius:4},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
+      onHover:drillHover,
+      onClick:(evt,els)=>{ if(!els.length) return;
+        const i=els[0].index, date=dayDates[i], lbl=dayNames[i]+' '+fmtDateShort(date);
+        if(els[0].datasetIndex===0){
+          const dr=rows.filter(r=>isComplete(r)&&r.complete===date);
+          openDrill('Completed · '+lbl,dr.length+' survey'+(dr.length===1?'':'s'),dr,{sort:'days'});
+        } else {
+          // Past days carry no scheduled bar, and today's counts only the ones
+          // still open — drill exactly what the bar drew.
+          const dr=rows.filter(r=>r.scheduled===date&&(i>todayIdx||!isComplete(r)));
+          openDrill('Scheduled · '+lbl,dr.length+' survey'+(dr.length===1?'':'s')+' booked',dr,{sort:'days'});
+        } },
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y}`}}},
       scales:{
         x:{stacked:true,grid:{display:false},ticks:{color:'#83838c',font:{size:11}}},
@@ -2641,6 +3004,14 @@ function renderRsReq(from,to){
 }
 
 // ═══ PERFORMANCE ═════════════════════════════════════════
+function drillPerfAll(){ openDrill('All completions',filtered.length+' surveys · '+drillScopeNote(),filtered,{sort:'days'}); }
+function drillPerfRes(rt){ const dr=filtered.filter(r=>r.resource===rt); openDrill(rt,dr.length+' completions · '+drillScopeNote(),dr,{sort:'days'}); }
+// The misses, which is what an on-target percentage is read to ask about.
+function drillPerfMissed(){
+  const dr=filtered.filter(r=>r.ct_total!=null&&r.ct_total>S.targetAvg);
+  const n=filtered.filter(r=>r.ct_total!=null&&r.ct_total>=0).length;
+  openDrill('Missed target',dr.length+' of '+n+' took longer than '+S.targetAvg+'d · '+drillScopeNote(),dr,{sort:'days'});
+}
 let repView='self';
 function renderPerformance(){
   const src=filtered;
@@ -2667,7 +3038,7 @@ function renderPerformance(){
     const rsrc=src.filter(r=>r.resource===rt);
     const rTots=rsrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const rMed=med(rTots),rAvg=avg(rTots),rOnTgt=pctTgt(rTots);
-    return `<div class="res-card">
+    return `<div class="res-card${rsrc.length?' drill-tgt':''}" ${rsrc.length?drillAttrs(`drillPerfRes('${escAttrJs(rt)}')`):''}>
       <div class="res-card-title"><span class="res-dot" style="background:${typeColors[rt]||'#8f8f98'};"></span>${rt}</div>
       <div class="res-card-count">${rsrc.length} surveys</div>
       <div class="res-stats">
@@ -2688,10 +3059,10 @@ function renderPerformance(){
 
   document.getElementById('perf-content').innerHTML=`
     <div class="kg kg5">
-      <div class="kcard"><div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
+      <div class="kcard drill-tgt" ${drillAttrs('drillPerfAll()')}><div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
       <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
       <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
+      <div class="kcard drill-tgt" ${drillAttrs('drillPerfMissed()')}><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
       <div class="kcard"><div class="klabel">Resource mix${kinfo(TIP.resourceMix)}</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div class="bar-fill-anim" style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div class="bar-fill-anim" style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div class="bar-fill-anim" style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
     </div>
     <div class="res-cards">${['Sales Rep','Radicl Services','SunPower Surveyor'].map(resCard).join('')}</div>
@@ -2711,8 +3082,9 @@ function renderPerformance(){
       <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
-      <div style="overflow-x:auto;"><table>
+      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div>
+        <button class="fbtn" onclick="copyTableEl('pf-rtable',this,'the region table')" style="font-size:11px;">Copy table</button></div>
+      <div style="overflow-x:auto;"><table id="pf-rtable">
         <thead><tr>
           <th tabindex="0" onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
           <th class="r" tabindex="0" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
@@ -2727,7 +3099,9 @@ function renderPerformance(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Sales rep cycle time</div><div class="ssub" id="rep-sub">Slowest first</div></div>
-        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="fbtn" onclick="copyTableEl('pf-reptable',this,'the rep table')" style="font-size:11px;">Copy table</button>
+        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div></div>
       </div>
       <div id="rep-table-wrap"></div>
     </div>`;
@@ -2741,6 +3115,7 @@ function renderPerformance(){
       minBarLength:3,
       backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#3f9d6c':(r.start_to_complete||0)<=(S.targetAvg+3)?'#c0912e':'#d94f4e'),borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; openDrill('Avg Cycle · '+reg,'All surveys · current filter',filtered.filter(r=>r.region===reg)); },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
@@ -2760,6 +3135,7 @@ function renderPerformance(){
       ...(hasNone?[{label:'Unassigned',data:volNone,backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
     ]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; const rls=['Sales Rep','Radicl Services','SunPower Surveyor',null]; const res=rls[els[0].datasetIndex]; const dr=filtered.filter(r=>r.region===reg&&(res===null?!r.resource:r.resource===res)); openDrill((res||'Unassigned')+' · '+reg,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',callbacks:{
@@ -2843,7 +3219,7 @@ function renderRepTable(){
   const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
   const hasMore=repRows.length>LIMIT;
   const th=(k,l,cls='r')=>`<th class="${cls}" tabindex="0" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
-  wrap.innerHTML=`<div style="overflow-x:auto;"><table>
+  wrap.innerHTML=`<div style="overflow-x:auto;"><table id="pf-reptable">
     <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
     <tbody>${displayRows.map(r=>`<tr class="drill-tgt" data-rep="${esc(r.name)}" data-res="${esc(resLabel)}" onclick="drillRep(this)">
       <td>${esc(r.name)}</td>
@@ -2860,6 +3236,28 @@ function renderRepTable(){
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
+// Populations the Trends cards and the weekly table drill into, kept for the
+// inline handlers the same way _curD is on the Current page.
+const _trD={};
+function drillTr(k,title,sub,opts){ openDrill(title,sub,_trD[k]||[],opts||{sort:'days'}); }
+// A percentile card is a question about the tail: which surveys are out there.
+function drillTrTail(p,val){
+  const dr=(_trD.done||[]).filter(r=>r.ct_total!=null&&r.ct_total>=val);
+  openDrill('P'+p+' tail · '+val.toFixed(1)+'d and over',dr.length+' of '+(_trD.done||[]).length+' completions · '+drillScopeNote(),dr,{sort:'days'});
+}
+// One week of the Weekly detail table, from whichever column was clicked. WIP
+// is a snapshot at the week's end, so it is "open on that Sunday", not a count
+// of anything that happened during the week.
+function drillTrWeek(wk,wkEnd,kind){
+  const src=_trD.src||[], done=_trD.done||[];
+  const lbl=fmtDateShort(wk)+' – '+fmtDateShort(wkEnd);
+  if(kind==='in'){ const dr=src.filter(r=>weekOf(r.start)===wk);
+    openDrill('New in · '+lbl,dr.length+' survey'+(dr.length===1?'':'s')+' started that week',dr,{sort:'days'}); }
+  else if(kind==='out'){ const dr=done.filter(r=>weekOf(r.complete)===wk);
+    openDrill('Completed · '+lbl,dr.length+' survey'+(dr.length===1?'':'s')+' closed that week',dr,{mode:'byDate'}); }
+  else { const dr=src.filter(r=>r.start&&r.start<=wkEnd&&(!isComplete(r)||r.complete>wkEnd));
+    openDrill('Open at the close of '+fmtDateShort(wkEnd),dr.length+' survey'+(dr.length===1?'':'s')+' still open that Sunday',dr,{sort:'days'}); }
+}
 let trFlowView='daily'; // 'daily' | 'weekly' — Intake & flow chart granularity
 function setTrFlowView(v){ trFlowView=v; renderTrends(); }
 // 'current' | 'first' — completion basis for the Weekly Completed bar/stat.
@@ -2900,6 +3298,10 @@ function renderTrends(){
   const p75=pct(allTots,75),p90=pct(allTots,90);
   const wkCounts=doneWeeks.map(w=>w.count);
   const avgWkPace=avg(wkCounts),bestWk=wkCounts.length?Math.max(...wkCounts):null;
+  _trD.done=trendDone; _trD.src=trendSrc;
+  const bestWkObj=bestWk!=null?doneWeeks.find(w=>w.count===bestWk):null;
+  const bestWkLbl=bestWkObj?fmtWeekLabel(bestWkObj)+' · '+bestWk+' completions':'';
+  _trD.best=bestWkObj?trendDone.filter(r=>weekOf(r.complete)===bestWkObj.week):[];
   const recentWks=doneWeeks.slice(-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const prevWks=doneWeeks.slice(-6,-3).map(w=>w.start_to_complete).filter(x=>x!=null);
   const recentAvgCycle=avg(recentWks),prevAvgCycle=avg(prevWks);
@@ -2943,9 +3345,9 @@ function renderTrends(){
     <div class="kg kg5">
       <div class="kcard"><div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
       <div class="kcard"><div class="klabel">Avg weekly pace${kinfo(TIP.pace)}</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
-      <div class="kcard"><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
-      <div class="kcard"><div class="klabel">P75 cycle${kinfo(TIP.p75)}</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
-      <div class="kcard"><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
+      <div class="kcard${bestWk!=null?' drill-tgt':''}" ${bestWk!=null?drillAttrs('drillTr(\'best\',\'Best week\',\''+escAttrJs(bestWkLbl)+'\',{mode:\'byDate\'})'):''}><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
+      <div class="kcard${p75!=null?' drill-tgt':''}" ${p75!=null?drillAttrs('drillTrTail(75,'+p75+')'):''}><div class="klabel">P75 cycle${kinfo(TIP.p75)}</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
+      <div class="kcard${p90!=null?' drill-tgt':''}" ${p90!=null?drillAttrs('drillTrTail(90,'+p90+')'):''}><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
     </div>
     <div class="sec">
       <div class="shead">
@@ -3017,8 +3419,9 @@ function renderTrends(){
       <div id="tr-dow-net" class="note" style="margin-top:8px;"></div>
     </div>
     <div class="sec">
-      <div class="shead"><div class="stitle">Weekly detail</div></div>
-      <table><thead><tr>
+      <div class="shead"><div><div class="stitle">Weekly detail</div><div class="ssub">New In, Completed and WIP open their own list</div></div>
+        <button class="fbtn" onclick="copyTableEl('tr-wtable',this,'the weekly table')" style="font-size:11px;">Copy table</button></div>
+      <table id="tr-wtable"><thead><tr>
         <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling avg</th><th class="r">On target</th>
       </tr></thead><tbody id="tr-tbody"></tbody></table>
@@ -3159,6 +3562,17 @@ function renderTrends(){
          tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
+        onHover:drillHover,
+        // The weekly bars have drilled for months and the daily ones — the
+        // default view — did not, which read as the chart being inert.
+        onClick:(evt,els)=>{ if(!els.length) return;
+          const d=flowDays[els[0].index];
+          const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+          const lbl=dow+' '+fmtDateShort(d);
+          if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>r.complete===d);
+            openDrill('Out · '+lbl,dr.length+' completed that day',dr,{sort:'days'}); }
+          else if(els[0].datasetIndex===0){ const dr=trendSrc.filter(r=>r.start===d);
+            openDrill('In · '+lbl,dr.length+' started that day',dr,{sort:'days'}); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
             title:ctx=>{const d=flowDays[ctx[0].dataIndex];return fmtDateShort(d)+' ('+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()]+')';},
@@ -3182,6 +3596,7 @@ function renderTrends(){
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,
+        onHover:drillHover,
         onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr,{basis:trFlowCompletionBasis==='first'?'first':'current'}); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
@@ -3253,6 +3668,7 @@ function renderTrends(){
        pointRadius:3,pointBackgroundColor:'#5570a8',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const w=weeklyC[els[0].index]; const dr=trendDone.filter(r=>weekOf(r.complete)===w.week); openDrill('Completions · Week of '+fmtWeekLabel(w),dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{callbacks:{
@@ -3309,6 +3725,7 @@ function renderTrends(){
        pointRadius:3,pointBackgroundColor:'#3a9e6a',spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
+        onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isComplete(r)) return state==='Complete'; if(hasResurveySig(r)) return state==='Resurvey pending'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',intersect:false,callbacks:{
@@ -3338,11 +3755,15 @@ function renderTrends(){
     const onTgtVal=wc?.pct_on_target;
     const wipSnap=wipLine[allWks.indexOf(wk)];
     const isPartial=wk===curWkStart;
+    // Cell-level drills, not a row-level one: New In, Completed and WIP are
+    // three different populations, and a row click would have to pick one.
+    const wkLbl=fmtDateShort(wk)+' – '+fmtDateShort(wkEnd);
+    const dc=(kind,n)=>n?` class="r dcell" tabindex="0" role="button" onclick="drillTrWeek('${wk}','${escAttrJs(wkEnd)}','${kind}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();drillTrWeek('${wk}','${escAttrJs(wkEnd)}','${kind}')}" title="Open the ${kind==='in'?'surveys started':kind==='out'?'completions':'open surveys'} for ${escAttrJs(wkLbl)}"`:' class="r"';
     return `<tr${isPartial?' style="opacity:.55;"':''}>
-      <td>${fmtDateShort(wk)} – ${fmtDateShort(wkEnd)}${isPartial?' <span style="font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 6px;margin-left:4px;">partial</span>':''}</td>
-      <td class="r">${newIn}</td>
-      <td class="r">${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
-      <td class="r" style="color:#d97706;font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
+      <td>${wkLbl}${isPartial?' <span style="font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 6px;margin-left:4px;">partial</span>':''}</td>
+      <td${dc('in',newIn)}>${newIn}</td>
+      <td${dc('out',compl)}>${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
+      <td${dc('wip',wipSnap)} style="color:#d97706;font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
       <td class="r">${vs}</td>
       <td class="r">${wc?.median_total!=null?wc.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r" style="color:var(--blue);font-weight:500;">${r3!=null?r3.toFixed(1)+'d':'—'}</td>
@@ -4040,8 +4461,9 @@ function renderResurvey(){
   });
   const rsWkMax=Math.max(...rsWeeks.map(w=>w.n),1);
   // Stale = open longer than 90% of resurveys have ever taken to resolve, fit
-  // to this team's own history the way floorBaseline is.
-  const RS_STALE=pct(scoped.filter(r=>r.resurvey_complete&&r.ct_resurvey!=null&&r.ct_resurvey>=0).map(r=>r.ct_resurvey),90)??14;
+  // to this team's own history the way floorBaseline is. Shared with the drill
+  // drawer's Days open column via rsStaleDays().
+  const RS_STALE=rsStaleDays(scoped);
   const rsAnchorTgl=(v,l)=>`<button class="tgl-btn${rsWeekAnchor===v?' active':''}" onclick="setRsWeekAnchor('${v}')">${l}</button>`;
 
   if(!completions.length&&!openRs.length){
@@ -4163,7 +4585,7 @@ function renderResurvey(){
     <div class="shead"><div><div class="stitle">By resource</div><div class="ssub">Yield by who ran the original survey</div></div></div>
     <div class="res-cards" style="margin-bottom:0;gap:12px;">
       ${resData.map(d=>`
-      <div class="res-card">
+      <div class="res-card${d.count?' drill-tgt':''}" ${d.count?drillAttrs(`drillRsResource('${escAttrJs(d.res)}')`):''}>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
           <div class="res-card-title"><span class="res-dot" style="background:${RES_COLOR[d.res]||'#ccc'};"></span>${d.res}</div>
           ${d.open?`<span class="rs-open-badge">${d.open} open</span>`:''}
@@ -4270,17 +4692,20 @@ function renderResurvey(){
       }).join('')}
     </div>
     <div class="note">Red marks one open longer than ${RS_STALE}d, the point 90% of past resurveys had already resolved by${rsWeekAnchor==='complete'?'. On this anchor an old resurvey sits on whatever week its original survey closed, so switch to Request wk to read aging directly':''}.</div>`:''}
-    <div class="ewrap" style="margin-top:12px;"><table class="etable"><thead><tr>
-      <th>Project</th>
-      <th>Region</th>
-      <th>Resource</th>
-      <th>Attributed To</th>
-      <th class="r">Days Open</th>
-      <th>Requested</th>
-      <th>Scheduled</th>
-      <th>Reason</th>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+      <button class="fbtn" onclick="copyTableEl('rs-open-tbl',this,'the open queue')" style="font-size:11px;">Copy table</button>
+    </div>
+    <div class="ewrap" style="margin-top:6px;"><table class="etable" id="rs-open-tbl"><thead><tr>
+      ${rsqTh('project','Project','')}
+      ${rsqTh('region','Region','')}
+      ${rsqTh('resource','Resource','')}
+      ${rsqTh('attr','Attributed To','')}
+      ${rsqTh('days','Days Open','r')}
+      ${rsqTh('requested','Requested','')}
+      ${rsqTh('scheduled','Scheduled','')}
+      ${rsqTh('reason','Reason','')}
     </tr></thead><tbody>
-      ${[...openRs].sort((a,b)=>(a.resurvey_requested||'').localeCompare(b.resurvey_requested||'')).map(r=>{
+      ${rsqSort(openRs,today).map(r=>{
         const daysOpen=dDiff(r.resurvey_requested,today);
         const ageCls=daysOpen==null?'':(daysOpen>RS_STALE?'kr-c':daysOpen>=7?'ka-c':'');
         return `<tr>
@@ -4343,6 +4768,7 @@ function renderResurvey(){
           borderRadius:2, borderSkipped:'bottom', maxBarThickness:38,
         }]},
         options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onHover:drillHover,
           onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
           plugins:{legend:{display:false},
             tooltip:{callbacks:{
@@ -4373,6 +4799,7 @@ function renderResurvey(){
            tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
         ]},
         options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onHover:drillHover,
           onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
           plugins:{legend:{display:false},
             tooltip:{callbacks:{
@@ -5008,9 +5435,18 @@ function mapPlaceSub(z){
   return z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st)
     +' · '+(nz===1?[...z.zips][0]:nz+' ZIPs');
 }
+// The drill follows the mode you were reading. Clicking a town in Resurvey
+// mode used to open the plain Start/Complete table with no reason and no
+// attribution — the two columns the map had just ranked the town by.
+function mapDrillOpts(){
+  if(mapMetric==='rs') return {mode:'resurvey',seg:'rs'};
+  if(mapMetric==='wip') return {sort:'days'};
+  if(mapMetric==='cycle') return {sort:'days'};
+  return {};
+}
 function mapDrillPlace(key){
   const z=_mapPlaces.get(key); if(!z) return;
-  openDrill(z.city, mapPlaceSub(z), z.rows);
+  openDrill(z.city, mapPlaceSub(z), z.rows, mapDrillOpts());
 }
 
 
@@ -5085,7 +5521,7 @@ document.addEventListener('click',e=>{
   if(mapMarket==='US'){ const st=mapStateAt(mx,my); if(st) setMapMarket(st.abbr); return; }
   const z=mapNearest(mx,my);
   if(!z) return;
-  openDrill(z.city, mapPlaceSub(z), z.rows);
+  openDrill(z.city, mapPlaceSub(z), z.rows, mapDrillOpts());
 });
 
 let _mapRt;
