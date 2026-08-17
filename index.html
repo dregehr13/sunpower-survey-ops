@@ -111,7 +111,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .kg5{grid-template-columns:repeat(5,1fr);}
 .kg4{grid-template-columns:repeat(4,1fr);}
 .kcard{background:var(--surface);border-radius:var(--radius-lg);padding:13px 15px;border:1px solid var(--border);box-shadow:var(--shadow);}
-.klabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.klabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
 .kval{font-size:24px;font-weight:600;line-height:1.1;}
 .ksub{font-size:10px;color:var(--faint);margin-top:3px;}
 .ktgt{font-size:10px;color:var(--faint);margin-top:4px;padding-top:4px;border-top:1px solid #f0f0ec;}
@@ -130,23 +130,26 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 /* SECTIONS */
 .sec{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:15px 17px;margin-bottom:14px;box-shadow:var(--shadow);}
 .shead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;gap:8px;}
-.stitle{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.ssub{font-size:10px;color:var(--faint);margin-top:2px;}
+/* Panel title and subtitle. Sentence case at 13/11 rather than a 10px
+   uppercase label — a panel title names the panel, it isn't a field label, and
+   at 10px uppercase it read as the same rank as the KPI labels inside it. */
+.stitle{font-size:13px;font-weight:700;color:var(--text);}
+.ssub{font-size:11px;font-weight:400;color:var(--faint);margin-top:2px;}
 
 /* LEGEND */
 .leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px;align-items:center;}
-.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);}
 .ld{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
 .ldash{width:14px;height:2px;border-radius:1px;flex-shrink:0;}
 .ltgt{color:var(--target);}
 
 /* TABLE */
 table{width:100%;border-collapse:collapse;font-size:12px;}
-th{font-size:10px;font-weight:600;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+th{font-size:11px;font-weight:700;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 th:hover{color:var(--text);}
 th.r,td.r{text-align:right;}
 td{padding:5px 8px;border-bottom:1px solid #f5f5f2;vertical-align:middle;}
-tr:hover td{background:#fafaf8;}
+tr:hover td{background:var(--bg);}
 .sbadge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--bg);color:#777;margin-right:3px;display:inline-block;}
 .pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;}
 .pg{background:var(--green-bg);color:var(--green);}
@@ -192,7 +195,7 @@ tr:hover td{background:#fafaf8;}
 .etable{width:100%;border-collapse:collapse;font-size:12px;}
 .etable th{background:var(--bg);position:sticky;top:0;z-index:5;font-size:10px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
 .etable td{padding:3px 5px;border-bottom:1px solid #f5f5f2;}
-.etable tr:hover td{background:#fafaf8;}
+.etable tr:hover td{background:var(--bg);}
 .ei{background:transparent;border:1px solid transparent;border-radius:3px;width:100%;font-size:12px;padding:2px 4px;color:var(--text);font-family:inherit;}
 .ei:hover{border-color:var(--border);background:var(--surface);}
 .ei:focus{border-color:var(--blue);background:var(--surface);outline:none;}
@@ -216,7 +219,7 @@ tr:hover td{background:#fafaf8;}
 
 /* WIP EXPANDABLE ROWS */
 .wip-row{cursor:pointer;}
-.wip-row:hover td{background:#f5f5f0!important;}
+.wip-row:hover td{background:var(--bg)!important;}
 .wip-row-open td{background:#f0f0eb!important;}
 .wip-expand{font-size:10px;color:var(--faint);margin-right:7px;display:inline-block;transition:transform .15s;vertical-align:middle;}
 .wip-row-open .wip-expand{transform:rotate(90deg);}
@@ -238,7 +241,7 @@ tr:hover td{background:#fafaf8;}
 .wip-detail.open .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;transition-delay:.04s;}
 .wip-detail-inner{padding:12px 16px 14px 16px;background:#f5f5f2;}
 .wip-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;gap:0;}
-.wip-panel-label{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;}
+.wip-panel-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;}
 .wip-person-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3;}
 .wip-person-row{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
 .wip-person-row:last-child{margin-bottom:0;}
@@ -249,7 +252,7 @@ tr:hover td{background:#fafaf8;}
 .wip-dates{display:flex;gap:0;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
 .wip-date-item{flex:1;text-align:center;}
 .wip-date-item+.wip-date-item{border-left:1px solid var(--border);}
-.wip-date-label{font-size:10px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
+.wip-date-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:2px;}
 .wip-date-val{font-size:12px;color:var(--muted);font-weight:500;}
 .wip-review-meta{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
 .wip-review-date{font-size:12px;font-weight:600;color:var(--text);}
@@ -274,7 +277,7 @@ tr:hover td{background:#fafaf8;}
 .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
 .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .ekcard{background:rgba(255,255,255,.08);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.12);}
-.eklabel{font-size:10px;color:#7eb3e0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.eklabel{font-size:11px;font-weight:600;color:#7eb3e0;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
 .ekval{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.02em;}
 .ektgt{font-size:10px;color:#5d87b3;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.1);}
 .eks-good{color:#6ee7b7;}
@@ -344,16 +347,14 @@ button:active:not(:disabled){transform:scale(.94)!important;transition-duration:
 .tgl-btn:hover:not(.active){background:#f5f4f0;}
 .tgl-btn.active{box-shadow:0 1px 4px rgba(0,0,0,.08);}
 
-/* CARD HOVER — the lift is an affordance, so only cards that actually open
-   something get it. Every KPI card used to rise and shadow on hover while only
-   the .drill-tgt ones did anything, which promised a click on most of the page
-   that was not there. Non-drillable cards get a flat border tint instead. */
+/* CARD HOVER — lift and shadow are reserved for things that OPEN something.
+   Everything else gets a border or background tint, or no hover at all. A
+   plain card and a panel are not clickable, so they no longer react: the
+   border tint on every .kcard still promised a click across most of the page.
+   Only .drill-tgt, which opens the drill drawer, keeps the lift. */
 .kcard{transition:box-shadow .22s cubic-bezier(.25,.46,.45,.94),transform .22s cubic-bezier(.34,1.56,.64,1),border-color .2s;}
-.kcard:hover{border-color:rgba(0,0,0,.13);}
 .kcard.drill-tgt:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);}
 .kcard.drill-tgt:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07);}
-.sec{transition:box-shadow .2s ease;}
-.sec:hover{box-shadow:0 3px 16px rgba(0,0,0,.06);}
 
 /* NAV */
 .ntab{transition:color .15s,background .15s,border-color .15s!important;}
@@ -361,7 +362,6 @@ button:active:not(:disabled){transform:scale(.94)!important;transition-duration:
 /* TABLE */
 td{transition:background .12s;}
 .wip-row{transition:background .12s;}
-.wip-row:hover td{background:#f4f3ef!important;}
 .wip-row:hover .wip-expand{transform:translateX(2px);}
 .wip-expand{transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
 .wip-row-open .wip-expand{transform:rotate(90deg)!important;}
@@ -370,9 +370,11 @@ td{transition:background .12s;}
   .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;}
 }
 
-/* PILLS */
-.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s;}
-.pill:hover{transform:scale(1.06);box-shadow:0 2px 8px rgba(0,0,0,.1);}
+/* PILLS — a status badge in a table cell is a readout, not a control, and most
+   .pill uses are exactly that. Scaling and shadowing every one of them on
+   hover advertised a click that only the filter chips (.qs-chip) have; those
+   darken their border instead, one step, with no transform. */
+.pill{transition:border-color .15s;}
 
 /* LINKS */
 a{transition:color .12s,opacity .12s;}
@@ -622,9 +624,6 @@ body{padding-left:180px;}
 
 /* Section + KPI cards pick up warm hairline language */
 .sec,.kcard,.res-card{box-shadow:var(--shadow);}
-.stitle{color:var(--text);font-size:12px;text-transform:none;letter-spacing:0;font-weight:700;}
-.ssub{color:var(--faint);}
-.klabel{color:var(--muted);}
 .kval{font-weight:700;letter-spacing:-.02em;}
 
 /* WIP attention badge in nav */
@@ -2960,7 +2959,7 @@ function renderTrends(){
     flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:weeklyFloor(trendSrc,end)});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
-  const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
+  const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
   // Backlog alarm. The SS ratio is deliberately not one of these — see
   // lib/metrics.cjs. The floor alarm (trailing-median multiplier) was dropped
   // 2026-08-07: it assumed a stable baseline with occasional spikes, but a
@@ -2988,8 +2987,8 @@ function renderTrends(){
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
-      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
-      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
+      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
+      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
   }
   const aEl=document.getElementById('tr-alarm');
   if(aEl){
@@ -3016,7 +3015,7 @@ function renderTrends(){
             label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y}`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
           }}},
         scales:{
-          x:{stacked:false,grid:{display:false},ticks:{color:'#9b9690',font:{size:9},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
+          x:{stacked:false,grid:{display:false},ticks:{color:'#a9a390',font:{size:10},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
           y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
@@ -3040,12 +3039,12 @@ function renderTrends(){
             label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
           }}},
         scales:{
-          x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+          x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
           y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   }
-  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',v=>Math.abs(v));
+  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#a9a390',v=>Math.abs(v));
   _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
@@ -3072,11 +3071,11 @@ function renderTrends(){
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{
         label:ctx=>ctx.dataset.label.startsWith('Bucket')?` Bucket level: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y}`:` ${ctx.dataset.label}: ${ctx.parsed.y}/day avg`}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
         y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#9b9690',v=>v);
+  _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#a9a390',v=>v);
   _drawAxis('tr-dow-yR',CH['tr-dow'].scales.y1,false,'#8677b8',v=>(v>0?'+':'')+v);
   const netEl=document.getElementById('tr-dow-net');
   if(netEl) netEl.innerHTML=DOWL.map((d,i)=>{const n=+(dInAvg[i]-dOutAvg[i]).toFixed(1);
@@ -3111,11 +3110,11 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='SS ratio'?` SS ratio: ${ctx.parsed.y}× weeks of backlog`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+        x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
         y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#9b9690',v=>v+'d');
+  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#a9a390',v=>v+'d');
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#5570a8',v=>v.toFixed(1)+'×');
 
   // ── tr-vol: state cohorts stacked by start week ───────────────
@@ -3167,13 +3166,13 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='Complete %'?` Complete: ${ctx.parsed.y}%`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}},stacked:true},
+        x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}},stacked:true},
         y:{min:0,stacked:true,position:'left',grid:{color:'rgba(80,65,40,.06)'},
            ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},
             ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#9b9690',v=>String(Math.round(v)));
+  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#a9a390',v=>String(Math.round(v)));
   _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#3a9e6a',v=>Math.round(v)+'%');
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
@@ -3530,7 +3529,7 @@ function renderAgingWIP(){
       const filterLabel=(anySelected||wipStatusSel)?[[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', '),wipStatusSel?STATUS_LABELS[wipStatusSel]:''].filter(Boolean).join(' · '):'';
       const clearBtn=(anySelected||wipStatusSel)?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
       return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">WIP by Age &amp; Schedule Status</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">WIP by Age &amp; Schedule Status</div>
         <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
         ${selFiltered?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:20px;font-size:12px;color:var(--muted);">
@@ -4041,8 +4040,8 @@ function renderResurvey(){
               return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still maturing'}`; }
           }}},
         scales:{
-          x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:10},maxTicksLimit:14}},
-          y:{grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#9b9690',font:{size:10},callback:v=>v+'%'},
+          x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10},maxTicksLimit:14}},
+          y:{grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#a9a390',font:{size:10},callback:v=>v+'%'},
              suggestedMin:Math.max(0,Math.min(...fpyWeeks.map(w=>w.fpy??100))-8), suggestedMax:100}},
       },
       plugins:[{id:'fpyTarget',afterDatasetsDraw(ch){
