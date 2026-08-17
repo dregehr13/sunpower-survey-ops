@@ -111,7 +111,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .kg5{grid-template-columns:repeat(5,1fr);}
 .kg4{grid-template-columns:repeat(4,1fr);}
 .kcard{background:var(--surface);border-radius:var(--radius-lg);padding:13px 15px;border:1px solid var(--border);box-shadow:var(--shadow);}
-.klabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.klabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
 .kval{font-size:24px;font-weight:600;line-height:1.1;}
 .ksub{font-size:10px;color:var(--faint);margin-top:3px;}
 .ktgt{font-size:10px;color:var(--faint);margin-top:4px;padding-top:4px;border-top:1px solid #f0f0ec;}
@@ -130,23 +130,26 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 /* SECTIONS */
 .sec{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:15px 17px;margin-bottom:14px;box-shadow:var(--shadow);}
 .shead{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:11px;gap:8px;}
-.stitle{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.ssub{font-size:10px;color:var(--faint);margin-top:2px;}
+/* Panel title and subtitle. Sentence case at 13/11 rather than a 10px
+   uppercase label — a panel title names the panel, it isn't a field label, and
+   at 10px uppercase it read as the same rank as the KPI labels inside it. */
+.stitle{font-size:13px;font-weight:700;color:var(--text);}
+.ssub{font-size:11px;font-weight:400;color:var(--faint);margin-top:2px;}
 
 /* LEGEND */
 .leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px;align-items:center;}
-.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);}
 .ld{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
 .ldash{width:14px;height:2px;border-radius:1px;flex-shrink:0;}
 .ltgt{color:var(--target);}
 
 /* TABLE */
 table{width:100%;border-collapse:collapse;font-size:12px;}
-th{font-size:10px;font-weight:600;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+th{font-size:11px;font-weight:700;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 th:hover{color:var(--text);}
 th.r,td.r{text-align:right;}
 td{padding:5px 8px;border-bottom:1px solid #f5f5f2;vertical-align:middle;}
-tr:hover td{background:#fafaf8;}
+tr:hover td{background:var(--bg);}
 .sbadge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--bg);color:#777;margin-right:3px;display:inline-block;}
 .pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;}
 .pg{background:var(--green-bg);color:var(--green);}
@@ -192,7 +195,7 @@ tr:hover td{background:#fafaf8;}
 .etable{width:100%;border-collapse:collapse;font-size:12px;}
 .etable th{background:var(--bg);position:sticky;top:0;z-index:5;font-size:10px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
 .etable td{padding:3px 5px;border-bottom:1px solid #f5f5f2;}
-.etable tr:hover td{background:#fafaf8;}
+.etable tr:hover td{background:var(--bg);}
 .ei{background:transparent;border:1px solid transparent;border-radius:3px;width:100%;font-size:12px;padding:2px 4px;color:var(--text);font-family:inherit;}
 .ei:hover{border-color:var(--border);background:var(--surface);}
 .ei:focus{border-color:var(--blue);background:var(--surface);outline:none;}
@@ -216,7 +219,7 @@ tr:hover td{background:#fafaf8;}
 
 /* WIP EXPANDABLE ROWS */
 .wip-row{cursor:pointer;}
-.wip-row:hover td{background:#f5f5f0!important;}
+.wip-row:hover td{background:var(--bg)!important;}
 .wip-row-open td{background:#f0f0eb!important;}
 .wip-expand{font-size:10px;color:var(--faint);margin-right:7px;display:inline-block;transition:transform .15s;vertical-align:middle;}
 .wip-row-open .wip-expand{transform:rotate(90deg);}
@@ -238,7 +241,7 @@ tr:hover td{background:#fafaf8;}
 .wip-detail.open .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;transition-delay:.04s;}
 .wip-detail-inner{padding:12px 16px 14px 16px;background:#f5f5f2;}
 .wip-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;gap:0;}
-.wip-panel-label{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px;}
+.wip-panel-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;}
 .wip-person-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.3;}
 .wip-person-row{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
 .wip-person-row:last-child{margin-bottom:0;}
@@ -249,7 +252,7 @@ tr:hover td{background:#fafaf8;}
 .wip-dates{display:flex;gap:0;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
 .wip-date-item{flex:1;text-align:center;}
 .wip-date-item+.wip-date-item{border-left:1px solid var(--border);}
-.wip-date-label{font-size:10px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px;}
+.wip-date-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:2px;}
 .wip-date-val{font-size:12px;color:var(--muted);font-weight:500;}
 .wip-review-meta{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
 .wip-review-date{font-size:12px;font-weight:600;color:var(--text);}
@@ -259,10 +262,6 @@ tr:hover td{background:#fafaf8;}
 .wip-no-review{font-size:12px;color:var(--faint);font-style:italic;}
 
 /* Needs-attention row controls (WIP queue) */
-.attn-dismiss{font-size:10px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;}
-.attn-dismiss:hover{background:var(--green-bg);color:var(--green);border-color:var(--green);}
-.wip-attn-reason{font-size:10px;color:var(--amber);margin-top:2px;display:flex;align-items:center;justify-content:space-between;font-weight:400;}
-.attn-reason-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;}
 
 /* STALE DATA BANNER */
 .stale-banner{display:none;background:var(--amber-bg);color:var(--amber);font-size:12px;padding:7px 22px;border-bottom:1px solid #f0d9a8;text-align:center;}
@@ -274,7 +273,7 @@ tr:hover td{background:#fafaf8;}
 .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
 .exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
 .ekcard{background:rgba(255,255,255,.08);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.12);}
-.eklabel{font-size:10px;color:#7eb3e0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+.eklabel{font-size:11px;font-weight:600;color:#7eb3e0;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
 .ekval{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.02em;}
 .ektgt{font-size:10px;color:#5d87b3;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.1);}
 .eks-good{color:#6ee7b7;}
@@ -344,16 +343,14 @@ button:active:not(:disabled){transform:scale(.94)!important;transition-duration:
 .tgl-btn:hover:not(.active){background:#f5f4f0;}
 .tgl-btn.active{box-shadow:0 1px 4px rgba(0,0,0,.08);}
 
-/* CARD HOVER — the lift is an affordance, so only cards that actually open
-   something get it. Every KPI card used to rise and shadow on hover while only
-   the .drill-tgt ones did anything, which promised a click on most of the page
-   that was not there. Non-drillable cards get a flat border tint instead. */
+/* CARD HOVER — lift and shadow are reserved for things that OPEN something.
+   Everything else gets a border or background tint, or no hover at all. A
+   plain card and a panel are not clickable, so they no longer react: the
+   border tint on every .kcard still promised a click across most of the page.
+   Only .drill-tgt, which opens the drill drawer, keeps the lift. */
 .kcard{transition:box-shadow .22s cubic-bezier(.25,.46,.45,.94),transform .22s cubic-bezier(.34,1.56,.64,1),border-color .2s;}
-.kcard:hover{border-color:rgba(0,0,0,.13);}
 .kcard.drill-tgt:hover{box-shadow:0 8px 28px rgba(0,0,0,.11);transform:translateY(-3px);}
 .kcard.drill-tgt:active{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07);}
-.sec{transition:box-shadow .2s ease;}
-.sec:hover{box-shadow:0 3px 16px rgba(0,0,0,.06);}
 
 /* NAV */
 .ntab{transition:color .15s,background .15s,border-color .15s!important;}
@@ -361,7 +358,6 @@ button:active:not(:disabled){transform:scale(.94)!important;transition-duration:
 /* TABLE */
 td{transition:background .12s;}
 .wip-row{transition:background .12s;}
-.wip-row:hover td{background:#f4f3ef!important;}
 .wip-row:hover .wip-expand{transform:translateX(2px);}
 .wip-expand{transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
 .wip-row-open .wip-expand{transform:rotate(90deg)!important;}
@@ -370,9 +366,11 @@ td{transition:background .12s;}
   .wip-detail-clip>.wip-detail-inner{opacity:1;transform:none;}
 }
 
-/* PILLS */
-.pill{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s;}
-.pill:hover{transform:scale(1.06);box-shadow:0 2px 8px rgba(0,0,0,.1);}
+/* PILLS — a status badge in a table cell is a readout, not a control, and most
+   .pill uses are exactly that. Scaling and shadowing every one of them on
+   hover advertised a click that only the filter chips (.qs-chip) have; those
+   darken their border instead, one step, with no transform. */
+.pill{transition:border-color .15s;}
 
 /* LINKS */
 a{transition:color .12s,opacity .12s;}
@@ -573,6 +571,165 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .wip-wrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;}
 .wip-wrap th{position:sticky;top:0;background:var(--surface);z-index:5;}
 
+/* ═══ QUALITY PAGE ═══ */
+.q-top{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:stretch;margin-bottom:14px;}
+.q-top>.sec{margin-bottom:0;}
+.q-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+.q-two>.sec{margin-bottom:14px;}
+.q-hero{display:flex;flex-direction:column;padding:18px 20px 20px;}
+.q-hero-val{font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums;}
+.q-hero-say{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px;text-wrap:pretty;}
+.q-hero-say b{color:var(--red);font-weight:600;}
+.q-track{height:7px;background:var(--border-lt);border-radius:4px;margin-top:14px;position:relative;overflow:hidden;}
+.q-track-fill{height:100%;border-radius:4px;}
+/* The target sits ON the track, not at its end — at 95% the gap between the
+   fill and the mark IS the shortfall, which is the thing to read. */
+.q-track-tgt{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--target);}
+.q-track-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:4px;}
+.q-dl{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-lt);display:flex;flex-direction:column;gap:9px;}
+.q-dl-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.q-dl-row span{font-size:12px;color:var(--muted);}
+.q-dl-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.q-hero-link{font:inherit;font-size:11.5px;color:var(--blue);background:none;border:none;padding:0;margin-top:auto;padding-top:16px;cursor:pointer;text-align:left;}
+.q-hero-link:hover{text-decoration:underline;text-underline-offset:2px;}
+.q-chart{margin-bottom:0;}
+
+.q-rate{display:grid;grid-template-columns:1fr 1fr;gap:9px 28px;}
+.q-rate-row{display:flex;align-items:center;gap:11px;min-width:0;}
+.q-rate-name{width:150px;flex-shrink:0;text-align:right;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.q-rate-track{flex:1;height:17px;background:var(--border-lt);border-radius:3px;position:relative;min-width:0;}
+.q-rate-fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;}
+.q-rate-ceil{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--target);}
+.q-rate-val{width:38px;flex-shrink:0;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+.q-rate-n{width:44px;flex-shrink:0;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;}
+.q-rate-n::before{content:'n=';}
+/* A reference, not a performer — neutral so it never ranks against the rest. */
+.q-rate-all .q-rate-name{color:var(--muted);}
+.q-rate-key{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--faint);margin-top:13px;}
+.q-rate-keyline{width:14px;height:2px;background:var(--target);flex-shrink:0;}
+
+@media(max-width:1100px){
+  .q-top{grid-template-columns:1fr;}
+  .q-rate{grid-template-columns:1fr;}
+}
+@media(max-width:860px){
+  .q-two{grid-template-columns:1fr;}
+  .q-hero-val{font-size:42px;}
+  .q-rate-name{width:88px;}
+  .q-rate-n{display:none;}
+}
+
+/* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
+   five figures carry in about a sixth of the vertical space and, sharing one
+   surface, stop implying they are five equally important things. */
+/* Cell padding is uniform and the panel supplies only the outer 2px. Trimming
+   the first and last cell's inner padding — as the handoff draws it — makes
+   those two 18px narrower than the rest: flex-basis:0 sizes the CONTENT box,
+   so padding is added on top of an equal share rather than taken out of it.
+   Uniform padding is the only way the dividers land evenly. */
+.wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 2px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
+.wip-rail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
+.wip-rail-cell:last-child{border-right:none;}
+.wip-rail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
+.wip-rail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
+
+/* WIP QUEUE BLOCK — the filters describe the table they sit on top of, so
+   they live inside its panel rather than in a card of their own above it. */
+.wip-queue{padding:0;overflow:hidden;}
+.wip-queue-head{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+.wip-queue-title{font-size:14px;font-weight:700;color:var(--text);}
+.wip-viewtgl{display:flex;flex-shrink:0;}
+.wip-viewtgl button{font:inherit;font-size:11.5px;padding:5px 12px;background:var(--surface);color:var(--muted);border:1px solid var(--border);cursor:pointer;white-space:nowrap;}
+.wip-viewtgl button:first-child{border-radius:6px 0 0 6px;}
+.wip-viewtgl button:last-child{border-radius:0 6px 6px 0;border-left:0;}
+.wip-viewtgl button:hover:not(.on){border-color:var(--faint);}
+.wip-viewtgl button.on{background:var(--text);color:#fff;border-color:var(--text);font-weight:600;}
+
+.wip-filters{padding:2px 18px 14px;display:flex;flex-direction:column;gap:9px;}
+.wip-frow{display:flex;align-items:center;gap:12px;}
+.wip-flabel{width:64px;flex-shrink:0;text-align:right;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+/* Fixed, and the same on both rows: with a flexed track the age and status
+   bars ended at different x positions because their legends are different
+   widths, which reads as a rendering bug rather than as data. */
+.wip-bar{width:430px;flex-shrink:0;display:flex;gap:2px;height:11px;}
+.wip-bar-seg{min-width:5px;cursor:pointer;transition:opacity .15s,box-shadow .15s;}
+.wip-bar-seg:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.wip-bar-seg.dim{opacity:.45;}
+.wip-bar-seg.on{box-shadow:0 0 0 2px var(--text);}
+.wip-legs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 13px;min-width:0;}
+.wip-leg{font:inherit;font-size:11px;color:var(--muted);background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;white-space:nowrap;transition:opacity .15s;}
+.wip-leg b{color:var(--text);margin-left:4px;font-variant-numeric:tabular-nums;}
+.wip-leg.dim{opacity:.45;}
+.wip-leg-sw{width:8px;height:8px;border-radius:2px;margin-right:5px;flex-shrink:0;}
+.wip-leg-sw.on{box-shadow:0 0 0 1.5px var(--text);}
+/* The unscheduled bracket — grouping on the bar, so the legend below stays
+   one uniform run of chips with no odd box on one of its lines. */
+.wip-bar-stack{width:430px;flex-shrink:0;}
+.wip-brk-row{display:flex;margin-top:3px;}
+.wip-brk{font:inherit;background:none;border:0;padding:0;cursor:pointer;min-width:0;
+  display:flex;flex-direction:column;align-items:center;}
+.wip-brk-line{width:100%;height:4px;border:1px solid var(--border);border-top:0;border-radius:0 0 3px 3px;transition:border-color .15s;}
+.wip-brk-lbl{font-size:10px;line-height:1;color:var(--faint);margin-top:3px;white-space:nowrap;transition:color .15s;}
+.wip-brk:hover .wip-brk-line{border-color:var(--faint);}
+.wip-brk:hover .wip-brk-lbl{color:var(--muted);}
+.wip-brk.on .wip-brk-line{border-color:var(--text);}
+.wip-brk.on .wip-brk-lbl{color:var(--text);font-weight:600;}
+.wip-frow-hint{margin-top:-2px;}
+.wip-fhint{font-size:11px;color:var(--faint);}
+.wip-fclear{font:inherit;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;}
+.wip-sel{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px;margin-top:2px;padding-top:10px;border-top:1px solid var(--border-lt);font-size:12px;color:var(--muted);}
+.wip-sel b{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.wip-sel-of{color:var(--faint);}
+.wip-foot{padding:11px 18px 4px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
+.wip-foot b{color:var(--text);font-variant-numeric:tabular-nums;}
+.wip-foot-a{font:inherit;font-size:11.5px;background:none;border:none;color:var(--blue);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+.wip-queue .wip-wrap{border:none;border-radius:0;max-height:70vh;}
+.wip-table th{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:7px 8px;}
+.wip-table th:first-child{padding-left:18px;} .wip-table th:last-child{padding-right:18px;}
+.wip-table td{padding:7px 8px;border-bottom:1px solid var(--border-lt);}
+.wip-table tr.wip-row>td:first-child{padding-left:18px;} .wip-table tr.wip-row>td:last-child{padding-right:18px;}
+
+/* The filter track cannot hold 430px on a narrow screen — the bar goes fluid
+   and the legend drops under it rather than squeezing both. */
+@media(max-width:1100px){
+  .wip-frow{flex-wrap:wrap;}
+  .wip-bar,.wip-bar-stack{width:100%;flex:1 1 100%;order:2;}
+  .wip-legs{order:3;flex:1 1 100%;}
+  .wip-flabel{order:1;width:auto;text-align:left;}
+  .wip-frow-hint .wip-flabel{display:none;}
+}
+@media(max-width:860px){
+  .wip-rail{flex-wrap:wrap;padding:0 12px;}
+  .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
+  .wip-rail-cell:first-child{flex:1 0 100%;border-bottom:1px solid var(--border);}
+  /* An odd cell count leaves the last one orphaned half-width — let it span. */
+  .wip-rail-cell:last-child:nth-child(odd){flex:1 0 100%;}
+  .wip-rail-val{font-size:24px;}
+  .wip-queue-head{flex-direction:column;gap:10px;}
+}
+
+/* Phones: eight columns are unreadable at 340px, so each row becomes a
+   two-line stacked item instead of a table that scrolls sideways. */
+@media(max-width:640px){
+  .wip-queue .wip-wrap{max-height:none;overflow:visible;}
+  .wip-table thead{display:none;}
+  .wip-table,.wip-table tbody,.wip-table tr.wip-row,.wip-table tr.wip-row>td{display:block;width:auto;}
+  .wip-table tr.wip-row{padding:9px 14px;border-bottom:1px solid var(--border-lt);position:relative;}
+  .wip-table tr.wip-row>td{border:none;padding:0;text-align:left!important;}
+  .wip-table tr.wip-row>td[data-c="Project"]{font-size:13px;padding-right:110px!important;}
+  /* Status rides the first line, pinned right, so line two is pure identity. */
+  .wip-table tr.wip-row>td[data-c="Status"]{position:absolute;top:9px;right:14px;}
+  .wip-table tr.wip-row>td[data-c="Contact"],
+  .wip-table tr.wip-row>td[data-c="Region"],
+  .wip-table tr.wip-row>td[data-c="Open in SS"]{display:inline-block;font-size:11.5px;margin-top:3px;}
+  .wip-table tr.wip-row>td[data-c="Region"]::before,
+  .wip-table tr.wip-row>td[data-c="Open in SS"]::before{content:'·';color:var(--faint);margin:0 6px;}
+  .wip-table tr.wip-row>td[data-c="Scheduled"],
+  .wip-table tr.wip-row>td[data-c="Last reviewed"],
+  .wip-table tr.wip-row>td[data-c="Proj age"]{display:none;}
+  .wip-table tr.wip-detail>td{padding:0;}
+}
+
 /* ═══════════ REDESIGN SKIN — warm light body · dark sidebar · blue/slate data ═══════════ */
 :root{
   --bg:#faf9f6;--surface:#ffffff;--border:#e4e1d8;--border-lt:#eeece5;
@@ -622,13 +779,11 @@ body{padding-left:180px;}
 
 /* Section + KPI cards pick up warm hairline language */
 .sec,.kcard,.res-card{box-shadow:var(--shadow);}
-.stitle{color:var(--text);font-size:12px;text-transform:none;letter-spacing:0;font-weight:700;}
-.ssub{color:var(--faint);}
-.klabel{color:var(--muted);}
 .kval{font-weight:700;letter-spacing:-.02em;}
 
 /* WIP attention badge in nav */
-#wip-attn-badge{display:none;align-items:center;justify-content:center;background:#4f7fae;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px;line-height:1.4;}
+#wip-count-badge{display:none;align-items:center;justify-content:center;background:#333;color:#ccc;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:auto;line-height:1.4;}
+.ntab[data-page="wip"]{display:flex;align-items:center;}
 
 /* Briefing hero — Current page editorial header */
 .brief-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
@@ -684,14 +839,14 @@ body{padding-left:180px;}
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
   <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
+  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-attn-badge" style="display:none;"></span></div>
-  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
+  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
     <div class="nmenu-dropdown" id="mobileMoreMenu">
-      <div class="nmenu-item" onclick="nav('resurvey')">Resurveys</div>
+      <div class="nmenu-item" onclick="nav('resurvey')">Quality</div>
       <div class="nmenu-item" onclick="nav('map')">Map</div>
     </div>
   </div>
@@ -943,7 +1098,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','performance','trends','wip','resurvey','map','data'];
+const PAGES = ['week','wip','performance','trends','resurvey','map','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -976,7 +1131,6 @@ let dataTimestamp = null;
 let wipF = {type:'all', sales_rep:'all'};
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
-let wipStatusSel = null;   // 'scheduled'|'pastdue'|'unscheduled'|null — narrows the age-bar selection
 let wipQsSel = new Set();  // selected queue-status keys (QS in renderAgingWIP), multi-select
 
 function saveFilterState(){
@@ -1173,7 +1327,7 @@ function buildFBar(page){
         ${offices.map(o=>`<label class="rgdrop-item"><input type="checkbox"${offArr.includes(o)?' checked':''} onchange="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',this.checked,event)"><span>${esc(o)}</span></label>`).join('')}
       </div>
     </div>`:''}
-    <div class="fsep"></div>
+    ${page==='resurvey'?'':`<div class="fsep"></div>
     ${(()=>{
       const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
       const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
@@ -1184,14 +1338,14 @@ function buildFBar(page){
           ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
         </div>
       </div>`;
-    })()}
+    })()}`}
     ${catDropdowns}
     ${isWip?wipExtraControls():''}
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
       <span class="fhint" id="fb-hint-${page}">${isWip
-        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open <span title="The WIP page is a live snapshot of the queue, so the date range does not apply to it.">· live, not date-filtered</span>'
+        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open'
         : filtered.length+' of '+rows.length+' shown'}</span>
     </div>
   </div>`;
@@ -1372,6 +1526,12 @@ function fmtReviewDate(s){
   if(!s) return '';
   try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; }
 }
+// Date only. last_reviewed_date is a timestamp, not an ISO date, so
+// fmtDateShort() — which splits on '-' — cannot read it.
+function fmtReviewDay(s){
+  if(!s) return '';
+  try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric'}); }catch(e){ return s; }
+}
 // ── WIP row expansion ─────────────────────────────────────────────────────
 // One panel open at a time. Detail rows stay display:none while closed rather
 // than sitting collapsed in the layout: the queue can run several hundred rows
@@ -1551,7 +1711,7 @@ function nav(page){
   saveFilterState();
   applyFilter();
   renderPage(page);
-  renderWipAttnBadge();  // the badge is in the nav, so it follows every page
+  renderWipCountBadge();  // the badge is in the nav, so it follows every page
   closeMobileMenu();
 }
 function toggleMobileMenu(){
@@ -1661,11 +1821,9 @@ const TIP={
 
   // ── The two age metrics — different questions, don't mix them ──
   wip:'Surveys that have started but are not yet complete.',
+  avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
   ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
   projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
-  avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
-  medAge:'Middle value of Days Open in SS across open surveys. Less sensitive than the average to a few very old stragglers.',
-  onTrackWip:()=>`Share of open surveys projected to finish within ${S.targetAvg} days, using each survey's scheduled date where it has one and its expected cycle time where it does not.`,
 
   // ── SS ratio: two variants, on purpose ──
   ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 means roughly a week of work is queued. This reads high on a Monday morning; that is the genuine queue before the day clears it.',
@@ -1849,6 +2007,12 @@ function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r)
 // that week, which bounced back", 'request' asks "how long has this resurvey
 // been sitting". Completion-week scatters the aging signal — a single 54-day-
 // old resurvey lands on whatever week its original survey closed.
+// The yield chart exists in two forms while the shape is being chosen: the
+// handoff's weekly bars, and the line with its 4-week rolling average. Weekly
+// yield swings ~15 points on volume noise alone, which is why the rolling line
+// was added in the first place; the bars read cleaner but carry no trend.
+let rsChartMode='bars'; // 'bars' | 'line'
+function setRsChartMode(v){ rsChartMode=v; renderResurvey(); }
 let rsWeekAnchor='complete'; // 'complete' | 'request'
 function setRsWeekAnchor(v){ rsWeekAnchor=v; renderResurvey(); }
 function drillRsWeek(wk){
@@ -1990,43 +2154,28 @@ function renderWeek(){
       </div>
       <div id="week-inner"></div>
     </div>`;
-  renderWipAttnBadge();
+  renderWipCountBadge();
   weekView==='last' ? renderLastWeek() : renderThisWeek();
 }
 function setWeekView(v){ weekView=v; renderWeek(); }
 
-// ═══ NEEDS ATTENTION — exceptions surfaced on the daily view ════════
-// Dismissals persist in localStorage keyed by project+rule+severity band,
-// so an item stays hidden across data uploads until its condition escalates.
-function getDismissed(){ try{ return new Set(JSON.parse(localStorage.getItem('ops_dismissed')||'[]')); }catch(e){ return new Set(); } }
-function attnKey(it){ return (it.r.task_id||it.r.id)+'|'+it.rule+'|'+it.band; }
-function dismissAttn(keys){ const s=getDismissed(); keys.split(',').forEach(k=>s.add(k)); localStorage.setItem('ops_dismissed',JSON.stringify([...s])); renderWipAttnBadge(); if(currentPage==='wip') renderAgingWIP(); }
-function attnItems(){
-  // Anchor to the export date so attention flags match the WIP page ages.
-  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  const items=[];
-  rows.filter(r=>isWIP(r)).forEach(r=>{
-    const d=ssDaysOpen(r,today)??0;
-    if(d>7) items.push({r,rule:'aging',band:d>14?'14d':'7d',sev:d,text:''});
-    if(r.scheduled&&r.scheduled<today) items.push({r,rule:'sched-passed',band:r.scheduled,sev:4+(dDiff(r.scheduled,today)||0),text:`scheduled ${fmtDateShort(r.scheduled)}, date passed`});
-    if(!r.last_reviewed_date&&d>5) items.push({r,rule:'no-review',band:d>10?'10d':'5d',sev:d/2,text:`no review on file`});
-  });
-  rows.filter(r=>isOpenResurvey(r)&&!r.resurvey_scheduled).forEach(r=>{
-    const d=dDiff(r.resurvey_requested,today)??0;
-    if(d>3) items.push({r,rule:'rs-unsched',band:d>7?'7d':'3d',sev:d+3,text:'resurvey unscheduled'});
-  });
-  const dis=getDismissed();
-  return items.filter(it=>!dis.has(attnKey(it)));
-}
-// The nav badge beside "WIP". It counts what needs attention, not how much WIP
-// exists — it is styled as an alert pill, and it read the full open-queue count
-// (113) while the WIP page's own "Needs attention" toggle read 42.
-function renderWipAttnBadge(){
-  const b=document.getElementById('wip-attn-badge');
+// ═══ WIP NAV BADGE ══════════════════════════════════════
+// Counts the open queue. It used to count a "needs attention" rule set —
+// aging, passed schedule date, no review — surfaced as a WIP view with
+// per-row dismissals in localStorage. That was a saved filter dressed as a
+// view: every row it held is reachable from Past due plus the age bands, and
+// the dismissals meant the badge and the table disagreed with Salesforce for
+// anyone who had clicked "Reviewed". The slot went to Open resurveys, which
+// is a genuinely different population with no live home anywhere else.
+//
+// Neutral grey on purpose: an open queue is the normal state, and a red badge
+// on every page load teaches you to ignore red.
+function renderWipCountBadge(){
+  const b=document.getElementById('wip-count-badge');
   if(!b) return;
-  const n=new Set(attnItems().map(it=>it.r.task_id||it.r.id)).size;
+  const n=rows.filter(r=>isWIP(r)).length;
   b.textContent=n||'';
-  b.title=n?n+' open surveys need attention':'';
+  b.title=n?n+' surveys open':'';
   b.style.display=n?'inline-flex':'none';
 }
 
@@ -2960,7 +3109,7 @@ function renderTrends(){
     flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:weeklyFloor(trendSrc,end)});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
-  const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
+  const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
   // Backlog alarm. The SS ratio is deliberately not one of these — see
   // lib/metrics.cjs. The floor alarm (trailing-median multiplier) was dropped
   // 2026-08-07: it assumed a stable baseline with occasional spikes, but a
@@ -2988,8 +3137,8 @@ function renderTrends(){
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
-      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
-      +`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
+      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
+      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
   }
   const aEl=document.getElementById('tr-alarm');
   if(aEl){
@@ -3016,7 +3165,7 @@ function renderTrends(){
             label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y}`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
           }}},
         scales:{
-          x:{stacked:false,grid:{display:false},ticks:{color:'#9b9690',font:{size:9},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
+          x:{stacked:false,grid:{display:false},ticks:{color:'#a9a390',font:{size:10},autoSkip:true,maxTicksLimit:14,callback(v){return fmtDateShort(flowDays[v]);}}},
           y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
@@ -3040,12 +3189,12 @@ function renderTrends(){
             label:ctx=>ctx.dataset.label==='WIP'?` WIP: ${ctx.parsed.y} open`:` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`
           }}},
         scales:{
-          x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+          x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
           y:{position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   }
-  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#9b9690',v=>Math.abs(v));
+  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#a9a390',v=>Math.abs(v));
   _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
@@ -3072,11 +3221,11 @@ function renderTrends(){
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{
         label:ctx=>ctx.dataset.label.startsWith('Bucket')?` Bucket level: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y}`:` ${ctx.dataset.label}: ${ctx.parsed.y}/day avg`}}},
-      scales:{x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
         y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#9b9690',v=>v);
+  _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#a9a390',v=>v);
   _drawAxis('tr-dow-yR',CH['tr-dow'].scales.y1,false,'#8677b8',v=>(v>0?'+':'')+v);
   const netEl=document.getElementById('tr-dow-net');
   if(netEl) netEl.innerHTML=DOWL.map((d,i)=>{const n=+(dInAvg[i]-dOutAvg[i]).toFixed(1);
@@ -3111,11 +3260,11 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='SS ratio'?` SS ratio: ${ctx.parsed.y}× weeks of backlog`:` ${ctx.parsed.y!=null?ctx.parsed.y.toFixed(1)+'d':'—'} avg`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}}},
+        x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
         y:{min:0,position:'left',grid:{color:'rgba(80,65,40,.06)'},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#9b9690',v=>v+'d');
+  _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#a9a390',v=>v+'d');
   _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#5570a8',v=>v.toFixed(1)+'×');
 
   // ── tr-vol: state cohorts stacked by start week ───────────────
@@ -3167,13 +3316,13 @@ function renderTrends(){
           label:ctx=>ctx.dataset.label==='Complete %'?` Complete: ${ctx.parsed.y}%`:` ${ctx.dataset.label}: ${ctx.parsed.y}`
         }}},
       scales:{
-        x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:11}},stacked:true},
+        x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}},stacked:true},
         y:{min:0,stacked:true,position:'left',grid:{color:'rgba(80,65,40,.06)'},
            ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
         y1:{min:0,max:100,position:'right',grid:{drawOnChartArea:false},
             ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
-  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#9b9690',v=>String(Math.round(v)));
+  _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#a9a390',v=>String(Math.round(v)));
   _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#3a9e6a',v=>Math.round(v)+'%');
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
@@ -3220,15 +3369,31 @@ function renderTrends(){
 }
 
 // ═══ WIP HUB ═════════════════════════════════════════════
-let wipView='all'; // 'all' | 'attn'
+// Two filter rows, not three. The handoff drew Age, Schedule and Status as
+// three parallel rows, but Schedule and Status are one hierarchy rather than
+// two dimensions: wipQueueStatus() reads the same wipSchedDate field that
+// schedStatus() does, returns Scheduled and Past due for the same two cases,
+// and then SUBDIVIDES the third. On live data that is Scheduled 55, Past due
+// 1, Unscheduled 57 against chips of 37+2+7+5+6 = 57 — exact, and exact by
+// construction, not coincidence. ANDing the two rows would have returned zero
+// rows for most pairs (Scheduled + Radicl scheduling can never intersect).
+//
+// So there is one status bar carrying the full vocabulary in schedule order,
+// and the coarse "everything unscheduled" cut survives as a group toggle on
+// the legend rather than as a second row.
+let wipView='all'; // 'all' | 'openrs'
 function setWipView(v){ wipView=v; renderAgingWIP(); }
 function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
-function selectWipStatus(s,ev){ ev.stopPropagation(); wipStatusSel=wipStatusSel===s?null:s; renderAgingWIP(); }
 function toggleWipQs(k){ if(wipQsSel.has(k)){wipQsSel.delete(k);}else{wipQsSel.add(k);} renderAgingWIP(); }
-// Clears only the status chips — the age bar above them is a separate control
-// and clearing it from here would undo a selection the user can still see.
-function clearWipQs(){ wipQsSel.clear(); renderAgingWIP(); }
-function clearWipAgeFilter(){ wipAgeSel.clear(); wipStatusSel=null; wipQsSel.clear(); renderAgingWIP(); }
+// The five waiting-reasons as one click. Selecting all of them is identical to
+// the old Schedule row's "Unscheduled", so the coarse cut costs nothing.
+function toggleWipUnscheduled(keys){
+  const ks=keys.split(',');
+  const allOn=ks.every(k=>wipQsSel.has(k));
+  ks.forEach(k=>allOn?wipQsSel.delete(k):wipQsSel.add(k));
+  renderAgingWIP();
+}
+function clearWipFilters(){ wipAgeSel.clear(); wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
   if(fbEl) fbEl.innerHTML=buildFBar('wip');
@@ -3236,12 +3401,6 @@ function renderAgingWIP(){
   // Anchor all WIP ages and schedule status to the export date, not the wall
   // clock — a stale export otherwise inflates every age and mislabels schedules.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  // Needs-attention groups keyed by project (task_id or id)
-  const attnMap={};
-  attnItems().forEach(it=>{ const k=it.r.task_id||it.r.id; if(!attnMap[k]) attnMap[k]={texts:[],keys:[]}; attnMap[k].texts.push(it.text); attnMap[k].keys.push(attnKey(it)); });
-  // Counted within the page's filter, so the toggle's badge matches the rows it
-  // produces rather than advertising the national figure.
-  const attnTotal=wipFiltered().filter(r=>attnMap[r.task_id||r.id]).length;
   const wipSchedDate=r=>isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
@@ -3260,17 +3419,28 @@ function renderAgingWIP(){
   // The queue-status vocabulary. One entry per pill, shared by the status
   // column and the counts strip so a colour or wording change lands on both.
   // `sort` is the table's status sort order, not display order.
+  // `bar` is the solid fill in the status bar, `bg`/`fg` the badge and chip.
+  // Scheduled and Past due carry the only judgement here (blue = neutral
+  // state, red = over threshold); the five waiting-reasons are categories of
+  // waiting, not severities, so they stay unsaturated except where the reason
+  // itself is the problem. Awaiting rep takes slate rather than the Scheduled
+  // blue so two different statuses never share a fill.
+  // `sort` is the table's status sort order, and QS_ORDER is schedule order:
+  // booked, overdue, then everything still waiting.
   const QS={
-    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eff6ff',       fg:'#3b82f6',     sort:0},
-    pastdue:     {key:'pastdue',     label:'Past due',          bg:'var(--red-bg)', fg:'var(--red)',  sort:1},
-    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#f3efff',       fg:'#7c3aed',     sort:3},
-    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'var(--amber-bg)',fg:'var(--amber)',sort:4},
-    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#edf3f8',       fg:'#4f7fae',     sort:5},
-    likelyCancel:{key:'likelyCancel',label:'Likely Cancel',     bg:'#fef3e7',       fg:'#b45309',     sort:6},
-    new:         {key:'new',         label:'New',               bg:'#ffffff',       fg:'var(--muted)',sort:7},
-    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f1f1ee',       fg:'var(--muted)',sort:8},
+    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#4f7fae', sort:0},
+    pastdue:     {key:'pastdue',     label:'Past due',          bg:'#f9e7e4', fg:'#b3402e',     bar:'#b3402e', sort:1},
+    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
+    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
+    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
+    likelyCancel:{key:'likelyCancel',label:'Likely cancel',     bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:6},
+    new:         {key:'new',         label:'New',               bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:7},
+    unscheduled: {key:'unscheduled', label:'Unscheduled',       bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:8},
   };
   const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+  // Everything after Past due is a survey with no booking — the old Schedule
+  // row's "Unscheduled" segment, reachable in one click from the legend.
+  const QS_UNSCHED=QS_ORDER.slice(2);
 
   // Queue status: what is this survey waiting on?
   // Returns one of QS below, rendered as a pill in the WIP table status column
@@ -3309,33 +3479,39 @@ function renderAgingWIP(){
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
     qsSort:wipQueueStatus(r).sort,
   }));
-  if(wipView==='attn') wip=wip.filter(r=>attnMap[r.task_id||r.id]);
+  // The view is the outermost cut: every count on the page — rail, bands,
+  // chips, footer — is computed within it, not against the national queue.
+  const inView=r=>wipView==='openrs'?isOpenResurvey(r):true;
+  wip=wip.filter(inView);
+  const viewPool=wip;
+
   const PA_MINS=[0,5,15,30,60,90];
   const PA_MAXS=[5,15,30,60,90,Infinity];
-  const schedStatus=r=>{const s=wipSchedDate(r);if(!s)return'unscheduled';return s>=today?'scheduled':'pastdue'};
-  if(wipAgeSel.size>0)
-    wip=wip.filter(r=>r.projectAge!=null&&[...wipAgeSel].some(i=>r.projectAge>=PA_MINS[i]&&r.projectAge<PA_MAXS[i]));
-  if(wipStatusSel) wip=wip.filter(r=>schedStatus(r)===wipStatusSel);
+  const inAgeBand=(age,i)=>age!=null&&age>=PA_MINS[i]&&age<PA_MAXS[i];
 
-  // Queue status is a second-degree filter: it narrows whatever the age bar
-  // and schedule status have already selected. Counting the whole open queue
-  // instead advertised statuses that aren't in the current selection — "<5d"
-  // plus "Missing UB · 2" filtered down to no rows at all.
-  const qsPool=wip;
+  // The two rows narrow each other, so each row's counts are computed against
+  // the OTHER row's selection: the age bands show what the chosen statuses
+  // contain, and the chips show what the chosen bands contain. Counting the
+  // whole queue instead advertised combinations that filter to nothing —
+  // "<5d" alongside "Missing UB · 2" produced an empty table.
+  const ageOK=r=>wipAgeSel.size===0||[...wipAgeSel].some(i=>inAgeBand(r.projectAge,i));
+  const qsOK=r=>wipQsSel.size===0||wipQsSel.has(wipQueueStatus(r).key);
+
+  const agePool=viewPool.filter(qsOK);
+  const qsPool=viewPool.filter(ageOK);
   const qsCounts={}; qsPool.forEach(r=>{const k=wipQueueStatus(r).key;qsCounts[k]=(qsCounts[k]||0)+1;});
-  const qsShown=QS_ORDER.filter(k=>qsCounts[k]);
   // A status that just left the selection takes its chip with it, so drop the
   // selection too rather than stranding the table on an unreachable filter.
   [...wipQsSel].forEach(k=>{ if(!qsCounts[k]) wipQsSel.delete(k); });
-  const qsNarrowed=wipAgeSel.size>0||wipStatusSel;
-  if(wipQsSel.size>0) wip=wip.filter(r=>wipQsSel.has(wipQueueStatus(r).key));
+  wip=wip.filter(r=>ageOK(r)&&qsOK(r));
   // Filtered summary stats (for strip below age bar). "Total" here means the
   // page's own filter, which is what the age bar and KPI cards now show too.
-  const _totalWipCount=wipFiltered().length;
+  // Selection summary, shown under the bars. The count sat in the table footer
+  // where it was a page down from the controls that change it — it belongs
+  // with the bars, next to the two figures that describe what was selected.
   const selDays=wip.map(r=>r.daysOpen).filter(x=>x>=0);
   const selAvg=selDays.length?Math.round(selDays.reduce((a,b)=>a+b,0)/selDays.length*10)/10:null;
   const selPct=wip.length?Math.round(wip.filter(r=>r.projectedCt<=S.targetAvg).length/wip.length*100):null;
-  const selFiltered=wip.length<_totalWipCount;
 
   wip.sort((a,b)=>{
     const sk=wipSortKey==='last_reviewed_date'?'last_reviewed_ts':wipSortKey==='scheduled'?'schedEff':wipSortKey;
@@ -3358,38 +3534,46 @@ function renderAgingWIP(){
     note:r.last_comment||'',
   }));
 
-  // Stats over the filtered queue, before the age-band / schedule / status
-  // chips narrow it further — those three are selections within this set.
-  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r)}));
+  // ── Stat rail ─────────────────────────────────────────────────────────
+  // The whole open queue under the page filter, NOT the view: the rail is the
+  // overview, the view toggle is a lens on the table beneath it. "Open
+  // resurveys" doubles as the pointer to that view.
+  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
   const wipUnfilteredCount=rows.filter(r=>isWIP(r)).length;
   const wipDimFiltered=allWip.length!==wipUnfilteredCount;
-  const allAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
-  const avgAge=allAges.length?Math.round(allAges.reduce((a,b)=>a+b,0)/allAges.length*10)/10:null;
-  const sortedAges=[...allAges].sort((a,b)=>a-b);
-  const medAge=sortedAges.length?(sortedAges.length%2?sortedAges[Math.floor(sortedAges.length/2)]:Math.round((sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2*10)/10):null;
+  const totalWip=allWip.length;
+  // Mean Days Open in SS. Past due held this slot and was the weakest cell on
+  // the rail: it reads 0 or 1 most days, and it is one click away as a status
+  // chip directly below. Avg age describes the whole queue instead.
+  const railAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
+  const avgAge=railAges.length?Math.round(railAges.reduce((a,b)=>a+b,0)/railAges.length*10)/10:null;
+  // Project age, the same clock the age bar runs on — not Days Open in SS.
+  // The two answer different questions and the bar directly below this rail is
+  // the one a reader will check the number against.
+  const railOver30=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=30).length;
+  const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
+  const railOpenRs=wipScoped().filter(isOpenResurvey).length;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
   // Both sides of the ratio come from the same filtered population.
   const pipeRatio=ssRatioLive(wipScoped(),today);
-  const pctOnTrack=allWip.length?Math.round(allWip.filter(r=>r.projectedCt<=S.targetAvg).length/allWip.length*100):null;
-  const totalWip=allWip.length;
 
   const agePill=(d,inGrace)=>{
-    // Rep still owns it today — the SS clock hasn't started.
-    if(inGrace) return '<span class="pill" style="background:#f1f1ee;color:var(--muted);font-style:italic;" title="Rep has until tomorrow before Site Survey starts working it">Rep day</span>';
+    // Rep still owns it today — the SS clock hasn't started. The handoff's
+    // table spec has no slot for this, but the grace day is a real part of
+    // ssDaysOpen(); printing "0d" instead would misreport whose clock it is.
+    if(inGrace) return '<span class="pill" style="background:#f3f1ea;color:var(--muted);font-style:italic;" title="Rep has until tomorrow before Site Survey starts working it">Rep day</span>';
     if(d==null) return '<span class="pna">—</span>';
-    if(d<=S.targetAvg) return `<span class="pill pg">${Math.round(d)}d</span>`;
-    if(d<=7)           return `<span class="pill pam">${Math.round(d)}d</span>`;
-    return                     `<span class="pill pr">${Math.round(d)}d</span>`;
+    const c=d<=S.targetAvg?'var(--green)':d<=7?'var(--amber)':'var(--red)';
+    return `<span style="font-weight:700;color:${c};">${Math.round(d)}d</span>`;
   };
-  const ageRowBg=d=>d>7?'background:#fff5f5;':d>S.targetAvg?'background:#fffbeb;':'';
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
   function detailCell(r){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
-    return `<td colspan="9" style="padding:0;">
+    return `<td colspan="8" style="padding:0;">
       <div class="wip-detail-clip"><div class="wip-detail-inner">
         <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
 
@@ -3444,135 +3628,195 @@ function renderAgingWIP(){
     </td>`;
   }
 
+  // Reviewer surname-initialled onto the review date: "Aug 14 · S. Mertz".
+  // Two columns became one — the time of day never changed a decision here,
+  // and the width goes to Contact and Region, which is how a row is identified.
+  const reviewedBy=n=>{
+    const p=(n||'').trim().split(/\s+/).filter(Boolean);
+    return p.length<2?(p[0]||''):p[0][0]+'. '+p[p.length-1];
+  };
   const tableRows=wip.map((r,i)=>{
-    const ag=wipView==='attn'?attnMap[r.task_id||r.id]:null;
+    const qs=wipQueueStatus(r);
+    const by=reviewedBy(r.reviewed_by);
+    // Rows are white. The old page tinted at-risk rows amber and red, but the
+    // Days Open figure and the status badge already carry that signal twice —
+    // a third copy made the whole table look uniformly alarmed.
     return `
-    <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)" style="${ageRowBg(r.daysOpen)}">
-      <td><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong>${ag?`<div class="wip-attn-reason"><span class="attn-reason-text">${ag.texts.filter(Boolean).join(' · ')||'overdue'}</span><button class="attn-dismiss" onclick="event.stopPropagation();dismissAttn('${ag.keys.join(',')}')">Reviewed ✓</button></div>`:''}</td>
-      <td style="color:var(--muted);">${esc(r.contact)||'—'}</td>
-      <td><span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}</td>
-      ${(()=>{const qs=wipQueueStatus(r);return`<td style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>`;})()}
-      <td class="r" style="color:var(--muted);">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'—'}</td>
-      <td style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDate(r.last_reviewed_date):'No review'}</td>
-      <td style="font-size:12px;color:var(--muted);">${esc(r.reviewed_by)||'<span style="color:var(--faint);">—</span>'}</td>
-      <td class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
-      <td class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
+    <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)">
+      <td data-c="Project"><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong></td>
+      <td data-c="Contact" style="color:var(--muted);">${esc(r.contact)||'—'}</td>
+      <td data-c="Region">${r.region?`<span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}`:'<span class="pna">—</span>'}</td>
+      <td data-c="Status" style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>
+      <td data-c="Scheduled" class="r" style="${qs.key==='pastdue'?'color:var(--red);':'color:var(--muted);'}">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'<span class="pna">—</span>'}</td>
+      <td data-c="Last reviewed" style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDay(r.last_reviewed_date)+(by?` · ${esc(by)}`:''):'No review'}</td>
+      <td data-c="Proj age" class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
+      <td data-c="Open in SS" class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:var(--amber);margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
 
   document.getElementById('ol-content').innerHTML=`
-    <div class="kg kg5" style="margin-bottom:14px;">
-      <div class="kcard"><div class="klabel">Open WIP${kinfo(TIP.wip)}</div><div class="kval">${totalWip}</div><div class="ksub">${wipDimFiltered?'of '+wipUnfilteredCount+' open · current filter':'All open surveys'}</div></div>
-      <div class="kcard"><div class="klabel">Avg age${kinfo(TIP.avgAge)}</div><div class="kval ${avgAge!=null?(avgAge<=S.targetAvg?'kg-c':avgAge<=7?'ka-c':'kr-c'):''}">${avgAge!=null?avgAge+'d':'—'}</div><div class="ksub">Mean days open in SS</div></div>
-      <div class="kcard"><div class="klabel">Median age${kinfo(TIP.medAge)}</div><div class="kval ${medAge!=null?(medAge<=S.targetMedian?'kg-c':medAge<=S.targetAvg?'ka-c':'kr-c'):''}">${medAge!=null?medAge+'d':'—'}</div><div class="ksub">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard"><div class="klabel">On track &le;${S.targetAvg}d${kinfo(TIP.onTrackWip())}</div><div class="kval ${pctOnTrack!=null?(pctOnTrack>=75?'kg-c':pctOnTrack>=50?'ka-c':'kr-c'):''}">${pctOnTrack!=null?pctOnTrack+'%':'—'}</div><div class="ksub">${allWip.filter(r=>r.projectedCt<=S.targetAvg).length} of ${totalWip}</div></div>
+    <div class="wip-rail">
+      <div class="wip-rail-cell">
+        <div class="klabel">Open now${kinfo(TIP.wip)}</div>
+        <div class="wip-rail-val">${totalWip}${wipDimFiltered?`<span class="wip-rail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
+        <div class="wip-rail-val" style="color:${avgAge==null?'var(--text)':avgAge<=S.targetAvg?'var(--green)':avgAge<=7?'var(--amber)':'var(--red)'};">${avgAge!=null?avgAge+'d':'—'}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Over 30 days${kinfo(TIP.projAge)}</div>
+        <div class="wip-rail-val" style="color:${railOver30?'var(--amber)':'var(--text)'};">${railOver30}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Unscheduled</div>
+        <div class="wip-rail-val">${railUnsched}</div>
+      </div>
+      <div class="wip-rail-cell">
+        <div class="klabel">Open resurveys${kinfo(TIP.rsOpen)}</div>
+        <div class="wip-rail-val" style="color:${railOpenRs?'var(--amber)':'var(--text)'};">${railOpenRs}</div>
+      </div>
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
         const band=ssRatioBand(pipeRatio);
-        const cls=band==='good'?'kg-c':band==='bad'?'kr-c':'';
-        return `<div class="kcard"><div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div><div class="kval ${cls}">${shown!=null?shown.toFixed(1)+'wk':'—'}</div><div class="ksub">of backlog at recent pace</div></div>`;})()}
+        const c=band==='good'?'var(--green)':band==='bad'?'var(--red)':'var(--text)';
+        return `<div class="wip-rail-cell">
+        <div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div>
+        <div class="wip-rail-val" style="color:${c};">${shown!=null?shown.toFixed(1)+'wk':'—'}</div>
+      </div>`;})()}
     </div>
-    ${(()=>{
-      const PA_BANDS=[
-        {label:'<5d', max:5, color:'#7ec488'},
-        {label:'5–15d', max:15, color:'#4a9e6a'},
-        {label:'15–30d', max:30, color:'#d4a843'},
-        {label:'30–60d', max:60, color:'#d97535'},
-        {label:'60–90d', max:90, color:'#c05252'},
-        {label:'>90d', max:Infinity, color:'#7a2e2e'},
-      ];
-      const STATUS_COLORS={scheduled:'#3b82f6',pastdue:'#f87171',unscheduled:'#9ca3af'};
-      const STATUS_LABELS={scheduled:'Scheduled',pastdue:'Past due',unscheduled:'Unscheduled'};
-      // Same filtered queue the table and the KPI cards read, so a band's count
-      // is the number of rows clicking it actually produces.
-      const paWip=wipFiltered().filter(r=>r.start).map(r=>{
-        const age=dDiff(r.start,today)??0;
-        const s=isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
-        const status=!s?'unscheduled':s>=today?'scheduled':'pastdue';
-        return{age,status};
-      });
-      const counts=PA_BANDS.map((b,i)=>paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max)).length);
-      const total=counts.reduce((a,b)=>a+b,0)||1;
-      const anySelected=wipAgeSel.size>0;
-      const singleSel=wipAgeSel.size===1?[...wipAgeSel][0]:null;
-      const segs=PA_BANDS.map((b,i)=>{
-        if(!counts[i]) return '';
-        const sel=wipAgeSel.has(i);
-        const dim=anySelected&&!sel;
-        const bandItems=paWip.filter(d=>d.age<b.max&&(i===0||d.age>=PA_BANDS[i-1].max));
-        const subCounts={scheduled:bandItems.filter(d=>d.status==='scheduled').length,pastdue:bandItems.filter(d=>d.status==='pastdue').length,unscheduled:bandItems.filter(d=>d.status==='unscheduled').length};
-        const subBar=`<div style="display:flex;gap:1px;height:10px;margin-top:2px;">${
-          ['scheduled','pastdue','unscheduled'].map(s=>subCounts[s]?`<div onclick="selectWipStatus('${s}',event)" title="${STATUS_LABELS[s]}: ${subCounts[s]}" style="flex:${subCounts[s]};background:${STATUS_COLORS[s]};border-radius:2px;cursor:pointer;${wipStatusSel===s?'outline:2px solid #333;outline-offset:-1px;':wipStatusSel?'opacity:.3;':''}transition:opacity .15s;"></div>`:'').join('')
-        }</div>`;
-        return `<div onclick="toggleWipAgeBand(${i})" title="${b.label}: ${counts[i]}" style="flex:${counts[i]};display:flex;flex-direction:column;cursor:pointer;min-width:4px;opacity:${dim?.25:1};transition:opacity .2s;">
-          <div class="bar-fill-anim" style="height:20px;background:${b.color};border-radius:2px;${sel?'outline:2px solid #444;outline-offset:-2px;':''}"></div>
-          ${subBar}
-        </div>`;
-      }).join('');
-      const legend=PA_BANDS.map((b,i)=>counts[i]?`
-        <span onclick="toggleWipAgeBand(${i})" style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:11px;color:var(--muted);cursor:pointer;opacity:${anySelected&&!wipAgeSel.has(i)?.35:1};transition:opacity .15s;">
-          <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0;${wipAgeSel.has(i)?'outline:1px solid #666;outline-offset:1px;':''}"></span>
-          ${b.label} <strong>${counts[i]}</strong>
-        </span>`:'').join('');
-      const subLegend=(()=>{
-        const visItems=anySelected
-          ? paWip.filter(d=>[...wipAgeSel].some(i=>d.age<PA_BANDS[i].max&&(i===0||d.age>=PA_BANDS[i-1].max)))
-          : paWip;
-        return `<span style="margin-left:8px;padding-left:8px;border-left:1px solid var(--border);display:inline-flex;align-items:center;gap:10px;">${
-          ['scheduled','pastdue','unscheduled'].map(s=>{
-            const n=visItems.filter(d=>d.status===s).length;
-            return n?`<span onclick="selectWipStatus('${s}',event)" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;opacity:${wipStatusSel&&wipStatusSel!==s?.35:1};color:var(--muted);transition:opacity .15s;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${STATUS_COLORS[s]};flex-shrink:0;"></span>
-              ${STATUS_LABELS[s]} <strong>${n}</strong></span>`:'';
-          }).join('')
-        }</span>`;
-      })();
-      const filterLabel=(anySelected||wipStatusSel)?[[...wipAgeSel].map(i=>PA_BANDS[i].label).join(', '),wipStatusSel?STATUS_LABELS[wipStatusSel]:''].filter(Boolean).join(' · '):'';
-      const clearBtn=(anySelected||wipStatusSel)?`<button onclick="clearWipAgeFilter()" style="margin-left:auto;font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;">Clear filter ×</button>`:'';
-      return `<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">WIP by Age &amp; Schedule Status</div>
-        <div style="display:flex;gap:2px;align-items:flex-start;margin-bottom:8px;">${segs}</div>
-        <div style="display:flex;flex-wrap:wrap;align-items:center;">${legend}${subLegend}${clearBtn}</div>
-        ${selFiltered?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:20px;font-size:12px;color:var(--muted);">
-          <span><strong style="color:var(--text);font-size:14px;">${wip.length}</strong> selected</span>
-          ${selAvg!=null?`<span>avg <strong style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};font-size:14px;">${selAvg}d</strong></span>`:''}
-          ${selPct!=null?`<span><strong style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};font-size:14px;">${selPct}%</strong> on track</span>`:''}
-          <span style="color:var(--faint);">of ${_totalWipCount} total</span>
-        </div>`:''}
-      </div>`;
-    })()}
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">WIP Queue</div><div class="ssub">Click any row to expand account &amp; review details · Green &le;${S.targetAvg}d · Amber &gt;${S.targetAvg}d · Red &gt;7d · RS = open resurvey</div></div>
-        <div class="toggle-group">
-          <button class="tgl-btn${wipView==='all'?' active':''}" onclick="setWipView('all')">All</button>
-          <button class="tgl-btn${wipView==='attn'?' active':''}" onclick="setWipView('attn')">Needs attention${attnTotal?' · '+attnTotal:''}</button>
+
+    <div class="sec wip-queue">
+      <div class="wip-queue-head">
+        <div>
+          <div class="wip-queue-title">WIP queue</div>
+        </div>
+        <div class="wip-viewtgl">
+          <button class="${wipView==='all'?'on':''}" onclick="setWipView('all')">All</button>
+          <button class="${wipView==='openrs'?'on':''}" onclick="setWipView('openrs')">Open resurveys${railOpenRs?' · '+railOpenRs:''}</button>
         </div>
       </div>
-      ${qsShown.length?`<div class="qs-strip">
-        ${qsShown.map(k=>{const q=QS[k],sel=wipQsSel.has(k);return `<button class="qs-chip${sel?' on':''}" aria-pressed="${sel}" onclick="toggleWipQs('${k}')" style="background:${q.bg};color:${q.fg};">${q.label}<span class="qs-n">${qsCounts[k]}</span></button>`;}).join('')}
-        <span class="qs-total">${qsPool.length} ${qsNarrowed?'in selection':'open'}</span>
-        ${wipQsSel.size?`<button class="qs-clear" onclick="clearWipQs()">Clear ×</button>`:''}
-      </div>`:''}
-      ${wip.length?`<div class="wip-wrap"><table>
+
+      ${(()=>{
+      const PA_BANDS=[
+        {label:'<5d',    color:'#7dc0a0'},
+        {label:'5–15d',  color:'#3f9d6c'},
+        {label:'15–30d', color:'#c0912e'},
+        {label:'30–60d', color:'#d0725c'},
+        {label:'60–90d', color:'#b3402e'},
+        {label:'>90d',   color:'#7c2b1f'},
+      ];
+      const ageCounts=PA_BANDS.map((b,i)=>agePool.filter(r=>inAgeBand(r.projectAge,i)).length);
+      // An age band that empties under the current status selection takes its
+      // segment with it — drop the selection rather than stranding the table.
+      [...wipAgeSel].forEach(i=>{ if(!ageCounts[i]) wipAgeSel.delete(i); });
+
+      // Both bars share one fixed track width so they end at the same x. With a
+      // flexed track the two ended in different places because their legends
+      // are different widths, which reads as a bug rather than as data.
+      const bar=(items,sel,onclick)=>{
+        const shown=items.filter(it=>it.n);
+        const any=sel.size>0;
+        return `<div class="wip-bar">${shown.map((it,ix)=>{
+          const on=sel.has(it.key);
+          const r0=ix===0?'3px':'0', r1=ix===shown.length-1?'3px':'0';
+          return `<div class="wip-bar-seg${any&&!on?' dim':''}${on?' on':''}" role="button" tabindex="0"
+            aria-pressed="${on}" aria-label="${esc(it.label)}: ${it.n}" title="${esc(it.label)}: ${it.n}"
+            onclick="${onclick(it)}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${onclick(it)}}"
+            style="flex:${it.n};background:${it.color};border-radius:${r0} ${r1} ${r1} ${r0};"></div>`;
+        }).join('')}</div>`;
+      };
+      // A bracket under the run of unscheduled segments, spanning exactly them.
+      // The grouping lives on the bar rather than in the legend: a box around
+      // five of eight legend chips made one wrapped line look like a different
+      // kind of thing, and the bracket also shows HOW MUCH of the queue is
+      // unscheduled, which a legend box cannot.
+      //
+      // Aligned by calc rather than by a matching flex row, because the bar's
+      // 2px gaps are fixed while its segments are proportional: the bracket
+      // starts after N whole gaps and spans its own internal ones.
+      const bracket=(shown,items,sel,onclick,label)=>{
+        if(!items.length||!shown.length) return '';
+        const total=shown.reduce((t,it)=>t+it.n,0)||1;
+        const keys=new Set(items.map(it=>it.key));
+        const grpSegs=shown.filter(it=>keys.has(it.key));
+        if(!grpSegs.length) return '';
+        const before=shown.slice(0,shown.findIndex(it=>keys.has(it.key)));
+        const G=(shown.length-1)*2, nB=before.length, nG=grpSegs.length;
+        const share=a=>a.reduce((t,it)=>t+it.n,0)/total;
+        const on=grpSegs.every(it=>sel.has(it.key));
+        const n=grpSegs.reduce((t,it)=>t+it.n,0);
+        return `<div class="wip-brk-row"><button class="wip-brk${on?' on':''}" aria-pressed="${on}"
+          title="Select every survey with no booking" aria-label="${esc(label)}: ${n}"
+          onclick="${onclick(grpSegs.map(it=>it.key))}"
+          style="margin-left:calc(${share(before)} * (100% - ${G}px) + ${nB*2}px);width:calc(${share(grpSegs)} * (100% - ${G}px) + ${(nG-1)*2}px);"><span class="wip-brk-line"></span><span class="wip-brk-lbl">${esc(label)}</span></button></div>`;
+      };
+      const swatch=(c,on)=>`<span class="wip-leg-sw${on?' on':''}" style="background:${c};"></span>`;
+
+      const ageItems=PA_BANDS.map((b,i)=>({...b,key:i,n:ageCounts[i]}));
+      const ageBar=bar(ageItems,wipAgeSel,it=>`toggleWipAgeBand(${it.key})`);
+      const ageLeg=ageItems.filter(it=>it.n).map(it=>{
+        const on=wipAgeSel.has(it.key);
+        return `<button class="wip-leg${wipAgeSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipAgeBand(${it.key})">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
+      }).join('');
+
+      const qsItems=QS_ORDER.filter(k=>qsCounts[k]).map(k=>({...QS[k],color:QS[k].bar,n:qsCounts[k]}));
+      const qsBar=bar(qsItems,wipQsSel,it=>`toggleWipQs('${it.key}')`);
+      // The legend splits after Past due: everything beyond it is a survey with
+      // no booking, and the group header selects all five at once — the coarse
+      // cut the old Schedule row provided, without a second row to AND against.
+      const legFor=it=>{
+        const on=wipQsSel.has(it.key);
+        return `<button class="wip-leg${wipQsSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipQs('${it.key}')">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
+      };
+      const qsLeg=qsItems.map(legFor).join('');
+      const unschedItems=qsItems.filter(it=>QS_UNSCHED.includes(it.key));
+      const qsShownSegs=qsItems.filter(it=>it.n);
+      const qsBrk=bracket(qsShownSegs,unschedItems,wipQsSel,ks=>`toggleWipUnscheduled('${ks.join(',')}')`,'Unscheduled');
+
+      const anyFilter=wipAgeSel.size>0||wipQsSel.size>0;
+      return `<div class="wip-filters">
+        <div class="wip-frow">
+          <div class="wip-flabel">Age</div>
+          ${ageBar}
+          <div class="wip-legs">${ageLeg}</div>
+        </div>
+        <div class="wip-frow wip-frow-brk">
+          <div class="wip-flabel">Status</div>
+          <div class="wip-bar-stack">${qsBar}${qsBrk}</div>
+          <div class="wip-legs">${qsLeg}</div>
+        </div>
+        ${anyFilter?`<div class="wip-frow wip-frow-hint">
+          <div class="wip-flabel"></div>
+          <div class="wip-fhint"><button class="wip-fclear" onclick="clearWipFilters()">Clear filters ×</button></div>
+        </div>`:''}
+        <div class="wip-sel">
+          <span><b>${wip.length}</b> ${anyFilter?'selected':(wipView==='openrs'?'open resurveys':'open')}</span>
+          ${selAvg!=null?`<span>avg <b style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};">${selAvg}d</b></span>`:''}
+          ${selPct!=null?`<span><b style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};">${selPct}%</b> on track &le;${S.targetAvg}d</span>`:''}
+          ${anyFilter?`<span class="wip-sel-of">of ${viewPool.length} ${wipView==='openrs'?'open resurveys':'open'}</span>`:''}
+        </div>
+      </div>`;
+      })()}
+
+      ${wip.length?`<div class="wip-wrap"><table class="wip-table">
         <thead><tr>
           <th tabindex="0" onclick="wipSortBy('project')">Project<span class="sarr ${arr('project')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('contact')">Contact<span class="sarr ${arr('contact')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('region')">Region<span class="sarr ${arr('region')}"></span></th>
           <th tabindex="0" onclick="wipSortBy('qsSort')">Status<span class="sarr ${arr('qsSort')}"></span></th>
           <th class="r" tabindex="0" onclick="wipSortBy('scheduled')">Scheduled<span class="sarr ${arr('scheduled')}"></span></th>
-          <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last Reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
-          <th tabindex="0" onclick="wipSortBy('reviewed_by')">Reviewed By<span class="sarr ${arr('reviewed_by')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="${esc(TIP.projAge)}">Proj Age<span class="sarr ${arr('projectAge')}"></span></th>
-          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="${esc(TIP.ssDaysOpen)}">Days Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
+          <th tabindex="0" onclick="wipSortBy('last_reviewed_date')">Last reviewed<span class="sarr ${arr('last_reviewed_date')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('projectAge')" title="${esc(TIP.projAge)}">Proj age<span class="sarr ${arr('projectAge')}"></span></th>
+          <th class="r" tabindex="0" onclick="wipSortBy('daysOpen')" title="${esc(TIP.ssDaysOpen)}">Open in SS<span class="sarr ${arr('daysOpen')}"></span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
-      :'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No open surveys match the current filter.</div>'}
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div class="note">Proj Age = days since Project Start Date · Days open in SS = time in Site Survey queue (resurvey req → start fallback), minus the rep grace day: when a rep takes the survey they have until the next calendar day before the SS clock starts, so this reads one day lower than Salesforce. Resurveys get no grace. · Cycle time (Spec 12744, ${S.targetAvg}d avg) is unaffected — it still runs Project Start → Survey Complete.</div>
-        ${wip.length?`<button id="wip-copy-btn" onclick="copyWipTable()" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap;margin-top:6px;" title="Copy the table as filtered and sorted">Copy table</button>`:''}
-      </div>
+      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${wipView==='openrs'?'open resurveys':'open surveys'} match the current filter.</div>`}
+
+      ${wip.length?`<div class="wip-foot">
+        <button class="wip-foot-a" onclick="copyWipTable()">Copy table</button>
+      </div>`:''}
     </div>`;
 }
 
@@ -3732,6 +3976,31 @@ function renderResurvey(){
             sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
   }).filter(d=>d.comps>0).sort((a,b)=>b.count-a.count||b.comps-a.comps);
   const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
+
+  // ── resurvey rate by group ────────────────────────────────────────────
+  // The inverse of FPY, which the table below already carries. It earns its
+  // place by being the ranked view: the table is sorted by volume and is read
+  // cell by cell, while these bars answer "who do I call" in one look. Same
+  // population, same rsGroupKey, so the two can never disagree.
+  //
+  // Banded as the mirror of fpyPill (95 / 85): under 5% green, 5–15% amber,
+  // 15%+ red. Against a 95% target most groups land red — that is the honest
+  // reading of a 15.6% national rate, not a scale problem.
+  const rateBand=v=>v<5?'var(--green)':v<15?'var(--amber)':'var(--red)';
+  const RS_CEILING=100-95;
+  // No "worst office per region" column. The handoff has one, but on this data
+  // only 2 of 28 regions contain an office clearing the 10-completion floor —
+  // the column would be blank on most rows, and filling it from n=3 would name
+  // a real org unit off noise. Grouping BY office is the default toggle state,
+  // so the panel still names something to call.
+  const RS_RATE_LIMIT=12;
+  const rateAll=regionData
+    .filter(d=>d.comps>=RS_MIN_CELL)   // same floor the table's pills use
+    .map(d=>({reg:d.reg,comps:d.comps,rate:d.count/d.comps*100}))
+    .sort((a,b)=>b.rate-a.rate);
+  const rateRows=rateAll.slice(0,RS_RATE_LIMIT);
+  const allRate=completions.length?defects.length/completions.length*100:null;
+  const rateMax=Math.max(...rateAll.map(d=>d.rate),RS_CEILING*2,1);
   const grpTgl=(v,l)=>`<button class="tgl-btn${grpKey===(v==='office'?'sales_office':'region')?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
   const cellPill=c=>c.n===0?'<span class="pna">—</span>'
     :c.n<RS_MIN_CELL?`<span class="pna-n" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
@@ -3781,52 +4050,78 @@ function renderResurvey(){
   }
 
   el.innerHTML=`
-  <div class="kg kg4">
-    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillFPYDefects()')}>
+  <div class="q-top">
+    ${(()=>{
+      const thin=completions.length<RS_MIN_CELL;
+      const c=pageFpy==null?'var(--text)':pageFpy>=95?'var(--green)':pageFpy>=85?'var(--amber)':'var(--red)';
+      const dl=(t,v,col,tip)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}</b></div>`;
+      return `<div class="sec q-hero">
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
-      ${completions.length>=RS_MIN_CELL
-        ? `<div class="kval ${fpyKCls(pageFpy)}">${pageFpy!=null?pageFpy.toFixed(1)+'%':'—'}</div>`
-        // The breakdown table below refuses to rate a cell under RS_MIN_CELL
-        // completions; the headline held itself to no such standard and would
-        // print a confident "75.0%" off n=8 under a narrow filter.
-        : `<div class="kval pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>`}
-      <div class="ksub">${defects.length} of ${completions.length} completions came back</div>
-      <div class="ktgt">${completions.length>=RS_MIN_CELL?'target 95%':'under '+RS_MIN_CELL+' completions'}</div>
-    </div>
-    <div class="kcard">
-      <div class="klabel">Cost of a resurvey${kinfo(TIP.rsPenalty)}</div>
-      <div class="kval ${penalty!=null?(penalty>=4?'kr-c':penalty>=2?'ka-c':''):''}">${penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—'}</div>
-      <div class="ksub">${cleanCt!=null?cleanCt.toFixed(1)+'d clean → '+dirtyCt.toFixed(1)+'d resurveyed':'—'}</div>
-      <div class="ktgt">against a ${S.targetAvg}d target</div>
-    </div>
-    <div class="kcard" style="cursor:pointer;" ${drillAttrs('drillOpenResurveys()')}>
-      <div class="klabel">Open now${kinfo(TIP.rsOpen)}</div>
-      <div class="kval ${openRs.length>0?'kr-c':''}">${openRs.length}</div>
-      <div class="ksub">${openRs.filter(r=>r.resurvey_scheduled).length} scheduled · ${openRs.filter(r=>!r.resurvey_scheduled).length} awaiting</div>
-      <div class="ktgt">${(()=>{const a=avg(openRs.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0));return a!=null?'avg '+a.toFixed(1)+'d open':'—';})()}</div>
-    </div>
-    <div class="kcard">
-      <div class="klabel">Resurvey cycle${kinfo(TIP.rsCycle)}</div>
-      <div class="kval">${fmtCt(avgRsCt)}</div>
-      <div class="ksub">median ${fmtCt(medRsCt)}</div>
-      <div class="ktgt">${ctVals.length} of ${defects.length} have both dates</div>
-    </div>
-  </div>
-
+      ${thin
+        ? `<div class="q-hero-val pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>
+           <div class="q-hero-say">Under ${RS_MIN_CELL} completions in range — too few to rate.</div>`
+        : `<div class="q-hero-val" style="color:${c};">${pageFpy.toFixed(1)}%</div>
+           <div class="q-hero-say">${completions.length-defects.length} of ${completions.length} completions closed without a resurvey. <b>${defects.length} defect${defects.length===1?'':'s'}.</b></div>
+           <div class="q-track"><div class="q-track-fill" style="width:${Math.max(0,Math.min(100,pageFpy))}%;background:${c};"></div><div class="q-track-tgt" style="left:95%;"></div></div>
+           <div class="q-track-ax"><span>0%</span><span>95% target</span></div>`}
+      <div class="q-dl">
+        ${dl('Cost of a resurvey',penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—',penalty!=null&&penalty>=2?'var(--red)':null,TIP.rsPenalty)}
+        ${dl('Resurvey cycle',fmtCt(avgRsCt),null,TIP.rsCycle)}
+        ${dl('Median',fmtCt(medRsCt))}
+      </div>
+      ${defects.length?`<button class="q-hero-link" onclick="drillFPYDefects()">See the ${defects.length} defect${defects.length===1?'':'s'} &rarr;</button>`:''}
+    </div>`;})()}
   ${fpyWeeks.length>2?`
-  <div class="sec">
-    <div class="shead"><div><div class="stitle">First pass yield over time${kinfo(TIP.fpyTrend)}</div>
-      <div class="ssub">By the week the survey completed</div></div></div>
+  <div class="sec q-chart">
+    <div class="shead">
+      <div><div class="stitle">Yield by completion week${kinfo(TIP.fpyTrend)}</div>
+      <div class="ssub">${rsChartMode==='bars'?`Hollow bars are younger than ${RS_MATURE_DAYS} days — their defects have not all arrived yet`:'Weeks younger than '+RS_MATURE_DAYS+' days are provisional and left out of the rolling line'}</div></div>
+      <div class="toggle-group">
+        <button class="tgl-btn${rsChartMode==='bars'?' active':''}" onclick="setRsChartMode('bars')">Bars</button>
+        <button class="tgl-btn${rsChartMode==='line'?' active':''}" onclick="setRsChartMode('line')">Trend</button>
+      </div>
+    </div>
     <div class="leg">
-      <span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
-      <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
-      <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>
+      ${rsChartMode==='bars'
+        ? `<span class="li"><span class="ld" style="background:var(--c1);"></span>Settled</span>
+           <span class="li"><span class="ld" style="background:var(--surface);border:1.5px solid var(--c1);"></span>Still landing</span>`
+        : `<span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
+           <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
+           <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>`}
       <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>95% target</span>
     </div>
     <div class="cw" style="height:210px;"><canvas id="rs-fpy"></canvas></div>
-    <div class="note">A completion keeps collecting resurveys for weeks — only 57% arrive within 7 days of the survey closing, and 1 in 7 takes more than a month. Recent weeks therefore read high until they mature, so they are drawn hollow and left out of the trend above.</div>
+  </div>`:''}
+  </div>
+
+  ${rateRows.length?`
+  <div class="sec">
+    <div class="shead">
+      <div><div class="stitle">Resurvey rate by ${grpLabel.toLowerCase()}</div>
+        <div class="ssub">Share of completions that came back · ${rateAll.length>RS_RATE_LIMIT?`worst ${RS_RATE_LIMIT} of ${rateAll.length} with `:''}${RS_MIN_CELL}+ completions</div></div>
+      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+    </div>
+    <div class="q-rate">
+      ${rateRows.map(d=>{
+        const c=rateBand(d.rate);
+        return `<div class="q-rate-row drill-tgt" ${drillAttrs(`drillResGroup('${escAttrJs(d.reg)}')`)}>
+          <div class="q-rate-name">${esc(d.reg)}</div>
+          <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(d.rate/rateMax*100,100)}%;background:${c};"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
+          <div class="q-rate-val" style="color:${c};">${d.rate.toFixed(0)}%</div>
+          <div class="q-rate-n">${d.comps}</div>
+        </div>`;
+      }).join('')}
+      ${allRate!=null?`<div class="q-rate-row q-rate-all">
+        <div class="q-rate-name">All ${grpKey==='sales_office'?'offices':'regions'}</div>
+        <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(allRate/rateMax*100,100)}%;background:var(--faint);"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
+        <div class="q-rate-val" style="color:var(--muted);">${allRate.toFixed(1)}%</div>
+        <div class="q-rate-n">${completions.length}</div>
+      </div>`:''}
+    </div>
+    <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling &mdash; the mirror of the 95% yield target</div>
   </div>`:''}
 
+  <div class="q-two">
   ${reasonRows.length?`
   <div class="sec">
     <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsReason)}</div>
@@ -3859,7 +4154,9 @@ function renderResurvey(){
       </div>`).join('')}
     </div>
     ${noAttr?`<div class="note">${noAttr} resurveys have no cause recorded, so every share above is of the ${defects.length} total rather than of the ${defects.length-noAttr} attributed ones.</div>`:''}
+    <div class="note">Attribution says who. The reason list says what to fix — it is the more useful of the two, which is why it sits on the left where reading starts.</div>
   </div>`:''}
+  </div>
 
   ${resData.length?`
   <div class="sec">
@@ -3886,8 +4183,7 @@ function renderResurvey(){
     return `
   <div class="sec">
     <div class="shead">
-      <div><div class="stitle">By ${grpLabel.toLowerCase()}</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
-      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+      <div><div class="stitle">${grpLabel} detail</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
     </div>
     <div class="xscroll"><table><thead><tr>
       <th>${grpLabel}</th>
@@ -4002,58 +4298,93 @@ function renderResurvey(){
   </div>`:''}
   `;
 
-  // ── FPY trend chart ───────────────────────────────────────────────────
+  // ── Yield by completion week ──────────────────────────────────────────
+  // Two forms behind the panel toggle. Both read the same fpyWeeks, both mark
+  // immature weeks, both draw the 95% target — they differ only in whether the
+  // trend is drawn for you (line) or left to the eye (bars).
   if(fpyWeeks.length>2){
     dc('rs-fpy');
     const cs=getComputedStyle(document.documentElement);
     const green=cs.getPropertyValue('--green').trim(), faint=cs.getPropertyValue('--faint').trim();
-    // Two lines, two jobs, so two weights AND two hues. They were both green
-    // (--green vs --c2) which differ mainly in lightness — at legend-swatch
-    // size that reads as one colour, and the legend cannot lean on line weight
-    // the way the chart can. Grey is the raw weekly noise; green is the
-    // rolling rate that carries the trend and the one to read.
+    const surface=cs.getPropertyValue('--surface').trim(), c1=cs.getPropertyValue('--c1').trim();
     const weekly=cs.getPropertyValue('--muted').trim();
-    CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
-      type:'line',
-      data:{labels:fpyWeeks.map(w=>fmtDateShort(w.wk)),datasets:[
-        {label:'Weekly',data:fpyWeeks.map(w=>w.fpy),borderColor:weekly,backgroundColor:'transparent',
-         tension:.3,borderWidth:1.25,
-         // Immature weeks are hollow and dashed: their defects have not all
-         // arrived yet, so the value is real but not yet final.
-         pointRadius:fpyWeeks.map(w=>w.n>=10?3:1.8),
-         pointBackgroundColor:fpyWeeks.map(w=>w.mature?weekly:cs.getPropertyValue('--surface').trim()),
-         pointBorderColor:fpyWeeks.map(w=>w.mature?weekly:faint),
-         segment:{borderDash:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?[4,3]:undefined,
-                  borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:weekly},
-         order:2},
-        {label:'4-week rolling',data:fpyRoll,borderColor:green,backgroundColor:'transparent',
-         tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:false,
-        onClick:(evt,els)=>{ if(!els.length) return; const w=fpyWeeks[els[0].index];
-          const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
-          openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); },
-        plugins:{legend:{display:false},
-          tooltip:{callbacks:{
-            title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
-            label:c=>{ const w=fpyWeeks[c.dataIndex];
-              if(c.datasetIndex===1) return ` 4-week rolling: ${c.parsed.y!=null?c.parsed.y.toFixed(1)+'%':'—'}`;
-              return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still maturing'}`; }
-          }}},
-        scales:{
-          x:{grid:{display:false},ticks:{color:'#9b9690',font:{size:10},maxTicksLimit:14}},
-          y:{grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#9b9690',font:{size:10},callback:v=>v+'%'},
-             suggestedMin:Math.max(0,Math.min(...fpyWeeks.map(w=>w.fpy??100))-8), suggestedMax:100}},
-      },
-      plugins:[{id:'fpyTarget',afterDatasetsDraw(ch){
-        const y=ch.scales.y.getPixelForValue(95); if(!isFinite(y)) return;
-        const {left,right}=ch.chartArea; const g=ch.ctx;
-        g.save(); g.strokeStyle='#c9542f'; g.lineWidth=1; g.setLineDash([5,4]);
-        g.beginPath(); g.moveTo(left,y); g.lineTo(right,y); g.stroke();
-        g.setLineDash([]); g.fillStyle='#c9542f'; g.font='10px -apple-system,sans-serif';
-        g.textAlign='right'; g.fillText('95% target',right-4,y-4); g.restore();
-      }}]
-    });
+    const drillWeek=i=>{ const w=fpyWeeks[i];
+      const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
+      openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); };
+    // One rule for both forms, so the target cannot drift between them.
+    const targetLine={id:'fpyTarget',afterDatasetsDraw(ch){
+      const y=ch.scales.y.getPixelForValue(95); if(!isFinite(y)) return;
+      const {left,right}=ch.chartArea; const g=ch.ctx;
+      g.save(); g.strokeStyle='#c9542f'; g.lineWidth=1; g.setLineDash([5,4]);
+      g.beginPath(); g.moveTo(left,y); g.lineTo(right,y); g.stroke();
+      g.setLineDash([]); g.fillStyle='#c9542f'; g.font='10px Archivo,-apple-system,sans-serif';
+      g.textAlign='right'; g.fillText('95% target',right-4,y-4); g.restore();
+    }};
+    const yScale=rsChartMode==='bars'
+      ? {beginAtZero:true,max:100,grid:{color:'rgba(80,65,40,.06)'},
+         ticks:{color:'#a9a390',font:{size:10},stepSize:20,callback:v=>v+'%'}}
+      : {grid:{color:'rgba(80,65,40,.06)'},ticks:{color:'#a9a390',font:{size:10},callback:v=>v+'%'},
+         suggestedMin:Math.max(0,Math.min(...fpyWeeks.map(w=>w.fpy??100))-8), suggestedMax:100};
+    const xScale={grid:{display:false},ticks:{color:'#a9a390',font:{size:10},maxTicksLimit:14}};
+    const labels=fpyWeeks.map(w=>fmtDateShort(w.wk));
+
+    if(rsChartMode==='bars'){
+      // Immature weeks draw hollow. The convention is load-bearing: defects
+      // keep arriving for weeks, so a recent bar reads high until it settles
+      // and must not be mistaken for improvement.
+      CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
+        type:'bar',
+        data:{labels,datasets:[{
+          label:'Yield',
+          data:fpyWeeks.map(w=>w.fpy),
+          backgroundColor:fpyWeeks.map(w=>w.mature?c1:surface),
+          borderColor:c1,
+          borderWidth:fpyWeeks.map(w=>w.mature?0:1.5),
+          borderRadius:2, borderSkipped:'bottom', maxBarThickness:38,
+        }]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{
+              title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
+              label:c=>{ const w=fpyWeeks[c.dataIndex];
+                return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still landing'}`; }
+            }}},
+          scales:{x:xScale,y:yScale}},
+        plugins:[targetLine]
+      });
+    } else {
+      // Two lines, two jobs, so two weights AND two hues. They were both green
+      // (--green vs --c2) which differ mainly in lightness — at legend-swatch
+      // size that reads as one colour. Grey is the raw weekly noise; green is
+      // the rolling rate that carries the trend and the one to read.
+      CH['rs-fpy']=new Chart(document.getElementById('rs-fpy'),{
+        type:'line',
+        data:{labels,datasets:[
+          {label:'Weekly',data:fpyWeeks.map(w=>w.fpy),borderColor:weekly,backgroundColor:'transparent',
+           tension:.3,borderWidth:1.25,
+           pointRadius:fpyWeeks.map(w=>w.n>=10?3:1.8),
+           pointBackgroundColor:fpyWeeks.map(w=>w.mature?weekly:surface),
+           pointBorderColor:fpyWeeks.map(w=>w.mature?weekly:faint),
+           segment:{borderDash:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?[4,3]:undefined,
+                    borderColor:c=>fpyWeeks[c.p1DataIndex]&&!fpyWeeks[c.p1DataIndex].mature?faint:weekly},
+           order:2},
+          {label:'4-week rolling',data:fpyRoll,borderColor:green,backgroundColor:'transparent',
+           tension:.35,borderWidth:3,pointRadius:0,spanGaps:false,order:1},
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,animation:false,
+          onClick:(evt,els)=>{ if(els.length) drillWeek(els[0].index); },
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{
+              title:c=>'Week of '+fmtDateShort(fpyWeeks[c[0].dataIndex].wk),
+              label:c=>{ const w=fpyWeeks[c.dataIndex];
+                if(c.datasetIndex===1) return ` 4-week rolling: ${c.parsed.y!=null?c.parsed.y.toFixed(1)+'%':'—'}`;
+                return ` ${w.fpy.toFixed(1)}% · ${w.d} of ${w.n} came back${w.mature?'':' · still maturing'}`; }
+            }}},
+          scales:{x:xScale,y:yScale}},
+        plugins:[targetLine]
+      });
+    }
   }
 }
 
@@ -4768,7 +5099,7 @@ window.addEventListener('resize',()=>{
 function renderSettings(){
   // Every page the nav can reach, so the landing-page setting can name any of
   // them. Map was missing, which made it the one page you could not start on.
-  const allPages = [{v:'week',l:'Current'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'wip',l:'WIP'},{v:'resurvey',l:'Resurveys'},{v:'map',l:'Map'}];
+  const allPages = [{v:'week',l:'Current'},{v:'wip',l:'WIP'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'resurvey',l:'Quality'},{v:'map',l:'Map'}];
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
 
   document.getElementById('settings-content').innerHTML=`
