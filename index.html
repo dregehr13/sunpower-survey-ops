@@ -171,7 +171,6 @@ tr:hover td{background:var(--bg);}
 .sarr-up::after{content:"↑";opacity:.8;}
 .sarr-dn::after{content:"↓";opacity:.8;}
 .sarr-no::after{content:"↕";}
-.dim-row td{opacity:.45;}
 
 /* CHART */
 .cw{position:relative;width:100%;}
@@ -428,13 +427,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .tgl-btn:hover:not(.active){background:var(--bg);}
 
 /* RESOURCE COMPARISON CARDS */
-.res-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
-.res-card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 16px;box-shadow:var(--shadow);}
-.res-card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;}
-.res-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;}
-.res-card-count{font-size:10px;color:var(--faint);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-.res-stats{display:flex;flex-direction:column;gap:7px;}
-.res-stat-row{display:flex;align-items:center;justify-content:space-between;}
 .rlabel{font-size:10px;color:var(--muted);}
 .rval{font-size:15px;font-weight:600;}
 
@@ -558,9 +550,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .ekcard.drill-tgt{position:relative;}
 .ekcard.drill-tgt::after{content:'↗';position:absolute;top:8px;right:10px;font-size:12px;color:#7eb3e0;opacity:.55;}
 .ekcard.drill-tgt:hover::after{opacity:1;}
-.kcard.drill-tgt,.res-card.drill-tgt{position:relative;}
-.kcard.drill-tgt::after,.res-card.drill-tgt::after{content:'↗';position:absolute;top:9px;right:11px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
-.kcard.drill-tgt:hover::after,.res-card.drill-tgt:hover::after{opacity:1;transform:translate(1px,-1px);}
+.kcard.drill-tgt{position:relative;}
+.kcard.drill-tgt::after{content:'↗';position:absolute;top:9px;right:11px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
+.kcard.drill-tgt:hover::after{opacity:1;transform:translate(1px,-1px);}
 
 /* The resurvey table is seven columns; 520px forces a horizontal scroll on
    every open, so that mode gets a wider drawer instead. */
@@ -617,14 +609,13 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 @media (prefers-reduced-motion:reduce){
   .drill-table tbody tr{animation:none!important;}
   .so-row:hover{padding-left:0;}
-  .kcard.drill-tgt:hover,.res-card.drill-tgt:hover{transform:none;}
+  .kcard.drill-tgt:hover{transform:none;}
 }
 
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
   .settings-grid{grid-template-columns:1fr;}
   .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
-  .res-cards{grid-template-columns:1fr;}
   .page{padding:12px;}
   /* Section headers wrap instead of squeezing the subtitle beside a toggle:
      "By sales office" left its .ssub 148px wide and three lines tall. */
@@ -682,38 +673,53 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   .q-rate-track{display:none;}
 }
 
-/* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
-   five figures carry in about a sixth of the vertical space and, sharing one
-   surface, stop implying they are five equally important things. */
+/* STAT RAIL — one panel of divided cells, not five separate cards. The figures
+   carry in about a sixth of the vertical space and, sharing one surface, stop
+   implying they are five equally important things. Shared by WIP, Performance
+   and Trends. WIP additionally uses .rail-f cells, which filter the queue
+   below; on the other pages every cell is a readout or a drill. */
 /* Cell padding is uniform and the panel supplies only the outer 2px. Trimming
    the first and last cell's inner padding — as the handoff draws it — makes
    those two 18px narrower than the rest: flex-basis:0 sizes the CONTENT box,
    so padding is added on top of an equal share rather than taken out of it.
    Uniform padding is the only way the dividers land evenly. */
-.wip-rail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 2px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
-.wip-rail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
-.wip-rail-cell:last-child{border-right:none;}
+.srail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0 2px;display:flex;align-items:stretch;margin-bottom:14px;box-shadow:var(--shadow);}
+.srail-cell{flex:1;padding:14px 18px 15px;border-right:1px solid var(--border);min-width:0;}
+.srail-cell:last-child{border-right:none;}
 /* Three of the six cells filter the queue below. Padding stays uniform across
    all six — flex-basis:0 sizes the content box, so a border or a padding change
    on one cell makes that cell a different width. State rides on background and
    an inset rule, neither of which touches layout. */
-.wip-rail-cell.rail-f{cursor:pointer;transition:background .16s,box-shadow .16s;}
-.wip-rail-cell.rail-f .klabel{transition:color .16s;}
-.wip-rail-cell.rail-f:hover{background:var(--bg);}
-.wip-rail-cell.rail-f:hover .klabel{color:var(--text);}
-.wip-rail-cell.rail-f:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
-.wip-rail-cell.rail-f.on{background:var(--bg);box-shadow:inset 0 -3px 0 var(--text);}
-.wip-rail-cell.rail-f.on .klabel{color:var(--text);font-weight:700;}
+.srail-cell.rail-f{cursor:pointer;transition:background .16s,box-shadow .16s;}
+.srail-cell.rail-f .klabel{transition:color .16s;}
+.srail-cell.rail-f:hover{background:var(--bg);}
+.srail-cell.rail-f:hover .klabel{color:var(--text);}
+.srail-cell.rail-f:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
+.srail-cell.rail-f.on{background:var(--bg);box-shadow:inset 0 -3px 0 var(--text);}
+.srail-cell.rail-f.on .klabel{color:var(--text);font-weight:700;}
 /* The cue that a cell is a filter, not a readout: a hairline that fills in on
    hover and stays filled while the filter is on. */
 .rail-cue{display:inline-block;width:12px;height:2px;border-radius:1px;background:var(--border);margin-left:7px;vertical-align:middle;transition:background .16s,width .16s;}
-.wip-rail-cell.rail-f:hover .rail-cue{background:var(--muted);width:16px;}
-.wip-rail-cell.rail-f.on .rail-cue{background:var(--text);width:16px;}
+.srail-cell.rail-f:hover .rail-cue{background:var(--muted);width:16px;}
+.srail-cell.rail-f.on .rail-cue{background:var(--text);width:16px;}
 @media (prefers-reduced-motion:reduce){
-  .wip-rail-cell.rail-f,.rail-cue{transition:none;}
+  .srail-cell.rail-f,.rail-cue{transition:none;}
 }
-.wip-rail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
-.wip-rail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
+.srail-cell.rail-d{cursor:pointer;position:relative;transition:background .16s;}
+.srail-cell.rail-d:hover{background:var(--bg);}
+.srail-cell.rail-d:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
+.srail-cell.rail-d::after{content:'↗';position:absolute;top:10px;right:12px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
+.srail-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
+.srail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
+.srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
+/* Search sits above the grouped table. With no floor the rep cut is 300 rows,
+   so reach comes from search and sort rather than from hiding anything. */
+.p-tools{display:flex;align-items:center;gap:8px;margin-bottom:11px;}
+.p-tools .drill-search{flex:1;min-width:0;}
+/* The survey count riding along with a per-resource cycle time. */
+.p-res-n{font-size:10px;color:var(--faint);margin-left:5px;font-variant-numeric:tabular-nums;}
+.srail-mix{display:flex;height:10px;border-radius:4px;overflow:hidden;gap:1px;margin:11px 0 7px;}
+.srail-mixleg{display:flex;gap:10px;font-size:10px;}
 
 /* WIP QUEUE BLOCK — the filters describe the table they sit on top of, so
    they live inside its panel rather than in a card of their own above it. */
@@ -795,12 +801,12 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   .wip-frow-hint .wip-flabel{display:none;}
 }
 @media(max-width:860px){
-  .wip-rail{flex-wrap:wrap;padding:0 12px;}
-  .wip-rail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
-  .wip-rail-cell:first-child{flex:1 0 100%;border-bottom:1px solid var(--border);}
+  .srail{flex-wrap:wrap;padding:0 12px;}
+  .srail-cell{flex:1 0 40%;border-right:none;padding:12px 0;}
+  .srail-cell:first-child{flex:1 0 100%;border-bottom:1px solid var(--border);}
   /* An odd cell count leaves the last one orphaned half-width — let it span. */
-  .wip-rail-cell:last-child:nth-child(odd){flex:1 0 100%;}
-  .wip-rail-val{font-size:24px;}
+  .srail-cell:last-child:nth-child(odd){flex:1 0 100%;}
+  .srail-val{font-size:24px;}
   .wip-queue-head{flex-direction:column;gap:10px;}
 }
 
@@ -874,7 +880,7 @@ body{padding-left:180px;}
 .exec-wrap .tgl-btn:hover:not(.active){background:var(--bg);}
 
 /* Section + KPI cards pick up warm hairline language */
-.sec,.kcard,.res-card{box-shadow:var(--shadow);}
+.sec,.kcard{box-shadow:var(--shadow);}
 .kval{font-weight:700;letter-spacing:-.02em;}
 
 /* WIP attention badge in nav */
@@ -1088,7 +1094,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, fpy, avg, med, pct,
+const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1150,7 +1156,6 @@ const SETTING_DEFAULTS = {
   targetAvg:            4,         // cycle time avg target (days)
   outlierDays:          10,        // hide surveys with cycle time above this
   defaultRemoveOutliers:false,     // hide outliers by default on load
-  minRegionVolume:      3,         // dim regions with fewer projects
   autoDateRange:        true,      // auto-set date range from data on load
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
@@ -1976,7 +1981,7 @@ const TIP={
   // ── Resurveys ──
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded: nothing was re-surveyed, so the survey did not fail. They are left out of this page entirely, not just out of the percentage.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land. Twenty-one days is about the 79th percentile of that lag.',
-  rsReason:'The reason picklist on the resurvey request, recorded on 96% of them. A request can carry more than one reason, so the shares add to more than 100%. This is the field that says what to fix, where attribution only says who.',
+  rsCat:'What the request actually asked for, read out of the Resurvey Request Details text — the reason picklist is too coarse to act on, with "Survey Incomplete" carrying 76% of it. A request asks for 2.2 of these on average, so the shares add to more than 100%. Derived from free text, not a Salesforce field: the drill drawer carries the raw reason and the original sentence beside every row.',
   rsPenalty:'How much longer a job takes when it comes back. Project Start → Resurvey Complete on resurveyed jobs, against Project Start → Site Survey Complete on clean ones, in calendar days. It used to be measured on ct_full (survey time plus resurvey time), which skipped the wait between the survey closing and the resurvey being requested — most of the calendar cost — and so read +5.3d against a true +20.7d.',
   rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
@@ -2362,8 +2367,14 @@ function copyTableEl(id,btn,label){
   const item=new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})});
   navigator.clipboard.write([item]).then(()=>_copyFlash(btn,'Copied '+(label||'table')+' to clipboard')).catch(_copyFail);
 }
-function drillRegion(el){ const reg=el.dataset.region; openDrill('Region · '+reg,'All completions · '+drillScopeNote(),filtered.filter(r=>r.region===reg)); }
-function drillRep(el){ const name=el.dataset.rep; const res=el.dataset.res; openDrill('Sales Rep · '+name,res+' · '+drillScopeNote(),filtered.filter(r=>r.sales_rep===name&&r.resource===res)); }
+// One entry point for every cut of the Performance table. The blank bucket
+// drills to the rows that actually have no value, not to a literal "(no region)".
+function drillPerfGroup(key,val){
+  const blank=val.startsWith('(no ');
+  const view=filtered.filter(r=>{ const v=((r[key]||'')+'').trim(); return blank?!v:v===val; });
+  const label={region:'Region',sales_office:'Sales office',sales_rep:'Sales rep',resource:'Resource'}[key]||key;
+  openDrill(label+' · '+val,view.length+' completions · '+drillScopeNote(),view,{sort:'days'});
+}
 function drillResGroup(val){
   const view=rsDefectPool().filter(r=>(r[rsGroupKey]||'')===val);
   openDrill('Resurveys · '+(val||'No '+(rsGroupKey==='sales_office'?'office':'region')),view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'});
@@ -2373,7 +2384,11 @@ function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep=
 // card says as much, and the drilled rows are that card's resurveys.
 function drillRsResource(res){ const view=rsDefectPool().filter(r=>(r.resource||'')===res); openDrill('Resurveys · '+res,view.length+' came back · original survey by '+res+' · '+drillScopeNote(),view,{mode:'resurvey'}); }
 function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
-function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
+// Opens on the derived category. The drawer's resurvey mode already carries the
+// raw Reason column and the original details sentence, which is how a category
+// stays checkable against the text it was read out of.
+function drillRsCategory(key){ const view=rsDefectPool().filter(r=>rsCategories(r).includes(key));
+  openDrill('Missing · '+rsCatLabel(key),view.length+' resurveys asked for this · '+drillScopeNote(),view,{mode:'resurvey'}); }
 // The yield chart exists in two forms while the shape is being chosen: the
 // handoff's weekly bars, and the line with its 4-week rolling average. Weekly
 // yield swings ~15 points on volume noise alone, which is why the rolling line
@@ -2503,9 +2518,6 @@ function distBuckets(src){
 }
 
 // Sort state
-let sortKey='count', sortAsc=false;
-function sortBy(k){ if(sortKey===k) sortAsc=!sortAsc; else{sortKey=k;sortAsc=false;} renderRegionTablePerf(); }
-function sortArrow(k){ if(sortKey!==k) return 'sarr-no'; return sortAsc?'sarr-up':'sarr-dn'; }
 
 // ═══ CURRENT ═════════════════════════════════════════════
 let weekView=new Date().getDay()===1?'last':'this';
@@ -3062,7 +3074,30 @@ function drillPerfMissed(){
   const n=filtered.filter(r=>r.ct_total!=null&&r.ct_total>=0).length;
   openDrill('Missed target',dr.length+' of '+n+' took longer than '+S.targetAvg+'d · '+drillScopeNote(),dr,{sort:'days'});
 }
-let repView='self';
+// One grouping drives the volume chart and the table below it. The rep cut used
+// to be a separate table with a Self-done / w/ SunPower / w/ Radicl toggle that
+// silently changed which population it measured; those three are columns now,
+// so a rep's three cycle times sit on one row. 103 of 300 reps have jobs under
+// more than one resource, so a third of the roster could not be read at all
+// without flipping between toggle states.
+let perfGroupBy='region';   // 'region' | 'office' | 'rep' | 'resource'
+let perfSortKey='average', perfSortAsc=false;
+let perfExpanded=false, perfQuery='';
+function setPerfGroupBy(v){ perfGroupBy=v; perfSortKey='average'; perfSortAsc=false; perfExpanded=false; perfQuery=''; renderPerformance(); }
+// Text columns open A to Z, numeric ones slowest first.
+function perfSortBy(k){
+  if(perfSortKey===k) perfSortAsc=!perfSortAsc;
+  else { perfSortKey=k; perfSortAsc=(k==='name'); }
+  renderPerformance();
+}
+function togglePerfExpand(){ perfExpanded=!perfExpanded; renderPerformance(); }
+// The whole page re-renders on each keystroke, so focus and caret have to be
+// put back or typing stops after one character.
+function setPerfQuery(v){
+  perfQuery=v; perfExpanded=false; renderPerformance();
+  const el=document.getElementById('perf-search');
+  if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length); }
+}
 function renderPerformance(){
   const src=filtered;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
@@ -3084,110 +3119,191 @@ function renderPerformance(){
   const srCount=src.filter(r=>r.resource==='Sales Rep').length;
   const rdCount=src.filter(r=>r.resource==='Radicl Services').length;
   const resTotal=spCount+srCount+rdCount;
-  const resCard=rt=>{
-    const rsrc=src.filter(r=>r.resource===rt);
-    const rTots=rsrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-    const rMed=med(rTots),rAvg=avg(rTots),rOnTgt=pctTgt(rTots);
-    return `<div class="res-card${rsrc.length?' drill-tgt':''}" ${rsrc.length?drillAttrs(`drillPerfRes('${escAttrJs(rt)}')`):''}>
-      <div class="res-card-title"><span class="res-dot" style="background:${typeColors[rt]||'#8f8f98'};"></span>${rt}</div>
-      <div class="res-card-count">${rsrc.length} surveys</div>
-      <div class="res-stats">
-        <div class="res-stat-row"><span class="rlabel">Avg</span><span class="rval ${kclsAvg(rAvg)}">${rAvg!=null?rAvg.toFixed(1)+'d':'—'}</span></div>
-        <div class="res-stat-row"><span class="rlabel">Median</span><span class="rval ${kclsMed(rMed)}">${rMed!=null?rMed.toFixed(1)+'d':'—'}</span></div>
-        <div class="res-stat-row"><span class="rlabel">On target</span><span class="rval">${rOnTgt!=null?rOnTgt+'%':'—'}</span></div>
-      </div>
-    </div>`;
+  const hasOfficeCol=src.some(r=>(r.sales_office||'').trim());
+  // ── one grouping, four cuts, feeding both the chart and the table ────
+  // Region, office, rep and resource are the same object: group the rows, then
+  // report count / avg / median / on-target. They used to be a chart, a second
+  // chart, a region table and a rep table with its own resource toggle, which
+  // is four surfaces over one shape.
+  const PGRP={region:'region',office:'sales_office',rep:'sales_rep',resource:'resource'};
+  const pKey=PGRP[perfGroupBy]||'region';
+  const pLabel={region:'Region',sales_office:'Sales office',sales_rep:'Sales rep',resource:'Resource'}[pKey];
+  const pPlural={region:'regions',sales_office:'offices',sales_rep:'reps',resource:'resources'}[pKey];
+  const pN=n=>n===1?pLabel.toLowerCase():pPlural;
+  // 72 completions carry no region and 39 no office. regionStats() dropped them
+  // silently, so they fell off the page entirely; they get their own row now.
+  const pBlank={region:'(no region)',sales_office:'(no office)',sales_rep:'(no rep)',resource:'(no resource)'}[pKey];
+  const RES3=['Sales Rep','Radicl Services','SunPower Surveyor'];
+  const RES_C={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
+  // No floor anywhere. A rep with two deals still did those two surveys, and
+  // the sample size sits in the Projects column on the same row, so a thin
+  // average can be read as thin without hiding it or dimming it.
+  const pGroups=(()=>{
+    const m={};
+    src.forEach(r=>{ const k=((r[pKey]||'')+'').trim()||pBlank; (m[k]=m[k]||[]).push(r); });
+    return Object.entries(m).map(([g,gr])=>{
+      const tots=gr.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+      const cell=res=>{ const c=gr.filter(r=>r.resource===res);
+        return {n:c.length, avg:avg(c.map(r=>r.ct_total).filter(x=>x!=null&&x>=0))}; };
+      return {g, count:gr.length, average:avg(tots), median:med(tots), pctOnTgt:pctTgt(tots),
+              none:gr.filter(r=>!r.resource).length,
+              sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
+    });
+  })();
+  // Grouped BY resource the three columns are the diagonal of their own table.
+  const pShowRes=pKey!=='resource';
+  const pQ=perfQuery.trim().toLowerCase();
+  const pMatched=pQ?pGroups.filter(d=>d.g.toLowerCase().includes(pQ)):pGroups;
+  const pSortVal={
+    name:d=>d.g.toLowerCase(), count:d=>d.count, average:d=>d.average,
+    median:d=>d.median, pctOnTgt:d=>d.pctOnTgt,
+    sr:d=>d.sr.avg, rd:d=>d.rd.avg, sp:d=>d.sp.avg,
+  }[perfSortKey]||(d=>d.average);
+  const pDir=perfSortAsc?1:-1;
+  // Blanks sink in both directions, same rule as the Quality and drawer tables.
+  const pSorted=[...pMatched].sort((a,b)=>{
+    const av=pSortVal(a), bv=pSortVal(b);
+    if(av==null&&bv==null) return 0;
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    return typeof av==='string'?pDir*av.localeCompare(bv):pDir*(av-bv);
+  });
+  const P_LIMIT=15;
+  const pShown=perfExpanded?pSorted:pSorted.slice(0,P_LIMIT);
+  const pMore=pSorted.length-pShown.length;
+  // The whole population, so the footer never depends on what is on screen.
+  const pAllTots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const pAllCell=res=>{ const c=src.filter(r=>r.resource===res);
+    return {n:c.length, avg:avg(c.map(r=>r.ct_total).filter(x=>x!=null&&x>=0))}; };
+  const pMaxAvg=Math.max(...pGroups.map(d=>d.average||0),S.targetAvg*2,1);
+  const pth=(k,label,cls)=>{
+    const on=perfSortKey===k, arrow=on?(perfSortAsc?'sarr-up':'sarr-dn'):'sarr-no';
+    return `<th class="${cls||''}" tabindex="0" role="button" aria-sort="${on?(perfSortAsc?'ascending':'descending'):'none'}" onclick="perfSortBy('${k}')" style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
   };
-  const rStats=regionStats(src).filter(r=>r.count>=S.minRegionVolume).sort((a,b)=>b.count-a.count).slice(0,16);
-  const rh=Math.max(220,rStats.length*26+50);
-  const volSP=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='SunPower Surveyor').length);
-  const volSR=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='Sales Rep').length);
-  const volRD=rStats.map(r=>src.filter(s=>s.region===r.region&&s.resource==='Radicl Services').length);
-  const volNone=rStats.map(r=>src.filter(s=>s.region===r.region&&!s.resource).length);
-  const hasNone=volNone.some(x=>x>0);
-  const tgl=(v,l)=>`<button class="tgl-btn${repView===v?' active':''}" onclick="setRepView('${v}')">${l}</button>`;
+  const pTgl=(v,l)=>`<button class="tgl-btn${perfGroupBy===v?' active':''}" onclick="setPerfGroupBy('${v}')">${l}</button>`;
+  const pTgls=`<div class="toggle-group">${pTgl('region','Region')}${hasOfficeCol?pTgl('office','Sales office'):''}${pTgl('rep','Sales rep')}${pTgl('resource','Resource')}</div>`;
+  const pDrill=g=>`drillPerfGroup('${escAttrJs(pKey)}','${escAttrJs(g)}')`;
+  // Cycle reads as a bar against the 4d target, the same way Quality's rate
+  // reads against its 5% ceiling. The number beside it is the average.
+  const pCycleCell=(v,muted)=>{
+    const c=v==null?'var(--muted)':v<=S.targetMedian?'var(--green)':v<=(S.targetAvg+2)?'var(--amber)':'var(--red)';
+    return `<td class="r"><div class="q-rate-cell">
+      <div class="q-rate-track"><div class="q-rate-fill" style="width:${v==null?0:Math.min(v/pMaxAvg*100,100)}%;background:${muted||c};"></div><div class="q-rate-ceil" style="left:${Math.min(S.targetAvg/pMaxAvg*100,100)}%;"></div></div>
+      <span class="q-rate-val" style="color:${muted?'var(--muted)':c};">${v==null?'—':v.toFixed(1)+'d'}</span>
+    </div></td>`;
+  };
+  // Cycle time and how many surveys it came from, in one cell.
+  const pResCell=c=>c.n===0?'<td class="r"><span class="pna">—</span></td>'
+    :`<td class="r" style="white-space:nowrap;">${c.avg!=null?c.avg.toFixed(1)+'d':'—'}<span class="p-res-n">${c.n}</span></td>`;
+  // The chart cannot draw 300 reps. It caps at the top slice by volume and says
+  // so; the table below it still carries every row.
+  const CHART_CAP=16;
+  const pChart=[...pGroups].sort((a,b)=>b.count-a.count).slice(0,CHART_CAP);
+  const rh=Math.max(220,pChart.length*26+50);
+  const hasNone=pChart.some(d=>d.none>0);
 
   document.getElementById('perf-content').innerHTML=`
-    <div class="kg kg5">
-      <div class="kcard drill-tgt" ${drillAttrs('drillPerfAll()')}><div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div><div class="kval">${src.length.toLocaleString()}</div><div class="ksub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-      <div class="kcard"><div class="klabel">Avg total${kinfo(TIP.cycle)}</div><div class="kval ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetAvg}d</div></div>
-      <div class="kcard"><div class="klabel">Median total${kinfo(TIP.cycle)}</div><div class="kval ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ktgt">Target: ${S.targetMedian}d</div></div>
-      <div class="kcard drill-tgt" ${drillAttrs('drillPerfMissed()')}><div class="klabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="kval ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ksub">average target</div></div>
-      <div class="kcard"><div class="klabel">Resource mix${kinfo(TIP.resourceMix)}</div>${resTotal>0?`<div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin:10px 0 6px;gap:1px;">${srCount>0?`<div class="bar-fill-anim" style="flex:${srCount};background:#4f7fae;"></div>`:''} ${rdCount>0?`<div class="bar-fill-anim" style="flex:${rdCount};background:#8677b8;"></div>`:''} ${spCount>0?`<div class="bar-fill-anim" style="flex:${spCount};background:#64748b;"></div>`:''}</div><div style="display:flex;gap:10px;margin-top:2px;"><span style="font-size:10px;color:#4f7fae;">${srCount} Sales</span><span style="font-size:10px;color:#8677b8;">${rdCount} Radicl</span><span style="font-size:10px;color:#64748b;">${spCount} SPWR</span></div>`:'<div class="ksub" style="margin-top:10px;">no resource data</div>'}</div>
+    <div class="srail">
+      <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs('drillPerfAll()')}>
+        <div class="klabel">Projects${kinfo('Completed surveys matching the current filters. '+TIP.complete)}</div>
+        <div class="srail-val">${src.length.toLocaleString()}<span class="srail-sub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</span></div>
+      </div>
+      <div class="srail-cell">
+        <div class="klabel">Avg total${kinfo(TIP.cycle)}</div>
+        <div class="srail-val ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
+      </div>
+      <div class="srail-cell">
+        <div class="klabel">Median total${kinfo(TIP.cycle)}</div>
+        <div class="srail-val ${kclsMed(medT)}">${medT!=null?medT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetMedian}d</span></div>
+      </div>
+      <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs('drillPerfMissed()')}>
+        <div class="klabel">On target &le;${S.targetAvg}d${kinfo(TIP.onTarget())}</div>
+        <div class="srail-val ${onTgt!=null?(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c'):''}">${onTgt!=null?onTgt+'%':'—'}</div>
+      </div>
+      <div class="srail-cell">
+        <div class="klabel">Resource mix${kinfo(TIP.resourceMix)}</div>
+        ${resTotal>0?`<div class="srail-mix">${srCount>0?`<div style="flex:${srCount};background:#4f7fae;"></div>`:''}${rdCount>0?`<div style="flex:${rdCount};background:#8677b8;"></div>`:''}${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''}</div>
+        <div class="srail-mixleg"><span style="color:#4f7fae;">${srCount} Sales</span><span style="color:#8677b8;">${rdCount} Radicl</span><span style="color:#64748b;">${spCount} SPWR</span></div>`
+        :'<div class="srail-val" style="color:var(--faint);font-size:13px;font-weight:400;">no resource data</div>'}
+      </div>
     </div>
-    <div class="res-cards">${['Sales Rep','Radicl Services','SunPower Surveyor'].map(resCard).join('')}</div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Volume by region</div><div class="ssub">All surveys · by resource type · ${rStats.length} regions</div></div></div>
+      <div class="shead">
+        <div><div class="stitle">Volume by ${pLabel.toLowerCase()}</div>
+          <div class="ssub">Completed surveys, split by who ran them${pGroups.length>CHART_CAP?` · top ${CHART_CAP} of ${pGroups.length} by volume, the table below has them all`:` · ${pChart.length} ${pPlural}`}</div></div>
+        ${pTgls}
+      </div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#4f7fae;"></span>Sales Rep</span>
-        <span class="li"><span class="ld" style="background:#8677b8;"></span>Radicl Services</span>
-        <span class="li"><span class="ld" style="background:#64748b;"></span>SunPower Surveyor</span>
+        ${RES3.map(r=>`<span class="li"><span class="ld" style="background:${RES_C[r]};"></span>${r}</span>`).join('')}
         ${hasNone?'<span class="li"><span class="ld" style="background:#e2e8f0;border:1px solid #ddd;box-sizing:border-box;"></span>Unassigned</span>':''}
       </div>
       <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Avg cycle by region</div><div class="ssub">Top ${rStats.length} regions by volume</div></div></div>
-      <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
-      <div class="cw" id="pf-rg-wrap"><canvas id="pf-rg"></canvas></div>
-    </div>
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Region detail</div><div class="ssub" id="pf-rc"></div></div></div>
-      <div style="overflow-x:auto;"><table id="pf-rtable">
-        <thead><tr>
-          <th tabindex="0" onclick="sortBy('region')">Region<span class="sarr ${sortArrow('region')}"></span></th>
-          <th class="r" tabindex="0" onclick="sortBy('count')">Projects<span class="sarr ${sortArrow('count')}"></span></th>
-          <th class="r" tabindex="0" onclick="sortBy('start_to_complete')">Avg<span class="sarr ${sortArrow('start_to_complete')}"></span></th>
-          <th class="r" tabindex="0" onclick="sortBy('median_total')">Median<span class="sarr ${sortArrow('median_total')}"></span></th>
-          <th class="r" tabindex="0" onclick="sortBy('pct_on_target')">On target<span class="sarr ${sortArrow('pct_on_target')}"></span></th>
-        </tr></thead>
-        <tbody id="pf-tbody"></tbody>
-      </table></div>
-      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('pf-rtable',this,'the region table')">Copy table</button></div>
-      <div class="note">Pills share one scale: green ≤${S.targetMedian}d · amber ≤${S.targetAvg+2}d · red >${S.targetAvg+2}d. KPI cards grade against their own target. Regions with &lt;${S.minRegionVolume} projects dimmed.</div>
-    </div>
-    <div class="sec">
       <div class="shead">
-        <div><div class="stitle">Sales rep cycle time</div><div class="ssub" id="rep-sub">Slowest first</div></div>
-        <div class="toggle-group" id="rep-tgl">${tgl('self','Self-done')}${tgl('sp','w/ SunPower')}${tgl('radicl','w/ Radicl')}</div>
+        <div><div class="stitle">Performance by ${pLabel.toLowerCase()}</div>
+          <div class="ssub">${pSorted.length.toLocaleString()} ${pN(pSorted.length)}${pQ?` matching "${esc(perfQuery.trim())}"`:''}${pMore?` · showing ${pShown.length}`:''} · no minimum, every group is listed</div></div>
+        ${pTgls}
       </div>
-      <div id="rep-table-wrap"></div>
+      <div class="p-tools">
+        <input type="text" class="drill-search" id="perf-search" placeholder="Filter ${pPlural}…" aria-label="Filter ${pPlural}" value="${esc(perfQuery)}" oninput="setPerfQuery(this.value)">
+        ${pQ?`<button class="drill-search-clr" onclick="setPerfQuery('')">Clear</button>`:''}
+      </div>
+      ${pShown.length?`<div class="xscroll"><table id="pf-gtable"><thead><tr>
+        ${pth('name',pLabel)}
+        ${pth('average','Cycle','r')}
+        ${pth('count','Projects','r')}
+        ${pth('median','Median','r')}
+        ${pth('pctOnTgt','On target','r')}
+        ${pShowRes?pth('sr','<span style="color:#4f7fae;">Self-done</span>','r')
+          +pth('rd','<span style="color:#8677b8;">Radicl</span>','r')
+          +pth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
+      </tr></thead><tbody>
+        ${pShown.map(d=>`<tr class="drill-tgt" onclick="${pDrill(d.g)}">
+          <td style="font-weight:500;font-size:12px;">${esc(d.g)}</td>
+          ${pCycleCell(d.average)}
+          <td class="r">${d.count.toLocaleString()}</td>
+          <td class="r">${d.median!=null?d.median.toFixed(1)+'d':'—'}</td>
+          <td class="r">${d.pctOnTgt!=null?d.pctOnTgt+'%':'—'}</td>
+          ${pShowRes?pResCell(d.sr)+pResCell(d.rd)+pResCell(d.sp):''}
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr class="q-rate-all">
+        <td style="color:var(--muted);font-weight:500;font-size:12px;">All ${pPlural}</td>
+        ${pCycleCell(avg(pAllTots),'var(--faint)')}
+        <td class="r" style="color:var(--muted);">${src.length.toLocaleString()}</td>
+        <td class="r" style="color:var(--muted);">${med(pAllTots)!=null?med(pAllTots).toFixed(1)+'d':'—'}</td>
+        <td class="r" style="color:var(--muted);">${pctTgt(pAllTots)!=null?pctTgt(pAllTots)+'%':'—'}</td>
+        ${pShowRes?pResCell(pAllCell('Sales Rep'))+pResCell(pAllCell('Radicl Services'))+pResCell(pAllCell('SunPower Surveyor')):''}
+      </tr></tfoot>
+      </table></div>
+      <div class="tbl-foot split">
+        ${pMore||perfExpanded?`<button class="drill-seg-btn" onclick="togglePerfExpand()">${perfExpanded?`Show top ${P_LIMIT} only`:`Show all ${pSorted.length.toLocaleString()} ${pPlural}`}</button>`:'<span></span>'}
+        <button class="copy-btn" onclick="copyTableEl('pf-gtable',this,'the table')">Copy table</button>
+      </div>
+      <div class="note">Cycle is the average, banded green at or under ${S.targetMedian}d, amber to ${S.targetAvg+2}d, red beyond, with the ${S.targetAvg}d target marked in the track. ${pShowRes?'The last three columns are the same cycle time split by who ran the survey, with the survey count beside each. ':''}Every ${pLabel.toLowerCase()} is listed however few projects it has, so read the average next to its Projects count.</div>`
+      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${pPlural} match &ldquo;${esc(perfQuery.trim())}&rdquo;.</div>`}
     </div>`;
-
-  document.getElementById('pf-rg-wrap').style.height=rh+'px';
-  dc('pf-rg');
-  CH['pf-rg']=new Chart(document.getElementById('pf-rg'),{
-    type:'bar',
-    data:{labels:rStats.map(r=>r.region),datasets:[{
-      data:rStats.map(r=>r.start_to_complete),
-      minBarLength:3,
-      backgroundColor:rStats.map(r=>(r.start_to_complete||0)<=S.targetAvg?'#3f9d6c':(r.start_to_complete||0)<=(S.targetAvg+3)?'#c0912e':'#d94f4e'),borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      onHover:drillHover,
-      onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; openDrill('Avg Cycle · '+reg,'All surveys · current filter',filtered.filter(r=>r.region===reg)); },
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x!=null?ctx.parsed.x.toFixed(1)+'d':'—'} avg (${rStats[ctx.dataIndex].count})`}},
-        annotation:{annotations:{t:{type:'line',xMin:S.targetAvg,xMax:S.targetAvg,borderColor:'#d94f4e',borderWidth:2,borderDash:[5,4]}}}},
-      scales:{x:{grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98',callback:v=>v+'d'}},
-              y:{grid:{display:false},ticks:{color:'#444',font:{size:11}}}}}
-  });
 
   document.getElementById('pf-vol-wrap').style.height=rh+'px';
   dc('pf-vol');
+  const volOf=res=>pChart.map(d=>res===null?d.none:d[{'Sales Rep':'sr','Radicl Services':'rd','SunPower Surveyor':'sp'}[res]].n);
   CH['pf-vol']=new Chart(document.getElementById('pf-vol'),{
     type:'bar',
-    data:{labels:rStats.map(r=>r.region),datasets:[
-      {label:'Sales Rep',data:volSR,backgroundColor:'#4f7fae',borderRadius:0},
-      {label:'Radicl Services',data:volRD,backgroundColor:'#8677b8',borderRadius:0},
-      {label:'SunPower Surveyor',data:volSP,backgroundColor:'#64748b',borderRadius:0},
-      ...(hasNone?[{label:'Unassigned',data:volNone,backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
+    data:{labels:pChart.map(d=>d.g),datasets:[
+      ...RES3.map(r=>({label:r,data:volOf(r),backgroundColor:RES_C[r],borderRadius:0})),
+      ...(hasNone?[{label:'Unassigned',data:volOf(null),backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
     ]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       onHover:drillHover,
-      onClick:(evt,els)=>{ if(!els.length) return; const reg=rStats[els[0].index].region; const rls=['Sales Rep','Radicl Services','SunPower Surveyor',null]; const res=rls[els[0].datasetIndex]; const dr=filtered.filter(r=>r.region===reg&&(res===null?!r.resource:r.resource===res)); openDrill((res||'Unassigned')+' · '+reg,dr.length+' surveys',dr); },
+      onClick:(evt,els)=>{ if(!els.length) return;
+        const g=pChart[els[0].index].g;
+        const res=[...RES3,null][els[0].datasetIndex];
+        const dr=filtered.filter(r=>((((r[pKey]||'')+'').trim()||pBlank)===g)&&(res===null?!r.resource:r.resource===res));
+        openDrill((res||'Unassigned')+' · '+g,dr.length+' surveys · '+drillScopeNote(),dr,{sort:'days'}); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',callbacks:{
-          title:ctx=>rStats[ctx[0].dataIndex].region,
+          title:ctx=>pChart[ctx[0].dataIndex].g,
           footer:ctx=>'Total: '+ctx.reduce((s,i)=>s+i.parsed.x,0)
         }}},
       scales:{
@@ -3195,93 +3311,6 @@ function renderPerformance(){
         y:{stacked:true,grid:{display:false},ticks:{color:'#444',font:{size:11}}}
       }}
   });
-
-  renderRegionTablePerf();
-  renderRepTable();
-}
-
-function renderRegionTablePerf(){
-  const stats=regionStats(filtered);
-  const el=document.getElementById('pf-rc'); if(el) el.textContent=stats.length+' regions · '+filtered.length+' projects';
-  const sorted=[...stats].sort((a,b)=>{
-    let av=a[sortKey],bv=b[sortKey];
-    if(av==null) av=sortAsc?Infinity:-Infinity;
-    if(bv==null) bv=sortAsc?Infinity:-Infinity;
-    if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
-    return sortAsc?av-bv:bv-av;
-  });
-  const tbody=document.getElementById('pf-tbody'); if(!tbody) return;
-  tbody.innerHTML=sorted.map(r=>{
-    const state=getState(r.region),city=r.region.split(' ').slice(1).join(' ');
-    const dim=r.count<S.minRegionVolume?' class="dim-row"':'';
-    return `<tr${dim} class="drill-tgt" data-region="${esc(r.region)}" onclick="drillRegion(this)">
-      <td><span class="sbadge">${state}</span>${city}${r.count<S.minRegionVolume?'<span style="font-size:10px;color:var(--faint);margin-left:4px;">(low vol)</span>':''}</td>
-      <td class="r">${r.count}</td>
-      <td class="r">${pillV(r.start_to_complete)}</td>
-      <td class="r">${r.count>1&&r.median_total!=null?r.median_total.toFixed(1)+'d':'—'}</td>
-      <td class="r">${r.pct_on_target!=null?r.pct_on_target+'%':'—'}</td>
-    </tr>`;
-  }).join('');
-}
-
-let repExpanded=false;
-let repMinVol=true; // hide reps with <3 completions by default — 1-survey reps dominate "slowest first" otherwise
-let repSortKey='average', repSortAsc=false;
-function toggleRepMinVol(){ repMinVol=!repMinVol; repExpanded=false; renderRepTable(); }
-function setRepView(v){ repView=v; repExpanded=false; repSortKey='average'; repSortAsc=false; document.querySelectorAll('#rep-tgl .tgl-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick')===`setRepView('${v}')`)); renderRepTable(); }
-function toggleRepExpand(){ repExpanded=!repExpanded; renderRepTable(); }
-function repSortBy(k){ if(repSortKey===k) repSortAsc=!repSortAsc; else{repSortKey=k;repSortAsc=false;} renderRepTable(); }
-function repSortArrow(k){ if(repSortKey!==k) return 'sarr-no'; return repSortAsc?'sarr-up':'sarr-dn'; }
-function renderRepTable(){
-  const wrap=document.getElementById('rep-table-wrap'); if(!wrap) return;
-  const resMap={self:'Sales Rep',sp:'SunPower Surveyor',radicl:'Radicl Services'};
-  const resLabel=resMap[repView];
-  // The toggle silently changed what the table measures — under "w/ Radicl"
-  // these are Radicl's cycle times, listed against the rep who sold the job —
-  // while the heading and subtitle never moved. Say which population it is.
-  const sub=document.getElementById('rep-sub');
-  if(sub) sub.textContent=repView==='self'
-    ? 'Surveys the rep did themselves · slowest first'
-    : `Surveys the rep sold, surveyed by ${resLabel} · slowest first`;
-  const src=filtered.filter(r=>r.resource===resLabel&&r.sales_rep);
-  const repMap={};
-  src.forEach(r=>{ if(!repMap[r.sales_rep]) repMap[r.sales_rep]={name:r.sales_rep,tots:[]}; if(r.ct_total!=null&&r.ct_total>=0) repMap[r.sales_rep].tots.push(r.ct_total); });
-  const allRepRows=Object.values(repMap).filter(r=>r.tots.length>=1)
-    .map(r=>({name:r.name,count:r.tots.length,median:med(r.tots),average:avg(r.tots),pctOnTgt:pctTgt(r.tots)}));
-  const lowN=allRepRows.filter(r=>r.count<3).length;
-  const repRows=(repMinVol?allRepRows.filter(r=>r.count>=3):allRepRows)
-    .sort((a,b)=>{
-      let av=a[repSortKey],bv=b[repSortKey];
-      if(av==null) av=repSortAsc?Infinity:-Infinity;
-      if(bv==null) bv=repSortAsc?Infinity:-Infinity;
-      if(typeof av==='string') return repSortAsc?av.localeCompare(bv):bv.localeCompare(av);
-      return repSortAsc?av-bv:bv-av;
-    });
-  if(!repRows.length){
-    wrap.innerHTML=allRepRows.length
-      ?`<div style="padding:16px;color:var(--faint);font-size:12px;">No reps with ≥3 completions in this range. <button onclick="toggleRepMinVol()" style="font-size:12px;padding:3px 12px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">Include low-volume reps</button></div>`
-      :`<div style="padding:16px;color:var(--faint);font-size:12px;">No completions for ${resLabel} in this range.</div>`;
-    return;
-  }
-  const LIMIT=10;
-  const displayRows=repExpanded?repRows:repRows.slice(0,LIMIT);
-  const hasMore=repRows.length>LIMIT;
-  const th=(k,l,cls='r')=>`<th class="${cls}" tabindex="0" onclick="repSortBy('${k}')" style="cursor:pointer;">${l}<span class="sarr ${repSortArrow(k)}"></span></th>`;
-  wrap.innerHTML=`<div style="overflow-x:auto;"><table id="pf-reptable">
-    <thead><tr>${th('name','Sales Rep','')+''+th('count','Completions')+th('average','Avg')+th('median','Median')+th('pctOnTgt','On target')}</tr></thead>
-    <tbody>${displayRows.map(r=>`<tr class="drill-tgt" data-rep="${esc(r.name)}" data-res="${esc(resLabel)}" onclick="drillRep(this)">
-      <td>${esc(r.name)}</td>
-      <td class="r">${r.count}</td>
-      <td class="r">${pillV(r.average)}</td>
-      <td class="r">${r.count>1&&r.median!=null?r.median.toFixed(1)+'d':'—'}</td>
-      <td class="r">${r.pctOnTgt!=null?r.pctOnTgt+'%':'—'}</td>
-    </tr>`).join('')}</tbody>
-  </table></div>
-  <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('pf-reptable',this,'the rep table')">Copy table</button></div>
-  ${hasMore||lowN?`<div style="padding:10px 0 4px;text-align:center;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-    ${hasMore?`<button onclick="toggleRepExpand()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repExpanded?'Show fewer':'Show all '+repRows.length+' reps'}</button>`:''}
-    ${lowN?`<button onclick="toggleRepMinVol()" style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;">${repMinVol?`Include ${lowN} rep${lowN===1?'':'s'} with <3 completions`:'Hide reps with <3 completions'}</button>`:''}
-  </div>`:''}`;
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
@@ -3353,7 +3382,7 @@ function renderTrends(){
   const trendDelta=(recentAvgCycle!=null&&prevAvgCycle!=null)?Math.round((recentAvgCycle-prevAvgCycle)*10)/10:null;
   const trendTxt=trendDelta==null?'—':trendLabel(trendDelta,0,TREND_BAND_AVG);
   const trendCls=trendTxt==='Improving'?'kg-c':trendTxt==='Slowing'?'kr-c':'';
-  const trendSub=trendDelta==null?'not enough data':(Math.abs(trendDelta).toFixed(1)+'d '+(trendDelta<0?'faster':'slower')+' (3wk vs prior 3wk)');
+  const trendSub=trendDelta==null?'no data':(Math.abs(trendDelta).toFixed(1)+'d '+(trendDelta<0?'faster':'slower'));
 
   // Scrollable chart sizing: ~12 weeks visible, scroll for the rest
   const WEEK_W=62;
@@ -3387,15 +3416,30 @@ function renderTrends(){
   const rhythmDays=[]; for(let i=55;i>=0;i--) rhythmDays.push(isoAddD(flowEnd,-i));
 
   document.getElementById('tr-content').innerHTML=`
-    <div class="kg kg5">
-      <div class="kcard"><div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div><div class="kval ${trendCls}">${trendTxt}</div><div class="ksub">${trendSub}</div></div>
-      <div class="kcard"><div class="klabel">Avg weekly pace${kinfo(TIP.pace)}</div><div class="kval">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}</div><div class="ksub">completions / week · full weeks only</div></div>
+    <div class="srail">
+      <div class="srail-cell">
+        <div class="klabel">Trend (3wk)${kinfo(TIP.trend3wk)}</div>
+        <div class="srail-val ${trendCls}">${trendTxt}<span class="srail-sub">${trendSub}</span></div>
+      </div>
+      <div class="srail-cell">
+        <div class="klabel">Avg weekly pace${kinfo(TIP.pace)}</div>
+        <div class="srail-val">${avgWkPace!=null?avgWkPace.toFixed(1):'—'}<span class="srail-sub">per week</span></div>
+      </div>
       <!-- Best week does not drill: "which surveys were in our highest-volume
            week" drives nothing, and that week's completions are already one
            click away in the Weekly detail table below, same as any other week. -->
-      <div class="kcard"><div class="klabel">Best week${kinfo(TIP.bestWeek)}</div><div class="kval">${bestWk!=null?bestWk:'—'}</div><div class="ksub">completions</div></div>
-      <div class="kcard${p75!=null?' drill-tgt':''}" ${p75!=null?drillAttrs('drillTrTail(75,'+p75+')'):''}><div class="klabel">P75 cycle${kinfo(TIP.p75)}</div><div class="kval">${p75!=null?p75.toFixed(1)+'d':'—'}</div><div class="ksub">75th percentile all-time</div></div>
-      <div class="kcard${p90!=null?' drill-tgt':''}" ${p90!=null?drillAttrs('drillTrTail(90,'+p90+')'):''}><div class="klabel">P90 cycle${kinfo(TIP.p90)}</div><div class="kval">${p90!=null?p90.toFixed(1)+'d':'—'}</div><div class="ksub">90th percentile all-time</div></div>
+      <div class="srail-cell">
+        <div class="klabel">Best week${kinfo(TIP.bestWeek)}</div>
+        <div class="srail-val">${bestWk!=null?bestWk:'—'}<span class="srail-sub">completions</span></div>
+      </div>
+      <div class="srail-cell${p75!=null?' rail-d':''}" ${p75!=null?'role="button" tabindex="0" '+drillAttrs('drillTrTail(75,'+p75+')'):''}>
+        <div class="klabel">P75 cycle${kinfo(TIP.p75)}</div>
+        <div class="srail-val">${p75!=null?p75.toFixed(1)+'d':'—'}<span class="srail-sub">75th pct</span></div>
+      </div>
+      <div class="srail-cell${p90!=null?' rail-d':''}" ${p90!=null?'role="button" tabindex="0" '+drillAttrs('drillTrTail(90,'+p90+')'):''}>
+        <div class="klabel">P90 cycle${kinfo(TIP.p90)}</div>
+        <div class="srail-val">${p90!=null?p90.toFixed(1)+'d':'—'}<span class="srail-sub">90th pct</span></div>
+      </div>
     </div>
     <div class="sec">
       <div class="shead">
@@ -4162,14 +4206,14 @@ function renderAgingWIP(){
   `;}).join('');
 
   document.getElementById('ol-content').innerHTML=`
-    <div class="wip-rail">
-      <div class="wip-rail-cell">
+    <div class="srail">
+      <div class="srail-cell">
         <div class="klabel">Open now${kinfo(TIP.wip)}</div>
-        <div class="wip-rail-val">${totalWip}${wipDimFiltered?`<span class="wip-rail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
+        <div class="srail-val">${totalWip}${wipDimFiltered?`<span class="srail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
       </div>
-      <div class="wip-rail-cell">
+      <div class="srail-cell">
         <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
-        <div class="wip-rail-val" style="color:${avgAge==null?'var(--text)':avgAge<=S.targetAvg?'var(--green)':avgAge<=7?'var(--amber)':'var(--red)'};">${avgAge!=null?avgAge+'d':'—'}</div>
+        <div class="srail-val" style="color:${avgAge==null?'var(--text)':avgAge<=S.targetAvg?'var(--green)':avgAge<=7?'var(--amber)':'var(--red)'};">${avgAge!=null?avgAge+'d':'—'}</div>
       </div>
       ${(()=>{
         // Three filter cells. Each mirrors a control that already exists below
@@ -4185,11 +4229,11 @@ function renderAgingWIP(){
         const unschedOn=unschedKeys.length>0&&unschedKeys.every(k=>wipQsSel.has(k));
         const rsOn=wipView==='openrs';
         const cell=(on,call,label,tip,val,color,hint)=>`
-      <div class="wip-rail-cell rail-f${on?' on':''}" role="button" tabindex="0" aria-pressed="${on}"
+      <div class="srail-cell rail-f${on?' on':''}" role="button" tabindex="0" aria-pressed="${on}"
            title="${esc(on?'Showing only these — click to clear':hint)}"
            onclick="${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${call}}">
         <div class="klabel">${label}${tip}<span class="rail-cue"></span></div>
-        <div class="wip-rail-val"${color?` style="color:${color};"`:''}>${val}</div>
+        <div class="srail-val"${color?` style="color:${color};"`:''}>${val}</div>
       </div>`;
         return cell(overOn,'toggleWipOverAge()','Over '+OVER_MIN+' days',kinfo(TIP.projAge),railOverAge,
                     railOverAge?'var(--amber)':'var(--text)','Filter the queue to surveys '+OVER_MIN+' days old and over')
@@ -4201,9 +4245,9 @@ function renderAgingWIP(){
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
         const band=ssRatioBand(pipeRatio);
         const c=band==='good'?'var(--green)':band==='bad'?'var(--red)':'var(--text)';
-        return `<div class="wip-rail-cell">
+        return `<div class="srail-cell">
         <div class="klabel">SS ratio${kinfo(TIP.ssRatioLive)}</div>
-        <div class="wip-rail-val" style="color:${c};">${shown!=null?shown.toFixed(1)+'wk':'—'}</div>
+        <div class="srail-val" style="color:${c};">${shown!=null?shown.toFixed(1)+'wk':'—'}</div>
       </div>`;})()}
     </div>
 
@@ -4361,11 +4405,9 @@ function renderAgingWIP(){
 const RS_MATURE_DAYS=21;
 // Reasons are a Salesforce multi-select: "Survey Incomplete; Re-Roof".
 const rsReasons=r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).filter(Boolean);
-// "Unnecessary Request" is deliberately absent: those rows never reach this
-// chart, because a dismissed request is not a resurvey.
-const RS_REASON_HINT={
-  'Survey Incomplete':'the survey came back missing something',
-};
+// Category labels and their one-line hints live in lib/metrics.cjs beside the
+// patterns that produce them, so a renamed category cannot keep an old hint.
+const rsCatHint=key=>(RS_CATEGORIES.find(c=>c.key===key)||{}).hint||'';
 
 function renderResurvey(){
   const el=document.getElementById('rs-content'); if(!el) return;
@@ -4440,14 +4482,22 @@ function renderResurvey(){
   });
 
   // ── why they happen ───────────────────────────────────────────────────
-  const reasonCounts={};
-  let noReason=0;
+  // Categories come from rsCategories(), which reads the request details text —
+  // NOT from the resurvey_reason picklist. The picklist was what this panel drew
+  // until 2026-08-18 and it could not be acted on: "Survey Incomplete" was 76%
+  // of it and the remaining eight values sat at 0–1% each, so the panel's whole
+  // height went to saying "something was missing".
+  //
+  // Multi-label, so a row lands in every category it asked for and the shares
+  // sum past 100%. See lib/metrics.cjs for why that is the right shape here.
+  const catCounts={};
+  let noDetails=0;
   defects.forEach(r=>{
-    const rs=rsReasons(r);
-    if(!rs.length){ noReason++; return; }
-    rs.forEach(x=>{ reasonCounts[x]=(reasonCounts[x]||0)+1; });
+    const cs=rsCategories(r);
+    if(!cs.length){ noDetails++; return; }
+    cs.forEach(k=>{ catCounts[k]=(catCounts[k]||0)+1; });
   });
-  const reasonRows=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1]);
+  const reasonRows=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]);
   const reasonMax=Math.max(...reasonRows.map(r=>r[1]),1);
 
   // ── one grouping, four cuts ───────────────────────────────────────────
@@ -4687,17 +4737,17 @@ function renderResurvey(){
   <div class="q-two">
   ${reasonRows.length?`
   <div class="sec">
-    <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsReason)}</div>
-      <div class="ssub">Reason recorded on ${defects.length-noReason} of ${defects.length} · a resurvey can carry more than one</div></div></div>
+    <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsCat)}</div>
+      <div class="ssub">What the request asked for, read from its details · ${defects.length-noDetails} of ${defects.length} · most ask for more than one</div></div></div>
     <div class="rswk-rows">
-      ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsReason('${escAttrJs(k)}')`)}>
-        <div class="rswk-wk" style="width:auto;">${esc(k)}</div>
+      ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsCategory('${escAttrJs(k)}')`)}>
+        <div class="rswk-wk" style="width:auto;">${esc(rsCatLabel(k))}</div>
         <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
         <div class="rswk-n">${v}</div>
-        <div class="rswk-meta">${Math.round(v/defects.length*100)}% of resurveys${RS_REASON_HINT[k]?' · '+RS_REASON_HINT[k]:''}</div>
+        <div class="rswk-meta">${Math.round(v/defects.length*100)}% of resurveys${rsCatHint(k)?' · '+rsCatHint(k):''}</div>
       </div>`).join('')}
     </div>
-    <div class="note">${reasonRows[0]?`<strong>${esc(reasonRows[0][0])}</strong> accounts for ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}${dismissed?`A further <strong>${dismissed}</strong> request${dismissed===1?' was':'s were'} dismissed as unnecessary and ${dismissed===1?'is':'are'} excluded from this page entirely, since nothing was re-surveyed.`:''}</div>
+    <div class="note">${reasonRows[0]?`<strong>${esc(rsCatLabel(reasonRows[0][0]))}</strong> is in ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}Shares add past 100% because one request usually asks for several things${noDetails?`, and <strong>${noDetails}</strong> carr${noDetails===1?'ies':'y'} no request details, so ${noDetails===1?'it is':'they are'} in none of the bars above`:''}. ${dismissed?`A further <strong>${dismissed}</strong> request${dismissed===1?' was':'s were'} dismissed as unnecessary and ${dismissed===1?'is':'are'} excluded from this page entirely, since nothing was re-surveyed.`:''}</div>
   </div>`:''}
   <div id="rsreq-wrap"></div>
   </div>
@@ -5545,10 +5595,6 @@ function renderSettings(){
               ${allPages.map(p=>`<option value="${p.v}"${S.defaultPage===p.v?' selected':''}>${p.l}</option>`).join('')}
             </select>
           </div>
-        </div>
-        <div class="set-row">
-          <div><div class="set-label">Min region volume</div><div class="set-desc">Dim regions with fewer than this many projects</div></div>
-          <div class="set-control"><input type="number" min="1" max="20" value="${S.minRegionVolume}" onchange="setSetting('minRegionVolume',parseInt(this.value))"></div>
         </div>
         <div class="set-row">
           <div><div class="set-label">Auto date range</div><div class="set-desc">Auto-set date range from data on file load</div></div>

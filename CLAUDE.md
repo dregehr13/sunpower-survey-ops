@@ -55,6 +55,14 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was
 - **One filter bar, every page** (`buildFBar`). WIP used to render a private bar against its own `wipF`, so a region chosen on Performance did not carry over and Office could not reach it at all. Region / Office / Status / Resource are shared; **Sales Rep and Install Type are WIP-only extras** in `wipF`, since nothing else cuts by either. WIP shows **no date range** — it is a live queue, and the hint says so. Don't reintroduce a second bar
 - **There is no global Install Type filter.** `type` had filter state, a `gfDim`/`applyFilter` clause and a `?type=` URL param but no control anywhere, so a shared link could filter every page invisibly. Removed 2026-08-14; `FIELDS.type` is `filterable:false`. The WIP page's Type control is separate state
+- **The stat rail is one shared component** (`.srail` / `.srail-cell` / `.srail-val` / `.srail-sub`), used by WIP, Performance and Trends. It replaced five and six KPI cards per page: the figures carry in about a sixth of the vertical space and, sharing one surface, stop implying they are equally important things. Cell padding must stay uniform, since `flex-basis:0` sizes the content box. WIP adds `.rail-f` cells that filter the queue below; the other pages use `.rail-d`, which opens a drill and is marked with the same `↗` the KPI cards used. The inline `.srail-sub` sits beside the value, so it has to stay short or the cell wraps and stops matching the others
+- **Performance is a stat rail, one chart and one table** (rebuilt 2026-08-18). It was five KPI cards, three resource cards, a volume chart, a cycle chart, a region table and a rep table: six surfaces over one shape, since region, office, rep and resource all answer group / count / avg / median / on-target. Things not to undo:
+  - **One grouping, four cuts**: Region (default) · Sales office · Sales rep · Resource. The toggle drives the chart and the table together. Sales office had no cut here at all before, though it is the more actionable org unit
+  - **The rep cut's three resource columns replaced a three-state toggle.** Self-done / w/ SunPower / w/ Radicl silently changed which population the table measured while the heading stayed put. 103 of 300 reps have jobs under more than one resource, so a third of the roster could not be compared without flipping between states. Each cell carries the cycle time and the survey count it came from
+  - **No floor and no dimming**, Doug's call 2026-08-18: a rep with two deals still did those two surveys. Reach comes from search, sort and an expander instead. The cuts run 58 regions, 173 offices and 300 reps, so the search box is load-bearing, not a nicety. Every row carries Projects beside its average, which is what lets a thin number be read as thin without hiding it. `S.minRegionVolume` and the `.dim-row` treatment were deleted with the dimming, including the Settings control
+  - **The blank bucket gets a row.** `regionStats()` skipped rows with no region, so 72 completions fell off the page; the cuts now emit `(no region)` / `(no office)` and the drill resolves it to the rows that genuinely have no value
+  - **The chart caps at 16 groups by volume, the table does not.** A display cap on a chart is not a floor on the data, and the subtitle says which it is
+  - Grouped BY resource, the three per-resource columns are the diagonal of their own table, so they are hidden on that cut
 - **The WIP page's stat rail and bars follow the page filter**, not just the table. They read `wipFiltered()`; the SS ratio takes both numerator and denominator from `wipScoped()` so it never divides one population by another. Filtering to a region with no recent completions correctly shows "—", not a national figure
 - **The WIP page is a stat rail + one queue panel** (rebuilt 2026-08-17):
   - Rail cells: Open now · Avg age · Over 15 days · Unscheduled · Open resurveys · SS ratio. Median age and On-track ≤4d were dropped with the five KPI cards. Cell padding must stay **uniform** — trimming the first and last cell's inner padding makes those two 18px narrower, because `flex-basis:0` sizes the content box and padding is added on top of an equal share rather than taken out of it. Active/hover state on the three filter cells therefore rides on background and an **inset** box-shadow: a border or a padding change would resize just that cell
@@ -79,7 +87,33 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - One population — `isResurveyDefect` for yield everywhere on the page. It used to run a second local definition alongside it, so "Total Resurveys" read 385 while FPY counted 434 on the same screen
   - It has **no time control of its own**. A `Date Range / Currently Open` toggle used to blank every FPY figure and delete the By Sales Rep section with nothing explaining why. The filter bar owns time
   - The yield chart marks weeks under `RS_MATURE_DAYS` (21) as provisional. Defects keep arriving for weeks — only 57% within 7 days, p90 41 — so recent weeks read high. A single trend arrow was tried and removed: it reported "down 7.7 pts" during the clearest improvement in the data
-  - `resurvey_reason` is the actionable field (96% populated; 66% is "Survey Incomplete"), and `resurvey_details` names the specific missing photo or measurement on 92% of those
+  - **"Why they come back" reads `rsCategories()`, not `resurvey_reason`** (2026-08-18).
+    The picklist is too coarse to act on — "Survey Incomplete" is 76% of every
+    recorded reason and the other eight values sit at 0–1% each, so the panel
+    spent its whole height saying "something was missing". `rsCategories()` in
+    `lib/metrics.cjs` reads the ~8 real categories out of the `resurvey_details`
+    free text instead (95% coverage). Things not to undo:
+    - **Multi-label.** A request asks for 2.18 categories on average ("a site map
+      showing the utility meter, plus the pitch of the rear faces"), so one
+      category per row would silently delete the second ask. Shares sum past
+      100%, and the note under the bars says so
+    - **Strip the request template first.** `INTERIOR ACCESS REQUIRED: No` is on
+      57% of requests and asks for nothing; left in, its words classify every row
+    - **No catch-all bucket.** The 20 unreadable rows (18 with an empty details
+      field, 2 one-offs) are counted in the note, not bucketed — a bucket named
+      "Other" at 5% would look like a category
+    - **Patterns must not carry `/g`** — `test()` is stateful with a global flag
+      and would drop rows at random. The unit test asserts this
+    - It is a **derived reading of free text**, so the raw picklist and the
+      original sentence stay beside it in the drill drawer. If SF ever ships a
+      real sub-reason picklist, that replaces this outright
+    - Guarded by a **frozen corpus in `test/metrics.test.js`**, not the snapshot:
+      `build-fixture.cjs` redacts `resurvey_details` because it is customer
+      prose. Widen a pattern, add the phrasing to the corpus in the same edit.
+      That test caught the pattern matching `breaker` but not `breakers`
+    - Panel + meter + sub-panels touch ~70% of resurveys between them. The
+      spread is genuinely uneven and that is the finding: the coaching story is
+      "photograph the panel completely". Don't flatten it by construction
   - **One grouping, four cuts, one table**: sales office (default) · region · resource · sales rep. Adding a cut means adding a key to `GRP`, not another panel. The toggle renders twice from one string (`grpTgls`) against one state, so the copies cannot drift
   - **The ranked bars and the detail table are one object.** They were separate until 2026-08-17 and printed the same fact twice: rate and FPY are exact complements, so each group showed its own number in two vocabularies, ranked two different ways (rate desc vs volume desc), under two different floors (10+ completions vs none). The bar now lives in the table's **Came back** cell with the 5% ceiling drawn in its track, and the ranking survives as the default sort
   - **One number per row, and it is the rate.** The bar length matches it, and small numbers band more legibly than the 85-to-100 range FPY lives in. The hero and the chart still speak FPY; the key line under the table states the relationship once. Do not add an FPY column back beside it
