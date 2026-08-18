@@ -120,12 +120,15 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 /* METRIC INFO TOOLTIP */
 .kinfo{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;opacity:.4;font-size:10px;font-weight:600;font-style:normal;cursor:help;margin-left:5px;vertical-align:-1px;position:relative;text-transform:lowercase;letter-spacing:0;}
 .kinfo:hover,.kinfo:focus-visible{opacity:.85;outline:none;}
-.kinfo::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%) translateY(2px);width:max-content;max-width:240px;background:#1a1a1a;color:#fff;font-size:10px;font-weight:400;line-height:1.55;padding:7px 10px;border-radius:6px;white-space:normal;text-align:left;text-transform:none;opacity:0;visibility:hidden;transition:opacity .12s,transform .12s;z-index:600;pointer-events:none;}
-.kinfo:hover::after,.kinfo:focus-visible::after{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
-.kg .kcard:first-child .kinfo::after,.exec-kpis .ekcard:first-child .kinfo::after{left:0;transform:translateX(0) translateY(2px);}
-.kg .kcard:first-child .kinfo:hover::after,.exec-kpis .ekcard:first-child .kinfo:hover::after,.kg .kcard:first-child .kinfo:focus-visible::after,.exec-kpis .ekcard:first-child .kinfo:focus-visible::after{transform:translateX(0) translateY(0);}
-.kg .kcard:last-child .kinfo::after,.exec-kpis .ekcard:last-child .kinfo::after{left:auto;right:0;transform:translateX(0) translateY(2px);}
-.kg .kcard:last-child .kinfo:hover::after,.exec-kpis .ekcard:last-child .kinfo:hover::after,.kg .kcard:last-child .kinfo:focus-visible::after,.exec-kpis .ekcard:last-child .kinfo:focus-visible::after{transform:translateX(0) translateY(0);}
+/* The bubble is portalled to <body> at hover time (showKtip) instead of being
+   an ::after on .kinfo. As a child of the icon it was subject to every
+   ancestor's overflow and stacking context — clipped inside the WIP queue and
+   the scrolling tables, painted under sticky headers — and no z-index on the
+   bubble itself can escape a stacking context it lives in. Fixed positioning
+   from the body also means the viewport clamps it, so the per-card first/last
+   alignment overrides this replaced are no longer needed. */
+.ktip{position:fixed;top:0;left:0;z-index:2147483000;width:max-content;max-width:240px;background:#1a1a1a;color:#fff;font-size:10px;font-weight:400;line-height:1.55;letter-spacing:0;padding:7px 10px;border-radius:6px;white-space:normal;text-align:left;text-transform:none;opacity:0;visibility:hidden;transform:translateY(2px);transition:opacity .12s,transform .12s;pointer-events:none;}
+.ktip.on{opacity:1;visibility:visible;transform:translateY(0);}
 
 /* SECTIONS */
 .sec{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:15px 17px;margin-bottom:14px;box-shadow:var(--shadow);}
@@ -1907,6 +1910,38 @@ function drillAttrs(call){
   return `role="button" tabindex="0" onclick="${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${call}}"`;
 }
 function kinfo(tip){ return `<span class="kinfo" tabindex="0" data-tip="${esc(tip)}">i</span>`; }
+// One tooltip element for all ~45 info icons, appended to <body> on first use
+// and positioned from the anchor's viewport rect. Anything painted after it in
+// the document — the drill drawer (1101), the toast (999), sticky table heads —
+// still sits below 2147483000, and body-level means no ancestor can clip it.
+let _ktip=null,_ktipFor=null;
+function showKtip(el){
+  const txt=el.getAttribute('data-tip'); if(!txt) return;
+  if(!_ktip){ _ktip=document.createElement('div'); _ktip.className='ktip'; _ktip.setAttribute('role','tooltip'); document.body.appendChild(_ktip); }
+  _ktip.textContent=txt; _ktipFor=el; _ktip.classList.add('on');
+  placeKtip();
+}
+function placeKtip(){
+  if(!_ktip||!_ktipFor||!_ktip.classList.contains('on')) return;
+  const a=_ktipFor.getBoundingClientRect();
+  // The anchor can scroll out of a table or off the page while the pointer is
+  // still technically over it; a bubble left floating there points at nothing.
+  if(a.bottom<0||a.top>innerHeight||a.right<0||a.left>innerWidth){ hideKtip(); return; }
+  const b=_ktip.getBoundingClientRect(),pad=8;
+  let left=Math.min(Math.max(pad,a.left+a.width/2-b.width/2),innerWidth-b.width-pad);
+  let top=a.bottom+7;
+  if(top+b.height>innerHeight-pad&&a.top-7-b.height>pad) top=a.top-7-b.height; // flip up rather than run off the fold
+  _ktip.style.left=Math.max(pad,left)+'px';
+  _ktip.style.top=top+'px';
+}
+function hideKtip(){ if(_ktip){ _ktip.classList.remove('on'); _ktipFor=null; } }
+document.addEventListener('mouseover',e=>{ const k=e.target.closest&&e.target.closest('.kinfo'); if(k&&k!==_ktipFor) showKtip(k); });
+document.addEventListener('mouseout',e=>{ const k=e.target.closest&&e.target.closest('.kinfo'); if(k&&k===_ktipFor&&!(e.relatedTarget&&k.contains(e.relatedTarget))) hideKtip(); });
+document.addEventListener('focusin',e=>{ const k=e.target.closest&&e.target.closest('.kinfo'); if(k) showKtip(k); else if(_ktipFor) hideKtip(); });
+document.addEventListener('focusout',e=>{ if(e.target.closest&&e.target.closest('.kinfo')) hideKtip(); });
+document.addEventListener('scroll',placeKtip,true);
+window.addEventListener('resize',hideKtip);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') hideKtip(); });
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
   complete:'A survey counts as complete only when it has a Site Survey Complete date AND List status "Complete". A Holding or Reopened row keeps its date but is still open.',
