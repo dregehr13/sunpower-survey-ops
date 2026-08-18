@@ -75,22 +75,34 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export
 - New fields must not break old rows (import defaults missing sfCols to `''`)
-- **Quality page** (rebuilt 2026-08-06, restructured 2026-08-17). Reads as quality first, then queue: FPY + a weekly yield chart, why they come back, who is at fault, breakdowns, then the open queue. Things not to undo:
+- **Quality page** (rebuilt 2026-08-06, restructured twice on 2026-08-17). Three panels, in this order: **yield hero + chart · Resurveys by <group> · why they come back | resurveys requested**. The second restructure removed *Who is at fault*, *By resource*, *By sales rep* and *The open queue*, then merged the ranked rate bars into the detail table. Six surfaces became three. Things not to undo:
   - One population — `isResurveyDefect` for yield everywhere on the page. It used to run a second local definition alongside it, so "Total Resurveys" read 385 while FPY counted 434 on the same screen
   - It has **no time control of its own**. A `Date Range / Currently Open` toggle used to blank every FPY figure and delete the By Sales Rep section with nothing explaining why. The filter bar owns time
   - The yield chart marks weeks under `RS_MATURE_DAYS` (21) as provisional. Defects keep arriving for weeks — only 57% within 7 days, p90 41 — so recent weeks read high. A single trend arrow was tried and removed: it reported "down 7.7 pts" during the clearest improvement in the data
   - `resurvey_reason` is the actionable field (96% populated; 66% is "Survey Incomplete"), and `resurvey_details` names the specific missing photo or measurement on 92% of those
-  - Default breakdown is **sales office**, toggleable to region
-  - **Daily intake lives on Current, not here** (`renderRsReq()`, added 2026-08-07): "Resurveys requested", left column, Mon–Sun by request date, expandable per day to the reason + `resurvey_details`, following the Last Week / This Week toggle. It anchors on `resurvey_requested` — the only thing on Current that does — and it keeps Unnecessary Request rows, greyed, because it is an inbox rather than a yield measure
+  - **One grouping, four cuts, one table**: sales office (default) · region · resource · sales rep. Adding a cut means adding a key to `GRP`, not another panel. The toggle renders twice from one string (`grpTgls`) against one state, so the copies cannot drift
+  - **The ranked bars and the detail table are one object.** They were separate until 2026-08-17 and printed the same fact twice: rate and FPY are exact complements, so each group showed its own number in two vocabularies, ranked two different ways (rate desc vs volume desc), under two different floors (10+ completions vs none). The bar now lives in the table's **Came back** cell with the 5% ceiling drawn in its track, and the ranking survives as the default sort
+  - **One number per row, and it is the rate.** The bar length matches it, and small numbers band more legibly than the 85-to-100 range FPY lives in. The hero and the chart still speak FPY; the key line under the table states the relationship once. Do not add an FPY column back beside it
+  - **Sortable, blanks sinking in both directions**, same `sarr` vocabulary as the Performance, WIP and drawer tables. Text columns open A to Z and numeric ones worst-first: a first click that sorts names Z to A reads as a broken control. Sort resets to rate when the cut changes, so a column that is not rendered can never be the active sort
+  - **One floor: `RS_MIN_CELL` (10 completions), applied to the whole table.** A row that cannot show a rate was doing no work in a table whose point is comparing rates. Per-resource cells keep the sample-count treatment, since a group above the floor can still be thin for one resource
+  - The **All \<plural\>** footer row is the population baseline, neutral so it never ranks against the rest. It reconciles by construction: the Resource cut's three rows are exactly the Sales office footer's three resource cells
+  - **One rate definition — `defects ÷ completions` — for all four cuts.** The rep cut used to run an own-fault variant excluding Customer/Design; merged 2026-08-17 because attribution is 90% Surveyor and the split moved only 21 of 303 rep defects
+  - **The rep cut counts self-surveyed rows only** (`resource === 'Sales Rep'`). Its denominator is smaller than the other three on purpose — grouping every completion by `sales_rep` charges a rep for a Radicl surveyor's defect. The footnote says so and gives both counts
+  - **Rep idle days are a label, never a filter.** `idle Nd` from 30 days, measured to the **end of the viewed range** rather than the export: an export anchor hid 3 of the 7 qualifying reps on a Q1 range because they left later that year. No activity cutoff exists, and one should not be added — sales activity is a proxy for employment and no threshold makes it a good one (30/45/60/90 were all measured; the only real difference was whether the worst-rate rep on the board appeared). Show the number, let the reader draw the line
+  - **Per-resource FPY columns only under office/region.** Grouped by resource they are the diagonal of their own table; grouped by rep every row is a Sales Rep row. The rep cut gets the rep's main region in that slot instead
+  - **No live counts on this page.** The detail table carried an "Open" column reading `isOpenResurvey` — a live figure inside a date-filtered table, the same defect that got "Open now" removed. Dropped with the open queue
+  - **The intake inbox lives here now** (`renderRsReq()`, added 2026-08-07 on Current, moved 2026-08-17 into the slot *Who is at fault* vacated). Expandable per day to the reason + `resurvey_details`. Two things about its window: it anchors on `resurvey_requested`, which nothing else on the page does, and it holds a **fixed two weeks — Monday of last week → the export date** rather than the filter's range. That is 8 rows on a Monday to 14 on a Sunday, and the oldest seven fall off each Monday. Over the default all-time range the filter's window would be 60-odd day rows in a panel built for seven; an inbox is read forward from the last time you looked, not scrubbed. **Region, office and resource still apply** — a panel ignoring an active region filter is the stale-scrubber bug the Map page had. It keeps Unnecessary Request rows, greyed, because it is an inbox rather than a yield measure
   - Per-survey resource still only covers the initial survey — future SF survey objects will fix that (see memory "Come back to" list)
-  - **Yield hero** (300px) replaced the four-KPI strip: FPY at 52px, the sentence, a progress track with the 95% target marked *on* it, then Cost of a resurvey / Resurvey cycle / Median as a definition list. Under `RS_MIN_CELL` completions it prints `n=` rather than a confident percentage
+  - **Yield hero** (300px) replaced the four-KPI strip: FPY at 52px, the sentence, a progress track with the 95% target marked *on* it, then three figures that **add up**, each with its median beneath: Cost of a resurvey (+20.7d) / Time to flag (16.2d) / Resurvey cycle (6.0d) ≈ 3.2 + 16.2 + 6.0 against 4.0d clean. Cost was `avg(ct_full) − avg(clean ct_total)` until 2026-08-17 and read +5.3d: `ct_full` is `ct_total + ct_resurvey`, so it skipped the wait before anyone flags the survey — most of the calendar cost — and that omission also made it a near-duplicate of the Resurvey cycle line directly beneath it. Doug could not defend the pair; they are three defensible facts now. **Time to flag is the largest of the three and is not this team's clock** — it is a Design/review number, worth owning the measurement of
+  - **No `n=` anywhere.** Cells under `RS_MIN_CELL` show their completion count in the grey non-pill `.pna-n` treatment, which is what says "not a percentage"; the `q-rate-n` column dropped its `::before{content:'n='}` at the same time
   - **The yield chart is temporarily built in two forms** behind a Bars/Trend toggle (`rsChartMode`), pending Doug's decision. They share one target rule and one immature-week convention. The tradeoff: bars must sit on a zero baseline, so 0–100% flattens a series living between 80 and 95, while the line auto-scales and shows the variation — which is the argument the 4-week rolling average was added to win. **Delete the loser once chosen**
-  - **Resurvey rate by group** heads the region/office section and follows its toggle; the detail table beneath is "<group> detail" and no longer carries its own. One ranking of one fact, not two
-  - Rate bands are the **mirror of `fpyPill`**: <5% green, 5–15% amber, 15%+ red, ceiling line at 5% because the target is 95%. At a 15.6% national rate most groups read red — that is the honest reading against a 95% target, not a scale fault
-  - **No "worst office per region" column**, though the handoff specifies one: only 2 of 28 regions contain an office clearing the 10-completion floor, so it would be blank on most rows, and filling it from n=3 would name a real org unit off noise. The column carries the sample size instead, so no rate is read without its n
-  - **Reasons sit left of attribution.** Attribution is the more tempting panel and the less actionable one
+
+  - Rate bands are the **mirror of the old `fpyPill`**: under 5% green, 5 to 15 amber, 15 and over red, ceiling line at 5% because the target is 95%. At a 15.6% national rate most groups read red. That is the honest reading against a 95% target, not a scale fault
+  - **No "worst office per region" column**, though the handoff specifies one: only 2 of 28 regions contain an office clearing the 10-completion floor, so it would be blank on most rows, and filling it from a sample of 3 would name a real org unit off noise. The column carries the sample size instead, so no rate is read without it
+  - **Attribution has no panel.** *Who is at fault* was removed 2026-08-17: with the backfill done it reads Surveyor 329 · Design 29 · Customer 5 · unattributed 2, so it said "it's us, 90% of the time" on every load. `resurvey_attributed` survives in the drill drawer's column and per-day in the inbox; nothing on this page computes with it. It never fed `isResurveyDefect`
+  - **Reasons sit left.** The reason list says what to fix and is the actionable half; it pairs with the inbox, whose height varies, so the variable panel sits last on the page
   - **Status is not in this page's filter bar** — every row here is already complete
-  - "Open now" is not on this page. It was a live count sitting under a date filter it ignored; it lives on the WIP rail as Open resurveys, whose cell switches the WIP queue to exactly those rows
+  - **The open queue is not on this page.** Removed 2026-08-17 — it lives on the WIP rail as Open resurveys, whose cell filters the WIP queue to exactly those rows. Before removing it, `resurvey_reason` + `resurvey_details` were added to the **WIP expanded row** (`.wip-rs-why`): 41 of the 42 open resurveys carry a reason, and this page's queue table was the only place it could be read. What did not survive the move is the weekly grouping with its oldest-age and `rsStaleDays()` marker — WIP has no staleness cue specific to resurveys
 - **Map page** (added 2026-08-06). All markets by town, four modes (Volume / Open WIP / Cycle / Resurvey), click a state nationally to open that market:
   - Location comes from the **ZIP in `address`, never `region`** — region is a sales territory, not a place, and reading the address also places the ~71 rows whose region is blank
   - Grouped by **town**, not ZIP: a ZIP is a postal artefact that split Glen Allen into two dots and buried Richmond's eight ZIPs entirely
@@ -190,6 +202,10 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
   on things worth opening
 
 ## Change list (next build)
+- **A resurvey staleness cue on WIP.** Removing the Quality open queue took the
+  `rsStaleDays()` marker (p90 of resolved resurvey cycles, ~15d) with it. The
+  WIP queue bands on `ssDaysOpen` and project age, neither of which knows a
+  resurvey has been open past the point 90% of them had resolved
 - **Pick a yield-chart form on Quality** (Bars vs Trend) and delete the other,
   along with `rsChartMode`. Built both 2026-08-17 so the shape could be judged
   on real data rather than on the handoff's sample numbers
@@ -200,10 +216,10 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
   `reopened_by_design` flags with no reason, no dates and review notes reading
   "RESURVEY NOT NEEDED". They fall out of FPY automatically once tagged
   (83.3% → ~84.1%); no code change needed
-- Doug is backfilling the ~74 resurveys with no `resurvey_attributed`
+- ~~Doug is backfilling the ~74 resurveys with no `resurvey_attributed`~~ — done,
+  2 rows remain. The result (90% Surveyor) is what retired the attribution panel
 - Not built, raised and parked: `survey_type` is unused everywhere and Battery
   Only surveys yield 75.8% against 84.1% for the rest (n=33, thin); the
-  By Resource card mixes initial-survey FPY with resurvey cycle time and should
-  say so; several dismissed requests were Design asking for utility bills or
+  several dismissed requests were Design asking for utility bills or
   ownership docs, which is a Design-process conversation rather than a survey
   failure — worth quantifying once the tagging is done

@@ -160,6 +160,9 @@ tr:hover td{background:var(--bg);}
    but not for a sample size — in the Resurveys breakdowns "n=4" IS the value in
    most rows. --muted is 5.7:1 and clears AA. */
 .pna-n{color:var(--muted);font-size:12px;}
+.rs-idle{font-size:10px;font-weight:400;color:var(--faint);white-space:nowrap;}
+.wip-rs-why{font-size:11.5px;color:var(--muted);line-height:1.45;margin:-4px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.wip-rs-why b{color:var(--text);font-weight:600;}
 .note{font-size:10px;color:var(--faint);margin-top:8px;line-height:1.6;}
 .sarr{font-size:10px;opacity:.3;margin-left:2px;}
 .sarr-up::after{content:"↑";opacity:.8;}
@@ -650,34 +653,30 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .q-dl{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-lt);display:flex;flex-direction:column;gap:9px;}
 .q-dl-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
 .q-dl-row span{font-size:12px;color:var(--muted);}
-.q-dl-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.q-dl-row b{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+.q-dl-sub{display:block;font-size:10px;font-weight:400;color:var(--faint);margin-top:1px;letter-spacing:0;}
 .q-hero-link{font:inherit;font-size:11.5px;color:var(--blue);background:none;border:none;padding:0;margin-top:auto;padding-top:16px;cursor:pointer;text-align:left;}
 .q-hero-link:hover{text-decoration:underline;text-underline-offset:2px;}
 .q-chart{margin-bottom:0;}
 
-.q-rate{display:grid;grid-template-columns:1fr 1fr;gap:9px 28px;}
-.q-rate-row{display:flex;align-items:center;gap:11px;min-width:0;}
-.q-rate-name{width:150px;flex-shrink:0;text-align:right;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.q-rate-track{flex:1;height:17px;background:var(--border-lt);border-radius:3px;position:relative;min-width:0;}
+.q-rate-cell{display:flex;align-items:center;gap:9px;min-width:132px;}
+.q-rate-track{flex:1;height:13px;background:var(--border-lt);border-radius:3px;position:relative;min-width:52px;}
 .q-rate-fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;}
-.q-rate-ceil{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--target);}
-.q-rate-val{width:38px;flex-shrink:0;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
-.q-rate-n{width:44px;flex-shrink:0;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;}
-.q-rate-n::before{content:'n=';}
-/* A reference, not a performer — neutral so it never ranks against the rest. */
-.q-rate-all .q-rate-name{color:var(--muted);}
+.q-rate-ceil{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--target);}
+.q-rate-val{width:44px;flex-shrink:0;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+/* A reference, not a performer. Neutral so it never ranks against the rest. */
+.q-rate-all td{border-top:1px solid var(--border);background:var(--bg);}
 .q-rate-key{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--faint);margin-top:13px;}
 .q-rate-keyline{width:14px;height:2px;background:var(--target);flex-shrink:0;}
 
 @media(max-width:1100px){
   .q-top{grid-template-columns:1fr;}
-  .q-rate{grid-template-columns:1fr;}
 }
 @media(max-width:860px){
   .q-two{grid-template-columns:1fr;}
   .q-hero-val{font-size:42px;}
-  .q-rate-name{width:88px;}
-  .q-rate-n{display:none;}
+  .q-rate-cell{min-width:96px;}
+  .q-rate-track{display:none;}
 }
 
 /* WIP STAT RAIL — one panel of divided cells, not five separate cards. The
@@ -764,6 +763,7 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
    every table that has one. It was an underlined link on WIP and a header
    button everywhere else — three shapes for one action. */
 .tbl-foot{display:flex;justify-content:flex-end;padding:10px 0 2px;}
+.tbl-foot.split{justify-content:space-between;align-items:center;}
 .wip-foot.tbl-foot{padding:10px 18px 4px;}
 .copy-btn{font:inherit;font-size:11.5px;font-weight:600;line-height:1;display:inline-flex;align-items:center;gap:6px;
   padding:7px 13px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--muted);
@@ -1942,8 +1942,9 @@ const TIP={
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded: nothing was re-surveyed, so the survey did not fail. They are left out of this page entirely, not just out of the percentage.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land. Twenty-one days is about the 79th percentile of that lag.',
   rsReason:'The reason picklist on the resurvey request, recorded on 96% of them. A request can carry more than one reason, so the shares add to more than 100%. This is the field that says what to fix, where attribution only says who.',
-  rsPenalty:'Average calendar days from Project Start to a clean Site Survey Complete, against the same figure for a survey that had to be redone (start → complete → resurvey complete). The gap is what one resurvey costs, and it is measured against the Spec 12744 target rather than in the abstract.',
-  rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days.',
+  rsPenalty:'How much longer a job takes when it comes back. Project Start → Resurvey Complete on resurveyed jobs, against Project Start → Site Survey Complete on clean ones, in calendar days. It used to be measured on ct_full (survey time plus resurvey time), which skipped the wait between the survey closing and the resurvey being requested — most of the calendar cost — and so read +5.3d against a true +20.7d.',
+  rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one.',
+  rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
   rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
@@ -2336,72 +2337,39 @@ function drillSalesRepRs(name){ const view=rsDefectPool().filter(r=>r.sales_rep=
 // Resource here means who ran the ORIGINAL survey, not who reworked it — the
 // card says as much, and the drilled rows are that card's resurveys.
 function drillRsResource(res){ const view=rsDefectPool().filter(r=>(r.resource||'')===res); openDrill('Resurveys · '+res,view.length+' came back · original survey by '+res+' · '+drillScopeNote(),view,{mode:'resurvey'}); }
-// Sort state for the Quality open queue. It defaults to oldest-first, which is
-// the order it is worked in, and was the only fixed order it had.
-let rsqKey='days', rsqAsc=false;
-function rsqSortBy(k){ if(rsqKey===k) rsqAsc=!rsqAsc; else { rsqKey=k; rsqAsc=false; } renderResurvey(); }
-function rsqTh(k,label,cls){
-  const on=rsqKey===k, arrow=on?(rsqAsc?'sarr-up':'sarr-dn'):'sarr-no';
-  return `<th class="${cls}${on?' dsort on':' dsort'}" tabindex="0" role="button" aria-sort="${on?(rsqAsc?'ascending':'descending'):'none'}" onclick="rsqSortBy('${k}')">${esc(label)}<span class="sarr ${arrow}"></span></th>`;
-}
-function rsqSort(list,today){
-  const val={
-    project:r=>(r.project||r.address||'').toLowerCase(),
-    region:r=>(r.region||'').toLowerCase(),
-    resource:r=>(r.resource||'').toLowerCase(),
-    attr:r=>r.resurvey_attributed?r.resurvey_attributed.toLowerCase():null,
-    days:r=>dDiff(r.resurvey_requested,today),
-    requested:r=>r.resurvey_requested||null,
-    scheduled:r=>r.resurvey_scheduled||null,
-    reason:r=>(r.resurvey_reason||'').toLowerCase()||null,
-  }[rsqKey]||(r=>r.resurvey_requested||'');
-  const dir=rsqAsc?1:-1;
-  return [...list].sort((a,b)=>{
-    const av=val(a), bv=val(b);
-    if(av==null&&bv==null) return 0;
-    if(av==null) return 1;
-    if(bv==null) return -1;
-    return typeof av==='string'?dir*av.localeCompare(bv):dir*(av-bv);
-  });
-}
 function rsDefectPool(){ return rows.filter(r=>gfDim(r)&&isComplete(r)&&gfDateIn(r.complete)&&isResurveyDefect(r)); }
-function drillAttribution(attr){ const view=rsDefectPool().filter(r=>attr==='—'?!r.resurvey_attributed:r.resurvey_attributed===attr); const label=attr==='—'?'No Attribution':attr; openDrill('Attribution · '+label,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
 function drillRsReason(reason){ const view=rsDefectPool().filter(r=>rsReasons(r).includes(reason)); openDrill('Reason · '+reason,view.length+' resurveys · '+drillScopeNote(),view,{mode:'resurvey'}); }
-// Which date anchors an open resurvey to a week. The two answer different
-// questions and genuinely disagree: 'complete' asks "of the surveys we closed
-// that week, which bounced back", 'request' asks "how long has this resurvey
-// been sitting". Completion-week scatters the aging signal — a single 54-day-
-// old resurvey lands on whatever week its original survey closed.
 // The yield chart exists in two forms while the shape is being chosen: the
 // handoff's weekly bars, and the line with its 4-week rolling average. Weekly
 // yield swings ~15 points on volume noise alone, which is why the rolling line
 // was added in the first place; the bars read cleaner but carry no trend.
 let rsChartMode='bars'; // 'bars' | 'line'
 function setRsChartMode(v){ rsChartMode=v; renderResurvey(); }
-let rsWeekAnchor='complete'; // 'complete' | 'request'
-function setRsWeekAnchor(v){ rsWeekAnchor=v; renderResurvey(); }
-function drillRsWeek(wk){
-  const src=rows.filter(r=>gfDim(r)&&isOpenResurvey(r)&&weekOf(rsWeekAnchor==='complete'?r.complete:r.resurvey_requested)===wk);
-  const [wy,wm,wd]=wk.split('-').map(Number);
-  const lbl=fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))});
-  openDrill('Open resurveys · '+lbl,(rsWeekAnchor==='complete'?'Completed':'Requested')+' that week · '+src.length+' still open · '+drillScopeNote('live'),src,{mode:'resurvey'});
-}
 // Sales office is the default cut: it is a real org unit with someone
 // accountable, where Sales Region is closer to a geography label. Across
 // offices with 25+ completions yield runs 71% to 94%, a wider and more
 // actionable spread than the same cut by region.
-let rsGroupBy='office';   // 'office' | 'region' — what the toggle asked for
+let rsGroupBy='office';   // 'office' | 'region' | 'resource' | 'rep'
 // What the table actually grouped by. Not the same thing: exports predating
 // 2026-08-06 carry no sales_office, so renderResurvey falls back to region
 // while rsGroupBy still says 'office'. The drill must follow the fallback or
 // it filters on an empty field and opens an empty drawer on every row.
 let rsGroupKey='sales_office';
-function setRsGroupBy(v){ rsGroupBy=v; renderResurvey(); }
-let rsRepsExpanded=false;
-function toggleRsReps(){ rsRepsExpanded=!rsRepsExpanded; renderResurvey(); }
-// Both breakdown tables show a leading slice by default, like the Performance
-// rep table — the office cut alone is 168 rows, 130 of them below the sample
-// floor and rendered as "n=4" rather than a rate.
+// Sort state for the grouped table. Defaults to worst rate first, which is the
+// ranking the separate bar panel used to be.
+let rsGrpSortKey='rate', rsGrpSortAsc=false;
+// Text columns open A to Z, numbers open worst first. A first click that sorts
+// names Z to A reads as a broken control rather than a choice.
+const RS_GRP_TEXT_SORT=['name','region'];
+function rsGrpSortBy(k){
+  if(rsGrpSortKey===k) rsGrpSortAsc=!rsGrpSortAsc;
+  else { rsGrpSortKey=k; rsGrpSortAsc=RS_GRP_TEXT_SORT.includes(k); }
+  renderResurvey();
+}
+function setRsGroupBy(v){ rsGroupBy=v; rsGrpSortKey='rate'; rsGrpSortAsc=false; renderResurvey(); }
+// The table shows a leading slice by default, like the Performance rep table —
+// the office cut alone is 168 rows, 130 of them below the sample floor and
+// showing their completion count rather than a rate.
 const RS_TABLE_LIMIT=10;
 let rsGroupExpanded=false;
 function toggleRsGroups(){ rsGroupExpanded=!rsGroupExpanded; renderResurvey(); }
@@ -2701,7 +2669,6 @@ function renderLastWeek(){
       ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk','so2')}
       ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn','so3')}
     </div>`:''}
-    <div id="rsreq-wrap"></div>
     </div>
     <div class="cur-col">
     <div class="sec">
@@ -2712,7 +2679,6 @@ function renderLastWeek(){
     </div>
     </div>`;
 
-  renderRsReq(lw.from,lw.to);
 
   const dist=distBuckets(src);
   dc('lw-dist');
@@ -2879,7 +2845,6 @@ function renderThisWeek(){
       </tbody></table></div>
       <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tw-sched-tbl',this,'the schedule')">Copy table</button></div>
     </div>`:''}
-    <div id="rsreq-wrap"></div>
     </div>
     <div class="cur-col">
     ${completedTW.length?`
@@ -2901,7 +2866,6 @@ function renderThisWeek(){
     </div>
     </div>`;
 
-  renderRsReq(tw.from,tw.to);
 
   dc('tw-daily');
   CH['tw-daily']=new Chart(document.getElementById('tw-daily'),{
@@ -2937,41 +2901,55 @@ function renderThisWeek(){
   });
 }
 
-// ═══ RESURVEYS REQUESTED — daily intake on the Current page ══════════
-// Anchors on resurvey_requested. Everything else on this page anchors on
-// complete or scheduled, which is why this is its own section rather than a
-// column on an existing table: the request that landed yesterday usually
-// belongs to a survey that closed weeks ago.
-// It lives here and not on the Resurveys page because that page deliberately
-// has no time control of its own — the filter bar owns time there.
-// Requests later dismissed as unnecessary are kept and marked. The Resurveys
-// page drops them because nothing was re-surveyed, but this is the inbox, and
-// a request that should not have been raised is still something to go and tag.
+// ═══ RESURVEYS REQUESTED — the intake inbox on the Quality page ══════
+// Anchors on resurvey_requested, which nothing else on Quality does: the
+// request that landed yesterday usually belongs to a survey that closed weeks
+// ago, so it cannot be a column on a completion-week table.
+//
+// Its window is fixed at Monday of last week → the export date and is NOT the
+// filter bar's. That is deliberate: over the default all-time range this would
+// be 60-odd day rows in a panel built for seven, and an inbox is a thing you
+// read forward from the last time you looked, not a thing you scrub. It always
+// holds 8 rows (a Monday) to 14 (a Sunday), and the oldest seven fall off each
+// Monday. Region, office and resource DO apply — a panel that ignores an
+// active region filter is the stale-scrubber bug the Map page had.
+//
+// Requests later dismissed as unnecessary are kept and marked. The yield
+// figures above drop them because nothing was re-surveyed, but this is the
+// inbox, and a request that should not have been raised is still something to
+// go and tag.
 const RSREQ_ATTR_COLOR={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
 let _rsReqWin=null, _rsReqOpenDays=null;
+// Monday of last week through the export date.
+function rsReqWindow(){
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
+  const [y,m,d]=weekOf(today).split('-').map(Number);
+  return {from:localISO(new Date(y,m-1,d-7)), to:today};
+}
+function rsReqRows(w){ return rows.filter(r=>gfDim(r)&&r.resurvey_requested&&r.resurvey_requested>=w.from&&r.resurvey_requested<=w.to); }
 function toggleRsReqDay(d){
   if(!_rsReqOpenDays) _rsReqOpenDays=new Set();
   _rsReqOpenDays.has(d)?_rsReqOpenDays.delete(d):_rsReqOpenDays.add(d);
   renderRsReq();
 }
 function drillRsRequested(){
-  const w=_rsReqWin; if(!w) return;
-  const v=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=w.from&&r.resurvey_requested<=w.to);
-  openDrill('Resurveys requested',fmtDate(w.from)+' — '+fmtDate(w.to),v,{mode:'resurvey'});
+  const w=rsReqWindow();
+  openDrill('Resurveys requested',fmtDate(w.from)+' — '+fmtDate(w.to),rsReqRows(w),{mode:'resurvey'});
 }
-// from/to are passed on a fresh week render and remembered for the expand toggle.
-function renderRsReq(from,to){
-  if(from&&to&&(!_rsReqWin||_rsReqWin.from!==from)){ _rsReqWin={from,to}; _rsReqOpenDays=null; }
-  const el=document.getElementById('rsreq-wrap'), w=_rsReqWin;
-  if(!el||!w) return;
-  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  const reqs=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=w.from&&r.resurvey_requested<=w.to);
+function renderRsReq(){
+  const el=document.getElementById('rsreq-wrap'); if(!el) return;
+  const w=rsReqWindow();
+  // The open day resets when the window rolls over on a Monday, not on a
+  // re-render — expanding a day must survive a filter change.
+  if(!_rsReqWin||_rsReqWin.from!==w.from){ _rsReqWin=w; _rsReqOpenDays=null; }
+  const today=w.to;
+  const reqs=rsReqRows(w);
 
-  // Mon–Sun, stopping at the export date so the current week does not render
-  // four empty days that read as "nothing came in".
+  // Two Mon–Sun weeks, stopping at the export date so the current week does not
+  // render four empty days that read as "nothing came in".
   const days=[];
   const [fy,fm,fd]=w.from.split('-').map(Number);
-  for(let i=0;i<7;i++){
+  for(let i=0;i<14;i++){
     const iso=localISO(new Date(fy,fm-1,fd+i));
     if(iso>w.to||iso>today) break;
     days.push(iso);
@@ -2997,7 +2975,7 @@ function renderRsReq(from,to){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Resurveys requested</div>
-          <div class="ssub">${reqs.length} request${reqs.length===1?'':'s'}${openN?` · ${openN} still open`:''}${unschedN?` · ${unschedN} unscheduled`:''}</div></div>
+          <div class="ssub">${reqs.length} request${reqs.length===1?'':'s'}${openN?` · ${openN} still open`:''}${unschedN?` · ${unschedN} unscheduled`:''} · <b>last week and this week so far</b></div></div>
         ${reqs.length?`<button class="fbtn" onclick="drillRsRequested()" style="font-size:11px;">All ${reqs.length} ↗</button>`:''}
       </div>
       ${reqs.length?`<div class="rswk-rows">
@@ -3035,7 +3013,7 @@ function renderRsReq(from,to){
           </div>`;
         }).join('')}
       </div>
-      <div class="note">By the date the resurvey was requested, not the date the original survey closed — most of these belong to surveys that finished weeks ago.${dismissedN?` ${dismissedN} ${dismissedN===1?'is':'are'} tagged Unnecessary Request and shown greyed: they are excluded from the Resurveys page entirely, since nothing was re-surveyed.`:''}</div>`
+      <div class="note">By the date the resurvey was requested, not the date the original survey closed — most of these belong to surveys that finished weeks ago. This panel holds a fixed two weeks and <b>ignores the date range</b>; region, office and resource filters do apply.${dismissedN?` ${dismissedN} ${dismissedN===1?'is':'are'} tagged Unnecessary Request and shown greyed: they are excluded from the yield figures above, since nothing was re-surveyed.`:''}</div>`
       :`<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No resurveys requested ${fmtDate(w.from)} — ${fmtDate(w.to)}.</div>`}
     </div>`;
 }
@@ -4095,7 +4073,8 @@ function renderAgingWIP(){
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-left:5px;">${dDiff(r.resurvey_requested,today)??'?'}d open</span>`:''}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):isOpenResurvey(r)?`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`:'—'}</span></div>
-            </div>`:''}
+            </div>
+            ${r.resurvey_reason||r.resurvey_details?`<div class="wip-rs-why" title="${esc(r.resurvey_details||'')}"><span class="wip-date-label">Why</span> <b>${esc(rsReasons(r).join(' · ')||'No reason recorded')}</b>${drillDetText(r)?' · '+esc(drillDetText(r)):''}</div>`:''}`:''}
             <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:12px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Survey Type</span><span style="font-size:12px;color:var(--muted);">${esc(r.survey_type)||'—'}</span></div>
@@ -4358,7 +4337,7 @@ function renderResurvey(){
   // Anchor ages to the export, not the wall clock, as the WIP page does.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
 
-  const scoped=rows.filter(gfDim); // global region/resource/type filters apply
+  const scoped=rows.filter(gfDim); // global region/office/resource filters apply
 
   // ── quality population ────────────────────────────────────────────────
   const completions=scoped.filter(r=>isComplete(r)&&gfDateIn(r.complete));
@@ -4368,28 +4347,28 @@ function renderResurvey(){
   // Counted only to say so once in the note under the reasons.
   const dismissed=completions.filter(r=>hasResurveySig(r)&&!isResurveyDefect(r)).length;
   const pageFpy=fpy(completions);
-  const fpyKCls=v=>v==null?'':(v>=95?'kg-c':v>=85?'ka-c':'kr-c');
-  const fpyPill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=95?'pg':v>=85?'pam':'pr'}">${v.toFixed(1)}%</span>`;
-
-  // ── queue population: live, not date-filtered ─────────────────────────
-  const openRs=scoped.filter(isOpenResurvey);
-  const closedRs=defects.filter(r=>r.resurvey_complete);
-  const ctVals=closedRs.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
-  const avgRsCt=avg(ctVals), medRsCt=med(ctVals);
-
-  const RES_COLOR={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
-  const ATTR_ORDER=['Surveyor','Customer','Design'];
-  const ATTR_COLOR={'Surveyor':'#ef4444','Customer':'#22c55e','Design':'#f59e0b'};
-  const ATTR_PILL={'Surveyor':'pr','Customer':'pg','Design':'pam'};
-  const attrPill=k=>{ const c=ATTR_PILL[k]; return c?`<span class="pill ${c}">${k}</span>`:`<span class="pna">${k||'—'}</span>`; };
   const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
 
   // ── what a resurvey costs ─────────────────────────────────────────────
-  // The case for caring about FPY at all, in one number: a resurveyed job
-  // takes this much longer end to end, against a 4-day Spec 12744 target.
-  const cleanCt=avg(completions.filter(r=>!isResurveyDefect(r)).map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
-  const dirtyCt=avg(defects.map(r=>r.ct_full).filter(x=>x!=null&&x>=0));
-  const penalty=(cleanCt!=null&&dirtyCt!=null)?dirtyCt-cleanCt:null;
+  // Three facts that add up, so each one can be defended on its own:
+  //   3.2d survey  +  16.2d before anyone flags it  +  6.0d to go back
+  // The old single "cost" figure was avg(ct_full) − avg(clean ct_total), and
+  // ct_full is ct_total + ct_resurvey (parse-sf.js) — it skips the wait between
+  // the survey closing and the resurvey being requested. That wait is most of
+  // the calendar cost, so the figure read +5.3d against a true +20.7d, and it
+  // sat one line above a 6.0d resurvey cycle it was nearly a duplicate of.
+  const cleanCts=completions.filter(r=>!isResurveyDefect(r)).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+  const fullCts=defects.filter(r=>r.resurvey_complete&&r.start)
+    .map(r=>dDiff(r.start,r.resurvey_complete)).filter(x=>x!=null&&x>=0);
+  const cleanAvg=avg(cleanCts), cleanMed=med(cleanCts), fullAvg=avg(fullCts), fullMed=med(fullCts);
+  const costAvg=(cleanAvg!=null&&fullAvg!=null)?fullAvg-cleanAvg:null;
+  const costMed=(cleanMed!=null&&fullMed!=null)?fullMed-cleanMed:null;
+  // Original survey closed → resurvey requested. Not the team's clock, which is
+  // exactly why it is worth showing: it is the largest of the three.
+  const flagVals=defects.map(r=>dDiff(r.complete,r.resurvey_requested)).filter(x=>x!=null&&x>=0);
+  const flagAvg=avg(flagVals), flagMed=med(flagVals);
+  const ctVals=defects.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
+  const avgRsCt=avg(ctVals), medRsCt=med(ctVals);
 
   // ── FPY over time ─────────────────────────────────────────────────────
   const fpyWeeks=(()=>{
@@ -4436,120 +4415,136 @@ function renderResurvey(){
   const reasonRows=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1]);
   const reasonMax=Math.max(...reasonRows.map(r=>r[1]),1);
 
-  // ── who is at fault ───────────────────────────────────────────────────
-  const attrGroups={};
-  defects.forEach(r=>{ if(r.resurvey_attributed) attrGroups[r.resurvey_attributed]=(attrGroups[r.resurvey_attributed]||0)+1; });
-  const noAttr=defects.length-Object.values(attrGroups).reduce((s,n)=>s+n,0);
-  const attrEntries=[...Object.entries(attrGroups).sort((a,b)=>{
-    const ia=ATTR_ORDER.indexOf(a[0]),ib=ATTR_ORDER.indexOf(b[0]);
-    return (ia<0?99:ia)-(ib<0?99:ib);
-  }),...(noAttr>0?[['—',noAttr]]:[])];
-
-  // ── by resource ───────────────────────────────────────────────────────
-  const RES_ORDER=['Sales Rep','Radicl Services','SunPower Surveyor'];
-  const resData=RES_ORDER.map(res=>{
-    const comps=completions.filter(r=>r.resource===res);
-    const defs=comps.filter(isResurveyDefect);
-    const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
-    return {res,comps:comps.length,count:defs.length,
-            open:openRs.filter(r=>r.resource===res).length,
-            avgCt:avg(cts), fpy:fpy(comps)};
-  }).filter(d=>d.comps>0);
-
-  // ── by region ─────────────────────────────────────────────────────────
-  // A per-resource FPY split produced 80 populated cells, 39 of them with
-  // fewer than 10 completions, each rendered as a confident coloured pill.
-  // Cells under the floor now read as a sample size instead.
+  // ── one grouping, four cuts ───────────────────────────────────────────
+  // The ranked bars and the table below them are one object: same population,
+  // same key, one toggle. They used to be a fixed office/region pair with By
+  // resource sitting above as cards and By sales rep below as a second table —
+  // four surfaces answering "which group is worst" in three vocabularies.
+  //
+  // A per-resource FPY split produced 80 populated cells, 39 of them under 10
+  // completions and each rendered as a confident coloured pill. Cells under the
+  // floor show their completion count instead of a rate.
   const RS_MIN_CELL=10;
   // Office is only present in exports taken after 2026-08-06; fall back to
   // region on older data rather than rendering an empty table.
   const hasOfficeData=completions.some(r=>(r.sales_office||'').trim());
-  const grpKey=(rsGroupBy==='office'&&hasOfficeData)?'sales_office':'region';
+  const GRP={office:'sales_office',region:'region',resource:'resource',rep:'sales_rep'};
+  const grpSel=(rsGroupBy==='office'&&!hasOfficeData)?'region':rsGroupBy;
+  const grpKey=GRP[grpSel]||'region';
   rsGroupKey=grpKey;   // the drills follow the resolved key, not the toggle
-  const grpLabel=grpKey==='sales_office'?'Sales office':'Region';
-  const regionData=[...new Set(completions.map(r=>r[grpKey]).filter(Boolean))].map(reg=>{
-    const comps=completions.filter(r=>r[grpKey]===reg);
+  const grpLabel={sales_office:'Sales office',region:'Region',resource:'Resource',sales_rep:'Sales rep'}[grpKey];
+  const grpPlural={sales_office:'offices',region:'regions',resource:'resources',sales_rep:'reps'}[grpKey];
+  // The rep cut counts only surveys the rep ran themselves. Grouping every
+  // completion by sales_rep would charge a rep for a Radicl surveyor's defect,
+  // so its denominator is smaller than the other three cuts on purpose.
+  const grpPool=grpKey==='sales_rep'?completions.filter(r=>r.resource==='Sales Rep'):completions;
+  const grpDefects=grpPool.filter(isResurveyDefect);
+  // Idle days per rep, measured to the END OF THE VIEWED RANGE rather than to
+  // the export. Anchoring on the export blanked reps out of ranges they worked
+  // all of — on a Q1 range it hid 3 of the 7 qualifying reps because they left
+  // later that year. Nobody is ever filtered out by this: it is a label, since
+  // sales activity is a proxy for employment and no threshold makes it a good
+  // one. The number is shown and the reader draws their own line.
+  const rangeEnd=GF.dateTo||today;
+  const RS_IDLE_TAG=30;
+  const repLastSale={};
+  if(grpKey==='sales_rep') scoped.forEach(r=>{
+    if(!r.sales_rep) return;
+    [r.agreement_signed,r.start,r.complete].forEach(d=>{
+      if(d&&d<=rangeEnd&&(!repLastSale[r.sales_rep]||d>repLastSale[r.sales_rep])) repLastSale[r.sales_rep]=d;
+    });
+  });
+
+  const groupData=[...new Set(grpPool.map(r=>r[grpKey]).filter(Boolean))].map(g=>{
+    const comps=grpPool.filter(r=>r[grpKey]===g);
     const defs=comps.filter(isResurveyDefect);
     const cts=defs.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
     const cell=res=>{ const c=comps.filter(r=>r.resource===res);
-      return {n:c.length, fpy:fpy(c)}; };
-    return {reg, comps:comps.length, count:defs.length,
-            open:openRs.filter(r=>r[grpKey]===reg).length, avgCt:avg(cts),
-            fpy:fpy(comps),
+      return {n:c.length, rate:c.length?c.filter(isResurveyDefect).length/c.length*100:null}; };
+    const regCounts={}; comps.forEach(r=>{ if(r.region) regCounts[r.region]=(regCounts[r.region]||0)+1; });
+    const idle=(grpKey==='sales_rep'&&repLastSale[g])?dDiff(repLastSale[g],rangeEnd):null;
+    return {g, comps:comps.length, count:defs.length, avgCt:avg(cts),
+            rate:comps.length?defs.length/comps.length*100:null,
+            region:Object.entries(regCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—',
+            idle,
             sr:cell('Sales Rep'), rd:cell('Radicl Services'), sp:cell('SunPower Surveyor')};
   }).filter(d=>d.comps>0).sort((a,b)=>b.count-a.count||b.comps-a.comps);
-  const maxRegCount=Math.max(...regionData.map(d=>d.count),1);
 
-  // ── resurvey rate by group ────────────────────────────────────────────
-  // The inverse of FPY, which the table below already carries. It earns its
-  // place by being the ranked view: the table is sorted by volume and is read
-  // cell by cell, while these bars answer "who do I call" in one look. Same
-  // population, same rsGroupKey, so the two can never disagree.
+  // One number per row: the share that came back. Rate and FPY are exact
+  // complements, so the old pair of panels printed the same fact twice in two
+  // vocabularies, ranked two different ways, under two different floors. Rate
+  // is the one that stays: the bar length matches it, and small numbers band
+  // more legibly than the 85-to-100 range FPY lives in. The hero and the chart
+  // keep speaking FPY, and the note under the table says so once.
   //
-  // Banded as the mirror of fpyPill (95 / 85): under 5% green, 5–15% amber,
-  // 15%+ red. Against a 95% target most groups land red — that is the honest
-  // reading of a 15.6% national rate, not a scale problem.
-  const rateBand=v=>v<5?'var(--green)':v<15?'var(--amber)':'var(--red)';
+  // Bands are the mirror of the old fpyPill (95 / 85): under 5% green, 5 to 15
+  // amber, 15 and over red. At a 15.6% national rate most groups land red. That
+  // is the honest reading against a 95% target, not a scale problem.
+  const rateBand=v=>v==null?'var(--muted)':v<5?'var(--green)':v<15?'var(--amber)':'var(--red)';
+  const ratePill=v=>v==null?'<span class="pna">—</span>':`<span class="pill ${v<5?'pg':v<15?'pam':'pr'}">${v.toFixed(1)}%</span>`;
   const RS_CEILING=100-95;
-  // No "worst office per region" column. The handoff has one, but on this data
-  // only 2 of 28 regions contain an office clearing the 10-completion floor —
-  // the column would be blank on most rows, and filling it from n=3 would name
-  // a real org unit off noise. Grouping BY office is the default toggle state,
-  // so the panel still names something to call.
-  const RS_RATE_LIMIT=12;
-  const rateAll=regionData
-    .filter(d=>d.comps>=RS_MIN_CELL)   // same floor the table's pills use
-    .map(d=>({reg:d.reg,comps:d.comps,rate:d.count/d.comps*100}))
-    .sort((a,b)=>b.rate-a.rate);
-  const rateRows=rateAll.slice(0,RS_RATE_LIMIT);
-  const allRate=completions.length?defects.length/completions.length*100:null;
-  const rateMax=Math.max(...rateAll.map(d=>d.rate),RS_CEILING*2,1);
-  const grpTgl=(v,l)=>`<button class="tgl-btn${grpKey===(v==='office'?'sales_office':'region')?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
-  const cellPill=c=>c.n===0?'<span class="pna">—</span>'
-    :c.n<RS_MIN_CELL?`<span class="pna-n" title="Only ${c.n} completion${c.n!==1?'s':''} — too few to rate">n=${c.n}</span>`
-    :fpyPill(c.fpy);
-
-  // ── by sales rep ──────────────────────────────────────────────────────
-  // Own-fault is separated out: 38 of the rep-attributed defects are caused by
-  // the customer or by design, and the rate pill bands at 10% and 20%, so
-  // charging them to the rep can move someone across a band unfairly.
-  const MIN_REP_COMPS=3;
-  const salesRepData=[...new Set(completions.filter(r=>r.resource==='Sales Rep').map(r=>r.sales_rep).filter(Boolean))].map(name=>{
-    const comps=completions.filter(r=>r.sales_rep===name&&r.resource==='Sales Rep');
-    const resur=comps.filter(isResurveyDefect);
-    const own=resur.filter(r=>!['Customer','Design'].includes(r.resurvey_attributed));
-    const regCounts={}; comps.forEach(r=>{ if(r.region) regCounts[r.region]=(regCounts[r.region]||0)+1; });
-    return {name, comps:comps.length, resurveys:resur.length, own:own.length,
-            rate:comps.length?own.length/comps.length*100:null,
-            primaryRegion:Object.entries(regCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—'};
-  }).filter(d=>d.comps>=MIN_REP_COMPS).sort((a,b)=>(b.rate??-1)-(a.rate??-1));
-  const repRatePill=v=>v==null?`<span class="pna">—</span>`:`<span class="pill ${v>=20?'pr':v>=10?'pam':'pg'}">${v.toFixed(0)}%</span>`;
-
-  // ── open queue by week ────────────────────────────────────────────────
-  const rsWkAnchorDate=r=>rsWeekAnchor==='complete'?r.complete:r.resurvey_requested;
-  const rsWkOpen=openRs.filter(r=>rsWkAnchorDate(r));
-  const rsWkMap={};
-  rsWkOpen.forEach(r=>{ const k=weekOf(rsWkAnchorDate(r)); (rsWkMap[k]=rsWkMap[k]||[]).push(r); });
-  const rsWkComps={};
-  if(rsWeekAnchor==='complete') scoped.forEach(r=>{ if(everCompleted(r)){ const k=weekOf(r.complete); rsWkComps[k]=(rsWkComps[k]||0)+1; } });
-  const rsWeeks=Object.keys(rsWkMap).sort().reverse().map(wk=>{
-    const gr=rsWkMap[wk];
-    const ages=gr.map(r=>dDiff(r.resurvey_requested,today)).filter(x=>x!=null&&x>=0);
-    const [wy,wm,wd]=wk.split('-').map(Number);
-    return {wk, label:fmtWeekLabel({week:wk,weekEnd:localISO(new Date(wy,wm-1,wd+6))}),
-      n:gr.length, comps:rsWkComps[wk]||0,
-      unsched:gr.filter(r=>!r.resurvey_scheduled).length,
-      oldest:ages.length?Math.max(...ages):null};
+  // One floor for the whole table. A row that cannot show a rate was not doing
+  // any work in a table whose point is comparing rates.
+  const rated=groupData.filter(d=>d.comps>=RS_MIN_CELL);
+  const allRate=grpPool.length?grpDefects.length/grpPool.length*100:null;
+  const allCt=avg(grpDefects.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
+  const allCell=res=>{ const c=grpPool.filter(r=>r.resource===res);
+    return {n:c.length, rate:c.length?c.filter(isResurveyDefect).length/c.length*100:null}; };
+  const rateMax=Math.max(...rated.map(d=>d.rate),RS_CEILING*2,1);
+  const grpTgl=(v,l)=>`<button class="tgl-btn${grpSel===v?' active':''}" onclick="setRsGroupBy('${v}')">${l}</button>`;
+  const grpTgls=`<div class="toggle-group">${hasOfficeData?grpTgl('office','Sales office'):''}${grpTgl('region','Region')}${grpTgl('resource','Resource')}${grpTgl('rep','Sales rep')}</div>`;
+  // Three entry points, one per key, all reading rsDefectPool() so the drawer
+  // population can never disagree with the row that opened it.
+  const drillGrp=v=>grpKey==='sales_rep'?`drillSalesRepRs('${escAttrJs(v)}')`
+    :grpKey==='resource'?`drillRsResource('${escAttrJs(v)}')`
+    :`drillResGroup('${escAttrJs(v)}')`;
+  // A per-resource cell under the floor shows how many completions it has
+  // instead of a rate. No "n=" prefix: it is a count, and the grey non-pill
+  // treatment is what says "not a percentage".
+  const sampleCell=n=>`<span class="pna-n" title="Only ${n} completion${n!==1?'s':''}, too few to rate">${n}</span>`;
+  const cellPill=c=>c.n===0?'<span class="pna">—</span>':c.n<RS_MIN_CELL?sampleCell(c.n):ratePill(c.rate);
+  const idleTag=d=>(d.idle!=null&&d.idle>=RS_IDLE_TAG)
+    ?` <span class="rs-idle" title="No recorded sale in the ${d.idle} days before the end of this range">idle ${d.idle}d</span>`:'';
+  // Per-resource columns only where they mean something. Grouped BY resource
+  // they are the diagonal of their own table; grouped by rep every row is a
+  // Sales Rep row. The rep cut gets the rep's main region instead.
+  const showResCols=grpKey==='sales_office'||grpKey==='region';
+  const showRegionCol=grpKey==='sales_rep';
+  // Sorting, the same vocabulary the Performance, WIP and drawer tables use.
+  // Blanks sink in both directions: a column of dashes at the top is never the
+  // answer to "sort by this".
+  const sortVal={
+    name:d=>(d.g||'').toLowerCase(),
+    region:d=>(d.region||'').toLowerCase(),
+    rate:d=>d.rate,
+    count:d=>d.count,
+    cycle:d=>d.avgCt,
+    sr:d=>d.sr.n>=RS_MIN_CELL?d.sr.rate:null,
+    rd:d=>d.rd.n>=RS_MIN_CELL?d.rd.rate:null,
+    sp:d=>d.sp.n>=RS_MIN_CELL?d.sp.rate:null,
+  }[rsGrpSortKey]||(d=>d.rate);
+  const sortDir=rsGrpSortAsc?1:-1;
+  const sortedGroups=[...rated].sort((a,b)=>{
+    const av=sortVal(a), bv=sortVal(b);
+    if(av==null&&bv==null) return 0;
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    return typeof av==='string'?sortDir*av.localeCompare(bv):sortDir*(av-bv);
   });
-  const rsWkMax=Math.max(...rsWeeks.map(w=>w.n),1);
-  // Stale = open longer than 90% of resurveys have ever taken to resolve, fit
-  // to this team's own history the way floorBaseline is. Shared with the drill
-  // drawer's Days open column via rsStaleDays().
-  const RS_STALE=rsStaleDays(scoped);
-  const rsAnchorTgl=(v,l)=>`<button class="tgl-btn${rsWeekAnchor===v?' active':''}" onclick="setRsWeekAnchor('${v}')">${l}</button>`;
+  const gth=(k,label,cls)=>{
+    const on=rsGrpSortKey===k, arrow=on?(rsGrpSortAsc?'sarr-up':'sarr-dn'):'sarr-no';
+    return `<th class="${cls||''}" tabindex="0" role="button" aria-sort="${on?(rsGrpSortAsc?'ascending':'descending'):'none'}" onclick="rsGrpSortBy('${k}')" style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
+  };
+  const rateCell=(v,extra)=>{
+    const c=rateBand(v);
+    return `<td class="r"><div class="q-rate-cell">
+      <div class="q-rate-track"><div class="q-rate-fill" style="width:${v==null?0:Math.min(v/rateMax*100,100)}%;background:${extra||c};"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
+      <span class="q-rate-val" style="color:${extra?'var(--muted)':c};">${v==null?'—':v.toFixed(1)+'%'}</span>
+    </div></td>`;
+  };
 
-  if(!completions.length&&!openRs.length){
-    el.innerHTML=`<div style="padding:64px;text-align:center;color:var(--faint);font-size:13px;">No completions or open resurveys match the current filters.</div>`;
+  if(!completions.length){
+    el.innerHTML=`<div style="padding:64px;text-align:center;color:var(--faint);font-size:13px;">No completions match the current filters.</div>`;
     return;
   }
 
@@ -4558,20 +4553,24 @@ function renderResurvey(){
     ${(()=>{
       const thin=completions.length<RS_MIN_CELL;
       const c=pageFpy==null?'var(--text)':pageFpy>=95?'var(--green)':pageFpy>=85?'var(--amber)':'var(--red)';
-      const dl=(t,v,col,tip)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}</b></div>`;
+      const dl=(t,v,col,tip,sub)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}${sub?`<span class="q-dl-sub">${sub}</span>`:''}</b></div>`;
+      const signed=v=>(v>0?'+':'')+v.toFixed(1)+'d';
       return `<div class="sec q-hero">
       <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
       ${thin
-        ? `<div class="q-hero-val pna-n" title="Too few completions in this filter to rate">n=${completions.length}</div>
-           <div class="q-hero-say">Under ${RS_MIN_CELL} completions in range — too few to rate.</div>`
+        ? `<div class="q-hero-val" style="color:var(--muted);">${completions.length}</div>
+           <div class="q-hero-say">Only ${completions.length} completion${completions.length===1?'':'s'} in range — too few to rate.</div>`
         : `<div class="q-hero-val" style="color:${c};">${pageFpy.toFixed(1)}%</div>
            <div class="q-hero-say">${completions.length-defects.length} of ${completions.length} completions closed without a resurvey. <b>${defects.length} defect${defects.length===1?'':'s'}.</b></div>
            <div class="q-track"><div class="q-track-fill" style="width:${Math.max(0,Math.min(100,pageFpy))}%;background:${c};"></div><div class="q-track-tgt" style="left:95%;"></div></div>
            <div class="q-track-ax"><span>0%</span><span>95% target</span></div>`}
       <div class="q-dl">
-        ${dl('Cost of a resurvey',penalty!=null?(penalty>0?'+':'')+penalty.toFixed(1)+'d':'—',penalty!=null&&penalty>=2?'var(--red)':null,TIP.rsPenalty)}
-        ${dl('Resurvey cycle',fmtCt(avgRsCt),null,TIP.rsCycle)}
-        ${dl('Median',fmtCt(medRsCt))}
+        ${dl('Cost of a resurvey',costAvg!=null?signed(costAvg):'—',costAvg!=null&&costAvg>=2?'var(--red)':null,TIP.rsPenalty,
+             costMed!=null?`median ${signed(costMed)}`:'')}
+        ${dl('Time to flag',fmtCt(flagAvg),flagAvg!=null&&flagAvg>=7?'var(--amber)':null,TIP.rsFlag,
+             flagMed!=null?`median ${fmtCt(flagMed)}`:'')}
+        ${dl('Resurvey cycle',fmtCt(avgRsCt),null,TIP.rsCycle,
+             medRsCt!=null?`median ${fmtCt(medRsCt)}`:'')}
       </div>
       ${defects.length?`<button class="q-hero-link" onclick="drillFPYDefects()">See the ${defects.length} defect${defects.length===1?'':'s'} &rarr;</button>`:''}
     </div>`;})()}
@@ -4598,32 +4597,57 @@ function renderResurvey(){
   </div>`:''}
   </div>
 
-  ${rateRows.length?`
+  ${rated.length?(()=>{
+    const shownGroups=rsGroupExpanded?sortedGroups:sortedGroups.slice(0,RS_TABLE_LIMIT);
+    const moreGroups=sortedGroups.length-shownGroups.length;
+    const sortName={name:grpLabel.toLowerCase(),region:'region',rate:'rate',count:'resurvey volume',
+                    cycle:'resurvey cycle',sr:'Sales Rep rate',rd:'Radicl rate',sp:'SPWR rate'}[rsGrpSortKey]||'rate';
+    return `
   <div class="sec">
     <div class="shead">
-      <div><div class="stitle">Resurvey rate by ${grpLabel.toLowerCase()}</div>
-        <div class="ssub">Share of completions that came back · ${rateAll.length>RS_RATE_LIMIT?`worst ${RS_RATE_LIMIT} of ${rateAll.length} with `:''}${RS_MIN_CELL}+ completions</div></div>
-      ${hasOfficeData?`<div class="toggle-group">${grpTgl('office','Sales office')}${grpTgl('region','Region')}</div>`:''}
+      <div><div class="stitle">Resurveys by ${grpLabel.toLowerCase()}</div>
+        <div class="ssub">Sorted by ${sortName}${moreGroups?` · top ${shownGroups.length} of ${sortedGroups.length}`:''} · ${RS_MIN_CELL}+ completions${grpKey==='sales_rep'?' · self-surveyed accounts only':''}</div></div>
+      ${grpTgls}
     </div>
-    <div class="q-rate">
-      ${rateRows.map(d=>{
-        const c=rateBand(d.rate);
-        return `<div class="q-rate-row drill-tgt" ${drillAttrs(`drillResGroup('${escAttrJs(d.reg)}')`)}>
-          <div class="q-rate-name">${esc(d.reg)}</div>
-          <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(d.rate/rateMax*100,100)}%;background:${c};"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
-          <div class="q-rate-val" style="color:${c};">${d.rate.toFixed(0)}%</div>
-          <div class="q-rate-n">${d.comps}</div>
-        </div>`;
-      }).join('')}
-      ${allRate!=null?`<div class="q-rate-row q-rate-all">
-        <div class="q-rate-name">All ${grpKey==='sales_office'?'offices':'regions'}</div>
-        <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min(allRate/rateMax*100,100)}%;background:var(--faint);"></div><div class="q-rate-ceil" style="left:${RS_CEILING/rateMax*100}%;"></div></div>
-        <div class="q-rate-val" style="color:var(--muted);">${allRate.toFixed(1)}%</div>
-        <div class="q-rate-n">${completions.length}</div>
-      </div>`:''}
+    <div class="xscroll"><table id="rs-detail-tbl"><thead><tr>
+      ${gth('name',grpLabel)}
+      ${showRegionCol?gth('region','Region'):''}
+      ${gth('rate','Came back','r')}
+      ${gth('count','Resurveys','r')}
+      ${gth('cycle','Cycle','r')}
+      ${showResCols?gth('sr','<span style="color:#4f7fae;">Sales Rep</span>','r')
+        +gth('rd','<span style="color:#8677b8;">Radicl</span>','r')
+        +gth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
+    </tr></thead><tbody>
+      ${shownGroups.map(d=>`<tr class="drill-tgt" onclick="${drillGrp(d.g)}">
+        <td><div style="font-weight:500;font-size:12px;">${esc(d.g)}${idleTag(d)}</div></td>
+        ${showRegionCol?`<td style="color:var(--muted);font-size:12px;">${esc(d.region)}</td>`:''}
+        ${rateCell(d.rate)}
+        <td class="r">${d.count} <span style="color:var(--faint);font-size:10px;">/ ${d.comps}</span></td>
+        <td class="r">${fmtCt(d.avgCt)}</td>
+        ${showResCols?`<td class="r">${cellPill(d.sr)}</td>
+        <td class="r">${cellPill(d.rd)}</td>
+        <td class="r">${cellPill(d.sp)}</td>`:''}
+      </tr>`).join('')}
+    </tbody>
+    ${allRate!=null?`<tfoot><tr class="q-rate-all">
+      <td style="color:var(--muted);font-weight:500;font-size:12px;">All ${grpPlural}</td>
+      ${showRegionCol?'<td></td>':''}
+      ${rateCell(allRate,'var(--faint)')}
+      <td class="r" style="color:var(--muted);">${grpDefects.length} <span style="color:var(--faint);font-size:10px;">/ ${grpPool.length}</span></td>
+      <td class="r" style="color:var(--muted);">${fmtCt(allCt)}</td>
+      ${showResCols?`<td class="r">${cellPill(allCell('Sales Rep'))}</td>
+      <td class="r">${cellPill(allCell('Radicl Services'))}</td>
+      <td class="r">${cellPill(allCell('SunPower Surveyor'))}</td>`:''}
+    </tr></tfoot>`:''}
+    </table></div>
+    <div class="tbl-foot split">
+      ${moreGroups||rsGroupExpanded?`<button class="drill-seg-btn" onclick="toggleRsGroups()">${rsGroupExpanded?`Show top ${RS_TABLE_LIMIT} only`:`Show all ${sortedGroups.length} ${grpPlural}`}</button>`:'<span></span>'}
+      <button class="copy-btn" onclick="copyTableEl('rs-detail-tbl',this,'the table')">Copy table</button>
     </div>
-    <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling &mdash; the mirror of the 95% yield target</div>
-  </div>`:''}
+    <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling, the mirror of the 95% yield target. Came back is the share of completions that needed a resurvey, so it is 100 minus first pass yield.</div>
+    ${grpKey==='sales_rep'?`<div class="note">Only the surveys a rep ran themselves: ${grpPool.length} of ${completions.length} completions. Reps with no sale in ${RS_IDLE_TAG} days or more are tagged idle. Nobody is filtered out on it, because a quiet rep may be between deals rather than gone.</div>`:''}
+  </div>`;})():''}
 
   <div class="q-two">
   ${reasonRows.length?`
@@ -4640,168 +4664,11 @@ function renderResurvey(){
     </div>
     <div class="note">${reasonRows[0]?`<strong>${esc(reasonRows[0][0])}</strong> accounts for ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}${dismissed?`A further <strong>${dismissed}</strong> request${dismissed===1?' was':'s were'} dismissed as unnecessary and ${dismissed===1?'is':'are'} excluded from this page entirely, since nothing was re-surveyed.`:''}</div>
   </div>`:''}
-
-  ${attrEntries.length?`
-  <div class="sec">
-    <div class="shead"><div><div class="stitle">Who is at fault</div>
-      <div class="ssub">${defects.length} resurveys${noAttr?` · ${Math.round(noAttr/defects.length*100)}% unattributed`:''}</div></div></div>
-    <div class="attr-bar">
-      ${attrEntries.map(([k,v])=>`<div class="attr-bar-seg drill-tgt" style="flex:${v};background:${ATTR_COLOR[k]||'#e2e8f0'};" title="${k==='—'?'No attribution':k}: ${v}" onclick="drillAttribution('${escAttrJs(k)}')"></div>`).join('')}
-    </div>
-    <div class="attr-legend">
-      ${attrEntries.map(([k,v])=>`
-      <div class="attr-legend-item drill-tgt" onclick="drillAttribution('${escAttrJs(k)}')">
-        <div class="attr-legend-dot" style="background:${ATTR_COLOR[k]||'#e2e8f0'};"></div>
-        <span class="attr-legend-name">${k==='—'?'No attribution':k}</span>
-        <span class="attr-legend-count">${v}</span>
-        <span class="attr-legend-pct">${(v/defects.length*100).toFixed(0)}%</span>
-      </div>`).join('')}
-    </div>
-    ${noAttr?`<div class="note">${noAttr} resurveys have no cause recorded, so every share above is of the ${defects.length} total rather than of the ${defects.length-noAttr} attributed ones.</div>`:''}
-    <div class="note">Attribution says who. The reason list says what to fix — it is the more useful of the two, which is why it sits on the left where reading starts.</div>
-  </div>`:''}
+  <div id="rsreq-wrap"></div>
   </div>
-
-  ${resData.length?`
-  <div class="sec">
-    <div class="shead"><div><div class="stitle">By resource</div><div class="ssub">Yield by who ran the original survey</div></div></div>
-    <div class="res-cards" style="margin-bottom:0;gap:12px;">
-      ${resData.map(d=>`
-      <div class="res-card${d.count?' drill-tgt':''}" ${d.count?drillAttrs(`drillRsResource('${escAttrJs(d.res)}')`):''}>
-        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-          <div class="res-card-title"><span class="res-dot" style="background:${RES_COLOR[d.res]||'#ccc'};"></span>${d.res}</div>
-          ${d.open?`<span class="rs-open-badge">${d.open} open</span>`:''}
-        </div>
-        <div class="res-card-count">${d.count} of ${d.comps} came back</div>
-        <div class="res-stats">
-          <div class="res-stat-row"><span class="rlabel">FPY</span><span class="rval ${fpyKCls(d.fpy)}">${d.fpy!=null?d.fpy.toFixed(1)+'%':'—'}</span></div>
-          <div class="res-stat-row"><span class="rlabel">Resurvey cycle</span><span class="rval">${fmtCt(d.avgCt)}</span></div>
-        </div>
-      </div>`).join('')}
-    </div>
-  </div>`:''}
-
-  ${regionData.length?(()=>{
-    const shownGroups=rsGroupExpanded?regionData:regionData.slice(0,RS_TABLE_LIMIT);
-    const moreGroups=regionData.length-shownGroups.length;
-    return `
-  <div class="sec">
-    <div class="shead">
-      <div><div class="stitle">${grpLabel} detail</div><div class="ssub">Sorted by resurvey volume${regionData.length>RS_TABLE_LIMIT?` · top ${shownGroups.length} of ${regionData.length}`:''} · cells under ${RS_MIN_CELL} completions show their sample instead of a rate</div></div>
-    </div>
-    <div class="xscroll"><table><thead><tr>
-      <th>${grpLabel}</th>
-      <th class="r">Resurveys</th>
-      <th class="r">Open</th>
-      <th class="r">FPY</th>
-      <th class="r">Cycle</th>
-      <th class="r" style="color:#4f7fae;">Sales Rep</th>
-      <th class="r" style="color:#8677b8;">Radicl</th>
-      <th class="r" style="color:#64748b;">SPWR</th>
-    </tr></thead><tbody>
-      ${shownGroups.map(d=>`<tr class="drill-tgt" onclick="drillResGroup('${escAttrJs(d.reg)}')">
-        <td>
-          <div style="font-weight:500;font-size:12px;">${esc(d.reg)}</div>
-          <div class="rs-region-bar" style="width:80px;">
-            <div class="rs-region-fill" style="width:${Math.round(d.count/maxRegCount*100)}%;"></div>
-          </div>
-        </td>
-        <td class="r">${d.count} <span style="color:var(--faint);font-size:10px;">/ ${d.comps}</span></td>
-        <td class="r">${d.open?`<span class="rs-open-badge">${d.open}</span>`:'<span class="pna">—</span>'}</td>
-        <td class="r">${d.comps>=RS_MIN_CELL?fpyPill(d.fpy):`<span class="pna-n">n=${d.comps}</span>`}</td>
-        <td class="r">${fmtCt(d.avgCt)}</td>
-        <td class="r">${cellPill(d.sr)}</td>
-        <td class="r">${cellPill(d.rd)}</td>
-        <td class="r">${cellPill(d.sp)}</td>
-      </tr>`).join('')}
-    </tbody></table></div>
-    ${moreGroups||rsGroupExpanded?`<div style="padding:10px 0 4px;text-align:center;"><button class="drill-seg-btn" onclick="toggleRsGroups()">${rsGroupExpanded?`Show top ${RS_TABLE_LIMIT} only`:`Show all ${regionData.length} ${grpKey==='sales_office'?'offices':'regions'}`}</button></div>`:''}
-  </div>`;})():''}
-
-  ${salesRepData.length?(()=>{
-    // One expander over the whole list, like the Performance rep table. The
-    // old toggle only added the reps with 0 resurveys; under a top-N cap that
-    // is a no-op, because rate sorts them to the bottom either way.
-    const zeroReps=salesRepData.filter(d=>d.resurveys===0).length;
-    const shownReps=rsRepsExpanded?salesRepData:salesRepData.slice(0,RS_TABLE_LIMIT);
-    const moreReps=salesRepData.length-shownReps.length;
-    const anyExcused=salesRepData.some(d=>d.resurveys>d.own);
-    return `
-  <div class="sec">
-    <div class="shead"><div><div class="stitle">By sales rep</div><div class="ssub">Self-surveyed accounts only · min ${MIN_REP_COMPS} completions${moreReps?` · worst ${shownReps.length} of ${salesRepData.length} by rate`:''} · rate counts only what was theirs to control</div></div></div>
-    <div class="xscroll"><table><thead><tr>
-      <th>Sales Rep</th>
-      <th>Region</th>
-      <th class="r">Completions</th>
-      <th class="r">Resurveys</th>
-      <th class="r">Their fault</th>
-      <th class="r">Rate</th>
-      <th style="width:110px;" aria-label="Rate, relative"></th>
-    </tr></thead><tbody>
-      ${shownReps.map(d=>`<tr class="drill-tgt" onclick="drillSalesRepRs('${escAttrJs(d.name)}')">
-        <td style="font-weight:500;">${esc(d.name)}</td>
-        <td style="color:var(--muted);font-size:12px;">${esc(d.primaryRegion)}</td>
-        <td class="r">${d.comps}</td>
-        <td class="r">${d.resurveys}</td>
-        <td class="r">${d.own}${d.own<d.resurveys?`<span style="color:var(--faint);font-size:10px;" title="${d.resurveys-d.own} caused by the customer or by design"> (−${d.resurveys-d.own})</span>`:''}</td>
-        <td class="r">${repRatePill(d.rate)}</td>
-        <td><div style="background:var(--border);border-radius:2px;height:6px;width:100%;"><div style="background:${d.rate>=20?'var(--red)':d.rate>=10?'var(--amber)':'var(--green)'};border-radius:2px;height:6px;width:${Math.min(Math.round((d.rate??0)/Math.max(...salesRepData.map(x=>x.rate??0),1)*100),100)}%;"></div></div></td>
-      </tr>`).join('')}
-    </tbody></table></div>
-    ${anyExcused?`<div class="note">Rate is their-fault resurveys ÷ completions. Ones attributed to the customer or to design are shown in the column but not charged to the rep.</div>`:''}
-    ${moreReps||rsRepsExpanded?`<div style="padding:10px 0 4px;text-align:center;"><button class="drill-seg-btn" onclick="toggleRsReps()">${rsRepsExpanded?`Show worst ${RS_TABLE_LIMIT} only`:`Show all ${salesRepData.length} reps${zeroReps?` (${zeroReps} with 0 resurveys)`:''}`}</button></div>`:''}
-  </div>`;})():''}
-
-  ${openRs.length?`
-  <div class="sec">
-    <div class="shead">
-      <div><div class="stitle">The open queue</div>
-        <div class="ssub">${openRs.length} awaiting completion · ${rsWeekAnchor==='complete'?'grouped by the week the original survey closed':'grouped by the week the resurvey was requested'} · <b>live, not affected by the date filter</b></div></div>
-      <div class="toggle-group">${rsAnchorTgl('complete','Complete wk')}${rsAnchorTgl('request','Request wk')}</div>
-    </div>
-    ${rsWeeks.length?`<div class="rswk-rows">
-      ${rsWeeks.map(w=>{
-        const stale=w.oldest!=null&&w.oldest>RS_STALE;
-        const meta=[rsWeekAnchor==='complete'&&w.comps?`of ${w.comps} done`:null,
-                    w.unsched?`${w.unsched} unscheduled`:null,
-                    w.oldest!=null?`oldest ${stale?`<b>${w.oldest}d</b>`:w.oldest+'d'}`:null].filter(Boolean).join(' · ');
-        return `<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsWeek('${w.wk}')`)}>
-          <div class="rswk-wk">${w.label}</div>
-          <div class="rswk-barwrap"><div class="rswk-bar${stale?' stale':''}" style="width:${Math.max(w.n/rsWkMax*100,4)}%;"></div></div>
-          <div class="rswk-n">${w.n}</div>
-          <div class="rswk-meta">${meta}</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="note">Red marks one open longer than ${RS_STALE}d, the point 90% of past resurveys had already resolved by${rsWeekAnchor==='complete'?'. On this anchor an old resurvey sits on whatever week its original survey closed, so switch to Request wk to read aging directly':''}.</div>`:''}
-    <div class="ewrap" style="margin-top:12px;"><table class="etable" id="rs-open-tbl"><thead><tr>
-      ${rsqTh('project','Project','')}
-      ${rsqTh('region','Region','')}
-      ${rsqTh('resource','Resource','')}
-      ${rsqTh('attr','Attributed To','')}
-      ${rsqTh('days','Days Open','r')}
-      ${rsqTh('requested','Requested','')}
-      ${rsqTh('scheduled','Scheduled','')}
-      ${rsqTh('reason','Reason','')}
-    </tr></thead><tbody>
-      ${rsqSort(openRs,today).map(r=>{
-        const daysOpen=dDiff(r.resurvey_requested,today);
-        const ageCls=daysOpen==null?'':(daysOpen>RS_STALE?'kr-c':daysOpen>=7?'ka-c':'');
-        return `<tr>
-          <td style="font-weight:500;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.project||r.address||'')}">${projLink(r)}</td>
-          <td>${esc(r.region||'—')}</td>
-          <td>${esc(r.resource||'—')}</td>
-          <td>${attrPill(r.resurvey_attributed)}</td>
-          <td class="r"><span class="${ageCls}" style="font-weight:${ageCls?'600':'400'}">${daysOpen!=null?daysOpen+'d':'—'}</span></td>
-          <td>${r.resurvey_requested?fmtDate(r.resurvey_requested):'—'}</td>
-          <td>${r.resurvey_scheduled?fmtDate(r.resurvey_scheduled):`<span class="rs-unsched-pill">Unscheduled</span>`}</td>
-          <td style="max-width:160px;white-space:normal;color:var(--muted);">${esc(r.resurvey_reason||'—')}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table></div>
-    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('rs-open-tbl',this,'the open queue')">Copy table</button></div>
-  </div>`:''}
   `;
+
+  renderRsReq();
 
   // ── Yield by completion week ──────────────────────────────────────────
   // Two forms behind the panel toggle. Both read the same fpyWeeks, both mark
@@ -4816,14 +4683,15 @@ function renderResurvey(){
     const drillWeek=i=>{ const w=fpyWeeks[i];
       const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
       openDrill('Resurveys · week of '+fmtDateShort(w.wk),dr.length+' of '+w.n+' completions came back',dr,{mode:'resurvey'}); };
-    // One rule for both forms, so the target cannot drift between them.
+    // One rule for both forms, so the target cannot drift between them. The
+    // line carries no text label: the legend above already names it, and the
+    // two together put "95% target" on screen twice.
     const targetLine={id:'fpyTarget',afterDatasetsDraw(ch){
       const y=ch.scales.y.getPixelForValue(95); if(!isFinite(y)) return;
       const {left,right}=ch.chartArea; const g=ch.ctx;
       g.save(); g.strokeStyle='#c9542f'; g.lineWidth=1; g.setLineDash([5,4]);
       g.beginPath(); g.moveTo(left,y); g.lineTo(right,y); g.stroke();
-      g.setLineDash([]); g.fillStyle='#c9542f'; g.font='10px Archivo,-apple-system,sans-serif';
-      g.textAlign='right'; g.fillText('95% target',right-4,y-4); g.restore();
+      g.setLineDash([]); g.restore();
     }};
     const yScale=rsChartMode==='bars'
       ? {beginAtZero:true,max:100,grid:{color:'rgba(80,65,40,.06)'},
