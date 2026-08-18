@@ -499,8 +499,11 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* ═══ MAP ═══ */
 .map-wrap{position:relative;background:var(--bg);border:1px solid var(--border);
   border-radius:var(--radius);overflow:hidden;}
-#map-cv{display:block;width:100%;height:auto;cursor:default;}
+#map-cv{display:block;width:100%;height:auto;cursor:default;transition:opacity .15s ease;}
 #map-cv.hot{cursor:pointer;}
+#map-cv.map-fade{opacity:.15;}
+@keyframes mapWrapIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.map-wrap.mw-anim{animation:mapWrapIn .3s cubic-bezier(.22,.68,0,1.2);}
 .map-tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .12s;z-index:4;
   background:var(--text);color:var(--surface);border-radius:var(--radius);
   padding:7px 9px;font-size:11px;line-height:1.5;max-width:230px;box-shadow:var(--shadow);}
@@ -4931,7 +4934,16 @@ function _mapSyncToggles(){
     b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
   });
 }
-function setMapMetric(v){ mapMetric=v; _mapSyncToggles(); mapDraw(); }
+function setMapMetric(v){
+  mapMetric=v; _mapSyncToggles();
+  // A hard redraw reads as a glitch when the marker style changes shape
+  // (heat blobs vs. graduated circles) as well as color. Dip the canvas out
+  // and back in around the redraw instead of swapping it in place.
+  const cv=document.getElementById('map-cv');
+  if(!cv){ mapDraw(); return; }
+  cv.classList.add('map-fade');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ mapDraw(); cv.classList.remove('map-fade'); }));
+}
 
 // ── geo assets: fetched, never baked. The page derives from data.js, which
 // push.sh rewrites daily; baked centroids would drift out from under it.
@@ -5024,7 +5036,7 @@ function renderMap(){
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
 
   el.innerHTML=`
-    <div class="kg kg4" id="map-kpis"></div>
+    <div id="map-kpis"></div>
     <div class="sec">
       <div class="shead">
         <div>
@@ -5042,7 +5054,7 @@ function renderMap(){
           </div>
         </div>
       </div>
-      <div class="map-wrap">
+      <div class="map-wrap mw-anim">
         <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
         <div class="map-state" id="map-msg" hidden></div>
@@ -5301,10 +5313,20 @@ function mapDraw(){
       const [x,y]=_mapProj(z.ll[1],z.ll[0]);
       const rad=Math.max(3.2,Math.min(17,3.2+Math.sqrt(z.n/maxN)*13));
       const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
-      ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2);
-      if(v==null){ ctx.strokeStyle=cs.getPropertyValue('--faint').trim(); ctx.lineWidth=1; ctx.stroke(); }
-      else { ctx.fillStyle=mapBandColor(v,cs); ctx.globalAlpha=.78; ctx.fill(); ctx.globalAlpha=1;
-             ctx.strokeStyle=surf; ctx.lineWidth=1; ctx.stroke(); }
+      if(v==null){
+        ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2);
+        ctx.strokeStyle=cs.getPropertyValue('--faint').trim(); ctx.lineWidth=1; ctx.stroke();
+      } else {
+        // A flat fill reads as a data point; a soft glow reads as a place.
+        const col=mapBandColor(v,cs);
+        ctx.save();
+        ctx.shadowColor=col; ctx.shadowBlur=rad*0.9;
+        ctx.globalAlpha=.82; ctx.fillStyle=col;
+        ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle=surf; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.stroke();
+      }
     });
   }
 
@@ -5355,8 +5377,11 @@ function mapDraw(){
 
   if(mapHoverKey&&zips.has(mapHoverKey)){
     const z=zips.get(mapHoverKey); const [x,y]=_mapProj(z.ll[1],z.ll[0]);
+    ctx.save();
+    ctx.shadowColor=ink; ctx.shadowBlur=8;
     ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2);
     ctx.strokeStyle=ink; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore();
   }
 
   const msg=document.getElementById('map-msg');
@@ -5386,20 +5411,21 @@ function mapPaintMeta(vis,zips){
   const byMkt={}; vis.forEach(p=>{byMkt[p.st]=(byMkt[p.st]||0)+1;});
   const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
-  k.innerHTML=
-     `<div class="kcard"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="kval">${vis.length}</div><div class="ksub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</div></div>`
-    +`<div class="kcard"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="kval" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}</div><div class="ksub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</div></div>`
+  k.innerHTML=`<div class="srail">`
+    +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</span></div></div>`
+    +`<div class="srail-cell"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="srail-val" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}<span class="srail-sub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</span></div></div>`
     +(mapMetric==='wip'
       ? (()=>{ const ages=vis.map(p=>ssDaysOpen(p.r,_mapToday())).filter(x=>x!=null&&x>=0); const a=avg(ages);
-          return `<div class="kcard"><div class="klabel">Avg days open${kinfo(TIP.ssDaysOpen)}</div><div class="kval ${a!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(a,S.targetAvg)]+'-c':''}">${a!=null?a.toFixed(1)+'d':'—'}</div><div class="ksub">in the Site Survey queue</div></div>`; })()
-      : `<div class="kcard"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="kval ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}</div><div class="ksub">${cts.length} completed</div></div>`)
+          return `<div class="srail-cell"><div class="klabel">Avg days open${kinfo(TIP.ssDaysOpen)}</div><div class="srail-val ${a!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(a,S.targetAvg)]+'-c':''}">${a!=null?a.toFixed(1)+'d':'—'}<span class="srail-sub">in the Site Survey queue</span></div></div>`; })()
+      : `<div class="srail-cell"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="srail-val ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}<span class="srail-sub">${cts.length} completed</span></div></div>`)
     +(mapMetric==='wip'
       // A resurvey rate over open surveys is 0 of 0 by construction — nothing
       // in this view has completed. Show what can actually be acted on.
       ? (()=>{ const over=vis.filter(p=>(ssDaysOpen(p.r,_mapToday())??0)>S.targetAvg).length;
           const pc=vis.length?Math.round(over/vis.length*100):null;
-          return `<div class="kcard"><div class="klabel">Past ${S.targetAvg}d${kinfo(TIP.ssDaysOpen)}</div><div class="kval ${pc!=null?(pc>=40?'kr-c':pc>=20?'ka-c':'kg-c'):''}">${over}</div><div class="ksub">${pc!=null?pc+'% of the open queue':'—'}</div></div>`; })()
-      : `<div class="kcard"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="kval ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}</div><div class="ksub">${defects} of ${comps.length}</div></div>`);
+          return `<div class="srail-cell"><div class="klabel">Past ${S.targetAvg}d${kinfo(TIP.ssDaysOpen)}</div><div class="srail-val ${pc!=null?(pc>=40?'kr-c':pc>=20?'ka-c':'kg-c'):''}">${over}<span class="srail-sub">${pc!=null?pc+'% of the open queue':'—'}</span></div></div>`; })()
+      : `<div class="srail-cell"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="srail-val ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}<span class="srail-sub">${defects} of ${comps.length}</span></div></div>`)
+    +`</div>`;
 
   const sub=document.getElementById('map-sub');
   if(sub&&_mapBounds){
