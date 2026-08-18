@@ -3081,9 +3081,9 @@ function drillPerfMissed(){
 // more than one resource, so a third of the roster could not be read at all
 // without flipping between toggle states.
 let perfGroupBy='region';   // 'region' | 'office' | 'rep' | 'resource'
-let perfSortKey='average', perfSortAsc=false;
+let perfSortKey='count', perfSortAsc=false;
 let perfExpanded=false, perfQuery='';
-function setPerfGroupBy(v){ perfGroupBy=v; perfSortKey='average'; perfSortAsc=false; perfExpanded=false; perfQuery=''; renderPerformance(); }
+function setPerfGroupBy(v){ perfGroupBy=v; perfSortKey='count'; perfSortAsc=false; perfExpanded=false; perfQuery=''; renderPerformance(); }
 // Text columns open A to Z, numeric ones slowest first.
 function perfSortBy(k){
   if(perfSortKey===k) perfSortAsc=!perfSortAsc;
