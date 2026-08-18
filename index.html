@@ -455,6 +455,20 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rswk-meta{grid-area:meta;font-size:10px;color:var(--muted);}
 .rswk-meta b{color:var(--red);font-weight:700;}
 
+/* Category rows carry a real label where the week rows carry a date. "Roof
+   measurements & pitch" is 25 characters against a 112px track, and the label
+   was overriding its width inline — which does not widen a fixed grid column,
+   so long labels ran under the bar. A wider track, and the label wraps instead
+   of overflowing: the bars keep one left edge, which is the whole point of
+   ranking them. */
+.rswk-row.rswk-cat{grid-template-columns:172px minmax(48px,1fr) 28px;}
+.rswk-cat .rswk-wk{white-space:normal;}
+/* 152px fits the longest current label (Roof measurements & pitch, 148px at
+   12px). Narrower and that one row alone wraps to two lines, which reads as a
+   layout fault rather than as a long name. Wrapping stays the fallback for a
+   label longer than any of today's. */
+@media(max-width:1180px){.rswk-row.rswk-cat{grid-template-columns:152px minmax(40px,1fr) 28px;}}
+
 /* Resurveys requested — the day rows reuse .rswk-row above; these style the
    requests that expand underneath one.
    A Current column runs past 1000px on a large monitor, which the Resurveys
@@ -4740,8 +4754,8 @@ function renderResurvey(){
     <div class="shead"><div><div class="stitle">Why they come back${kinfo(TIP.rsCat)}</div>
       <div class="ssub">What the request asked for, read from its details · ${defects.length-noDetails} of ${defects.length} · most ask for more than one</div></div></div>
     <div class="rswk-rows">
-      ${reasonRows.map(([k,v])=>`<div class="rswk-row drill-tgt" ${drillAttrs(`drillRsCategory('${escAttrJs(k)}')`)}>
-        <div class="rswk-wk" style="width:auto;">${esc(rsCatLabel(k))}</div>
+      ${reasonRows.map(([k,v])=>`<div class="rswk-row rswk-cat drill-tgt" ${drillAttrs(`drillRsCategory('${escAttrJs(k)}')`)}>
+        <div class="rswk-wk">${esc(rsCatLabel(k))}</div>
         <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/reasonMax*100,3)}%;"></div></div>
         <div class="rswk-n">${v}</div>
         <div class="rswk-meta">${Math.round(v/defects.length*100)}% of resurveys${rsCatHint(k)?' · '+rsCatHint(k):''}</div>
