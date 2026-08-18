@@ -28,7 +28,7 @@
   --shadow:0 1px 2px rgba(20,20,25,.05),0 2px 8px rgba(20,20,25,.05);
 }
 /* Tabular figures — numeric columns and KPIs align vertically */
-table,.kval,.ekval,.rval,.nbadge,.nav-ts{font-variant-numeric:tabular-nums;}
+table,.kval,.rval,.nbadge,.nav-ts{font-variant-numeric:tabular-nums;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;}
 /* Never pan the page sideways on phones — wide content scrolls inside its own wrapper */
@@ -150,6 +150,10 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th{font-size:11px;font-weight:700;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 th:hover{color:var(--text);}
+/* A handful of tables have no sort at all — the base th{cursor:pointer} above
+   implies a control that isn't there. */
+.tbl-static th{cursor:default;}
+.tbl-static th:hover{color:var(--muted);}
 th.r,td.r{text-align:right;}
 td{padding:5px 8px;border-bottom:1px solid #f5f5f2;vertical-align:middle;}
 tr:hover td{background:var(--bg);}
@@ -276,14 +280,6 @@ tr:hover td{background:var(--bg);}
 /* Hero — single navy treatment, the page's one dark anchor */
 .exec-hero{background:linear-gradient(135deg,var(--navy1) 0%,var(--navy2) 100%);border-radius:var(--radius-lg);padding:26px 28px;margin-bottom:14px;}
 .exec-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:-.02em;}
-.exec-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-.ekcard{background:rgba(255,255,255,.08);border-radius:var(--radius);padding:13px 15px;border:1px solid rgba(255,255,255,.12);}
-.eklabel{font-size:11px;font-weight:600;color:#7eb3e0;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
-.ekval{font-size:28px;font-weight:700;color:#fff;letter-spacing:-.02em;}
-.ektgt{font-size:10px;color:#5d87b3;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.1);}
-.eks-good{color:#6ee7b7;}
-.eks-mid{color:#fcd34d;}
-.eks-bad{color:#fca5a5;}
 .exec-wrap .tgl-btn{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);}
 .exec-wrap .tgl-btn.active{background:rgba(255,255,255,.88);color:#0f172a;border-color:rgba(255,255,255,.88);}
 .exec-wrap .tgl-btn:hover:not(.active){background:rgba(255,255,255,.15);}
@@ -564,9 +560,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-proj{font-weight:500;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .drill-tgt{cursor:pointer;}
 /* Drillable KPI cards get a corner arrow so they read as clickable */
-.ekcard.drill-tgt{position:relative;}
-.ekcard.drill-tgt::after{content:'↗';position:absolute;top:8px;right:10px;font-size:12px;color:#7eb3e0;opacity:.55;}
-.ekcard.drill-tgt:hover::after{opacity:1;}
 .kcard.drill-tgt{position:relative;}
 .kcard.drill-tgt::after{content:'↗';position:absolute;top:9px;right:11px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
 .kcard.drill-tgt:hover::after{opacity:1;transform:translate(1px,-1px);}
@@ -632,14 +625,13 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
   .settings-grid{grid-template-columns:1fr;}
-  .exec-wrap .exec-kpis{grid-template-columns:repeat(2,1fr)!important;}
   .page{padding:12px;}
   /* Section headers wrap instead of squeezing the subtitle beside a toggle:
      "By sales office" left its .ssub 148px wide and three lines tall. */
   .shead{flex-wrap:wrap;}
   .shead>.toggle-group{margin-left:auto;}
   /* 5-card grids wrap 2+2+1 — let the 5th card span the row instead of orphaning */
-  .kg5>.kcard:nth-child(5),.exec-kpis>.ekcard:nth-child(5){grid-column:1/-1;}
+  .kg5>.kcard:nth-child(5){grid-column:1/-1;}
 }
 
 /* WIP QUEUE — scroll within the card, header stays visible */
@@ -883,15 +875,10 @@ body{padding-left:180px;}
 /* Exec hero — light briefing panel instead of navy */
 .exec-hero{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);padding:24px 26px 18px;}
 .exec-title{color:var(--text);font-size:23px;letter-spacing:-.015em;}
-.exec-kpis{gap:0;border-top:1px solid var(--border);}
-.ekcard{background:transparent;border:none;border-right:1px solid var(--border);border-radius:0;padding:14px 18px 6px 0;}
-.ekcard+.ekcard{padding-left:18px;}
-.ekcard:last-child{border-right:none;}
-.eklabel{color:var(--muted);letter-spacing:.08em;}
-.ekval{color:var(--text);font-size:30px;}
-.ektgt{color:var(--faint);border-top:none;padding-top:0;}
-.eks-good{color:#2e7a52;}.eks-mid{color:#b98a1d;}.eks-bad{color:#c04a38;}
-.ekcard.drill-tgt::after{color:var(--faint);}
+/* The rail sits inside .exec-hero, which is already this page's one bordered
+   panel — the rail's own surface/border/shadow would double the chrome, so
+   nested here it drops back to a plain divider row. */
+.exec-hero .srail{background:transparent;border:none;box-shadow:none;border-radius:0;margin-bottom:0;border-top:1px solid var(--border);padding:0;}
 .exec-wrap .tgl-btn{border-color:var(--border);background:var(--surface);color:var(--muted);}
 .exec-wrap .tgl-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
 .exec-wrap .tgl-btn:hover:not(.active){background:var(--bg);}
@@ -905,7 +892,7 @@ body{padding-left:180px;}
 .ntab[data-page="wip"]{display:flex;align-items:center;}
 
 /* Briefing hero — Current page editorial header */
-.brief-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.brief-eyebrow{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .brief-sentence{font-size:24px;line-height:1.36;font-weight:400;letter-spacing:-.01em;max-width:780px;color:var(--text);}
 .brief-verdict{font-weight:700;border-bottom:3px solid var(--green);padding-bottom:1px;}
 .bv-warn{border-bottom-color:#e0a33c;}
@@ -2547,7 +2534,7 @@ function renderWeek(){
           <div id="cur-hero-hdr" style="flex:1;min-width:0;"></div>
           <div class="toggle-group" style="flex-shrink:0;">${tgl('last','Last Week')}${tgl('this','This Week')}</div>
         </div>
-        <div class="exec-kpis" id="cur-kpis"></div>
+        <div class="srail" id="cur-kpis"></div>
       </div>
       <div id="week-inner"></div>
     </div>`;
@@ -2585,7 +2572,7 @@ function renderLastWeek(){
   const src=rows.filter(r=>everCompleted(r)&&r.complete>=lw.from&&r.complete<=lw.to);
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
+  const eks=(v,t)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,t)]||'');
   // Prior week for comparison
   const pw=weekRange(-2);
   const pwSrc=rows.filter(r=>everCompleted(r)&&r.complete>=pw.from&&r.complete<=pw.to);
@@ -2632,11 +2619,26 @@ function renderLastWeek(){
   // The misses, not the hits: "68% on target" is read to ask which ones blew it.
   _curD.lwMiss=src.filter(r=>r.ct_total!=null&&r.ct_total>S.targetAvg);
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard drill-tgt" onclick="openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})"><div class="eklabel">Completions${kinfo(TIP.firstComplete)}</div><div class="ekval">${src.length}</div><div class="ektgt">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</div></div>
-    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetAvg}d</div></div>
-    <div class="ekcard"><div class="eklabel">Median cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(medT,S.targetMedian)}">${medT!=null?medT.toFixed(1)+'d':'—'}</div><div class="ektgt">Target: ${S.targetMedian}d</div></div>
-    <div class="ekcard${_curD.lwMiss.length?' drill-tgt':''}" ${_curD.lwMiss.length?`onclick="drillCur('lwMiss','Missed target · last week','${_curD.lwMiss.length} of ${tots.length} took longer than ${S.targetAvg}d',{sort:'days'})"`:''}><div class="eklabel">On target ≤${S.targetAvg}d${kinfo(TIP.onTarget())}</div><div class="ekval ${onTgt==null?'':(onTgt>=75?'eks-good':onTgt>=50?'eks-mid':'eks-bad')}">${onTgt!=null?onTgt+'%':'—'}</div><div class="ektgt">${tots.length} with data</div></div>
-    <div class="ekcard drill-tgt" onclick="drillCur('lwWip','WIP at the close of last week','Open as of ${fmtDate(lw.to)} · ${wip} survey${wip===1?'':'s'}',{sort:'days'})"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})")}>
+      <div class="klabel">Completions${kinfo(TIP.firstComplete)}</div>
+      <div class="srail-val">${src.length}<span class="srail-sub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
+      <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Median cycle${kinfo(TIP.cycle)}</div>
+      <div class="srail-val ${eks(medT,S.targetMedian)}">${medT!=null?medT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetMedian}d</span></div>
+    </div>
+    <div class="srail-cell${_curD.lwMiss.length?' rail-d':''}" ${_curD.lwMiss.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('lwMiss','Missed target · last week','${_curD.lwMiss.length} of ${tots.length} took longer than ${S.targetAvg}d',{sort:'days'})`):''}>
+      <div class="klabel">On target &le;${S.targetAvg}d${kinfo(TIP.onTarget())}</div>
+      <div class="srail-val ${onTgt==null?'':(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c')}">${onTgt!=null?onTgt+'%':'—'}<span class="srail-sub">${tots.length} with data</span></div>
+    </div>
+    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs(`drillCur('lwWip','WIP at the close of last week','Open as of ${fmtDate(lw.to)} · ${wip} survey${wip===1?'':'s'}',{sort:'days'})`)}>
+      <div class="klabel">WIP${kinfo(TIP.wip)}</div>
+      <div class="srail-val">${wip}<span class="srail-sub">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</span></div>
+    </div>`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
@@ -2677,7 +2679,7 @@ function renderLastWeek(){
   const lwFpy=rnd(fpy(src));
   const pwFpy=rnd(fpy(pwSrc));
   const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
-  const fpyCls=lwFpy==null?'':(lwFpy>=90?'eks-good':lwFpy>=80?'eks-mid':'eks-bad');
+  const fpyCls=lwFpy==null?'':(lwFpy>=90?'kg-c':lwFpy>=80?'ka-c':'kr-c');
   const fpyBarW=lwFpy!=null?lwFpy:0;
 
   // Still open from last week. Ages are queue ages against the export date, not
@@ -2714,7 +2716,7 @@ function renderLastWeek(){
     <div class="sec">
       <div class="shead"><div><div class="stitle">First-pass yield</div><div class="ssub">Last week</div></div></div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
-        <span class="ekval ${fpyCls}" style="font-size:24px;">${lwFpy!=null?lwFpy+'%':'—'}</span>
+        <span class="kval ${fpyCls}" style="font-size:24px;">${lwFpy!=null?lwFpy+'%':'—'}</span>
         ${fpyDelta!=null?`<span style="font-size:12px;color:${fpyDelta>=0?'var(--green)':'var(--red)'};">${fpyDelta>=0?'+':''}${fpyDelta}% vs prior week</span>`:''}
       </div>
       <div style="background:var(--border-lt);border-radius:3px;height:5px;margin-bottom:8px;overflow:hidden;">
@@ -2829,7 +2831,7 @@ function renderThisWeek(){
   const projTip=`${completedTW.length} completed + ${_schedExp.toFixed(1)} expected from ${scheduledRem.length} scheduled (measured show-rates by resource) + ${_flowExp.toFixed(1)} expected from ${unschedRows.length} unscheduled WIP (rep/region cycle times) over the ${daysRem} days left ≈ ${projTotal}.`;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const avgT=avg(tots);
-  const eks=(v,t)=>{const b=bandFor(v,t);return b&&'eks-'+b;};
+  const eks=(v,t)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,t)]||'');
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   const lwr=weekRange(-1);
@@ -2862,11 +2864,26 @@ function renderThisWeek(){
   _thisWeekSrc=completedTW;
   _curD.twSched=scheduledRem; _curD.twWip=wipProjects;
   document.getElementById('cur-kpis').innerHTML=`
-    <div class="ekcard drill-tgt" onclick="openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})"><div class="eklabel">Completed so far${kinfo(TIP.complete)}</div><div class="ekval">${completedTW.length}</div><div class="ektgt">through today</div></div>
-    <div class="ekcard"><div class="eklabel">Projected total${kinfo(projTip)}</div><div class="ekval">${daysRem>0?'~'+projTotal:String(projTotal)}</div><div class="ektgt">${daysRem>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</div></div>
-    <div class="ekcard${scheduledRem.length?' drill-tgt':''}" ${scheduledRem.length?`onclick="drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})"`:''}><div class="eklabel">Scheduled remaining${kinfo(TIP.schedRem)}</div><div class="ekval">${scheduledRem.length}</div><div class="ektgt">this week · incl. resurveys</div></div>
-    <div class="ekcard"><div class="eklabel">Avg cycle${kinfo(TIP.cycle)}</div><div class="ekval ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}</div><div class="ektgt">${tots.length} completed · target ${S.targetAvg}d</div></div>
-    <div class="ekcard drill-tgt" onclick="drillCur('twWip','Open right now','${wip} survey${wip===1?'':'s'} in progress as of ${escAttrJs(fmtDate(dataThrough))}',{sort:'days'})"><div class="eklabel">WIP${kinfo(TIP.wip)}</div><div class="ekval">${wip}</div><div class="ektgt">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</div></div>`;
+    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})")}>
+      <div class="klabel">Completed so far${kinfo(TIP.complete)}</div>
+      <div class="srail-val">${completedTW.length}<span class="srail-sub">through today</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Projected total${kinfo(projTip)}</div>
+      <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</span></div>
+    </div>
+    <div class="srail-cell${scheduledRem.length?' rail-d':''}" ${scheduledRem.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})`):''}>
+      <div class="klabel">Scheduled remaining${kinfo(TIP.schedRem)}</div>
+      <div class="srail-val">${scheduledRem.length}<span class="srail-sub">this week · incl. resurveys</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
+      <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">${tots.length} completed · target ${S.targetAvg}d</span></div>
+    </div>
+    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs(`drillCur('twWip','Open right now','${wip} survey${wip===1?'':'s'} in progress as of ${escAttrJs(fmtDate(dataThrough))}',{sort:'days'})`)}>
+      <div class="klabel">WIP${kinfo(TIP.wip)}</div>
+      <div class="srail-val">${wip}<span class="srail-sub">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</span></div>
+    </div>`;
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
@@ -2896,7 +2913,7 @@ function renderThisWeek(){
     ${atRisk.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div></div>
-      <div style="overflow-x:auto;"><table id="tw-sched-tbl"><thead><tr>
+      <div style="overflow-x:auto;"><table id="tw-sched-tbl" class="tbl-static"><thead><tr>
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
         ${atRisk.sort((a,b)=>a.sched.localeCompare(b.sched)).map(e=>`<tr>
@@ -2914,7 +2931,7 @@ function renderThisWeek(){
     ${completedTW.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Completed so far</div><div class="ssub">${completedTW.length} survey${completedTW.length===1?'':'s'} closed this week</div></div></div>
-      <div style="overflow-x:auto;"><table id="tw-done-tbl"><thead><tr>
+      <div style="overflow-x:auto;"><table id="tw-done-tbl" class="tbl-static"><thead><tr>
         <th>Project</th><th>Region</th><th>Resource</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
         ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
