@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, fpy, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
@@ -123,6 +123,98 @@ test('isResurveyDefect excludes requests dismissed as unnecessary', () => {
   assert.equal(isResurveyDefect({}), false);
   // Every defect is still a resurvey signal; the reverse no longer holds.
   assert.equal(hasResurveySig({ resurvey_reason: 'Unnecessary Request' }), true);
+});
+
+// ── rsCategories: what the request actually asked for, read from free text ──
+test('rsCategories reads the ask out of the request details', () => {
+  const cat = d => rsCategories({ resurvey_details: d });
+  // The commonest shape in the data by a wide margin.
+  assert.deepEqual(cat('We need photos of the MSP with the dead front removed showing all breaker ratings.'), ['panel']);
+  // Multi-label: one request, three asks — all three are kept.
+  assert.deepEqual(
+    cat('- site map showing location of utility meter\n- exact pitch measurements of all roof faces'),
+    ['meter', 'where', 'roofMeas'],
+  );
+  assert.deepEqual(cat('Need attic photos. Dimensions of rafters and spacing.'), ['roofMeas', 'roofStruct']);
+  assert.deepEqual(cat('Need existing module model and manufacturer'), ['existing']);
+  assert.deepEqual(cat('Duplicate photos with another project. New site survey needed with Radicl.'), ['redo']);
+  // Order follows RS_CATEGORIES, never the order the words appear in the text,
+  // so two requests asking for the same things read the same way.
+  assert.deepEqual(cat('roof pitch, and the dead front off'), cat('dead front off, and the roof pitch'));
+});
+
+test('rsCategories ignores the request template boilerplate', () => {
+  // "INTERIOR ACCESS REQUIRED: No" is on 57% of requests and asks for nothing.
+  // Left in, "access"/"required" and the header words classify every row.
+  assert.deepEqual(rsCategories({
+    resurvey_details: 'RESURVEY EXPLANATION:\nINTERIOR ACCESS REQUIRED: No\nREQUEST DETAILS:',
+  }), []);
+  // Blank and missing fields are unclassified, not guessed at from the picklist:
+  // "Survey Incomplete" with no details is genuinely unknown.
+  assert.deepEqual(rsCategories({ resurvey_details: '', resurvey_reason: 'Survey Incomplete' }), []);
+  assert.deepEqual(rsCategories({}), []);
+  assert.deepEqual(rsCategories(null), []);
+});
+
+test('rsCategories patterns are stateless and every key has a label', () => {
+  // A /g flag makes test() stateful: the second row through would skip matches
+  // from wherever the first left off, so a category would drop rows at random.
+  RS_CATEGORIES.forEach(c => {
+    assert.equal(c.re.global, false, `${c.key} pattern carries /g`);
+    assert.ok(c.label && c.hint, `${c.key} is missing a label or hint`);
+    assert.equal(rsCatLabel(c.key), c.label);
+  });
+  // Keys are unique — two categories sharing one would merge in every count.
+  assert.equal(new Set(RS_CATEGORIES.map(c => c.key)).size, RS_CATEGORIES.length);
+  // Repeat calls agree, which a stateful pattern would break on the second pass.
+  const row = { resurvey_details: 'dead front off, plus the roof pitch' };
+  assert.deepEqual(rsCategories(row), rsCategories(row));
+  // Unknown key falls back to itself rather than rendering "undefined".
+  assert.equal(rsCatLabel('nope'), 'nope');
+});
+
+// The real regression guard for the category patterns. The snapshot fixture
+// cannot do this job: build-fixture.cjs redacts resurvey_details, because it is
+// customer-written prose that should not be committed. So the corpus lives here
+// instead — sentences written in the shape of real requests, no real addresses,
+// names or account references, one per category plus the multi-ask cases that
+// are the whole reason this is multi-label.
+//
+// Widening a pattern to catch a new phrasing is fine and expected. Widening one
+// until it also claims a line that belongs to another category is the failure
+// mode this catches, so add the new phrasing here at the same time.
+const RS_CORPUS = [
+  ['We need photos of the MSP with the dead front removed showing all breaker ratings and the max bus rating.', ['panel']],
+  ['Photos of the meter/main combo with the deadfront off.', ['panel', 'meter']],
+  ['Step back photos (10-15ft) of the utility meter, and a site map highlighting the main service panel location.', ['panel', 'meter', 'where']],
+  ['There is a subpanel for the home that was not documented. Take photos of the breakers and their ratings.', ['panel', 'subs']],
+  ['Need exact pitch measurements of all roof faces with a physical pitch tool, verify no face is under 10 or over 45.', ['roofMeas']],
+  ['Need attic photos. Dimensions of rafters and spacing.', ['roofMeas', 'roofStruct']],
+  ['Design needs confirmation of clay vs concrete tile on the rear roof plane.', ['roofStruct']],
+  ['Need existing module model and manufacturer, plus the inverter count.', ['existing']],
+  ['We also need clearance measurements of the battery location.', ['roofMeas', 'existing']],
+  ['Photos of the generator panel with the dead front off to determine the interconnection method.', ['panel', 'subs']],
+  ['Duplicate photos with another project. New site survey needed with Radicl.', ['redo']],
+  ['The layout shows a different house and the survey photos appear to be from a different property.', ['redo']],
+  ['We need structural photos of the outbuilding, including truss size and spacing.', ['roofStruct', 'redo']],
+  ['Site map requested', ['where']],
+];
+
+test('rsCategories holds its reading of a frozen corpus of real request shapes', () => {
+  const wrong = [];
+  RS_CORPUS.forEach(([text, want]) => {
+    const got = rsCategories({ resurvey_details: text });
+    if (got.join(',') !== want.join(',')) wrong.push(`  "${text.slice(0, 58)}…"\n    want [${want}]\n    got  [${got}]`);
+  });
+  assert.deepEqual(wrong, [], `category rule drifted on ${wrong.length} case(s):\n${wrong.join('\n')}`);
+});
+
+test('every category is exercised by the corpus', () => {
+  // A category with no case is a pattern nobody is checking — and one that has
+  // silently stopped matching anything looks identical to one that is rare.
+  const seen = new Set(RS_CORPUS.flatMap(([, want]) => want));
+  const untested = RS_CATEGORIES.map(c => c.key).filter(k => !seen.has(k));
+  assert.deepEqual(untested, [], `no corpus case for: ${untested.join(', ')}`);
 });
 
 test('fpy is completions-minus-defects over completions', () => {

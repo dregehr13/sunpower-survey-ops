@@ -22,7 +22,7 @@ const SNAP_PATH = path.join(HERE, 'fixtures/snapshot.json');
 
 const {
   filterRows, isComplete, isWIP, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace,
-  hasResurveySig, avg, med, pct, normalizeName,
+  hasResurveySig, rsCategories, avg, med, pct, normalizeName,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
   ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
@@ -123,6 +123,22 @@ function computeAll() {
       daysRemaining: 2.5, showRates, expectedCt,
     }),
   };
+
+  // ── resurvey categories are NOT snapshotted, deliberately ──
+  // rsCategories() reads the request details free text, and build-fixture.cjs
+  // replaces that field with "[details redacted]" — it is customer-written prose
+  // and does not belong in a committed fixture. A distribution taken here would
+  // be eight zeros, which guards nothing and reads like a broken classifier.
+  // The regression guard for those patterns is the frozen corpus of synthesised
+  // request sentences in metrics.test.js. Keep it that way: if this fixture ever
+  // starts carrying real details text, that is the bug.
+  const withDetails = rows.filter(r => (r.resurvey_details || '').trim());
+  assert.ok(withDetails.length > 0, 'fixture carries no resurvey_details rows at all');
+  assert.deepEqual(
+    [...new Set(withDetails.map(r => r.resurvey_details))], ['[details redacted]'],
+    'fixture details are no longer redacted — build-fixture.cjs must not commit customer prose',
+  );
+  assert.deepEqual(withDetails.flatMap(rsCategories), [], 'a category pattern matches the redaction marker');
 
   // ── pure helpers whose bands have burned us before ──
   const helpers = {
