@@ -2428,7 +2428,11 @@ const RS_TABLE_LIMIT=10;
 let rsGroupExpanded=false;
 function toggleRsGroups(){ rsGroupExpanded=!rsGroupExpanded; renderResurvey(); }
 
-function pillV(v){ if(v==null) return '<span class="pna">—</span>'; const m=Math.abs(v); const c=m<=S.targetMedian?'pg':m<=(S.targetAvg+2)?'pam':'pr'; return `<span class="pill ${c}">${v<0?'~0':v.toFixed(1)}d</span>`; }
+// Pill scale: green ≤targetMedian, amber ≤targetAvg+2, red beyond — one scale
+// shared by every caller. Returns the band key only; each caller owns its own
+// presentation (a CSS class here, a CSS var in Performance's pCycleCell).
+function pillBand(v){ if(v==null) return null; const m=Math.abs(v); return m<=S.targetMedian?'g':m<=(S.targetAvg+2)?'am':'r'; }
+function pillV(v){ if(v==null) return '<span class="pna">—</span>'; return `<span class="pill p${pillBand(v)}">${v<0?'~0':v.toFixed(1)}d</span>`; }
 
 const CH={};
 function dc(k){ if(CH[k]){CH[k].destroy();delete CH[k];} }
@@ -3271,7 +3275,8 @@ function renderPerformance(){
   // Cycle reads as a bar against the 4d target, the same way Quality's rate
   // reads against its 5% ceiling. The number beside it is the average.
   const pCycleCell=(v,muted)=>{
-    const c=v==null?'var(--muted)':v<=S.targetMedian?'var(--green)':v<=(S.targetAvg+2)?'var(--amber)':'var(--red)';
+    const b=pillBand(v);
+    const c=b==null?'var(--muted)':{g:'var(--green)',am:'var(--amber)',r:'var(--red)'}[b];
     return `<td class="r"><div class="q-rate-cell">
       <div class="q-rate-track"><div class="q-rate-fill" style="width:${v==null?0:Math.min(v/pMaxAvg*100,100)}%;background:${muted||c};"></div><div class="q-rate-ceil" style="left:${Math.min(S.targetAvg/pMaxAvg*100,100)}%;"></div></div>
       <span class="q-rate-val" style="color:${muted?'var(--muted)':c};">${v==null?'—':v.toFixed(1)+'d'}</span>

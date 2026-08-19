@@ -1,3 +1,99 @@
+# Performance & Trends audit — 2026-08-19
+
+Phase 1 assessment, scoped to Performance and Trends only (arguments given).
+Walked both pages in the browser against live `data.js` (2,442 rows, `DATA_TS`
+2026-08-18 10:29), exercising every toggle, cut, sort, search box, drill,
+keyboard path and narrow-viewport layout, and cross-checked displayed numbers
+against `lib/metrics.cjs` and `docs/METRICS.md`. Baseline `npm test`: **70
+pass, 0 fail**.
+
+Both pages have been substantially rebuilt since the 2026-08-14 audit below
+(stat rail, region/office/rep/resource cuts, the P1–P4/T1–T3 findings from
+that pass) — this is a fresh look at the current code, not a re-check of the
+old findings. Ranked worst first within each page.
+
+## Batch 1 — applied (correctness)
+
+`npm test` 70/70 after each change, snapshot unchanged — no metric definition
+moved. **PF1, PF2, TR2 fixed**; verified live (chart config, keyboard-drill via
+a dispatched Enter keydown, and a fresh 480px load with `document.body.
+scrollWidth === window.innerWidth`, all after the change). **TR1 left alone —
+Doug's call: the date-filter behavior on that strip works as intended, not a
+bug.** Pages stay separate; no merge (see the note below).
+
+Batch 2 (organization + logic clarity) had nothing queued — the one Logic
+finding was TR1, dismissed above. **PF3 pulled forward from batch 4** since it
+was the only thing left in scope: `pillV()` and `pCycleCell` now both read the
+band from a shared `pillBand(v)` (next to `pillV()`), rather than each
+carrying its own copy of the three thresholds. Verified byte-identical output
+before/after on both callers (`pillV(2/4/8/null)` and the first five
+Performance table rows' cell colours).
+
+## Performance
+
+| # | axis | what I observed | severity | proposed fix | risk |
+|---|---|---|---|---|---|
+| PF1 | Functionality | **"Volume by resource" chart's x-axis is unreadable.** The chart hardcodes `ticks:{stepSize:1}` on the count axis. That's fine when the biggest bar is ~300 (the Region/Office/Rep cuts), but under the **Resource** cut one bar (Sales Rep) reaches 1,718 — Chart.js tries to generate 1,719 ticks, logs `scales.x.ticks.stepSize: 1 would result generating up to 1719 ticks. Limiting to 1000.`, and renders a solid smear of overlapping numbers instead of a legible axis. Reproduced every time: switch the toggle to Resource with any filter. | wrong | Drop the hardcoded `stepSize:1` on `pf-vol`'s x scale (~line 3385) and let Chart.js auto-step, or compute one from the max value (e.g. `Math.ceil(pMaxCount/10)`). | low — chart option only |
+| PF2 | Functionality / Accessibility | **Performance-by-\<group\> table rows have no keyboard path.** `pShown.map(d=>'<tr class="drill-tgt" onclick="...">')` (~line 3337) opens the drill drawer on click, but unlike *every other* `.drill-tgt` element in the app it carries no `role="button"`, `tabindex`, or `onkeydown` — the shared `drillAttrs()` helper exists precisely to add those three things and is used on the srail cells, the Current page's `so-row`/`rswk-row` divs, and the Quality reason bars. A keyboard or screen-reader user cannot open a drill from this table. (The identical pattern exists on Quality's group table, line 4782 — out of scope for this pass, but the same fix applies there too.) | rough | Replace the bare `onclick` with `${drillAttrs(pDrill(d.g))}`. | low |
+| PF3 | Code health | **`pCycleCell`'s colour thresholds duplicated `pillV()`.** Both compute the identical three-way band — green ≤`targetMedian`, amber ≤`targetAvg+2`, red beyond (docs/METRICS.md's "Pill scale") — but `pCycleCell` (~line 3277) wrote the comparison out again inline instead of calling `pillV()` or a shared helper. They agreed at the time; nothing enforced that they'd stay that way, and `test/surfaces.test.js`'s inline-band guard didn't match this shape (it only greps for the `Math.round(...*10)/10` pattern). **Fixed** — both now call a shared `pillBand(v)`. | nit | ~~Extract a small `pillColor(v)` used by both `pillV()` and `pCycleCell`.~~ Done. | low |
+
+Verified working: Region / Sales office / Sales rep / Resource cuts (chart and
+table stay in sync, resource cut correctly hides its own diagonal columns);
+search box (filters the table, not the chart — by design, the subtitle says
+so; focus and caret survive each keystroke); sort on every column, blanks
+sinking in both directions, default Projects-desc; Show-all / show-top-15
+expand; row-click drills open the right population with the right title;
+"(no region)"/"(no office)" rows present; Copy table; narrow-viewport (480px)
+layout — stat rail reflows to two columns, the group table scrolls inside its
+own `.xscroll` container rather than the page.
+
+---
+
+## Trends
+
+| # | axis | what I observed | severity | proposed fix | risk |
+|---|---|---|---|---|---|
+| TR1 | Logic | **The Intake/Completed/Clearance/Weekly-floor strip — and its alarm banner — ignore the date filter entirely.** They're built from `flowWeeks`, which loops off `trendSrc` (dimension filters only) and `flowEnd` (today's export date), never `GF.dateFrom`/`GF.dateTo`. Verified live: switching the filter to **This wk** (a 2-day range) and separately to a **custom January range**, both produced the identical Intake 98 / Completed 92 / Clearance 88% / Weekly floor 105 as under **All**, while the chart above and the Trend/Avg pace/Best week/P75/P90 cards correctly obey the filter. **Doug's call, 2026-08-19: this is intended — the strip works as designed on his end. Left alone.** | — | — (not a bug) | — |
+| TR2 | Aesthetics / Functionality | **The Weekly detail table has no `.xscroll` wrapper**, unlike every other wide table in the app (including Performance's own group table, one page over). Confirmed in the DOM at a 480px viewport: the table's `.sec` has `scrollWidth` 562 against a `clientWidth` of 454, and `document.body.scrollWidth` (575) exceeds `window.innerWidth` (480) — the whole page grows a horizontal scrollbar instead of just the table scrolling in its own faded-edge container. | wrong | Wrap `<table id="tr-wtable">…</table>` in `<div class="xscroll">…</div>`, matching `pf-gtable`. | low — structural HTML only |
+
+Verified working: Daily/Weekly toggle on Intake & Flow, and the
+Current/First-time completion-basis toggle (Completed swaps 92→96, while
+Clearance/Weekly floor correctly stay on the current-truth basis per the
+in-code note); P75/P90/Trend(3wk) drills open the right population; weekly
+detail table's New In/Completed/WIP cell drills open the right week and kind;
+Escape closes the drawer and returns focus to the element that opened it;
+Weekly rhythm stays fixed to the trailing 8 weeks regardless of the date
+filter, as documented; SS ratio line and Weekly avg cycle bars render and
+drill correctly; no console errors besides the PF1 warning above.
+
+---
+
+## On combining Performance and Trends
+
+**Decided 2026-08-19: pages stay separate.** Asked to think about it, not to
+build it. My read: don't merge them. The two
+pages are already structurally orthogonal, not overlapping — Performance
+slices **one time window** by many groups (region/office/rep/resource);
+Trends slices **one group (everyone)** by many time windows. Their stat
+rails don't share a single metric today (Projects/Avg/Median/OnTarget/
+ResourceMix vs. Trend/AvgPace/BestWeek/P75/P90), which is a sign they're
+answering different questions, not an oversight.
+
+A literal merge would either double the rail to nine-odd cells — undoing the
+entire point of the stat-rail redesign, which exists to compress five or six
+KPI cards into "about a sixth of the vertical space" — or force one lens to
+drop a metric to fit the other's slots. It also reproduces exactly the
+six-surfaces-over-one-shape problem Performance and Quality were each already
+rebuilt to get out of.
+
+If the goal is fewer clicks to compare "this region" over time, a cross-link
+is cheaper and doesn't conflate two different populations: a drill or button
+on a Performance row that opens Trends pre-filtered to that region/office/rep,
+the way `drillPerfGroup()` already opens the drawer. Worth doing if you want
+it; a page merge isn't.
+
+---
+
 # Full-app audit — 2026-08-14
 
 Phase 1 assessment. Nothing changed yet.
