@@ -2878,7 +2878,7 @@ function renderThisWeek(){
     </div>
     <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
-      <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">${tots.length} completed · target ${S.targetAvg}d</span></div>
+      <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
     </div>
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs(`drillCur('twWip','Open right now','${wip} survey${wip===1?'':'s'} in progress as of ${escAttrJs(fmtDate(dataThrough))}',{sort:'days'})`)}>
       <div class="klabel">WIP${kinfo(TIP.wip)}</div>
