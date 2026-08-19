@@ -3283,7 +3283,7 @@ function renderPerformance(){
   // The chart cannot draw 300 reps. It caps at the top slice by volume and says
   // so; the table below it still carries every row.
   const CHART_CAP=16;
-  const pChart=[...pGroups].sort((a,b)=>b.count-a.count).slice(0,CHART_CAP);
+  const pChart=[...pMatched].sort((a,b)=>b.count-a.count).slice(0,CHART_CAP);
   const rh=Math.max(220,pChart.length*26+50);
   const hasNone=pChart.some(d=>d.none>0);
 
@@ -3315,14 +3315,15 @@ function renderPerformance(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Volume by ${pLabel.toLowerCase()}</div>
-          <div class="ssub">Completed surveys, split by who ran them${pGroups.length>CHART_CAP?` · top ${CHART_CAP} of ${pGroups.length} by volume, the table below has them all`:` · ${pChart.length} ${pPlural}`}</div></div>
+          <div class="ssub">Completed surveys, split by who ran them${pMatched.length>CHART_CAP?` · top ${CHART_CAP} of ${pMatched.length} by volume, the table below has them all`:` · ${pChart.length} ${pN(pChart.length)}`}${pQ?` matching "${esc(perfQuery.trim())}"`:''}</div></div>
         ${pTgls}
       </div>
-      <div class="leg">
+      ${pChart.length?`<div class="leg">
         ${RES3.map(r=>`<span class="li"><span class="ld" style="background:${RES_C[r]};"></span>${r}</span>`).join('')}
         ${hasNone?'<span class="li"><span class="ld" style="background:#e2e8f0;border:1px solid #ddd;box-sizing:border-box;"></span>Unassigned</span>':''}
       </div>
-      <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>
+      <div class="cw" id="pf-vol-wrap"><canvas id="pf-vol"></canvas></div>`
+      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${pPlural} match &ldquo;${esc(perfQuery.trim())}&rdquo;.</div>`}
     </div>
     <div class="sec">
       <div class="shead">
@@ -3344,7 +3345,7 @@ function renderPerformance(){
           +pth('rd','<span style="color:#8677b8;">Radicl</span>','r')
           +pth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
       </tr></thead><tbody>
-        ${pShown.map(d=>`<tr class="drill-tgt" onclick="${pDrill(d.g)}">
+        ${pShown.map(d=>`<tr class="drill-tgt" ${drillAttrs(pDrill(d.g))}>
           <td style="font-weight:500;font-size:12px;">${esc(d.g)}</td>
           ${pCycleCell(d.average)}
           <td class="r">${d.count.toLocaleString()}</td>
@@ -3370,32 +3371,34 @@ function renderPerformance(){
       :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${pPlural} match &ldquo;${esc(perfQuery.trim())}&rdquo;.</div>`}
     </div>`;
 
-  document.getElementById('pf-vol-wrap').style.height=rh+'px';
-  dc('pf-vol');
-  const volOf=res=>pChart.map(d=>res===null?d.none:d[{'Sales Rep':'sr','Radicl Services':'rd','SunPower Surveyor':'sp'}[res]].n);
-  CH['pf-vol']=new Chart(document.getElementById('pf-vol'),{
-    type:'bar',
-    data:{labels:pChart.map(d=>d.g),datasets:[
-      ...RES3.map(r=>({label:r,data:volOf(r),backgroundColor:RES_C[r],borderRadius:0})),
-      ...(hasNone?[{label:'Unassigned',data:volOf(null),backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
-    ]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      onHover:drillHover,
-      onClick:(evt,els)=>{ if(!els.length) return;
-        const g=pChart[els[0].index].g;
-        const res=[...RES3,null][els[0].datasetIndex];
-        const dr=filtered.filter(r=>((((r[pKey]||'')+'').trim()||pBlank)===g)&&(res===null?!r.resource:r.resource===res));
-        openDrill((res||'Unassigned')+' · '+g,dr.length+' surveys · '+drillScopeNote(),dr,{sort:'days'}); },
-      plugins:{legend:{display:false},
-        tooltip:{mode:'index',callbacks:{
-          title:ctx=>pChart[ctx[0].dataIndex].g,
-          footer:ctx=>'Total: '+ctx.reduce((s,i)=>s+i.parsed.x,0)
-        }}},
-      scales:{
-        x:{stacked:true,grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98',stepSize:1}},
-        y:{stacked:true,grid:{display:false},ticks:{color:'#444',font:{size:11}}}
-      }}
-  });
+  if(pChart.length){
+    document.getElementById('pf-vol-wrap').style.height=rh+'px';
+    dc('pf-vol');
+    const volOf=res=>pChart.map(d=>res===null?d.none:d[{'Sales Rep':'sr','Radicl Services':'rd','SunPower Surveyor':'sp'}[res]].n);
+    CH['pf-vol']=new Chart(document.getElementById('pf-vol'),{
+      type:'bar',
+      data:{labels:pChart.map(d=>d.g),datasets:[
+        ...RES3.map(r=>({label:r,data:volOf(r),backgroundColor:RES_C[r],borderRadius:0})),
+        ...(hasNone?[{label:'Unassigned',data:volOf(null),backgroundColor:'#e2e8f0',borderRadius:0}]:[]),
+      ]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        onHover:drillHover,
+        onClick:(evt,els)=>{ if(!els.length) return;
+          const g=pChart[els[0].index].g;
+          const res=[...RES3,null][els[0].datasetIndex];
+          const dr=filtered.filter(r=>((((r[pKey]||'')+'').trim()||pBlank)===g)&&(res===null?!r.resource:r.resource===res));
+          openDrill((res||'Unassigned')+' · '+g,dr.length+' surveys · '+drillScopeNote(),dr,{sort:'days'}); },
+        plugins:{legend:{display:false},
+          tooltip:{mode:'index',callbacks:{
+            title:ctx=>pChart[ctx[0].dataIndex].g,
+            footer:ctx=>'Total: '+ctx.reduce((s,i)=>s+i.parsed.x,0)
+          }}},
+        scales:{
+          x:{stacked:true,grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#8f8f98'}},
+          y:{stacked:true,grid:{display:false},ticks:{color:'#444',font:{size:11}}}
+        }}
+    });
+  }
 }
 
 // ═══ TRENDS ══════════════════════════════════════════════
@@ -3597,10 +3600,10 @@ function renderTrends(){
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">Weekly detail</div><div class="ssub">New In, Completed and WIP open their own list</div></div></div>
-      <table id="tr-wtable"><thead><tr>
+      <div class="xscroll"><table id="tr-wtable"><thead><tr>
         <th>Week (Mon–Sun)</th><th class="r">New In</th><th class="r">Completed</th><th class="r">WIP</th>
         <th class="r">Avg total</th><th class="r">Median</th><th class="r">3-wk rolling avg</th><th class="r">On target</th>
-      </tr></thead><tbody id="tr-tbody"></tbody></table>
+      </tr></thead><tbody id="tr-tbody"></tbody></table></div>
       <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tr-wtable',this,'the weekly table')">Copy table</button></div>
     </div>`;
 
