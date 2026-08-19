@@ -3010,7 +3010,7 @@ function renderThisWeek(){
     dc('tw-res-cycle');
     CH['tw-res-cycle']=new Chart(document.getElementById('tw-res-cycle'),{
       type:'bar',
-      data:{labels:resCycle.map(rc=>[RES_SHORT[rc.t],'('+rc.rows.length+')']),datasets:[{
+      data:{labels:resCycle.map(rc=>RES_SHORT[rc.t]+' ('+rc.rows.length+')'),datasets:[{
         data:resCycle.map(rc=>rc.avgCyc),
         backgroundColor:resCycle.map(rc=>RES_COLORS[rc.t]),
         borderRadius:4}]},
