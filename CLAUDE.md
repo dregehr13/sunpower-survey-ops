@@ -310,3 +310,34 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
   several dismissed requests were Design asking for utility bills or
   ownership docs, which is a Design-process conversation rather than a survey
   failure — worth quantifying once the tagging is done
+
+### Left open by the 2026-08-14 full audit
+Carried here 2026-08-24 when `docs/AUDIT.md` was deleted — the audit's findings
+were applied across four batches, but these six were deliberately not, because
+each is a judgement call rather than cleanup. The measurements behind them are
+in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
+- **A1 — `/api/send-teams` and `/api/team-opener` have no auth.** Anyone who can
+  POST can push a card into the team channel. An in-code secret is public
+  because compose is a static file, so the real options are Vercel Deployment
+  Protection or building the Adaptive Card server-side instead of accepting an
+  arbitrary `card` from the client
+- **Q1/A3 — `/queues` is a live, undocumented surface.** Its own Supabase
+  pipeline (`api/upload-data.js`), its own copy of the field registry, untouched
+  since 2026-06-23. Document it or retire it (page + routes + endpoint + the
+  `@supabase/supabase-js` dependency)
+- **W3 — the `>7d` queue-age band is written inline in four places.** Naming it
+  in `lib/metrics.cjs` is a definition change, so it needs sign-off
+- **G8 — the default range starts before `DATA_CUTOFF`** because 3 re-signed
+  accounts carry completions months before their starts. Clamping was tried and
+  reverted: it drops those rows from every date-filtered population (Performance
+  2335→2332) and flips the default preset from All to Custom
+- **X5 — compose's password gate runs after the data loads.** `prompt()` against
+  a plaintext constant, after all 2,538 customer rows (names, phones, emails)
+  are already in the page. Product tradeoff for an internal tool
+- **P4 — `pillV` and `pctTgt` band inline on purpose.** Documented in the
+  register; promote to shared definitions only if you want them uniform
+- **Quality's group table has no keyboard path.** `index.html:4935` renders
+  `<tr class="drill-tgt" onclick=...>` with no `role`/`tabindex`/`onkeydown`,
+  so the drill cannot be opened from a keyboard. Every other `.drill-tgt` in the
+  app goes through `drillAttrs()`. The same bug on Performance was fixed
+  2026-08-19; this one was flagged out-of-scope then and is still open

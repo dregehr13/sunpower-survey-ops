@@ -27,7 +27,6 @@ api/_opener-prompt.js The opener prompt, shared by the two above
 api/send-teams.js     Posts an Adaptive Card to the Teams webhook
 api/upload-data.js    XLS → Supabase, for the /queues page only
 docs/METRICS.md       The metric register — every displayed number and its definition
-docs/AUDIT.md         Full-surface audit + what each cleanup batch changed
 test/                 node:test suites (metrics, frozen snapshot, cross-surface guards)
 scripts/              build-fixture.cjs (test fixture), build-geo.cjs (geo/)
 geo/                  ZIP centroids, state outlines, top-1k cities, per-state counties
