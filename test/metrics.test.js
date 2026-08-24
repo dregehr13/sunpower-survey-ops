@@ -11,7 +11,7 @@ const {
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
   buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
-  bandFor, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
+  bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
 
 // ── isComplete: requires BOTH a completion date AND List status 'Complete' ──
@@ -559,6 +559,23 @@ test('bandFor bands on the displayed (1dp) value, not the raw one', () => {
   assert.equal(bandFor(6.04, 4), 'mid');
   assert.equal(bandFor(6.05, 4), 'mid'); // renders "6.0d" — exactly target+2
   assert.equal(bandFor(6.06, 4), 'bad'); // renders "6.1d" — over the band
+});
+
+// ── queueAgeBand ──
+test('queueAgeBand gives an open queue target+3 before it goes red', () => {
+  // Distinct from bandFor's target+2: this bands how long something has been
+  // OPEN, not how long a finished survey took.
+  assert.equal(queueAgeBand(0, 4), 'good');
+  assert.equal(queueAgeBand(4, 4), 'good');  // exactly target
+  assert.equal(queueAgeBand(5, 4), 'mid');
+  assert.equal(queueAgeBand(7, 4), 'mid');   // exactly target+3
+  assert.equal(queueAgeBand(8, 4), 'bad');
+  assert.equal(queueAgeBand(null, 4), '');
+  // The bug this function exists to prevent: the amber cutoff must FOLLOW the
+  // target, not sit on a literal 7. At targetAvg 3 the two old call sites gave
+  // 7 and 6 respectively; both must now say 6.
+  assert.equal(queueAgeBand(7, 3), 'bad');
+  assert.equal(queueAgeBand(6, 3), 'mid');
 });
 
 // ── trendLabel ──

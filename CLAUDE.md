@@ -328,8 +328,17 @@ in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
   and publishable key (`hoczpteqfpjkldcptwxo`), and retiring the code does not
   delete the rows it wrote. Deleting that project is Doug's to do in the Supabase
   console. Recover the page with `git log --diff-filter=D -- queues/index.html`
-- **W3 — the `>7d` queue-age band is written inline in four places.** Naming it
-  in `lib/metrics.cjs` is a definition change, so it needs sign-off
+- ~~W3 — the `>7d` queue-age band is written inline in four places~~ — **done
+  2026-08-24, as `queueAgeBand(d, targetAvg)` in `lib/metrics.cjs`.** The audit's
+  count was wrong: it was two genuine sites, not four, and the other three
+  lookalikes are different rules that must stay separate (`pillBand` bands a
+  finished cycle at `targetMedian`/`targetAvg+2`; the drawer's `rsOpen` column
+  bands resurvey staleness against `stale`; the WIP-vs-done pill at line ~2088
+  uses `targetMedian`/`targetAvg+1`). **Don't merge those into it.** The two real
+  sites had already drifted: the WIP Open-in-SS pill hardcoded amber as `d<=7`
+  while Current's still-open buckets derived `targetAvg+3` — identical at 4, and
+  8 live rows would have split the moment the target moved. Verified as a pure
+  refactor: 0 band changes across all 2,522 rows at `targetAvg` 4
 - **G8 — the default range starts before `DATA_CUTOFF`** because 3 re-signed
   accounts carry completions months before their starts. Clamping was tried and
   reverted: it drops those rows from every date-filtered population (Performance
@@ -342,7 +351,11 @@ in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
   the URL is shared outside the team — that is the trigger to revisit, and the
   fix then is Vercel Deployment Protection rather than anything in page code
 - **P4 — `pillV` and `pctTgt` band inline on purpose.** Documented in the
-  register; promote to shared definitions only if you want them uniform
+  register. **Deliberately left inline 2026-08-24** when W3 was consolidated:
+  `pillBand` bands at `targetMedian`/`targetAvg+2` and `pctTgt` is a percentage
+  rather than a band, so folding either into `bandFor` would change displayed
+  colours rather than just move code. Promote only if you want uniformity badly
+  enough to accept that
 - ~~Quality's group table has no keyboard path~~ — fixed 2026-08-24. It rendered
   a bare `onclick` with no `role`/`tabindex`/`onkeydown`; it now goes through
   `drillAttrs()` like every other `.drill-tgt`. **Every drill target in the app
