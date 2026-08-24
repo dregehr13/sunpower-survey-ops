@@ -4932,7 +4932,7 @@ function renderResurvey(){
         +gth('rd','<span style="color:#8677b8;">Radicl</span>','r')
         +gth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
     </tr></thead><tbody>
-      ${shownGroups.map(d=>`<tr class="drill-tgt" onclick="${drillGrp(d.g)}">
+      ${shownGroups.map(d=>`<tr class="drill-tgt" ${drillAttrs(drillGrp(d.g))}>
         <td><div style="font-weight:500;font-size:12px;">${esc(d.g)}${idleTag(d)}</div></td>
         ${showRegionCol?`<td style="color:var(--muted);font-size:12px;">${esc(d.region)}</td>`:''}
         ${rateCell(d.rate)}

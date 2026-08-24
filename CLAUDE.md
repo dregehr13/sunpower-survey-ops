@@ -336,8 +336,7 @@ in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
   are already in the page. Product tradeoff for an internal tool
 - **P4 — `pillV` and `pctTgt` band inline on purpose.** Documented in the
   register; promote to shared definitions only if you want them uniform
-- **Quality's group table has no keyboard path.** `index.html:4935` renders
-  `<tr class="drill-tgt" onclick=...>` with no `role`/`tabindex`/`onkeydown`,
-  so the drill cannot be opened from a keyboard. Every other `.drill-tgt` in the
-  app goes through `drillAttrs()`. The same bug on Performance was fixed
-  2026-08-19; this one was flagged out-of-scope then and is still open
+- ~~Quality's group table has no keyboard path~~ — fixed 2026-08-24. It rendered
+  a bare `onclick` with no `role`/`tabindex`/`onkeydown`; it now goes through
+  `drillAttrs()` like every other `.drill-tgt`. **Every drill target in the app
+  routes through `drillAttrs()` — a bare `onclick` on one is the bug, twice now**
