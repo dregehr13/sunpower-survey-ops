@@ -120,6 +120,32 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - **The WIP page is a stat rail + one queue panel** (rebuilt 2026-08-17):
   - Rail cells: Open now · Avg age · Over 15 days · Unscheduled · Open resurveys · SS ratio. Median age and On-track ≤4d were dropped with the five KPI cards. Cell padding must stay **uniform** — trimming the first and last cell's inner padding makes those two 18px narrower, because `flex-basis:0` sizes the content box and padding is added on top of an equal share rather than taken out of it. Active/hover state on the three filter cells therefore rides on background and an **inset** box-shadow: a border or a padding change would resize just that cell
   - **Three rail cells filter the queue** (2026-08-17): Over 15 days, Unscheduled and Open resurveys. Each drives a control that already exists below it — the age bands, the Unscheduled bracket, the view toggle — so the rail is a shortcut into the queue, not a fourth filter vocabulary, and clicking one lights up its twin below. The other three cells are readouts and stay inert
+  - **The queue lens is one segmented control in the panel head — All · Initial ·
+    Resurveys** (`wipView` / `WIP_VIEWS`, third state added 2026-08-25). Doug
+    could see resurvey WIP on its own but not the initial surveys, which is the
+    larger half and different work. Things not to undo:
+    - **Initial is `!isOpenResurvey`, not `survey_type`.** The question is "is
+      this a first visit or something that came back", which is a queue state.
+      `survey_type` is still unused everywhere
+    - **It is not a seventh rail cell.** That was built first and reverted: at
+      1280px seven cells leave 112px of label width, and *every* filter label —
+      "Over 15 days", "Unscheduled", "Open resurveys" — wraps, the last to three
+      lines when its bold active state kicks in. Six is what the rail fits
+    - **It is still one control.** Putting it in the panel head restores the
+      pattern the other two filter cells follow (rail cell = shortcut into a
+      control that exists below it); the rail's Open resurveys cell now lights
+      up its twin the way Over-15 and Unscheduled do. The 2026-08-17 removal of
+      the All / Open resurveys pair stands — what was wrong there was *two*
+      controls, and there is still exactly one
+    - **`setWipView(v)` assigns, it does not toggle.** A segmented control must
+      no-op when you click the segment you are already in. The rail cell wants
+      click-active-to-clear, like its neighbours, so it passes `'all'` itself
+    - **The lens badge is gone** — an active segment already names the view, and
+      the badge named it a second time nine pixels away. The panel subtitle says
+      what the lens means instead, and in the All view prints the split
+      (`58 initial, 21 resurveys`) so the answer is readable without switching
+    - Both counts come off `allWip`, not `wipScoped()`, so they add to Open now
+      exactly rather than nearly
   - "Over 15 days" is **project age ≥15**, not >15, so it agrees with the 15–30d band directly beneath it. The threshold is read off `PA_MINS[WIP_OVER_BANDS[0]]` rather than written twice, so the number the cell shows and the bands its click selects are the same rows **by construction**. Moving it means moving `WIP_OVER_BANDS` to another band boundary — a cell reading "over 20 days" would have no band to select and would filter to something other than what it counted
   - The Unscheduled cell tests and selects only the unscheduled statuses that **have rows**, the same list the bracket uses and the list `wipQsSel` gets pruned to. Testing all of `QS_UNSCHED` meant the cell could never light up, because Likely cancel is empty most days
   - **Two filter rows, never three.** Schedule and Status are one hierarchy, not two dimensions: `wipQueueStatus()` reads the same `wipSchedDate` field `schedStatus()` does, returns Scheduled and Past due for the same two cases, then subdivides the third. Live data: Scheduled 55 / Past due 1 / Unscheduled 57 against chips of 37+2+7+5+6 = 57 — exact by construction. ANDing a Schedule row against a Status row returns zero rows for most pairs. The status bar carries the whole vocabulary in schedule order instead
@@ -131,7 +157,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - Whole-row red/amber tinting is gone: the Open in SS figure and the status badge already carried it twice
   - The **"Rep day" pill stays.** The handoff has no slot for it, but printing `0d` would misreport whose clock is running
   - Under 640px rows stack two-line rather than scrolling sideways
-- **The nav badge beside WIP is the open count**, neutral grey. It was the "needs attention" count until 2026-08-17, when that whole concept came out: `attnItems()`, `attnKey()`, `dismissAttn()`, the per-row "Reviewed ✓" buttons and the `ops_dismissed` localStorage store are gone. It was a saved filter dressed as a view — every row it held is reachable from Past due plus the age bands — and the dismissals made the badge disagree with Salesforce for anyone who had clicked one. Its toggle slot went to **Open resurveys**, a population with no live home before then; the All / Open resurveys button pair was itself removed 2026-08-17 once the rail cell became the control — two controls for one piece of state is how they drift. A lens badge on the queue heading says which view you are in. Grey, not red: an open queue is the normal state, and a red badge on every page load teaches you to ignore red
+- **The nav badge beside WIP is the open count**, neutral grey. It was the "needs attention" count until 2026-08-17, when that whole concept came out: `attnItems()`, `attnKey()`, `dismissAttn()`, the per-row "Reviewed ✓" buttons and the `ops_dismissed` localStorage store are gone. It was a saved filter dressed as a view — every row it held is reachable from Past due plus the age bands — and the dismissals made the badge disagree with Salesforce for anyone who had clicked one. Its toggle slot went to **Open resurveys**, a population with no live home before then. Grey, not red: an open queue is the normal state, and a red badge on every page load teaches you to ignore red
 - Main cycle metric: **Project Start Date → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export

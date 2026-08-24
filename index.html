@@ -761,10 +761,14 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .wip-queue{padding:0;overflow:hidden;}
 .wip-queue-head{padding:14px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
 .wip-queue-title{font-size:14px;font-weight:700;color:var(--text);}
+.wip-queue-sub{font-size:11px;font-weight:400;color:var(--faint);margin-top:2px;}
 /* The All / Open resurveys pair is gone — the rail's Open resurveys cell is the
    one control now, and two controls for one piece of state is how they drift.
    The lens badge says which view you are in, since the toggle used to. */
-.wip-queue-lens{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border-radius:99px;padding:2px 9px;margin-left:9px;vertical-align:middle;}
+/* The lens toggle sits opposite the title. The badge that used to name the
+   view is gone with it — an active segment already says which lens you are in,
+   and the badge said it a second time. */
+.wip-lens{display:flex;flex:none;}
 
 .wip-filters{padding:2px 18px 14px;display:flex;flex-direction:column;gap:9px;}
 .wip-frow{display:flex;align-items:center;gap:12px;}
@@ -2041,6 +2045,7 @@ const TIP={
   rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
   rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
+  wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now. A resurvey and a first survey are different work with different clocks, so this is the cut to use when you want the queue the team is actually starting from scratch.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
@@ -4100,7 +4105,23 @@ function renderTrends(){
 // So there is one status bar carrying the full vocabulary in schedule order,
 // and the coarse "everything unscheduled" cut survives as a group toggle on
 // the legend rather than as a second row.
-let wipView='all'; // 'all' | 'openrs'
+// The queue lens. Three states, one control apiece on the rail: the whole open
+// queue, the open resurveys, or the initial surveys — the two lens cells are
+// mutually exclusive, so clicking one clears the other. The pair partitions
+// "Open now" exactly (both counts come off the same allWip), which is why the
+// third number is worth its cell: a resurvey and a first survey are different
+// work, and until now only one of them could be looked at on its own.
+let wipView='all'; // 'all' | 'openrs' | 'initial'
+const WIP_VIEWS={
+  all:     {noun:'open',            full:'open surveys',    sub:'Every open survey'},
+  initial: {noun:'initial surveys', full:'initial surveys', sub:'First visits only — nothing that came back'},
+  openrs:  {noun:'open resurveys',  full:'open resurveys',  sub:'Resurveys requested and not yet complete'},
+};
+const wipViewIs=v=>wipView===v;
+// A plain assignment, because the lens toggle is a segmented control: clicking
+// the segment you are already in must be a no-op, not a deselect. The rail's
+// shortcut cell wants the opposite — click-active-to-clear, like the two filter
+// cells beside it — so it passes 'all' itself rather than toggling in here.
 function setWipView(v){ wipView=v; renderAgingWIP(); }
 function toggleWipAgeBand(i){ if(wipAgeSel.has(i)){wipAgeSel.delete(i);}else{wipAgeSel.add(i);} renderAgingWIP(); }
 function toggleWipQs(k){ if(wipQsSel.has(k)){wipQsSel.delete(k);}else{wipQsSel.add(k);} renderAgingWIP(); }
@@ -4233,7 +4254,7 @@ function renderAgingWIP(){
   }));
   // The view is the outermost cut: every count on the page — rail, bands,
   // chips, footer — is computed within it, not against the national queue.
-  const inView=r=>wipView==='openrs'?isOpenResurvey(r):true;
+  const inView=r=>wipView==='openrs'?isOpenResurvey(r):wipView==='initial'?!isOpenResurvey(r):true;
   wip=wip.filter(inView);
   const viewPool=wip;
 
@@ -4307,7 +4328,12 @@ function renderAgingWIP(){
   const OVER_MIN=PA_MINS[WIP_OVER_BANDS[0]];
   const railOverAge=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=OVER_MIN).length;
   const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
-  const railOpenRs=wipScoped().filter(isOpenResurvey).length;
+  // Read off allWip rather than wipScoped(), so this and the initial count that
+  // sits beside it in the queue subtitle add to Open now exactly — a count
+  // taken from wipScoped() could include a row the table's own filter (start
+  // present, still open) drops.
+  const railOpenRs=allWip.filter(isOpenResurvey).length;
+  const railInitial=allWip.length-railOpenRs;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
   // Both sides of the ratio come from the same filtered population.
@@ -4455,7 +4481,10 @@ function renderAgingWIP(){
         // "every key selected" was unreachable.
         const unschedKeys=QS_UNSCHED.filter(k=>qsCounts[k]);
         const unschedOn=unschedKeys.length>0&&unschedKeys.every(k=>wipQsSel.has(k));
-        const rsOn=wipView==='openrs';
+        // The two lens cells. Mutually exclusive by construction — setWipView
+        // replaces the state rather than ORing into it — so the queue can
+        // never claim to be showing both halves of a partition at once.
+        const rsOn=wipViewIs('openrs');
         const cell=(on,call,label,tip,val,color,hint)=>`
       <div class="srail-cell rail-f${on?' on':''}" role="button" tabindex="0" aria-pressed="${on}"
            title="${esc(on?'Showing only these — click to clear':hint)}"
@@ -4467,7 +4496,7 @@ function renderAgingWIP(){
                     railOverAge?'var(--amber)':'var(--text)','Filter the queue to surveys '+OVER_MIN+' days old and over')
           +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
                     'Filter the queue to everything with no booking')
-          +cell(rsOn,`setWipView('${wipView==='openrs'?'all':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
+          +cell(rsOn,`setWipView('${rsOn?'all':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
                     railOpenRs?'var(--amber)':'var(--text)','Show only the open resurveys');
       })()}
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
@@ -4482,8 +4511,20 @@ function renderAgingWIP(){
     <div class="sec wip-queue">
       <div class="wip-queue-head">
         <div>
-          <div class="wip-queue-title">WIP queue${wipView==='openrs'?' <span class="wip-queue-lens">Open resurveys only</span>':''}</div>
+          <div class="wip-queue-title">WIP queue</div>
+          <div class="wip-queue-sub">${WIP_VIEWS[wipView].sub}${wipView==='all'?` — ${railInitial} initial, ${railOpenRs} resurvey${railOpenRs===1?'':'s'}`:''}</div>
         </div>
+        ${(()=>{
+          // The lens, as one control carrying all three states. It lives here
+          // rather than on the rail because the rail has no room for a third
+          // filter cell: at 1280px seven cells leave 112px of label width and
+          // every one of "Over 15 days" / "Unscheduled" / "Open resurveys"
+          // wraps. It also restores the pattern the other two filter cells
+          // already follow — the rail cell is a shortcut into a control that
+          // exists below it, not the only place the state can be reached.
+          const lt=(v,l,tip)=>`<button class="tgl-btn${wipView===v?' active':''}" onclick="setWipView('${v}')"${tip?` title="${esc(tip)}"`:''} aria-pressed="${wipView===v}">${l}</button>`;
+          return `<div class="wip-lens">${lt('all','All',TIP.wip)}${lt('initial','Initial',TIP.wipInitial)}${lt('openrs','Resurveys',TIP.rsOpen)}</div>`;
+        })()}
       </div>
 
       ${(()=>{
@@ -4580,10 +4621,10 @@ function renderAgingWIP(){
           <div class="wip-fhint"><button class="wip-fclear" onclick="clearWipFilters()">Clear filters ×</button></div>
         </div>`:''}
         <div class="wip-sel">
-          <span><b>${wip.length}</b> ${anyFilter?'selected':(wipView==='openrs'?'open resurveys':'open')}</span>
+          <span><b>${wip.length}</b> ${anyFilter?'selected':WIP_VIEWS[wipView].noun}</span>
           ${selAvg!=null?`<span>avg <b style="color:${selAvg<=S.targetAvg?'var(--green)':selAvg<=7?'var(--amber)':'var(--red)'};">${selAvg}d</b></span>`:''}
           ${selPct!=null?`<span><b style="color:${selPct>=75?'var(--green)':selPct>=50?'var(--amber)':'var(--red)'};">${selPct}%</b> on track &le;${S.targetAvg}d</span>`:''}
-          ${anyFilter?`<span class="wip-sel-of">of ${viewPool.length} ${wipView==='openrs'?'open resurveys':'open'}</span>`:''}
+          ${anyFilter?`<span class="wip-sel-of">of ${viewPool.length} ${WIP_VIEWS[wipView].noun}</span>`:''}
         </div>
       </div>`;
       })()}
@@ -4601,7 +4642,7 @@ function renderAgingWIP(){
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>`
-      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${wipView==='openrs'?'open resurveys':'open surveys'} match the current filter.</div>`}
+      :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${WIP_VIEWS[wipView].full} match the current filter.</div>`}
 
       ${wip.length?`<div class="wip-foot tbl-foot">
         <button class="copy-btn" onclick="copyWipTable(this)">Copy table</button>
