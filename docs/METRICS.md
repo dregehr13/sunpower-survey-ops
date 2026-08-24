@@ -13,10 +13,9 @@ status for five months; a colour band that disagreed with the number beside it).
 
 | surface | file | what it renders |
 |---|---|---|
-| Dashboard | `index.html` | Current / Performance / Trends / WIP / Resurveys / Map / Data / Settings |
+| Dashboard | `index.html` | Current / WIP / Performance / Trends / Quality / Map / Data / Settings |
 | Compose | `compose/index.html` | Monday recap + daily email |
 | Morning card | `api/morning-card.js` | Teams card (not adopted — see CLAUDE.md) |
-| Queues | `queues/index.html` | **Undocumented and unaudited.** A live route (`vercel.json`) with its own Supabase pipeline via `api/upload-data.js` and its own copy of the field registry, untouched since 2026-06-23. Nothing here describes its numbers. Document it or retire it |
 
 ## The metrics
 

@@ -12,7 +12,7 @@ via CDN) plus a handful of Vercel serverless functions. Data is baked into stati
 files until the Salesforce API integration lands.
 
 ```
-index.html            Dashboard — Current / Performance / Trends / WIP / Resurveys / Map / Data / Settings
+index.html            Dashboard — Current / WIP / Performance / Trends / Quality / Map / Data / Settings
 compose/index.html    Email + Teams card generator
 data.js               const RAW = [...] — the dataset the browser pages load
 data.json             Same rows as plain JSON — read by /api/morning-card
@@ -25,18 +25,11 @@ api/morning-card.js   Stats + AI opener for the Teams morning card
 api/team-opener.js    AI opener only (stats supplied by client)
 api/_opener-prompt.js The opener prompt, shared by the two above
 api/send-teams.js     Posts an Adaptive Card to the Teams webhook
-api/upload-data.js    XLS → Supabase, for the /queues page only
 docs/METRICS.md       The metric register — every displayed number and its definition
 test/                 node:test suites (metrics, frozen snapshot, cross-surface guards)
 scripts/              build-fixture.cjs (test fixture), build-geo.cjs (geo/)
 geo/                  ZIP centroids, state outlines, top-1k cities, per-state counties
-queues/index.html     Separate Supabase-backed queues page — see the note below
 ```
-
-`queues/` is routed in `vercel.json` and has been untouched since June 2026. It
-carries its own copy of the field registry and its own data path, and nothing
-else in this repo depends on it. Either document it or retire it (page, routes,
-`api/upload-data.js`, and the `@supabase/supabase-js` dependency).
 
 ## Daily data update
 

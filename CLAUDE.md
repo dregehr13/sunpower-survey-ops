@@ -182,7 +182,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - Per-survey resource still only covers the initial survey — future SF survey objects will fix that (see memory "Come back to" list)
   - **Yield hero** (300px) replaced the four-KPI strip: FPY at 52px, the sentence, a progress track with the 95% target marked *on* it, then three figures that **add up**, each with its median beneath: Cost of a resurvey (+20.7d) / Time to flag (16.2d) / Resurvey cycle (6.0d) ≈ 3.2 + 16.2 + 6.0 against 4.0d clean. Cost was `avg(ct_full) − avg(clean ct_total)` until 2026-08-17 and read +5.3d: `ct_full` is `ct_total + ct_resurvey`, so it skipped the wait before anyone flags the survey — most of the calendar cost — and that omission also made it a near-duplicate of the Resurvey cycle line directly beneath it. Doug could not defend the pair; they are three defensible facts now. **Time to flag is the largest of the three and is not this team's clock** — it is a Design/review number, worth owning the measurement of
   - **No `n=` anywhere.** Cells under `RS_MIN_CELL` show their completion count in the grey non-pill `.pna-n` treatment, which is what says "not a percentage"; the `q-rate-n` column dropped its `::before{content:'n='}` at the same time
-  - **The yield chart is temporarily built in two forms** behind a Bars/Trend toggle (`rsChartMode`), pending Doug's decision. They share one target rule and one immature-week convention. The tradeoff: bars must sit on a zero baseline, so 0–100% flattens a series living between 80 and 95, while the line auto-scales and shows the variation — which is the argument the 4-week rolling average was added to win. **Delete the loser once chosen**
+  - **The yield chart ships in both forms** behind a Bars/Trend toggle (`rsChartMode`). Built two ways 2026-08-17 so the shape could be judged on real data; **Doug chose 2026-08-24 to keep both and keep the toggle** — this is settled, not a pending decision, and neither form is to be deleted. They share one target rule and one immature-week convention. The tradeoff each answers: bars must sit on a zero baseline, so 0–100% flattens a series living between 80 and 95, while the line auto-scales and shows the variation — which is the argument the 4-week rolling average was added to win
 
   - Rate bands are the **mirror of the old `fpyPill`**: under 5% green, 5 to 15 amber, 15 and over red, ceiling line at 5% because the target is 95%. At a 15.6% national rate most groups read red. That is the honest reading against a 95% target, not a scale fault
   - **No "worst office per region" column**, though the handoff specifies one: only 2 of 28 regions contain an office clearing the 10-completion floor, so it would be blank on most rows, and filling it from a sample of 3 would name a real org unit off noise. The column carries the sample size instead, so no rate is read without it
@@ -293,9 +293,8 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
   `rsStaleDays()` marker (p90 of resolved resurvey cycles, ~15d) with it. The
   WIP queue bands on `ssDaysOpen` and project age, neither of which knows a
   resurvey has been open past the point 90% of them had resolved
-- **Pick a yield-chart form on Quality** (Bars vs Trend) and delete the other,
-  along with `rsChartMode`. Built both 2026-08-17 so the shape could be judged
-  on real data rather than on the handoff's sample numbers
+- ~~Pick a yield-chart form on Quality~~ — decided 2026-08-24: **both stay, and
+  so does the toggle.** See the Quality section; don't re-open it
 - The 5% resurvey-rate ceiling paints nearly every sales office red at the
   current 15.6% rate. Correct against a 95% target, but worth a look before it
   is treated as settled
@@ -321,19 +320,27 @@ in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
   because compose is a static file, so the real options are Vercel Deployment
   Protection or building the Adaptive Card server-side instead of accepting an
   arbitrary `card` from the client
-- **Q1/A3 — `/queues` is a live, undocumented surface.** Its own Supabase
-  pipeline (`api/upload-data.js`), its own copy of the field registry, untouched
-  since 2026-06-23. Document it or retire it (page + routes + endpoint + the
-  `@supabase/supabase-js` dependency)
+- ~~Q1/A3 — `/queues` is a live, undocumented surface~~ — **retired 2026-08-24,
+  Doug's call.** `queues/index.html`, `api/upload-data.js`, both `vercel.json`
+  rewrites and the `@supabase/supabase-js` dependency are gone. That removed the
+  repo's third copy of the field registry and an unauthenticated upload endpoint.
+  **The Supabase project itself still exists** — the code held a hardcoded URL
+  and publishable key (`hoczpteqfpjkldcptwxo`), and retiring the code does not
+  delete the rows it wrote. Deleting that project is Doug's to do in the Supabase
+  console. Recover the page with `git log --diff-filter=D -- queues/index.html`
 - **W3 — the `>7d` queue-age band is written inline in four places.** Naming it
   in `lib/metrics.cjs` is a definition change, so it needs sign-off
 - **G8 — the default range starts before `DATA_CUTOFF`** because 3 re-signed
   accounts carry completions months before their starts. Clamping was tried and
   reverted: it drops those rows from every date-filtered population (Performance
   2335→2332) and flips the default preset from All to Custom
-- **X5 — compose's password gate runs after the data loads.** `prompt()` against
-  a plaintext constant, after all 2,538 customer rows (names, phones, emails)
-  are already in the page. Product tradeoff for an internal tool
+- ~~X5 — compose's password gate runs after the data loads~~ — **accepted as an
+  internal-tool tradeoff, Doug's call 2026-08-24.** The `prompt()` still runs
+  against a plaintext constant *after* all 2,538 customer rows (names, phones,
+  emails) are in the page and the network log, so the gate is a speed bump, not
+  access control. Do not re-raise it as a bug. It stops being acceptable the day
+  the URL is shared outside the team — that is the trigger to revisit, and the
+  fix then is Vercel Deployment Protection rather than anything in page code
 - **P4 — `pillV` and `pctTgt` band inline on purpose.** Documented in the
   register; promote to shared definitions only if you want them uniform
 - ~~Quality's group table has no keyboard path~~ — fixed 2026-08-24. It rendered

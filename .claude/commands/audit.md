@@ -11,7 +11,7 @@ SURFACES — cover every one:
   index.html      → Current, Performance, Trends, WIP, Resurveys, Map, Data, Settings
                     (the global filter bar, nav, chips, and modals count as surfaces too)
   compose/index.html → the email generator, incl. the password gate
-  api/*.js        → morning-card, generate, update, upload-data, send-teams, team-opener
+  api/*.js        → morning-card, generate, update, send-teams, team-opener
   lib/metrics.cjs, parse-sf.js, push.sh, scripts/*, geo/*
   docs/METRICS.md, README.md, CLAUDE.md
 
