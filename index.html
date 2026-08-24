@@ -168,8 +168,11 @@ tr:hover td{background:var(--bg);}
    most rows. --muted is 5.7:1 and clears AA. */
 .pna-n{color:var(--muted);font-size:12px;}
 .rs-idle{font-size:10px;font-weight:400;color:var(--faint);white-space:nowrap;}
-.wip-rs-why{font-size:11.5px;color:var(--muted);line-height:1.45;margin:-4px 0 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.wip-rs-why{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:0;}
 .wip-rs-why b{color:var(--text);font-weight:600;}
+.wip-rs-items{margin:8px 0 0;padding-left:16px;font-size:12px;color:var(--muted);line-height:1.6;}
+.wip-rs-items li{margin-bottom:3px;}
+.wip-rs-items li:last-child{margin-bottom:0;}
 .note{font-size:10px;color:var(--faint);margin-top:8px;line-height:1.6;}
 .sarr{font-size:10px;opacity:.3;margin-left:2px;}
 .sarr-up::after{content:"↑";opacity:.8;}
@@ -256,7 +259,7 @@ tr:hover td{background:var(--bg);}
 .wip-person-row:last-child{margin-bottom:0;}
 .wip-person-row a{color:var(--blue);text-decoration:none;}
 .wip-person-row a:hover{text-decoration:underline;}
-.wip-person-icon{font-size:10px;color:var(--faint);flex-shrink:0;width:12px;text-align:center;}
+.wip-person-icon{width:13px;height:13px;color:var(--faint);flex-shrink:0;}
 .wip-address{font-size:10px;color:var(--faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5;}
 .wip-dates{display:flex;gap:0;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
 .wip-date-item{flex:1;text-align:center;}
@@ -2103,11 +2106,73 @@ function drillScopeNote(kind){
   return bits.length?bits.join(' · '):'no filters applied';
 }
 const DRILL_ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'var(--amber)'};
+// Unicode ☎/✉ render inconsistently across fonts and read as illegible flecks
+// at small sizes. Inline SVGs keep a fixed stroke weight that matches the
+// app's other line icons (caret, expand triangle) instead of borrowing a
+// font's glyph design.
+const ICON_PHONE='<svg class="wip-person-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5c-.8 0-1.5.7-1.4 1.5.3 2.8 1.6 5.4 3.7 7.5s4.7 3.4 7.5 3.7c.8.1 1.5-.6 1.5-1.4v-1.6c0-.7-.5-1.3-1.2-1.4l-2-.4c-.5-.1-1 .1-1.3.5l-.6.8c-1.6-.8-2.9-2.1-3.7-3.7l.8-.6c.4-.3.6-.8.5-1.3l-.4-2c-.1-.7-.7-1.2-1.4-1.2H4.5z"/></svg>';
+const ICON_MAIL='<svg class="wip-person-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3.25" width="13" height="9.5" rx="1.5"/><path d="M2 4.25l6 4.75 6-4.75"/></svg>';
 // "Survey Incomplete" is two thirds of all resurveys and says nothing about what
 // was actually wrong. Resurvey Request Details does, on 92% of them.
 const drillDetText=r=>(r.resurvey_details||'')
   .replace(/\s*\n\s*/g,' · ')
   .replace(/^\s*(RESURVEY (EXPLANATION|REQUIRED)|REQUEST DETAILS)\s*:?\s*/i,'').trim();
+
+// resurvey_details is semi-templated SF free text — RESURVEY EXPLANATION /
+// INTERIOR ACCESS REQUIRED / REQUEST DETAILS, roughly in that order — but the
+// labels are typed inconsistently (EXPLAINATION, no REQUIRED, no colon) and
+// about a sixth of rows run every field onto one line with no breaks at all.
+// This forces a line break in front of each known label wherever it appears
+// (multi-word phrases match with or without a colon; bare words like DETAILS
+// need one, since without it they're just as likely to be ordinary prose —
+// "we need more details" — as a field header), then buckets the resulting
+// lines so the WIP detail panel can render explanation / access / request
+// list separately instead of one run-on line joined by " · ". Rows with no
+// template at all fall through to `extra` and render as plain prose, same as
+// today. This is a display-only reformatting of drillDetText's source field —
+// drillDetText itself (used by the drill drawer table) is untouched.
+const RS_LABEL_RE=/(REQUESTED DATE|RESURVEY RESOURCE TYPE|RESURVEY REQUIRED|RESURVEY EXPLANATION|INTERIOR ACCESS REQUIRED|REQUEST DETAILS|DRYWALL CUTS\/WIRE PROBE REQUIRED)\s*:?\s*|(EXPLAI?NATION|INTERIOR ACCESS|DETAILS)\s*:\s*/gi;
+const RS_LINE_LABEL_RE=/^(REQUESTED DATE|RESURVEY RESOURCE TYPE|RESURVEY REQUIRED|RESURVEY EXPLANATION|EXPLAI?NATION|INTERIOR ACCESS(?: REQUIRED)?|REQUEST DETAILS|DETAILS|DRYWALL CUTS\/WIRE PROBE REQUIRED)\s*:?\s*(.*)$/i;
+const RS_BULLET_RE=/^(?:[-•?]|\[\s*\]|\d+[.)])\s*/;
+function parseRsDetails(text){
+  if(!text||!text.trim()) return null;
+  const marked=text.replace(/\r\n/g,'\n').replace(RS_LABEL_RE,(m,l1,l2)=>'\n'+(l1||l2).toUpperCase()+': ');
+  const lines=marked.split('\n').map(l=>l.trim()).filter(Boolean);
+  const out={explanation:[],access:'',resourceType:'',items:[],extra:[]};
+  let cur=null;
+  for(const line of lines){
+    const lm=line.match(RS_LINE_LABEL_RE);
+    if(lm){
+      const label=lm[1].toUpperCase(), rest=lm[2].trim();
+      // REQUESTED DATE duplicates the RS Req date already shown above this
+      // panel; RESURVEY REQUIRED is a header with no value of its own.
+      if(/^REQUESTED DATE/.test(label)){ cur=null; continue; }
+      if(/^RESURVEY REQUIRED$/.test(label)){ cur=null; if(rest) out.extra.push(rest); continue; }
+      if(/^RESURVEY RESOURCE TYPE/.test(label)){ out.resourceType=rest; cur=null; continue; }
+      if(/^(RESURVEY EXPLANATION|EXPLAI?NATION)$/.test(label)){ cur='explanation'; if(rest) out.explanation.push(rest); continue; }
+      if(/^INTERIOR ACCESS/.test(label)){ out.access=rest; cur=null; continue; }
+      if(/^(REQUEST )?DETAILS$/.test(label)){ cur='items'; if(rest) out.items.push(rest.replace(RS_BULLET_RE,'')); continue; }
+      if(/^DRYWALL CUTS/.test(label)){ out.extra.push('Drywall cuts / wire probe required: '+(rest||'—')); cur=null; continue; }
+    }
+    if(RS_BULLET_RE.test(line)||cur==='items'){ out.items.push(line.replace(RS_BULLET_RE,'')); continue; }
+    if(cur==='explanation'){ out.explanation.push(line); continue; }
+    out.extra.push(line);
+  }
+  const narrative=[out.explanation.join(' '),...out.extra].filter(Boolean).join(' ').trim();
+  return {narrative, access:out.access, resourceType:out.resourceType, items:out.items.filter(Boolean)};
+}
+function rsDetailsHtml(r){
+  const p=parseRsDetails(r.resurvey_details);
+  if(!p) return '';
+  const parts=[];
+  if(p.narrative) parts.push(`<div class="wip-rs-why" style="margin-top:6px;">${esc(p.narrative)}</div>`);
+  const meta=[];
+  if(p.access) meta.push(`<span><span class="wip-date-label" style="display:inline;">Interior access</span> <span style="color:var(--muted);">${esc(p.access)}</span></span>`);
+  if(p.resourceType) meta.push(`<span><span class="wip-date-label" style="display:inline;">Resurvey by</span> <span style="color:var(--muted);">${esc(p.resourceType)}</span></span>`);
+  if(meta.length) parts.push(`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;">${meta.join('')}</div>`);
+  if(p.items.length) parts.push(`<ul class="wip-rs-items">${p.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`);
+  return parts.join('');
+}
 
 // One column table per mode, so the header, the sort, the cells and the copy
 // all read from the same list. These were four separate template strings, which
@@ -4211,25 +4276,44 @@ function renderAgingWIP(){
   };
   const arr=k=>wipSortKey!==k?'sarr-no':wipSortAsc?'sarr-up':'sarr-dn';
 
+  // The note field often echoes the review subject as its own first line —
+  // last_reviewed_subject "RADICL SCHEDULING - FUP 8/26" then last_comment
+  // "RADICL SCHEDULING - FUP 8/26\nI messaged radicl...". Strip that repeated
+  // lead-in so Last Review doesn't print the same line twice.
+  function reviewNoteText(r){
+    const subj=(r.last_reviewed_subject||'').trim();
+    let note=(r.last_comment||'').trim();
+    if(subj&&note.toUpperCase().startsWith(subj.toUpperCase())){
+      note=note.slice(subj.length).replace(/^[\s:.\-–—]+/,'').trim();
+    }
+    return note;
+  }
+
   function detailCell(r){
     const ph=v=>v?`<a href="tel:${v.replace(/\D/g,'')}">${fmtPhone(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const em=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span style="color:var(--faint);">—</span>';
     const hasReview=r.last_reviewed_date||r.last_comment||r.last_reviewed_subject;
+    const hasWhy=r.resurvey_reason||r.resurvey_details;
+    const note=reviewNoteText(r);
     return `<td colspan="8" style="padding:0;">
       <div class="wip-detail-clip"><div class="wip-detail-inner">
-        <div style="display:grid;grid-template-columns:1.4fr 1fr 1.3fr;gap:10px;align-items:start;">
+        <div style="display:grid;grid-template-columns:1.15fr 1.45fr;gap:10px;align-items:start;">
 
           <div class="wip-panel">
             <div class="wip-panel-label">Customer</div>
             <div class="wip-person-name">${esc(r.contact)||'—'}</div>
-            <div class="wip-person-row"><span class="wip-person-icon">&#9990;</span>${ph(r.contact_phone)}</div>
-            <div class="wip-person-row"><span class="wip-person-icon">&#9993;</span>${em(r.contact_email)}</div>
+            <div class="wip-person-row">${ICON_PHONE}${ph(r.contact_phone)}</div>
+            <div class="wip-person-row">${ICON_MAIL}${em(r.contact_email)}</div>
             ${r.address?`<div class="wip-address">${esc(r.address)}</div>`:''}
             <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
               <div class="wip-panel-label" style="margin-bottom:6px;">Sales Rep</div>
               <div class="wip-person-name">${esc(r.sales_rep)||'—'}</div>
-              <div class="wip-person-row"><span class="wip-person-icon">&#9990;</span>${ph(r.sales_rep_phone)}</div>
-              <div class="wip-person-row"><span class="wip-person-icon">&#9993;</span>${em(r.sales_rep_email)}</div>
+              <div class="wip-person-row">${ICON_PHONE}${ph(r.sales_rep_phone)}</div>
+              <div class="wip-person-row">${ICON_MAIL}${em(r.sales_rep_email)}</div>
+              <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:12px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
+                <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Sales Office</span><span style="font-size:12px;color:var(--muted);">${esc(r.sales_office)||'—'}</span></div>
+              </div>
             </div>
           </div>
 
@@ -4245,25 +4329,28 @@ function renderAgingWIP(){
               <div class="wip-date-item" style="text-align:left;padding-right:12px;"><span class="wip-date-label">RS Req</span><span class="wip-date-val">${r.resurvey_requested?fmtDateShort(r.resurvey_requested):'—'}${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:#d97706;margin-left:5px;">${dDiff(r.resurvey_requested,today)??'?'}d open</span>`:''}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Sched</span><span class="wip-date-val">${r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'—'}</span></div>
               <div class="wip-date-item"><span class="wip-date-label">RS Done</span><span class="wip-date-val">${r.resurvey_complete?fmtDateShort(r.resurvey_complete):isOpenResurvey(r)?`<span style="color:var(--muted);font-style:italic;" title="Estimated from scheduled date or expected cycle time">est. ${fmtDateShort(estComplete(r))}</span>`:'—'}</span></div>
-            </div>
-            ${r.resurvey_reason||r.resurvey_details?`<div class="wip-rs-why" title="${esc(r.resurvey_details||'')}"><span class="wip-date-label">Why</span> <b>${esc(rsReasons(r).join(' · ')||'No reason recorded')}</b>${drillDetText(r)?' · '+esc(drillDetText(r)):''}</div>`:''}`:''}
+            </div>`:''}
             <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
-              <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Region</span><span style="font-size:12px;color:var(--muted);">${esc(r.region)||'—'}</span></div>
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Survey Type</span><span style="font-size:12px;color:var(--muted);">${esc(r.survey_type)||'—'}</span></div>
               <div><span class="wip-date-label" style="display:inline;margin-right:6px;">Resource</span><span style="font-size:12px;color:var(--muted);">${esc(r.resource)||'—'}</span></div>
             </div>
-          </div>
-
-          <div class="wip-panel">
-            <div class="wip-panel-label">Last Review</div>
-            ${hasReview?`
-              <div class="wip-review-meta">
-                ${r.last_reviewed_date?`<span class="wip-review-date">${fmtReviewDate(r.last_reviewed_date)}</span>`:''}
-                ${r.reviewed_by?`<span class="wip-review-by">by ${esc(r.reviewed_by)}</span>`:''}
-              </div>
-              ${r.last_reviewed_subject?`<div class="wip-review-subject">${esc(r.last_reviewed_subject)}</div>`:''}
-              ${r.last_comment?`<p class="wip-review-note">${esc(r.last_comment)}</p>`:''}
-            `:`<div class="wip-no-review">No review on file</div>`}
+            ${hasWhy?`
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+              <div class="wip-panel-label" style="margin-bottom:6px;">Resurvey</div>
+              <div class="wip-rs-why"><b>${esc(rsReasons(r).join(' · ')||'No reason recorded')}</b></div>
+              ${rsDetailsHtml(r)}
+            </div>`:''}
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+              <div class="wip-panel-label" style="margin-bottom:6px;">Last Review</div>
+              ${hasReview?`
+                <div class="wip-review-meta">
+                  ${r.last_reviewed_date?`<span class="wip-review-date">${fmtReviewDate(r.last_reviewed_date)}</span>`:''}
+                  ${r.reviewed_by?`<span class="wip-review-by">by ${esc(r.reviewed_by)}</span>`:''}
+                </div>
+                ${r.last_reviewed_subject?`<div class="wip-review-subject">${esc(r.last_reviewed_subject)}</div>`:''}
+                ${note?`<p class="wip-review-note">${esc(note)}</p>`:''}
+              `:`<div class="wip-no-review">No review on file</div>`}
+            </div>
           </div>
 
         </div>
