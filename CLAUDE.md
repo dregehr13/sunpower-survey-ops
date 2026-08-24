@@ -53,6 +53,59 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - **Sales office is a global filter** alongside Region, applied through `gfDim` **and `applyFilter`** so it reaches every page. It only ever lived in `gfDim`, which meant Performance — the one page reading `filtered` — showed an active button, a chip and identical numbers (fixed 2026-08-14). Both the filter and the Resurveys breakdown hide/fall back on exports predating 2026-08-06, which have no office field
 - **One label scale, every page** (added 2026-08-17). A single 10px uppercase `.05em` style used to do four jobs at once, so four ranks of information read as one. The seven roles: section/KPI label 11/600/.07em uppercase `--muted` · panel title 13/700 sentence `--text` · panel subtitle 11/400 `--faint` · table header 11/700 sentence `--muted` · chart legend 11/400 `--muted` · axis tick 10/400 `--faint` · footnote 10/400 `--faint`. **10px survives only as axis ticks and footnotes**
 - **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was
+- **Glass means "this is a layer over the page"** (added 2026-08-24). The app is
+  otherwise matte — hairline borders, 4–5% shadows, no gradients — so glass is the
+  only material effect in it and has to carry a meaning or it is decoration. The
+  rule: a surface gets glass when it floats over the page. That is the drill
+  drawer, the modal, the region/office dropdown, the mobile More menu and the nav.
+  **Never cards, panels, the stat rail or tables** — those *are* the page, and
+  glossing them would also fight "charts deliberately muted so status stays
+  loudest". Things not to undo:
+  - **One token set, `--glass*` in the first `:root`.** Fills (`--glass` body /
+    `--glass-strong` chrome), `--glass-edge` + `--glass-hl` for the edge,
+    `--glass-shadow`, `--glass-blur`, and `--glass-dark` / `--glass-dark-edge`
+    for the nav. Tune the material in one place, not per component
+  - **The edge is a hairline plus an inner highlight, not a drawn grey border.**
+    On a near-white page a `--border` line and a tight dark shadow are how you
+    separate an *opaque* panel; glass separates by refraction. Each surface gets
+    a near-transparent edge and an `inset` white highlight, which is what reads
+    as the thickness of the pane
+  - **The nav is glass at *both* breakpoints**, though only the ≤860px sticky one
+    has anything passing under it — beside the 180px sidebar, content never goes
+    under it, so there the glass is a static tint. It is there anyway because the
+    nav is one permanent component and a component that changes material at a
+    breakpoint reads as a bug. `--glass-dark` is `.76` because that lands both
+    ends on the same tone (~`#494847` over the warm page background, ~`#4a4a4a`
+    over light content). This overrides the floats-over-the-page rule on purpose
+  - **Sidebar accents are translucent white, never a fixed dark grey.** The
+    `#2c2c2c` dividers / active-tab fill and the `#333` WIP badge were tuned to
+    sit on `#111`; against the glass nav's lighter effective tone they go *darker*
+    than their own background and the active tab inverts from raised to recessed.
+    `rgba(255,255,255,.13)`/`.16` is lighter than whatever it lands on, so it
+    holds at both breakpoints
+  - **`.nmenu-dropdown` must stay outside `<nav>`.** `backdrop-filter` makes an
+    element the containing block for `position:fixed` descendants, so nested in a
+    nav carrying `overflow-y:hidden` the menu is clipped away entirely. Moving it
+    out also stopped an item click bubbling to `mobileMoreBtn` and re-opening the
+    menu `nav()` had just closed
+  - **`.nmenu-more` and `.nmenu-dropdown` need their base `display:none`.** Every
+    other `.nmenu-*` rule lives inside the 860px block, so with no base rule they
+    are unstyled divs on desktop and render as loose text in the sidebar. The
+    button had always leaked there
+  - **`backdropIn` must end on the same value `.mback` sets.** It runs `forwards`,
+    so its end state silently overrides the CSS rule — the dim looks unchanged no
+    matter what you edit on `.mback`
+  - **`.nav::after` fades to `--glass-dark`, not opaque `#111`.** It is the
+    horizontal-scroll cue; an opaque stop paints a black smudge on a glass nav
+  - `.ktip` and `.toast` stay **opaque** on purpose: both are dark chips carrying
+    10–12px text over arbitrary content, and translucency there costs legibility
+    while revealing nothing worth reading
+- **`index.html` has a second stylesheet.** A "REDESIGN SKIN" block near the
+  bottom re-declares `:root` and restyles many components (`.nav` as the fixed
+  sidebar, `.ntab`, `.brand`, the exec hero, cards) as **base** rules, so it wins
+  over everything earlier in the file. Edit a component's colour near the top and
+  the change can be silently dead — check for a later definition first. The skin
+  does not touch `.drill-panel`, `.modal`, `.mback` or `.rgdrop-panel`
 - **One filter bar, every page** (`buildFBar`). WIP used to render a private bar against its own `wipF`, so a region chosen on Performance did not carry over and Office could not reach it at all. Region / Office / Status / Resource are shared; **Sales Rep and Install Type are WIP-only extras** in `wipF`, since nothing else cuts by either. WIP shows **no date range** — it is a live queue, and the hint says so. Don't reintroduce a second bar
 - **There is no global Install Type filter.** `type` had filter state, a `gfDim`/`applyFilter` clause and a `?type=` URL param but no control anywhere, so a shared link could filter every page invisibly. Removed 2026-08-14; `FIELDS.type` is `filterable:false`. The WIP page's Type control is separate state
 - **The stat rail is one shared component** (`.srail` / `.srail-cell` / `.srail-val` / `.srail-sub`), used by WIP, Performance and Trends. It replaced five and six KPI cards per page: the figures carry in about a sixth of the vertical space and, sharing one surface, stop implying they are equally important things. Cell padding must stay uniform, since `flex-basis:0` sizes the content box. WIP adds `.rail-f` cells that filter the queue below; the other pages use `.rail-d`, which opens a drill and is marked with the same `↗` the KPI cards used. The inline `.srail-sub` sits beside the value, so it has to stay short or the cell wraps and stops matching the others

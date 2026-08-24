@@ -26,6 +26,20 @@
   --navy1:#1e3a5f;--navy2:#0f2440;
   --radius:8px;--radius-lg:12px;
   --shadow:0 1px 2px rgba(20,20,25,.05),0 2px 8px rgba(20,20,25,.05);
+  /* GLASS — reserved for one thing: a temporary layer floating over the page.
+     Drawer, modal, dropdowns, sticky nav. Never cards, panels or the stat rail;
+     those ARE the page, and glass on them would be decoration with no job.
+     --glass is a body fill, --glass-strong is chrome that carries buttons.
+     The edge is a hairline plus an inner highlight rather than a drawn grey
+     border: on a near-white page the separation has to come from the shadow,
+     and the highlight is what gives the pane its thickness. */
+  --glass:rgba(255,255,255,.45);--glass-strong:rgba(255,255,255,.65);
+  --glass-edge:rgba(20,20,25,.09);--glass-hl:rgba(255,255,255,.7);
+  --glass-shadow:0 16px 48px rgba(20,20,25,.13);
+  --glass-blur:blur(10px) saturate(1.5);
+  /* Dark glass, for the surfaces that were #111. Alpha stays high — the nav
+     carries 11px muted text, and contrast falls off fast as it drops. */
+  --glass-dark:rgba(17,17,17,.76);--glass-dark-edge:rgba(255,255,255,.14);
 }
 /* Tabular figures — numeric columns and KPIs align vertically */
 table,.kval,.rval,.nbadge,.nav-ts{font-variant-numeric:tabular-nums;}
@@ -43,6 +57,12 @@ html,body{overflow-x:clip;}
 .ntab{color:#777;font-size:12px;padding:0 11px;height:48px;display:flex;align-items:center;cursor:pointer;border-bottom:2px solid transparent;transition:color .12s,border-color .12s;white-space:nowrap;flex-shrink:0;user-select:none;}
 .ntab:hover{color:#bbb;}
 .ntab.active{color:#fff;border-bottom-color:var(--accent);}
+/* The More menu is a mobile affordance — every other .nmenu-* rule lives in
+   the 860px block, which re-shows both of these. Without a base rule they are
+   unstyled divs on desktop and render as loose text in the sidebar: the button
+   has always leaked there, and the dropdown would too now that it sits at body
+   level rather than nested inside the button. */
+.nmenu-more,.nmenu-dropdown{display:none;}
 .nav-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .nav-ts{font-size:10px;color:#8f8f98;white-space:nowrap;padding:3px 8px;background:#1e1e1e;border-radius:4px;border:1px solid #333;}
 .nbadge{font-size:12px;color:#666;white-space:nowrap;}
@@ -92,7 +112,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .rgdrop-btn:hover{background:var(--bg);}
 .rgdrop-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
 .rgdrop-btn .rg-caret{font-size:10px;opacity:.6;}
-.rgdrop-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 0;min-width:200px;max-height:280px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.rgdrop-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:var(--glass-strong);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-edge);border-radius:8px;padding:5px 0;min-width:200px;max-height:280px;overflow-y:auto;box-shadow:inset 0 1px 0 var(--glass-hl),0 10px 30px rgba(20,20,25,.13);}
 .rgdrop-panel.open{display:block;}
 .rgdrop-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;color:var(--text);}
 .rgdrop-item:hover{background:var(--bg);}
@@ -308,9 +328,12 @@ tr:hover td{background:var(--bg);}
 .spec-ref strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;color:#3b82f6;}
 
 /* MODAL */
-.mback{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center;}
+.mback{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:500;display:flex;align-items:center;justify-content:center;}
 .mback.hidden{display:none;}
-.modal{background:var(--surface);border-radius:var(--radius-lg);padding:22px 24px;width:480px;max-width:95vw;border:1px solid var(--border);}
+/* Same glass rule as the drill drawer: a layer floating over the page reads
+   through to the page it floats over. The dim stays heavier than the drawer's
+   because a modal is blocking and sits over content on all four sides. */
+.modal{background:var(--glass-strong);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-radius:var(--radius-lg);padding:22px 24px;width:480px;max-width:95vw;border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hl),var(--glass-shadow);}
 .modal h2{font-size:14px;font-weight:600;margin-bottom:3px;}
 .msub{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
 .mbtn{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;}
@@ -323,7 +346,7 @@ tr:hover td{background:var(--bg);}
 @keyframes barFillIn{from{clip-path:inset(0 100% 0 0 round 2px)}to{clip-path:inset(0 0% 0 0 round 2px)}}
 @keyframes subBarIn{from{opacity:0;transform:scaleY(0);transform-origin:top}to{opacity:1;transform:scaleY(1)}}
 @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes backdropIn{from{background:rgba(0,0,0,0)}to{background:rgba(0,0,0,.5)}}
+@keyframes backdropIn{from{background:rgba(0,0,0,0)}to{background:rgba(0,0,0,.18)}}
 @keyframes badgePop{0%,100%{transform:scale(1)}40%{transform:scale(1.22)}}
 @keyframes hintFlash{0%{color:var(--blue)}100%{color:var(--faint)}}
 @keyframes dragPulse{0%,100%{border-color:#2563eb}50%{border-color:#93c5fd}}
@@ -528,15 +551,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .rs-unsched-pill{font-size:10px;padding:1px 6px;border-radius:99px;background:var(--bg);color:var(--faint);border:1px solid var(--border);}
 
 /* DRILL DRAWER */
-.drill-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1100;display:none;}
+.drill-overlay{position:fixed;inset:0;background:rgba(0,0,0,.06);z-index:1100;display:none;}
 .drill-overlay.open{display:block;}
-.drill-panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--surface);border-left:1px solid var(--border);z-index:1101;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;box-shadow:-6px 0 28px rgba(0,0,0,.12);}
+.drill-panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-left:1px solid var(--glass-edge);z-index:1101;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;box-shadow:inset 1px 0 0 var(--glass-hl),-18px 0 52px rgba(20,20,25,.11);}
 .drill-panel.open{transform:translateX(0);visibility:visible;transition:transform .22s ease;}
-.drill-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);gap:12px;}
+.drill-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);gap:12px;background:var(--glass-strong);}
 .drill-title{font-size:14px;font-weight:600;color:var(--text);}
 .drill-sub{font-size:12px;color:var(--muted);margin-top:3px;}
-.drill-count{font-size:12px;color:var(--faint);padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--border);}
-.drill-seg{display:flex;gap:6px;padding:9px 16px 0;background:var(--bg);flex-wrap:wrap;}
+.drill-count{font-size:12px;color:var(--faint);padding:8px 16px;background:var(--glass-strong);border-bottom:1px solid var(--border);}
+.drill-seg{display:flex;gap:6px;padding:9px 16px 0;background:var(--glass-strong);flex-wrap:wrap;}
 .drill-seg:empty{display:none;}
 .drill-seg-btn{font-size:11px;font-weight:600;padding:4px 10px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
 .drill-seg-btn:hover:not(:disabled){border-color:var(--muted);color:var(--text);}
@@ -551,7 +574,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-close:hover{background:var(--red-bg);color:var(--red);border-color:var(--red);}
 .drill-table-wrap{flex:1;overflow:auto;}
 .drill-table{width:100%;border-collapse:collapse;font-size:12px;}
-.drill-table th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-weight:500;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;z-index:1;}
+.drill-table th{position:sticky;top:0;background:var(--glass-strong);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);color:var(--muted);font-weight:500;text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;z-index:1;}
 .drill-table th.r,.drill-table td.r{text-align:right;}
 .drill-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
 /* Request details run to 960 characters; clamp to three lines and keep the
@@ -585,7 +608,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* One padding rule, not a sibling override: .drill-seg:empty is display:none,
    so a drill with no segment chips gave the input no top padding at all and it
    sat flush against the header rule. */
-.drill-tools{display:flex;align-items:center;gap:8px;padding:13px 16px 11px;background:var(--bg);}
+.drill-tools{display:flex;align-items:center;gap:8px;padding:13px 16px 11px;background:var(--glass-strong);}
 .drill-search{flex:1;min-width:0;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;}
 .drill-search::placeholder{color:var(--faint);}
 .drill-search-clr{font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
@@ -862,13 +885,23 @@ body{font-family:'Archivo',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 
 /* Sidebar nav (desktop) */
 body{padding-left:180px;}
-.nav{position:fixed;left:0;top:0;bottom:0;width:180px;height:100vh;flex-direction:column;align-items:stretch;padding:18px 0 14px;gap:2px;overflow:visible;background:#111;}
-.brand{padding:0 18px 14px;margin:0 10px 8px 0;border-bottom:1px solid #2c2c2c;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding-left:18px;}
+/* Glass here too. Nothing scrolls under the sidebar — content sits beside it —
+   so on desktop this is a static tint rather than a live reveal. It is here for
+   consistency: the nav is one permanent component and must not change material
+   at a breakpoint. The alphas are chosen so both ends land on the same colour —
+   .76 over the warm page background reads ~#494949, which is what the sticky
+   mobile nav averages to over light content. */
+.nav{position:fixed;left:0;top:0;bottom:0;width:180px;height:100vh;flex-direction:column;align-items:stretch;padding:18px 0 14px;gap:2px;overflow:visible;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:inset -1px 0 0 var(--glass-dark-edge);}
+.brand{padding:0 18px 14px;margin:0 10px 8px 0;border-bottom:1px solid var(--glass-dark-edge);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding-left:18px;}
 .brand span{color:var(--accent);font-weight:700;}
 .ntab{height:auto;padding:8px 13px;margin:0 10px;border-bottom:none;border-left:3px solid transparent;border-radius:0 5px 5px 0;font-size:12.5px;color:#999;}
 .ntab:hover{color:#ddd;}
-.ntab.active{color:#fff;background:#2c2c2c;border-left-color:var(--accent);border-bottom:none;font-weight:600;padding-left:10px;}
-.nav-r{margin:auto 0 0 0;flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px 0;border-top:1px solid #2c2c2c;}
+/* Translucent white, not #2c2c2c: the nav's effective background is now lighter
+   than #111, and a fixed dark grey would sit *below* it and read as recessed —
+   the opposite of what an active tab should do. A white overlay is lighter than
+   whatever it lands on, so this holds at both breakpoints. */
+.ntab.active{color:#fff;background:rgba(255,255,255,.13);border-left-color:var(--accent);border-bottom:none;font-weight:600;padding-left:10px;}
+.nav-r{margin:auto 0 0 0;flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px 0;border-top:1px solid var(--glass-dark-edge);}
 .nbadge{font-size:10px;color:#888;letter-spacing:.06em;}
 .nav-ts{background:transparent;border:none;padding:0;}
 .nload,.nsf{text-align:center;}
@@ -891,7 +924,9 @@ body{padding-left:180px;}
 .kval{font-weight:700;letter-spacing:-.02em;}
 
 /* WIP attention badge in nav */
-#wip-count-badge{display:none;align-items:center;justify-content:center;background:#333;color:#ccc;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:auto;line-height:1.4;}
+/* Translucent white for the same reason as .ntab.active — #333 sat below the
+   glass nav's effective tone and the badge sank into it. */
+#wip-count-badge{display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.16);color:#e2e2e2;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:auto;line-height:1.4;}
 .ntab[data-page="wip"]{display:flex;align-items:center;}
 
 /* Briefing hero — Current page editorial header */
@@ -911,17 +946,25 @@ body{padding-left:180px;}
 /* Phones: sidebar collapses back to a top bar */
 @media(max-width:860px){
   body{padding-left:0;}
-  .nav{position:sticky;top:0;left:auto;bottom:auto;width:auto;height:46px;flex-direction:row;align-items:center;padding:0 12px;gap:0;overflow-x:auto;overflow-y:hidden;}
-  .nav::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,rgba(17,17,17,0),rgba(17,17,17,1));pointer-events:none;z-index:10;}
+  /* Glass only at this breakpoint. Here the nav is sticky and the page scrolls
+     under it, so it is genuinely a layer over the page. The default rule above
+     (the fixed 180px sidebar) stays solid: content sits beside it, never under
+     it, so there is nothing for glass to reveal. */
+  .nav{position:sticky;top:0;left:auto;bottom:auto;width:auto;height:46px;flex-direction:row;align-items:center;padding:0 12px;gap:0;overflow-x:auto;overflow-y:hidden;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:inset 0 -1px 0 var(--glass-dark-edge);}
+  /* Fades to the glass fill, not to solid #111 — against a translucent nav an
+     opaque stop reads as a black smudge on the right edge. */
+  .nav::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,rgba(17,17,17,0),var(--glass-dark));pointer-events:none;z-index:10;}
   .brand{padding:0;margin:0 10px 0 0;border-bottom:none;letter-spacing:-.01em;text-transform:none;font-weight:600;font-size:12px;white-space:nowrap;}
   .brand span{font-size:11px;}
   .ntab{height:46px;padding:0 8px;margin:0;border-left:none;border-radius:0;border-bottom:2px solid transparent;font-size:11px;white-space:nowrap;}
   .ntab.active{background:transparent;border-left:none;border-bottom-color:var(--accent);padding-left:8px;}
   .ntab[data-page="resurvey"],.ntab[data-page="map"]{display:none;}
-  .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#777;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
+  /* #999 to match .ntab: over glass the nav's effective background lightens to
+     roughly #4a4a4a, and #777 does not hold up against it. */
+  .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#999;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
   .nmenu-more:hover{color:#bbb;}
   .nmenu-more.active{color:#fff;border-bottom-color:var(--accent);}
-  .nmenu-dropdown{display:none;position:fixed;top:46px;right:12px;background:#111;border:1px solid #333;border-radius:6px;z-index:300;min-width:120px;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .nmenu-dropdown{display:none;position:fixed;top:46px;right:12px;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-dark-edge);border-radius:6px;z-index:300;min-width:120px;box-shadow:0 10px 30px rgba(0,0,0,.34);}
   .nmenu-dropdown.open{display:block;}
   .nmenu-item{display:block;padding:8px 12px;color:#999;font-size:11px;cursor:pointer;border-bottom:1px solid #222;white-space:nowrap;}
   .nmenu-item:hover{color:#fff;background:#1a1a1a;}
@@ -953,12 +996,7 @@ body{padding-left:180px;}
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
-  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼
-    <div class="nmenu-dropdown" id="mobileMoreMenu">
-      <div class="nmenu-item" onclick="nav('resurvey')">Quality</div>
-      <div class="nmenu-item" onclick="nav('map')">Map</div>
-    </div>
-  </div>
+  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge"></span>
     <span class="nav-ts" id="nav-ts"></span>
@@ -971,6 +1009,16 @@ body{padding-left:180px;}
     </button>
   </div>
 </nav>
+
+<!-- Sits outside <nav> on purpose. The nav carries backdrop-filter, which makes
+     it the containing block for position:fixed descendants — nested here, the
+     menu would re-anchor to the nav box and then be clipped away by its
+     overflow-y:hidden. Moving it out also stops an item click bubbling to
+     mobileMoreBtn and re-opening the menu that nav() had just closed. -->
+<div class="nmenu-dropdown" id="mobileMoreMenu">
+  <div class="nmenu-item" onclick="nav('resurvey')">Quality</div>
+  <div class="nmenu-item" onclick="nav('map')">Map</div>
+</div>
 
 <div class="stale-banner" id="staleBanner"></div>
 
