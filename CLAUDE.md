@@ -274,6 +274,29 @@ labelled. Things not to undo:
   disputable and it is the largest single finding on the page
 - The parser prints the same kind of non-blocking sanity report to stderr that
   `parse-sf.js` does, including a warning when two statements' periods overlap
+- **In-app import, added 2026-08-25.** The Billing page has an "Import
+  statement" panel — pick a vendor (hidden while only one exists, same rule
+  the vendor filter follows), choose the `.xlsx`, enter the update password.
+  Parsing and the merge rule (replace this statement's own lines, keep every
+  other statement's) live in `lib/statement-import.cjs`, shared by
+  `parse-radicl.js` and `api/update-billing.js` — an upload here and a
+  terminal import run the same code path, not two parsers. The endpoint reuses
+  `GITHUB_TOKEN`/`UPDATE_PASSWORD`, the same env vars `api/update.js` already
+  uses to commit `data.js`/`data.json` — no new Vercel config. It commits
+  `billing.json` straight to `main` via the GitHub Contents API and returns
+  the merged history, which the page applies in memory immediately; the
+  commit itself is live for everyone else in ~30 seconds, same as the SF
+  data-update flow
+- **Cost per account, added 2026-08-25.** `OpsBilling.byAccount()` already
+  existed (used by the CLI report) but had no page surface. The "Cost per
+  account" table sums every charge line an account drew — survey plus travel
+  adders, cleanup, rework — into one total, so three travel adders and three
+  surveys on one account reads as what that account cost, not a per-survey
+  average
+- **State, added 2026-08-25.** Both the charges table and the accounts table
+  carry a State column, read off the matched Salesforce row's address with
+  `MAP_ZIP_RE` — the same ", ST ZIP" capture the Map page uses. A statement's
+  own address column has no state on it, and an unmatched line has none either
 
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads

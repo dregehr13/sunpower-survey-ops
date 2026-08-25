@@ -5,7 +5,9 @@
 //
 // Column mapping, unit price and subtype taxonomy all come from the vendor
 // spec in lib/billing.cjs, so onboarding a second subcontractor is a spec
-// object there plus `--vendor <id>` here — not a second parser.
+// object there plus `--vendor <id>` here — not a second parser. The parsing
+// and merge logic itself lives in lib/statement-import.cjs, shared with the
+// in-app "Import statement" button (api/update-billing.js) — same reason.
 //
 // Merges into billing.json, the master history. History is the point: a
 // duplicate charge is only visible if you still hold the statement it first
@@ -16,6 +18,8 @@ import XLSX from 'xlsx';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { basename } from 'path';
 import OpsBilling from './lib/billing.cjs';
+import StatementImport from './lib/statement-import.cjs';
+const { parseWorkbookLines, mergeStatement, overlapWarnings } = StatementImport;
 
 const HISTORY = new URL('./billing.json', import.meta.url).pathname;
 const DATA = new URL('./data.json', import.meta.url).pathname;
@@ -38,67 +42,6 @@ if (!OpsBilling.VENDORS[vendorId]) {
 }
 const SPEC = OpsBilling.vendor(vendorId);
 
-const isoDate = v => {
-  if (v == null || v === '') return '';
-  if (v instanceof Date) {
-    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
-  }
-  const s = String(v).trim();
-  let m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
-  if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
-  return '';
-};
-
-function parseStatement(file) {
-  const wb = XLSX.readFile(file, { cellDates: true });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
-
-  // Find the header row rather than assuming row 1 — these statements carry a
-  // balance figure in the header row's trailing cell and could gain a title.
-  let hdrRow = -1, map = {};
-  for (let i = 0; i < Math.min(grid.length, 20); i++) {
-    const cells = grid[i].map(c => String(c || '').trim().toLowerCase());
-    const found = {};
-    Object.entries(SPEC.columns).forEach(([k, label]) => {
-      const idx = cells.indexOf(label);
-      if (idx >= 0) found[k] = idx;
-    });
-    if (found.name != null && found.units != null && found.subtype != null) { hdrRow = i; map = found; break; }
-  }
-  if (hdrRow < 0) {
-    throw new Error(`${basename(file)}: no header row matching the ${SPEC.name} column map `
-      + `(${Object.values(SPEC.columns).join(', ')})`);
-  }
-
-  const lines = [];
-  for (let i = hdrRow + 1; i < grid.length; i++) {
-    const row = grid[i];
-    const units = Number(row[map.units]);
-    if (!Number.isFinite(units)) continue;
-    const name = String(row[map.name] == null ? '' : row[map.name]).trim();
-    if (!name) continue;
-    lines.push({
-      vendor: vendorId,
-      name,
-      address: String(row[map.address] == null ? '' : row[map.address]).trim(),
-      date: isoDate(row[map.date]),
-      type: String(row[map.type] == null ? '' : row[map.type]).trim(),
-      subtype: String(row[map.subtype] == null ? '' : row[map.subtype]).trim(),
-      units,
-      balance: map.balance != null && Number.isFinite(Number(row[map.balance])) ? Number(row[map.balance]) : null,
-    });
-  }
-  return lines;
-}
-
-// A statement's identity is its vendor plus its filename. These are named by
-// period ("Sunpower 07.01.26-08.08.26.xlsx"), so the name is meaningful and
-// stable, and re-importing the same file updates rather than duplicates.
-const statementId = f => vendorId + '/' + basename(f).replace(/\.xlsx?$/i, '');
-
 let history = { statements: [], lines: [] };
 if (existsSync(HISTORY)) {
   try { history = JSON.parse(readFileSync(HISTORY, 'utf8')); }
@@ -107,29 +50,17 @@ if (existsSync(HISTORY)) {
 
 const report = [];
 for (const file of files) {
-  const id = statementId(file);
   let lines;
-  try { lines = parseStatement(file); }
-  catch (e) { console.error('SKIP  ' + e.message); continue; }
+  try {
+    const wb = XLSX.readFile(file, { cellDates: true });
+    lines = parseWorkbookLines(wb, vendorId);
+  } catch (e) { console.error('SKIP  ' + basename(file) + ': ' + e.message); continue; }
 
-  const dates = lines.map(l => l.date).filter(Boolean).sort();
-  const existing = history.statements.find(s => s.id === id);
-  const before = history.lines.length;
-  history.lines = history.lines.filter(l => l.statement !== id);
-  const replaced = before - history.lines.length;
-
-  lines.forEach((l, i) => history.lines.push({ ...l, statement: id, line: i + 1 }));
-  const meta = { id, vendor: vendorId, file: basename(file), from: dates[0] || '',
-    to: dates[dates.length - 1] || '', lines: lines.length, imported: new Date().toISOString().slice(0, 10) };
-  if (existing) Object.assign(existing, meta); else history.statements.push(meta);
-
-  report.push({ id, lines: lines.length, replaced, from: meta.from, to: meta.to,
-    charged: lines.filter(OpsBilling.isCharge).reduce((s, l) => s + Math.abs(l.units), 0) });
+  const { history: next, meta, replaced, charged } = mergeStatement(history, vendorId, file, lines);
+  history = next;
+  report.push({ id: meta.id, lines: lines.length, replaced, from: meta.from, to: meta.to, charged });
 }
 
-history.statements.sort((a, b) => String(a.from).localeCompare(String(b.from)));
-history.lines.sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.line || 0) - (b.line || 0));
-history.updated = new Date().toISOString();
 writeFileSync(HISTORY, JSON.stringify(history, null, 2) + '\n');
 
 // ── Import report, to stderr, non-blocking — parse-sf.js convention ─────────
@@ -145,14 +76,7 @@ report.forEach(r => {
 e(`  history: ${history.statements.length} statement(s), ${history.lines.length} lines, `
   + `${new Set(history.statements.map(s => s.vendor)).size} vendor(s)`);
 
-// Overlapping periods are the usual reason a charge looks duplicated when it
-// is really the same work reported twice.
-const st = history.statements.filter(s => s.from && s.to);
-for (let i = 1; i < st.length; i++) {
-  if (st[i].vendor === st[i - 1].vendor && st[i].from <= st[i - 1].to) {
-    e(`  ! ${st[i].id} overlaps ${st[i - 1].id} (${st[i].from} <= ${st[i - 1].to})`);
-  }
-}
+overlapWarnings(history).forEach(w => e(`  ! ${w}`));
 
 if (existsSync(DATA)) {
   const rows = JSON.parse(readFileSync(DATA, 'utf8'));

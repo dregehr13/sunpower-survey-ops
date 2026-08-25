@@ -196,3 +196,163 @@ test('clusterByRadius: the grid index returns exactly what all-pairs would', () 
     assert.deepEqual(fast, bruteForce(pts, R), `grid and all-pairs disagree at radius ${R}`);
   }
 });
+
+// ── Roster and reach ───────────────────────────────────────────────────────
+test('daysAvailable reads the roster, it does not assume five', () => {
+  assert.equal(C.daysAvailable({ off: ['Sun', 'Sat'] }), 5);
+  assert.equal(C.daysAvailable({ off: ['Sun', 'Tue'] }), 5);   // Harry: midweek, still five
+  assert.equal(C.daysAvailable({ off: [] }), 7);
+  assert.equal(C.daysAvailable({}), 7);
+  assert.equal(C.daysAvailable(null), 7);
+});
+
+test('reach is three classes, because a posting is a real option', () => {
+  assert.equal(C.reachClass(30), C.REACH.DAY);
+  assert.equal(C.reachClass(200), C.REACH.DEPLOY);
+  assert.equal(C.reachClass(900), C.REACH.FAR);
+  assert.equal(C.reachClass(null), C.REACH.FAR);
+  // A surveyor with a wider day radius pulls a market back into day range.
+  assert.equal(C.reachClass(90, { maxOneWayMi: 120 }), C.REACH.DAY);
+});
+
+test('nearestBase picks the closest base and classifies the trip', () => {
+  const bases = [{ id: 'pdx', ll: [45.482, -122.6445] }, { id: 'det', ll: [42.4975, -83.2306] }];
+  const n = C.nearestBase([45.52, -122.68], bases);
+  assert.equal(n.base.id, 'pdx');
+  assert.ok(n.miles < 5);
+  assert.equal(n.reach, C.REACH.DAY);
+  assert.equal(C.nearestBase([45.5, -122.6], []), null);
+});
+
+// ── Mobility ───────────────────────────────────────────────────────────────
+const wkOf = d => d;  // the test data is already keyed by week
+const spray = (wk, center, spreadDeg, n, office) =>
+  Array.from({ length: n }, (_, i) => ({
+    office, date: wk,
+    ll: [center[0] + ((i % 5) - 2) * spreadDeg, center[1] + ((i % 3) - 1) * spreadDeg],
+  }));
+
+test('mobility: a wide territory worked in place is NOT mobile', () => {
+  // The false positive that killed mean-weekly-drift. An office selling across
+  // 200 miles of one valley every week jitters its centroid enormously and has
+  // not gone anywhere. Live case: Movement - Summit (OR), 213mi net across a
+  // 297mi-wide footprint.
+  const pts = [];
+  ['2026-01-04', '2026-01-11', '2026-01-18', '2026-01-25', '2026-02-01', '2026-02-08'].forEach((wk, i) => {
+    pts.push(...spray(wk, i % 2 ? [45.5, -122.6] : [42.3, -122.9], 0.3, 6, 'wide'));
+  });
+  const m = C.officeMobility(pts, wkOf);
+  assert.equal(m.wide.mobile, false, 'jittering inside a fixed footprint is dispersion, not relocation');
+});
+
+test('mobility: a footprint that relocates IS mobile', () => {
+  // The false negative that killed straightness. This office wanders widely at
+  // each end, so its path is long relative to its net move — but the early and
+  // late footprints do not overlap. Live case: "Solar's Dead" - CTRL, which
+  // went Pennsylvania to Virginia and scored 0.26 on straightness.
+  const pts = [];
+  ['2026-05-03', '2026-05-10', '2026-05-17', '2026-05-24'].forEach((wk, i) => {
+    pts.push(...spray(wk, [39.9 + (i % 2) * 0.4, -76.7 - (i % 2) * 0.5], 0.25, 6, 'movers'));
+  });
+  ['2026-07-12', '2026-07-19', '2026-07-26', '2026-08-02'].forEach((wk, i) => {
+    pts.push(...spray(wk, [37.5 + (i % 2) * 0.4, -78.5 - (i % 2) * 0.5], 0.25, 6, 'movers'));
+  });
+  const m = C.officeMobility(pts, wkOf);
+  assert.equal(m.movers.mobile, true);
+  assert.ok(m.movers.reloc >= C.MOBILITY_RELOC);
+  assert.ok(m.movers.net >= C.MOBILITY_MIN_NET_MI);
+});
+
+test('mobility: a scattered national book is not a moving crew', () => {
+  // Live case: Virtual Region - Virtual Closers, 56mi net across a 1,673mi
+  // width. Enormous spread, no relocation.
+  const pts = [];
+  ['w1', 'w2', 'w3', 'w4', 'w5', 'w6'].forEach(wk => {
+    pts.push(...spray(wk, [40, -100], 8, 8, 'national'));
+  });
+  const m = C.officeMobility(pts, wkOf);
+  assert.equal(m.national.mobile, false);
+});
+
+test('mobility: too little history answers "do not know", not "settled"', () => {
+  const pts = [...spray('w1', [40, -75], 0.2, 6, 'new'), ...spray('w2', [40, -75], 0.2, 6, 'new')];
+  const m = C.officeMobility(pts, wkOf);
+  assert.equal(m.new.mobile, false);
+  assert.equal(m.new.reloc, null, 'a null reading is not the same as a settled one');
+  // Thin weeks never contribute a centroid at all.
+  const thin = C.officeMobility(spray('w1', [40, -75], 0.2, 2, 'thin'), wkOf);
+  assert.equal(thin.thin.weeks, 0);
+});
+
+test('mobileShare ignores rows with no office rather than assuming settled', () => {
+  const mob = { movers: { mobile: true }, settled: { mobile: false } };
+  const pts = [{ office: 'movers' }, { office: 'movers' }, { office: 'settled' }, { office: '' }];
+  assert.ok(Math.abs(C.mobileShare(pts, mob) - 2 / 3) < 1e-9);
+  assert.equal(C.mobileShare([{ office: '' }], mob), 0);
+});
+
+// ── Advice ─────────────────────────────────────────────────────────────────
+const mkt = (o = {}) => ({ n: 40, recentPerWeek: 5, outsourcedPerWeek: 3, reach: C.REACH.DAY,
+  mobileShare: 0, repShare: 0.3, repDefectRate: 0.1, repDone: 30,
+  baseName: 'Portland', baseMiles: 20, ...o });
+
+test('advice: reachable work going outside the team is absorbed', () => {
+  const a = C.marketAdvice(mkt());
+  assert.equal(a.k, 'absorb');
+  assert.ok(a.reasons.some(r => /Portland/.test(r)));
+});
+
+test('advice: a market built on a moving crew is never a local hire', () => {
+  // The whole point of measuring mobility. Volume alone would say "hire".
+  const a = C.marketAdvice(mkt({ mobileShare: 0.95, outsourcedPerWeek: 20, recentPerWeek: 25, reach: C.REACH.DEPLOY }));
+  assert.equal(a.k, 'deploy');
+  assert.ok(a.reasons.some(r => /footprint moves/.test(r)));
+  // And if the moving crew is not producing much, it is not even worth a posting.
+  assert.equal(C.marketAdvice(mkt({ mobileShare: 0.95, recentPerWeek: 1, outsourcedPerWeek: 1 })).k, 'vendor');
+});
+
+test('advice: a market with no recent work gets no recommendation at all', () => {
+  // The flaw this exists for: rates averaged over eight months kept PA York
+  // recommended for a posting on volume whose sales crew had already left the
+  // state in July. A market with nothing in the window is its own answer —
+  // "gone quiet" — not a staffing call made on history.
+  const a = C.marketAdvice(mkt({ recentPerWeek: 0, outsourcedPerWeek: 0, n: 215 }));
+  assert.equal(a.k, 'dormant');
+  assert.ok(a.reasons[0].includes('215 historically'));
+  // Dormancy outranks every other signal, including a big mobile book.
+  assert.equal(C.marketAdvice(mkt({ recentPerWeek: 0, outsourcedPerWeek: 30, mobileShare: 1 })).k, 'dormant');
+});
+
+test('advice: a thin sample never carries a coaching call', () => {
+  // At 5 completions one defect is 20% and would name an office off noise.
+  const thin = mkt({ reach: C.REACH.FAR, outsourcedPerWeek: 0.5, recentPerWeek: 3,
+    repShare: 0.9, repDefectRate: 0.4, repDone: 5 });
+  assert.equal(C.marketAdvice(thin).k, 'vendor');
+  assert.equal(C.marketAdvice({ ...thin, repDone: C.COACH_MIN_N }).k, 'coach');
+});
+
+test('advice: durable out-of-reach volume justifies a local hire', () => {
+  const a = C.marketAdvice(mkt({ reach: C.REACH.FAR, outsourcedPerWeek: 12, recentPerWeek: 14 }));
+  assert.equal(a.k, 'hire');
+});
+
+test('advice: a rep quality problem is coaching, not headcount', () => {
+  const a = C.marketAdvice(mkt({ reach: C.REACH.FAR, outsourcedPerWeek: 0.5, recentPerWeek: 8,
+    repShare: 0.9, repDefectRate: 0.23, repDone: 40 }));
+  assert.equal(a.k, 'coach');
+  assert.ok(a.reasons.some(r => /training, not headcount/.test(r)));
+});
+
+test('advice: thin markets stay with the vendor', () => {
+  assert.equal(C.marketAdvice(mkt({ reach: C.REACH.FAR, recentPerWeek: 0.4, outsourcedPerWeek: 0.4, repShare: 0 })).k, 'vendor');
+});
+
+test('advice always returns a labelled action with at least one reason', () => {
+  const cases = [mkt(), mkt({ mobileShare: 1 }), mkt({ reach: C.REACH.FAR }), mkt({ reach: C.REACH.DEPLOY }),
+    mkt({ outsourcedPerWeek: 0, repShare: 1, repDefectRate: 0.5 }), mkt({ recentPerWeek: 0, outsourcedPerWeek: 0 })];
+  cases.forEach(c => {
+    const a = C.marketAdvice(c);
+    assert.ok(a.label && a.k && a.rank, 'every action is labelled and ranked');
+    assert.ok(a.reasons.length >= 1, 'an action with no reason is not actionable');
+  });
+});

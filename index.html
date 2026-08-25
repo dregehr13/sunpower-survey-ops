@@ -603,8 +603,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .bill-flag.sev-med{border-left-color:var(--amber);}
 .bill-flag.sev-info{border-left-color:var(--border);}
 .bill-flag.on{background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);}
-.bill-flag-n{font-size:19px;font-weight:600;color:var(--text);line-height:1.2;}
-.bill-flag-l{font-size:11px;color:var(--muted);margin-top:1px;}
+.bill-flag-n{font-size:19px;font-weight:700;color:var(--text);line-height:1.2;font-variant-numeric:tabular-nums;}
+.bill-flag-l{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
 .bill-flag-v{font-size:11px;color:var(--faint);margin-top:3px;}
 .bill-sfmeta{font-size:10px;color:var(--faint);margin-top:2px;}
 .bill-pill{font-size:10px;}
@@ -612,6 +612,23 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .bill-pill.sev-med{color:var(--amber);}
 .bill-pill.sev-info{color:var(--muted);}
 .bill-tbl td{vertical-align:top;}
+
+/* Resource. The action tag is the page's verdict, so it carries the only
+   colour in the table; the mix bar beside it is deliberately muted, because
+   the split is context for the verdict rather than a second reading. */
+.res-act{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:4px;white-space:nowrap;}
+.res-act-absorb{background:rgba(45,125,70,.12);color:var(--green);}
+.res-act-deploy{background:rgba(60,110,190,.12);color:var(--blue);}
+.res-act-hire{background:rgba(190,140,30,.14);color:var(--amber);}
+.res-act-coach{background:rgba(140,90,180,.12);color:#7b5aa6;}
+.res-act-vendor{background:var(--bg);color:var(--faint);}
+.res-mix{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;min-width:80px;max-width:130px;}
+.res-seg{display:block;height:100%;}
+.res-tbl td{vertical-align:top;}
+.res-bvb{display:flex;gap:14px;flex-wrap:wrap;}
+.res-bvb-col{flex:1 1 190px;min-width:190px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
+.res-bvb-v{font-size:26px;font-weight:600;color:var(--text);margin:3px 0 5px;}
+.res-bvb-v.good{color:var(--green);}
 
 /* Sortable drawer headers. Same vocabulary as every other table in the app —
    .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
@@ -1019,6 +1036,7 @@ body{padding-left:180px;}
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
+  <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
   <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼</div>
   <div class="nav-r">
@@ -1052,6 +1070,7 @@ body{padding-left:180px;}
 <div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
 <div id="page-map"         class="page">     <div id="fb-map"></div>         <div id="map-content"></div></div>
+<div id="page-resource"    class="page">     <div id="fb-resource"></div>    <div id="res-content"></div></div>
 <div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
@@ -1287,7 +1306,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','wip','performance','trends','resurvey','map','billing','data'];
+const PAGES = ['week','wip','performance','trends','resurvey','map','resource','billing','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -1946,6 +1965,7 @@ function renderPage(p){
   if(p==='wip')         renderAgingWIP();
   if(p==='resurvey')    renderResurvey();
   if(p==='map')         renderMap();
+  if(p==='resource')    renderResource();
   if(p==='billing')     renderBilling();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
@@ -2082,6 +2102,12 @@ const TIP={
   mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a market for its average days open.',
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
+  resTeam:'In-house surveyors on roster.json, placed by their home ZIP. The roster is hand-maintained — there is no Salesforce object for the team.',
+  resCapacity:'What the team could do in a week if every job were close to home, from the drive-time model in lib/coverage.cjs. It is the optimistic end: capacity falls as the drive grows, and the team table shows the whole curve.',
+  resNow:'Surveys a week the in-house team is actually completing, over the span of the rows in view. Compare against capacity rather than against the vendor — the gap between these two is the cheapest volume available.',
+  resHeadroom:'Capacity minus what the team is doing. Unused in-house time is the first place outsourced volume should go, because it costs nothing extra.',
+  resOutsourced:'Surveys a week going to a third-party vendor. Not all of it is reclaimable — most of it is nowhere near a base — which is what the market table sorts out.',
+  resAbsorb:'The part of the outsourced volume sitting inside day-trip range of a base the team already has. This is the number that needs no hire, no posting and no negotiation.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an in-house surveyor against, not the base rate.',
   billTravel:'Adders applied beyond the vendor\'s free radius. Not an error, and tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
@@ -5966,6 +5992,306 @@ window.addEventListener('resize',()=>{
   _mapRt=setTimeout(()=>{ mapResize(); mapDrawHist(); mapDrawTicks(); },140);
 });
 
+// ═══ RESOURCE ═════════════════════════════════════════════
+// Who should be doing the work, where, and what it costs.
+//
+// The other six pages measure the work. This one measures the PEOPLE against
+// it: what the in-house team can reach, what is going outside the team that
+// need not, and which markets would carry a body. Geography and capacity come
+// from lib/coverage.cjs, vendor cost from lib/billing.cjs — nothing here
+// redefines either.
+//
+// It reads live rows, not `filtered`: a staffing decision is about the current
+// book, and a date range that excluded last month would silently answer a
+// different question. The filter bar's region/office cuts still apply.
+let _roster = null, _rosterLoad = null, _rosterErr = null;
+let resView = 'markets';
+
+// Cost assumptions. Doug has the vendor side exactly (billing.json); the
+// in-house side is an estimate until he supplies it, so it lives in Settings
+// and the page says so rather than presenting a guess as a finding.
+const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900, perDiem: 65, lodging: 140 };
+function resCost(){
+  const s = (S && S.resCost) || {};
+  return { ...RES_COST_DEFAULTS, ...s };
+}
+// Fully loaded weekly cost of one in-house surveyor, before travel.
+const resWeeklyCost = () => (resCost().surveyorAnnual / 52) + (resCost().vehicleMonthly * 12 / 52);
+
+function resEnsure(){
+  if(_roster||_rosterLoad) return _rosterLoad;
+  _rosterLoad = fetch('roster.json',{cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('no roster.json ('+r.status+')'); return r.json(); })
+    .then(j=>{ _roster=j; _rosterErr=null; })
+    .catch(e=>{ _rosterErr=e.message; })
+    .then(()=>{ _rosterLoad=null; renderResource(); });
+  return _rosterLoad;
+}
+
+const _rmoney = n => n==null?'—':'$'+Math.round(n).toLocaleString();
+const _rpct = n => n==null?'—':Math.round(n*100)+'%';
+const _r1 = n => n==null?'—':(Math.round(n*10)/10).toFixed(1);
+
+// Surveyor bases, placed by the ZIP on the roster. A surveyor whose ZIP is not
+// in geo/zips.json is kept and shown unplaced rather than dropped — a missing
+// centroid is a data problem to fix, not a person to hide.
+function resBases(){
+  if(!_roster||!MAPGEO.zips) return [];
+  return _roster.surveyors.map(sv=>({
+    ...sv, ll: MAPGEO.zips[sv.zip]||null,
+    cfg: OpsCoverage.surveyorCfg(sv),
+    days: OpsCoverage.daysAvailable(sv),
+  }));
+}
+
+// Every in-scope row that can be placed, carrying what the market maths needs.
+function resPoints(){
+  const out=[];
+  rows.filter(gfDim).forEach(r=>{
+    const m=(r.address||'').match(MAP_ZIP_RE); if(!m) return;
+    const ll=MAPGEO.zips&&MAPGEO.zips[m[2]]; if(!ll) return;
+    out.push({ r, ll, st:m[1].toUpperCase(), zip:m[2], office:r.sales_office||'', date:r.start });
+  });
+  return out;
+}
+
+// Weeks of data in view — every per-week figure divides by this, so it is
+// computed once from the rows themselves rather than assumed.
+function resWeeks(pts){
+  const ds=pts.map(p=>p.date).filter(Boolean).sort();
+  if(ds.length<2) return 1;
+  return Math.max((dDiff(ds[0],ds[ds.length-1])||7)/7, 1);
+}
+
+// Per-market cost actually invoiced, from the billing history. Only markets
+// whose billed lines matched a Salesforce row can be costed, so this is
+// reported where it exists and left blank where it does not — an average
+// stamped on an unmatched market would be a guess wearing a measurement's face.
+function resVendorCostByZip(){
+  const out={};
+  if(!_billing) return out;
+  const recon=OpsBilling.reconcile(_billing.lines, allRows);
+  recon.forEach(l=>{
+    if(!OpsBilling.isCharge(l)||!l.match) return;
+    const m=(l.match.address||'').match(MAP_ZIP_RE); if(!m) return;
+    const z=m[2];
+    out[z]=out[z]||{usd:0,visits:0};
+    out[z].usd += OpsBilling.usd(Math.abs(l.units||0), l.vendor);
+    if(OpsBilling.isWork(l)) out[z].visits++;
+  });
+  return out;
+}
+
+function resMarkets(){
+  const pts=resPoints();
+  const weeks=resWeeks(pts);
+  // The recent window is anchored on the export date, not the wall clock, so a
+  // stale upload does not silently empty every market — the same rule the WIP
+  // and Map pages use for ages.
+  const today=_mapToday();
+  const recentFrom=(()=>{ const [y,m,d]=today.split('-').map(Number);
+    return localISO(new Date(y,m-1,d-OpsCoverage.RECENT_WEEKS*7)); })();
+  const recentWeeks=OpsCoverage.RECENT_WEEKS;
+  const bases=resBases().filter(b=>b.ll);
+  const mobility=OpsCoverage.officeMobility(pts, d=>weekOf(d));
+  const vendorZip=resVendorCostByZip();
+
+  return OpsCoverage.clusterByRadius(pts, mapRadius).map(c=>{
+    const mem=c.members;
+    const ll=OpsCoverage.centroid(mem);
+    const towns=new Map(); mem.forEach(p=>towns.set(mapCityFor(p.zip),(towns.get(mapCityFor(p.zip))||0)+1));
+    const ranked=[...towns.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+
+    const near=OpsCoverage.nearestBase(ll,bases,b=>b.cfg);
+    const byRes=k=>mem.filter(p=>p.r.resource===k);
+    const rep=byRes('Sales Rep'), vend=byRes('Radicl Services'), inhouse=byRes('SunPower Surveyor');
+
+    // Every per-week rate is measured over the recent window, never the whole
+    // dataset — see marketAdvice(). Historical totals stay available beside
+    // them so a market that has gone quiet still says how big it once was.
+    const recent=mem.filter(p=>p.date&&p.date>=recentFrom);
+    const recentVend=recent.filter(p=>p.r.resource==='Radicl Services');
+
+    const repDone=rep.filter(p=>everCompleted(p.r));
+    const repDefects=repDone.filter(p=>isResurveyDefect(p.r)).length;
+
+    const vendorUsd=mem.reduce((a,p)=>a+((vendorZip[p.zip]||{}).usd||0),0);
+    const vendorVisits=mem.reduce((a,p)=>a+((vendorZip[p.zip]||{}).visits||0),0);
+
+    const m={
+      key:c.seed.st+'|'+ranked[0][0]+'|'+c.seedIndex,
+      name:ranked[0][0], st:c.seed.st, towns:ranked, ll, rows:mem.map(p=>p.r),
+      n:mem.length, perWeek:mem.length/weeks,
+      recentN:recent.length, recentPerWeek:recent.length/recentWeeks,
+      rep:rep.length, vendor:vend.length, inhouse:inhouse.length,
+      outsourcedPerWeek:recentVend.length/recentWeeks,
+      repDone:repDone.length,
+      repShare:mem.length?rep.length/mem.length:0,
+      repDefectRate:repDone.length?repDefects/repDone.length:null,
+      mobileShare:OpsCoverage.mobileShare(mem,mobility),
+      baseName:near?near.base.name.split(' ')[0]:'—',
+      baseMiles:near?near.miles:null,
+      reach:near?near.reach:OpsCoverage.REACH.FAR,
+      base:near?near.base:null,
+      vendorUsd:vendorVisits?vendorUsd:null, vendorVisits,
+      vendorPerSurvey:vendorVisits?vendorUsd/vendorVisits:null,
+    };
+    m.capacity = near ? OpsCoverage.weeklyCapacity(near.miles, near.base.cfg) : null;
+    m.advice = OpsCoverage.marketAdvice(m);
+    return m;
+  }).sort((a,b)=>a.advice.rank-b.advice.rank || b.outsourcedPerWeek-a.outsourcedPerWeek || b.n-a.n);
+}
+
+function setResView(v){ if(resView===v) return; resView=v; renderResource(); }
+
+function renderResource(){
+  const el=document.getElementById('res-content'); if(!el) return;
+  const pending = (!_roster&&!_rosterErr) || !MAPGEO.zips;
+  if(pending){
+    if(!_roster&&!_rosterErr) resEnsure();
+    if(!MAPGEO.zips) mapEnsureGeo().then(()=>renderResource());
+    el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading the team and geography…</div></div>';
+    return;
+  }
+  if(!_roster){
+    el.innerHTML=`<div class="sec"><div class="shead"><div><div class="stitle">No roster</div>
+      <div class="ssub">roster.json could not be loaded — ${esc(_rosterErr||'')}</div></div></div></div>`;
+    return;
+  }
+  if(!_billing&&!_billingErr) billingEnsure();
+
+  const bases=resBases();
+  const markets=resMarkets();
+  const pts=resPoints(), weeks=resWeeks(pts);
+
+  // Team-wide capacity at each surveyor's own home market distance, which is
+  // the optimistic case: it assumes they work close in.
+  const teamCap=bases.reduce((a,b)=>a+(OpsCoverage.weeklyCapacity(8,b.cfg)||0),0);
+  const inhouseNow=markets.reduce((a,m)=>a+m.inhouse,0)/weeks;
+  const outsourcedNow=markets.reduce((a,m)=>a+m.outsourcedPerWeek,0);
+  const absorbable=markets.filter(m=>m.advice.k==='absorb').reduce((a,m)=>a+m.outsourcedPerWeek,0);
+  const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
+  const perVendor=billSum?billSum.perSurvey:null;
+  const perInhouse=teamCap?resWeeklyCost()/ (teamCap/bases.length) :null;
+
+  const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
+    +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
+
+  el.innerHTML=`
+    <div class="srail">
+      ${cell('In-house team',bases.length,bases.filter(b=>b.ll).length+' placed',TIP.resTeam)}
+      ${cell('Weekly capacity',_r1(teamCap),'surveys, close in',TIP.resCapacity)}
+      ${cell('Doing now',_r1(inhouseNow),'a week',TIP.resNow)}
+      ${cell('Headroom',_r1(Math.max(teamCap-inhouseNow,0)),'unused a week',TIP.resHeadroom)}
+      ${cell('Outsourced',_r1(outsourcedNow),'a week',TIP.resOutsourced)}
+      ${cell('In reach today',_r1(absorbable),'of that, absorbable',TIP.resAbsorb)}
+    </div>
+
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">What to do, market by market</div>
+        <div class="ssub">One action per market from four facts: can we reach it, is there enough work, is that work durable, and who is doing it badly. Markets are ${mapRadius}-mile clusters — the Map's radius control sets this too.</div></div>
+        <div class="toggle-group">
+          ${['markets','team'].map(v=>`<button class="tgl-btn${resView===v?' active':''}" onclick="setResView('${v}')">${v==='markets'?'Markets':'The team'}</button>`).join('')}
+        </div>
+      </div>
+      <div id="res-body"></div>
+    </div>
+
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Build vs buy</div>
+      <div class="ssub">The vendor side is measured from ${_billing?'the imported statements':'nothing yet — import a statement on the Billing page'}. The in-house side is an estimate you can correct in Settings.</div></div></div>
+      <div class="res-bvb">
+        <div class="res-bvb-col">
+          <div class="klabel">Vendor, all-in</div>
+          <div class="res-bvb-v">${_rmoney(perVendor)}</div>
+          <div class="note">per survey${billSum?', across '+billSum.surveys+' billed visits. Includes travel adders and demobilisation — the base rate alone understates it by 37%.':''}</div>
+        </div>
+        <div class="res-bvb-col">
+          <div class="klabel">In-house, loaded</div>
+          <div class="res-bvb-v">${_rmoney(perInhouse)}</div>
+          <div class="note">per survey at ${_r1(teamCap/Math.max(bases.length,1))} a week each — ${_rmoney(resWeeklyCost())}/week fully loaded, an <b>estimate</b>. Falls as utilisation rises and rises with drive time.</div>
+        </div>
+        <div class="res-bvb-col">
+          <div class="klabel">Gap</div>
+          <div class="res-bvb-v ${perVendor&&perInhouse&&perInhouse<perVendor?'good':''}">${perVendor&&perInhouse?_rmoney(perVendor-perInhouse):'—'}</div>
+          <div class="note">per survey moved in-house, before quality. In-house also runs ${'4.2d vs 8.3d'} and 94.1% vs 87.6% first-pass yield.</div>
+        </div>
+      </div>
+    </div>`;
+
+  _renderResBody(markets,bases,weeks);
+}
+
+function _renderResBody(markets,bases,weeks){
+  const host=document.getElementById('res-body'); if(!host) return;
+
+  if(resView==='team'){
+    host.innerHTML=`
+      <table class="tbl"><thead><tr>
+        <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
+        <th class="r">Doing now</th><th class="r">Headroom</th><th>Constraints</th><th>Contact</th>
+      </tr></thead><tbody>
+        ${bases.map(b=>{
+          const cap=b.ll?OpsCoverage.weeklyCapacity(8,b.cfg):null;
+          const mine=b.ll?markets.filter(m=>m.base&&m.base.id===b.id):[];
+          const now=mine.reduce((a,m)=>a+m.inhouse,0)/weeks;
+          const off=(b.off||[]).join(', ');
+          return `<tr>
+            <td>${esc(b.name)}${b.ll?'':' <span class="pill sev-high">ZIP not placed</span>'}</td>
+            <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
+            <td style="color:var(--muted);">${b.days}<div class="bill-sfmeta">${off?'off '+esc(off):''}</div></td>
+            <td class="r">${_r1(cap)}</td>
+            <td class="r">${_r1(now)}</td>
+            <td class="r"><b>${_r1(cap!=null?Math.max(cap-now,0):null)}</b></td>
+            <td>${((b.constraints||[]).map(c=>`<span class="pill">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
+            <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>
+      <div class="note" style="margin-top:10px;line-height:1.7;">
+        Capacity is the drive-time model at a tight 8-mile market — the optimistic case. It falls as the drive grows:
+        ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
+        Every knob (hours, time on site, admin, speed, day radius) is per-surveyor and overridable in roster.json.
+        <b>Constraints are recorded, not yet modelled</b> — nothing here divides capacity by them.
+      </div>`;
+    return;
+  }
+
+  const act=a=>`<span class="res-act res-act-${a.k}">${esc(a.label)}</span>`;
+  host.innerHTML=`
+    <table class="tbl res-tbl"><thead><tr>
+      <th>Market</th><th>Action</th><th class="r">Jobs/wk<br><span style="font-weight:400;color:var(--faint);">last 8wk</span></th><th>Who does it now</th>
+      <th class="r">Nearest base</th><th class="r">Vendor cost</th><th>Why</th>
+    </tr></thead><tbody>
+      ${markets.filter(m=>m.n>=3).slice(0,40).map(m=>{
+        const tot=Math.max(m.rep+m.vendor+m.inhouse,1);
+        const bar=[['rep',m.rep,'var(--faint)'],['vendor',m.vendor,'var(--amber)'],['inhouse',m.inhouse,'var(--blue)']]
+          .filter(x=>x[1]>0)
+          .map(x=>`<span class="res-seg" style="width:${x[1]/tot*100}%;background:${x[2]};" title="${x[1]} ${x[0]}"></span>`).join('');
+        const reachLbl=m.reach==='day'?'day trip':m.reach==='deploy'?'posting':'out of range';
+        return `<tr class="drill-tgt" role="button" tabindex="0"
+          ${drillAttrs("openDrill('"+String(m.name).replace(/'/g,"\\'")+"', '"+m.n+" jobs · "+reachLbl+"', _resRows('"+m.key.replace(/'/g,"\\'")+"'), {mode:'place'})")}>
+          <td><b>${esc(m.name)}</b>, ${esc(m.st)}<div class="bill-sfmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' · '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
+          <td>${act(m.advice)}</td>
+          <td class="r">${_r1(m.recentPerWeek)}${m.advice.k==='dormant'?`<div class="bill-sfmeta">${m.n} all-time</div>`:''}</td>
+          <td><div class="res-mix">${bar}</div><div class="bill-sfmeta">${m.rep} rep · ${m.vendor} vendor · ${m.inhouse} in-house</div></td>
+          <td class="r" style="white-space:nowrap;">${m.baseMiles!=null?Math.round(m.baseMiles)+'mi':'—'}<div class="bill-sfmeta">${esc(m.baseName)} · ${reachLbl}</div></td>
+          <td class="r" style="white-space:nowrap;">${m.vendorPerSurvey!=null?_rmoney(m.vendorPerSurvey):'<span class="pna">—</span>'}${m.vendorVisits?`<div class="bill-sfmeta">${m.vendorVisits} billed</div>`:''}</td>
+          <td style="max-width:230px;white-space:normal;color:var(--muted);font-size:11px;">${m.advice.reasons.map(esc).join('; ')}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>
+    <div class="note" style="margin-top:10px;">Markets under 3 jobs are omitted — ${markets.filter(m=>m.n<3).length} of ${markets.length}. Rows open the underlying surveys.</div>
+    <button class="copy-btn" onclick="copyTableEl('res-body',this,'markets')">Copy table</button>`;
+}
+
+// Drill support: markets are rebuilt per render, so the drill resolves by key.
+function _resRows(key){
+  const m=resMarkets().find(x=>x.key===key);
+  return m?m.rows:[];
+}
+
 // ═══ BILLING ══════════════════════════════════════════════
 // Third-party surveyor invoices, reconciled against Salesforce.
 //
@@ -5982,6 +6308,8 @@ window.addEventListener('resize',()=>{
 // needs to be private, the answer is Vercel Deployment Protection, not a flag.
 let _billing = null, _billingLoad = null, _billingErr = null;
 let billingFlag = 'all', billingVendor = 'all', billingQ = '';
+let billAcctSortKey = 'usd', billAcctSortAsc = false;
+let _billImpFile = null;
 
 // Fetched rather than baked into the page: billing.json is written by
 // parse-radicl.js on its own cadence, which is not the daily data push.
@@ -5998,6 +6326,12 @@ function billingEnsure(){
 const _bmoney = n => n==null?'—':'$'+Math.round(n).toLocaleString();
 const _bpct = n => n==null?'—':Math.round(n*100)+'%';
 
+// State comes off the matched Salesforce address, the same ", ST ZIP" capture
+// the Map page uses (MAP_ZIP_RE) — a statement's own address column has no
+// state on it. A line with no SF match has no known state.
+const _billState = l => { const m=(l&&l.match&&l.match.address||'').match(MAP_ZIP_RE); return m?m[1].toUpperCase():null; };
+const _billAcctState = entry => { const m=(entry.lines||[]).find(l=>l.match); return m?_billState(m):null; };
+
 function billingRows(){
   if(!_billing) return [];
   const lines = billingVendor==='all' ? _billing.lines : _billing.lines.filter(l=>(l.vendor||'radicl')===billingVendor);
@@ -6006,7 +6340,14 @@ function billingRows(){
 
 function setBillingFlag(k){ if(billingFlag===k) return; billingFlag=k; renderBilling(); }
 function setBillingVendor(v){ if(billingVendor===v) return; billingVendor=v; renderBilling(); }
-function setBillingQ(v){ billingQ=v; _renderBillingTable(); }
+function setBillingQ(v){ billingQ=v; _renderBillingTable(); _renderBillingAccounts(); }
+// Text columns open A to Z, numeric ones highest-first — same rule Performance
+// and Quality's group tables use.
+function billAcctSortBy(k){
+  if(billAcctSortKey===k) billAcctSortAsc=!billAcctSortAsc;
+  else { billAcctSortKey=k; billAcctSortAsc=(k==='name'||k==='state'); }
+  _renderBillingAccounts();
+}
 
 function renderBilling(){
   const el=document.getElementById('billing-content'); if(!el) return;
@@ -6081,6 +6422,14 @@ function renderBilling(){
     </div>
 
     <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Cost per account</div>
+        <div class="ssub">What an account actually cost across every line it drew — a survey plus its travel adders and any rework, not a per-survey average.</div></div>
+      </div>
+      <div id="bill-accounts"></div>
+    </div>
+
+    <div class="sec">
       <div class="shead"><div><div class="stitle">Statements imported</div>
       <div class="ssub">History is what makes a duplicate visible — re-importing a statement replaces its lines, it never appends them twice.</div></div></div>
       <table class="tbl"><thead><tr><th>Statement</th><th>Vendor</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
@@ -6093,9 +6442,34 @@ function renderBilling(){
             <td style="color:var(--faint);white-space:nowrap;">${esc(st.imported||'')}</td></tr>`;
         }).join('')}
       </tbody></table>
+    </div>
+
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Import statement</div>
+        <div class="ssub">Parses a vendor statement the same way the terminal import does (<code style="font-size:11px;">node parse-radicl.js</code>), then commits it — live for everyone in ~30 seconds.</div></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${Object.keys(OpsBilling.VENDORS).length>1?`
+        <select id="bill-imp-vendor" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text);">
+          ${Object.values(OpsBilling.VENDORS).map(v=>`<option value="${esc(v.id)}"${v.id===OpsBilling.DEFAULT_VENDOR?' selected':''}>${esc(v.name)}</option>`).join('')}
+        </select>`:''}
+        <input type="file" id="bill-imp-file" accept=".xlsx,.xls" style="display:none;" onchange="billingImportPick(this.files[0])">
+        <button class="fbtn" onclick="document.getElementById('bill-imp-file').click()">Choose statement…</button>
+        <span id="bill-imp-filename" style="font-size:12px;color:var(--muted);"></span>
+      </div>
+      <div id="bill-imp-save" style="display:none;margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;" id="bill-imp-summary"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="password" id="bill-imp-password" placeholder="Update password" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+          <button class="mbtn" onclick="billingImportSave()" id="bill-imp-btn">Import</button>
+        </div>
+        <div id="bill-imp-status" style="font-size:12px;color:var(--muted);margin-top:7px;min-height:16px;"></div>
+      </div>
     </div>`;
 
   _renderBillingTable();
+  _renderBillingAccounts();
 }
 
 function _renderBillingTable(){
@@ -6124,7 +6498,7 @@ function _renderBillingTable(){
 
   host.innerHTML = rows.length ? `
     <table class="tbl bill-tbl"><thead><tr>
-      <th>Date</th><th>Account</th><th>Charge</th><th class="r">Cost</th>
+      <th>Date</th><th>Account</th><th>State</th><th>Charge</th><th class="r">Cost</th>
       <th>Salesforce</th><th>Also flagged</th><th>Statement</th>
     </tr></thead><tbody>
       ${rows.slice(0,400).map(l=>{
@@ -6141,6 +6515,7 @@ function _renderBillingTable(){
         return `<tr>
           <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}</td>
           <td><div>${esc(l.name||'—')}</div><div class="bill-sfmeta">${esc(l.address||'')}</div></td>
+          <td style="color:var(--muted);">${esc(_billState(l)||'—')}</td>
           <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="bill-sfmeta">after ${esc(prior)}</div>`:''}</td>
           <td class="r" style="white-space:nowrap;">${_bmoney(OpsBilling.usd(Math.abs(l.units||0),l.vendor))}</td>
           <td>${sf}</td>
@@ -6152,6 +6527,112 @@ function _renderBillingTable(){
     ${rows.length>400?`<div class="note" style="margin-top:8px;">Showing the newest 400 of ${rows.length}. Narrow with search.</div>`:''}
     <button class="copy-btn" onclick="copyTableEl('bill-table',this,'charges')">Copy table</button>`
     : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
+}
+
+function _renderBillingAccounts(){
+  const host=document.getElementById('bill-accounts'); if(!host) return;
+  const recon=billingRows();
+  let accounts=OpsBilling.byAccount(recon);
+
+  if(billingQ){
+    const q=billingQ.toLowerCase();
+    accounts=accounts.filter(a=>[a.name,a.address].filter(Boolean).join(' ').toLowerCase().includes(q));
+  }
+
+  const multiVendor=new Set(accounts.map(a=>a.vendor)).size>1;
+  const val={
+    name:a=>(a.name||'').toLowerCase(), state:a=>_billAcctState(a)||'',
+    vendor:a=>OpsBilling.vendor(a.vendor).name, visits:a=>a.visits, lines:a=>a.lines.length, usd:a=>a.usd,
+  }[billAcctSortKey]||(a=>a.usd);
+  const dir=billAcctSortAsc?1:-1;
+  // Blanks sink in both directions, same rule as every other sortable table.
+  const sorted=[...accounts].sort((a,b)=>{
+    const av=val(a), bv=val(b);
+    if(av===''||av==null) return 1; if(bv===''||bv==null) return -1;
+    return typeof av==='string'?dir*av.localeCompare(bv):dir*(av-bv);
+  });
+
+  const th=(k,label,cls)=>{
+    const on=billAcctSortKey===k, arrow=on?(billAcctSortAsc?'sarr-up':'sarr-dn'):'sarr-no';
+    return `<th class="${cls||''}" tabindex="0" role="button" aria-sort="${on?(billAcctSortAsc?'ascending':'descending'):'none'}" onclick="billAcctSortBy('${k}')" style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
+  };
+
+  host.innerHTML = sorted.length ? `
+    <table class="tbl bill-tbl"><thead><tr>
+      ${th('name','Account')}${th('state','State')}${multiVendor?th('vendor','Vendor'):''}
+      ${th('visits','Visits','r')}${th('lines','Lines','r')}${th('usd','Total cost','r')}
+    </tr></thead><tbody>
+      ${sorted.slice(0,400).map(a=>{
+        const counts={};
+        a.lines.forEach(l=>{ const k=l.subtype||l.type||'—'; counts[k]=(counts[k]||0)+1; });
+        const breakdown=Object.entries(counts).map(([k,n])=>`${n} ${k}`).join(' + ');
+        return `<tr>
+          <td><div>${esc(a.name||'—')}</div><div class="bill-sfmeta">${esc(a.address||'')}</div></td>
+          <td style="color:var(--muted);">${esc(_billAcctState(a)||'—')}</td>
+          ${multiVendor?`<td style="color:var(--muted);">${esc(OpsBilling.vendor(a.vendor).name)}</td>`:''}
+          <td class="r">${a.visits}</td>
+          <td class="r">${a.lines.length}<div class="bill-sfmeta">${esc(breakdown)}</div></td>
+          <td class="r" style="white-space:nowrap;">${_bmoney(a.usd)}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>
+    ${sorted.length>400?`<div class="note" style="margin-top:8px;">Showing the top 400 of ${sorted.length} by the current sort.</div>`:''}
+    <button class="copy-btn" onclick="copyTableEl('bill-accounts',this,'account costs')">Copy table</button>`
+    : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
+}
+
+// ── Import statement (in-app) ────────────────────────────────────────────
+// Parses through the exact same lib/statement-import.cjs the CLI runs
+// (api/update-billing.js), so an upload here and `node parse-radicl.js`
+// from the terminal behave identically — one parser, two entry points.
+function billingImportPick(file){
+  if(!file) return;
+  _billImpFile=file;
+  document.getElementById('bill-imp-filename').textContent=file.name;
+  document.getElementById('bill-imp-summary').textContent=`Ready to import "${file.name}".`;
+  document.getElementById('bill-imp-save').style.display='';
+  const status=document.getElementById('bill-imp-status');
+  status.textContent=''; status.style.color='';
+  const btn=document.getElementById('bill-imp-btn');
+  btn.disabled=false; btn.textContent='Import';
+}
+function _fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=()=>reject(new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
+}
+async function billingImportSave(){
+  if(!_billImpFile) return;
+  const pw=document.getElementById('bill-imp-password').value.trim();
+  const status=document.getElementById('bill-imp-status');
+  if(!pw){ status.textContent='Enter the update password.'; return; }
+  const vendorSel=document.getElementById('bill-imp-vendor');
+  const vendor=vendorSel?vendorSel.value:OpsBilling.DEFAULT_VENDOR;
+  const btn=document.getElementById('bill-imp-btn');
+  btn.disabled=true; btn.textContent='Importing…'; status.style.color=''; status.textContent='Parsing and pushing to GitHub — live in ~30 seconds…';
+  try{
+    const fileBase64=await _fileToBase64(_billImpFile);
+    const res=await fetch('/api/update-billing',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({fileBase64,filename:_billImpFile.name,vendor,password:pw})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Unknown error');
+    _billing=data.history; _billingErr=null;
+    status.style.color='var(--green)';
+    status.textContent=`Imported — ${data.report.lines} lines, ${_bmoney(data.report.usd)}`
+      +(data.report.replaced?` (replaced ${data.report.replaced} previously imported line${data.report.replaced===1?'':'s'})`:'')
+      +'. Live for everyone in ~30 seconds.';
+    btn.textContent='Imported';
+    document.getElementById('bill-imp-password').value='';
+    _billImpFile=null;
+    setTimeout(renderBilling,1500);
+  }catch(err){
+    status.style.color='var(--red)';
+    status.textContent='Error: '+err.message;
+    btn.disabled=false; btn.textContent='Import';
+  }
 }
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
