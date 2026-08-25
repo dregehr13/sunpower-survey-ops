@@ -163,6 +163,19 @@ if (backwards.length) warnings.push(`${backwards.length} row(s) surveyed before 
 const rsBackwards = rows.filter(r => r.resurvey_requested && r.resurvey_complete && r.resurvey_complete < r.resurvey_requested);
 if (rsBackwards.length) warnings.push(`${rsBackwards.length} row(s) resurvey complete before requested: ${sample(rsBackwards, r => `${label(r)} (${r.resurvey_requested} → ${r.resurvey_complete})`)}`);
 
+// Counted as a resurvey on the Reopened by Design checkbox alone. hasResurveySig()
+// treats that flag as evidence, so a single stray tick moves a clean survey into
+// the resurvey population and charges it against FPY. 470 of the 471 flagged rows
+// carry a reason, a date or details beside it; the odd one out (7502HARM, whose
+// review note read SITE SURVEY COMPLETE and nothing else) was invisible until
+// someone went looking. The classification rule deliberately stays in
+// Salesforce's vocabulary rather than inferring "not really a resurvey" from an
+// absence — see isResurveyDefect in lib/metrics.cjs — so this warning is how such
+// a row gets found and fixed at the source.
+const SF_TASK = 'https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
+const bareFlag = rows.filter(r => r.reopened_by_design === '1' && !r.resurvey_reason && !r.resurvey_attributed && !r.resurvey_requested && !r.resurvey_scheduled && !r.resurvey_complete && !r.resurvey_details);
+if (bareFlag.length) warnings.push(`${bareFlag.length} row(s) counted as a resurvey on the Reopened by Design flag alone — no reason, no dates, no details (untick it in SF, or set the reason): ${sample(bareFlag, r => `${label(r)}${r.task_id ? ' ' + SF_TASK + r.task_id + '/view' : ''}`)}`);
+
 // Real records missing a Sales Region (kept, but region-based groupings skip them)
 const noRegion = rows.filter(r => !r.region);
 if (noRegion.length) warnings.push(`${noRegion.length} row(s) missing Sales Region (kept; fix in SF to restore region grouping): ${sample(noRegion, label)}`);

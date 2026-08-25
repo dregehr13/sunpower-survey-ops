@@ -49,7 +49,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - `test/snapshot.test.js` — every metric against a frozen real-data fixture (`test/fixtures/rows.json`, rebuilt by `scripts/build-fixture.cjs`). A definition change fails with a value diff; accept it deliberately with `UPDATE_SNAPSHOT=1 npm test`
   - `test/surfaces.test.js` — static cross-surface guards: no surface may reimplement the completion test, read a data.js const off `window`, band inline, redefine a shared definition, destructure a name metrics.cjs doesn't export, or leave a `TIP` entry unreferenced
 - **`docs/METRICS.md` is the metric register** — every displayed number, its definition, and which surfaces read it. Update it when adding a metric
-- parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
+- parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings, resurveys resting on a bare `reopened_by_design` flag); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
 - **Sales office is a global filter** alongside Region, applied through `gfDim` **and `applyFilter`** so it reaches every page. It only ever lived in `gfDim`, which meant Performance — the one page reading `filtered` — showed an active button, a chip and identical numbers (fixed 2026-08-14). Both the filter and the Resurveys breakdown hide/fall back on exports predating 2026-08-06, which have no office field
 - **One label scale, every page** (added 2026-08-17). A single 10px uppercase `.05em` style used to do four jobs at once, so four ranks of information read as one. The seven roles: section/KPI label 11/600/.07em uppercase `--muted` · panel title 13/700 sentence `--text` · panel subtitle 11/400 `--faint` · table header 11/700 sentence `--muted` · chart legend 11/400 `--muted` · axis tick 10/400 `--faint` · footnote 10/400 `--faint`. **10px survives only as axis ticks and footnotes**
 - **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was
@@ -324,10 +324,18 @@ One drawer serves ~30 entry points across all six pages. Things not to undo:
 - The 5% resurvey-rate ceiling paints nearly every sales office red at the
   current 15.6% rate. Correct against a 95% target, but worth a look before it
   is treated as settled
-- Doug is tagging ~19 accounts in SF as "Unnecessary Request" — bare
-  `reopened_by_design` flags with no reason, no dates and review notes reading
-  "RESURVEY NOT NEEDED". They fall out of FPY automatically once tagged
-  (83.3% → ~84.1%); no code change needed
+- ~~Doug is tagging ~19 accounts in SF as "Unnecessary Request"~~ — all but one
+  done (58 rows now carry the reason; FPY 83.3% → 84.2%). The survivor is
+  7502HARM, which is not a resurvey at all: `reopened_by_design` is ticked with
+  no reason, no attribution, no dates, no details, and a review note reading
+  SITE SURVEY COMPLETE. Confirmed against the raw export — Salesforce ships the
+  tick, it is not a parse artefact. **The import sanity report now finds these**
+  (2026-08-25): parse-sf.js warns on any row counted as a resurvey on the flag
+  alone and prints its SF link, so the row is fixed at the source instead of
+  being excluded in code. That rule has been proposed twice and rejected twice —
+  see `isResurveyDefect` — because it has the dashboard inferring "not really a
+  resurvey" from an absence. 470 of 471 flagged rows corroborate; zero rows
+  carry resurvey evidence without the flag, so the flag itself is sound
 - ~~Doug is backfilling the ~74 resurveys with no `resurvey_attributed`~~ — done,
   2 rows remain. The result (90% Surveyor) is what retired the attribution panel
 - Not built, raised and parked: `survey_type` is unused everywhere and Battery
