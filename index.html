@@ -594,6 +594,25 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    every open, so that mode gets a wider drawer instead. */
 .drill-panel.wide{width:min(820px,100vw);}
 
+/* Billing. The flag chips are the page's control: each is a rule, its count
+   and what it is worth. Severity colours the left edge only — a whole tinted
+   card would say "error" about rules that are deliberately informational. */
+.bill-flags{display:flex;flex-wrap:wrap;gap:8px;}
+.bill-flag{flex:1 1 150px;min-width:150px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;}
+.bill-flag.sev-high{border-left-color:var(--red);}
+.bill-flag.sev-med{border-left-color:var(--amber);}
+.bill-flag.sev-info{border-left-color:var(--border);}
+.bill-flag.on{background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);}
+.bill-flag-n{font-size:19px;font-weight:600;color:var(--text);line-height:1.2;}
+.bill-flag-l{font-size:11px;color:var(--muted);margin-top:1px;}
+.bill-flag-v{font-size:11px;color:var(--faint);margin-top:3px;}
+.bill-sfmeta{font-size:10px;color:var(--faint);margin-top:2px;}
+.bill-pill{font-size:10px;}
+.bill-pill.sev-high{color:var(--red);}
+.bill-pill.sev-med{color:var(--amber);}
+.bill-pill.sev-info{color:var(--muted);}
+.bill-tbl td{vertical-align:top;}
+
 /* Sortable drawer headers. Same vocabulary as every other table in the app —
    .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
    way the Performance and WIP tables already do. */
@@ -1000,6 +1019,7 @@ body{padding-left:180px;}
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
+  <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼</div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge"></span>
@@ -1032,6 +1052,7 @@ body{padding-left:180px;}
 <div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
 <div id="page-map"         class="page">     <div id="fb-map"></div>         <div id="map-content"></div></div>
+<div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
 
@@ -1131,6 +1152,8 @@ body{padding-left:180px;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
 <script src="lib/metrics.cjs"></script>
+<script src="lib/coverage.cjs"></script>
+<script src="lib/billing.cjs"></script>
 <script src="data.js"></script>
 <script>
 // Guard: if data.js or the chart CDN failed to load, show a recoverable error instead of a blank page
@@ -1139,6 +1162,8 @@ body{padding-left:180px;}
   if (typeof RAW === 'undefined') missing.push('the data file (data.js)');
   if (typeof Chart === 'undefined') missing.push('the chart library');
   if (typeof OpsMetrics === 'undefined') missing.push('the metrics library (lib/metrics.cjs)');
+  if (typeof OpsCoverage === 'undefined') missing.push('the coverage library (lib/coverage.cjs)');
+  if (typeof OpsBilling === 'undefined') missing.push('the billing library (lib/billing.cjs)');
   if (!missing.length) return;
   document.body.innerHTML =
     '<div style="max-width:420px;margin:80px auto;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a;">'
@@ -1262,7 +1287,7 @@ const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','wip','performance','trends','resurvey','map','data'];
+const PAGES = ['week','wip','performance','trends','resurvey','map','billing','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -1921,6 +1946,7 @@ function renderPage(p){
   if(p==='wip')         renderAgingWIP();
   if(p==='resurvey')    renderResurvey();
   if(p==='map')         renderMap();
+  if(p==='billing')     renderBilling();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
   requestAnimationFrame(()=>animateSections('page-'+p));
@@ -2050,13 +2076,19 @@ const TIP={
 
   // ── Map ──
   mapLocation:'Position comes from the ZIP in the installation address, not the Sales Region. Region is a sales territory, not a place: 317 of Virginia\'s rows are tagged "VA Richmond" while the addresses run from Burke to King George. Reading the address also places the rows whose Region is blank, which no other view can show.',
-  mapVolume:'Job density. Each ZIP contributes a blob weighted by how many jobs it holds, and overlapping blobs add together, so colour reads as concentration rather than any single survey.',
+  mapVolume:'Job density. Each market contributes a blob weighted by how many jobs it holds, and overlapping blobs add together, so colour reads as concentration rather than any single survey.',
   mapCycle:'Average Project Start to Site Survey Complete for the completed jobs in each ZIP, banded against the same targets as every other card. ZIPs below the minimum sample are drawn hollow rather than coloured.',
   mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
-  mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a town for its average days open.',
+  mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a market for its average days open.',
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
-  mapTopLocation:'The town holding the most jobs in view. Towns are grouped by name, not by ZIP — a town spanning several ZIPs is one place here.',
+  billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
+  billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an in-house surveyor against, not the base rate.',
+  billTravel:'Adders applied beyond the vendor\'s free radius. Not an error, and tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
+  billCleanup:'Return visits to finish a survey another resource started, billed at the full first-visit rate. This is what an incomplete first survey costs, and the invoice is the only place it is recorded.',
+  billRework:'Return visits to a job this vendor already did. Billed at the full first-visit rate like everything else — whether that is contractually right is the question the queue raises.',
+  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict — the tool compares the invoice to Salesforce and does not know the contract.',
+  mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -2247,6 +2279,8 @@ function drillCols(mode,shown,today){
       sortVal:r=>(r.resource||'').toLowerCase(), txt:r=>r.resource||'', cell:r=>_drillResSpan(r.resource)},
     rep:{k:'rep',label:'Sales Rep',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
       sortVal:r=>(r.sales_rep||'').toLowerCase(), txt:r=>r.sales_rep||'', cell:r=>hl(r.sales_rep||'—')},
+    office:{k:'office',label:'Sales Office',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>(r.sales_office||'').toLowerCase(), txt:r=>r.sales_office||'', cell:r=>hl(r.sales_office||'—')},
     start:{k:'start',label:'Start',tdStyle:'white-space:nowrap;color:var(--muted);',
       sortVal:r=>r.start||'', txt:r=>r.start||'', cell:r=>r.start?fmtDateShort(r.start):dash},
     complete:{k:'complete',label:'Complete',tdStyle:'white-space:nowrap;color:var(--muted);',
@@ -2281,6 +2315,13 @@ function drillCols(mode,shown,today){
         const c=d>stale?'var(--red)':d>=7?'var(--amber)':'var(--muted)';
         return `<span style="font-weight:700;color:${c};">${d}d</span>`;}},
   };
+  // Map drills are read for "who is selling and surveying here", so they carry
+  // the org columns the other modes leave to search — a town's rate is only
+  // actionable once you can see which office and which reps produced it.
+  if(mode==='place')   return [col.proj,col.region,col.rep,col.office,col.resource,col.start,col.complete,col.days];
+  if(mode==='placeRs') return openRs
+    ? [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
+    : [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsCycle];
   if(mode==='resurvey') return openRs
     ? [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
     : [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsCycle];
@@ -2297,7 +2338,7 @@ function openDrill(title,subtitle,drillRows,opts={}){
   document.getElementById('drill-sub').textContent=subtitle;
   _renderDrill();
   const panel=document.getElementById('drill-panel');
-  panel.classList.toggle('wide',opts.mode==='resurvey');
+  panel.classList.toggle('wide',opts.mode==='resurvey'||opts.mode==='placeRs'||opts.mode==='place');
   panel.classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
   // A modal that never takes focus leaves the keyboard behind it — Tab from the
@@ -5197,7 +5238,7 @@ function mapCities(){
 }
 const mapCityFor=zip=>mapCities()[zip]||zip;
 
-let mapMarket='US', mapMetric='vol';
+let mapMarket='US', mapMetric='vol', mapRadius=OpsCoverage.DEFAULT_RADIUS_MI;
 let mapHoverKey=null, _mapPlaces=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
 let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
 const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
@@ -5205,6 +5246,11 @@ const MAPGEO={zips:null,states:null,cities:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
 
 function setMapMarket(v){ mapMarket=v; mapHoverKey=null; renderMap(); }
+// The radius is the map's one honest judgement call — how far a surveyor
+// drives before a job stops belonging to the same market — so it is a control
+// rather than a constant. Assigns, never toggles: clicking the radius you are
+// already on must no-op, same rule the WIP lens follows.
+function setMapRadius(v){ const r=+v; if(r===mapRadius) return; mapRadius=r; mapHoverKey=null; renderMap(); }
 // The toggles are painted once by renderMap, but switching metric or window
 // only redraws the canvas — without this the highlight stays on whatever was
 // selected at the last full render.
@@ -5314,6 +5360,7 @@ function renderMap(){
   const b=all.length?mapDayBounds(all):null;
 
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
+  const rTgl=r=>`<button class="tgl-btn${mapRadius===r?' active':''}" aria-pressed="${mapRadius===r}" title="Group jobs within ${r} miles of each other into one market" onclick="setMapRadius(${r})">${r}mi</button>`;
 
   el.innerHTML=`
     <div id="map-kpis"></div>
@@ -5331,6 +5378,9 @@ function renderMap(){
           </select>
           <div class="toggle-group">
             ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}
+          </div>
+          <div class="toggle-group" role="group" aria-label="Market radius">
+            ${OpsCoverage.RADIUS_CHOICES.map(r=>rTgl(r)).join('')}
           </div>
         </div>
       </div>
@@ -5376,33 +5426,61 @@ function mapVisible(){
 // not inflate every queue age — same rule the WIP page uses.
 const _mapToday=()=>(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
 
-// Grouped by town, not ZIP. A ZIP is a postal artefact — Glen Allen's two and
-// Fredericksburg's three split one place into several dots and several rows,
-// none of which is the number anyone wants. Position is the job-weighted mean
-// of the constituent ZIP centroids, so a multi-ZIP town lands on its own
-// centre of gravity rather than on whichever ZIP happened to be first.
+// Grouped by MARKET — everything inside one drive radius — not by town.
+//
+// Town grouping made 833 places out of 2,446 jobs and 470 of them held a
+// single job; 73% held two or fewer. That is a map of postal names, not of
+// where the work is, and it cannot answer the question the map exists for:
+// where is there enough work in one place to staff it. Portland read 63 jobs
+// as a town and 267 as a market, because Gresham, Beaverton and 30 other
+// names were each being drawn as their own dot.
+//
+// The market is a radius because a surveyor is a radius. Its name is the
+// town inside it with the most jobs, so the label still reads as a place;
+// the towns it absorbed survive in the tooltip, the subtitle and the drill.
+// Position stays the job-weighted mean, which is now genuinely the market's
+// centre of gravity — and therefore where a base would sit.
 function mapGroup(pts){
   const m=new Map();
-  pts.forEach(p=>{
-    const city=mapCityFor(p.zip);
-    const key=city+'|'+p.st;   // Springfield exists in a dozen states
-    let e=m.get(key);
-    if(!e){ e={key,city,st:p.st,zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],_la:0,_ln:0}; m.set(key,e); }
-    e.n++; e.rows.push(p.r); e.zips.add(p.zip);
-    e._la+=p.ll[0]; e._ln+=p.ll[1];
-    if(isWIP(p.r)){ const d=ssDaysOpen(p.r,_mapToday()); if(d!=null) e.opens.push(d); }
-    if(isComplete(p.r)){
-      e.comps++;
-      if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
-      if(isResurveyDefect(p.r)) e.defects++;
-    }
-  });
-  m.forEach(e=>{
+  const clusters=OpsCoverage.clusterByRadius(pts,mapRadius);
+  clusters.forEach((c,ci)=>{
+    // Name and home state come from the towns inside, by job count. A market
+    // can straddle a state line — Portland's takes in Vancouver WA — so the
+    // state is the majority, not the seed's, and the rest are kept for the
+    // tooltip rather than silently dropped.
+    const towns=new Map(), states=new Map();
+    c.members.forEach(p=>{
+      const t=mapCityFor(p.zip);
+      towns.set(t,(towns.get(t)||0)+1);
+      states.set(p.st,(states.get(p.st)||0)+1);
+    });
+    const ranked=[...towns.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+    const st=[...states.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0][0];
+    const city=ranked[0][0];
+    // Springfield exists in a dozen states, and at a tight radius one state
+    // can hold two clusters that both name themselves after the same town.
+    // The index keeps the key unique without changing what is displayed.
+    let key=city+'|'+st;
+    if(m.has(key)) key=city+'|'+st+'#'+ci;
+    const e={key,city,st,ci,towns:ranked,states:[...states.keys()],
+      zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],_la:0,_ln:0};
+    c.members.forEach(p=>{
+      e.n++; e.rows.push(p.r); e.zips.add(p.zip);
+      e._la+=p.ll[0]; e._ln+=p.ll[1];
+      if(isWIP(p.r)){ const d=ssDaysOpen(p.r,_mapToday()); if(d!=null) e.opens.push(d); }
+      if(isComplete(p.r)){
+        e.comps++;
+        if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
+        if(isResurveyDefect(p.r)) e.defects++;
+      }
+    });
     e.ll=[e._la/e.n,e._ln/e.n];
+    e.spread=OpsCoverage.spreadMi(c.members,e.ll);
     e.avgCt=e.cts.length>=MAP_MIN_N?avg(e.cts):null;
     e.rsRate=e.comps>=MAP_MIN_N?Math.round(e.defects/e.comps*100):null;
     // Queue age, not cycle time — the same number the WIP page triages on.
     e.avgOpen=e.opens.length?avg(e.opens):null;
+    m.set(key,e);
   });
   return m;
 }
@@ -5692,7 +5770,7 @@ function mapPaintMeta(vis,zips){
   const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   k.innerHTML=`<div class="srail">`
-    +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} town${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' markets':''}</span></div></div>`
+    +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} market${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' states':''}</span></div></div>`
     +`<div class="srail-cell"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="srail-val" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}<span class="srail-sub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</span></div></div>`
     +(mapMetric==='wip'
       ? (()=>{ const ages=vis.map(p=>ssDaysOpen(p.r,_mapToday())).filter(x=>x!=null&&x>=0); const a=avg(ages);
@@ -5720,14 +5798,14 @@ function mapPaintMeta(vis,zips){
     const list=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,12);
     const maxN=Math.max(...list.map(z=>z.n),1);
     document.getElementById('map-top-sub').textContent=
-      zips.size?zips.size+' town'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
+      zips.size?zips.size+' market'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
     tl.innerHTML=list.length?list.map(z=>{
       const val=mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
               :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
               :mapMetric==='wip'?(z.avgOpen!=null?z.avgOpen.toFixed(1)+'d avg open':'open')
               :(z.comps+' completed');
-      const nz=z.zips.size;
-      const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):(nz===1?[...z.zips][0]:nz+' ZIPs')),val].join(' · ');
+      const towns=z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town';
+      const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):towns),val].join(' · ');
       const k=esc(z.key).replace(/'/g,"\\'");
       return `<div class="rswk-row drill-tgt" role="button" tabindex="0" onclick="mapDrillPlace('${k}')"
                    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mapDrillPlace('${k}');}">
@@ -5742,7 +5820,7 @@ function mapPaintMeta(vis,zips){
   const lg=document.getElementById('map-legend'); if(!lg) return;
   const sw=(c,t)=>`<span><span class="map-swatch" style="background:var(${c});"></span>${t}</span>`;
   lg.innerHTML=(mapMetric==='vol'||mapMetric==='wip')
-    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapVolume)}</span><span style="color:var(--faint);">${mapMetric==='wip'?'Open surveys only, as of the latest export. Hover a town for its average days open.':'Blob size follows job count; overlaps add.'}</span>`
+    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapVolume)}</span><span style="color:var(--faint);">${mapMetric==='wip'?'Open surveys only, as of the latest export. Hover a market for its average days open.':'Blob size follows job count; overlaps add.'}</span>`
     : mapMetric==='cycle'
       ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`
       : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`;
@@ -5783,19 +5861,24 @@ function mapDrawTicks(){
   }
 }
 
+// A market's subtitle names what it swallowed. ZIP count was the old unit and
+// meant nothing to anyone — "4 ZIPs" does not tell you Salem also covers
+// Albany and Dallas, which is exactly what you need to know before staffing it.
 function mapPlaceSub(z){
-  const nz=z.zips.size;
+  const others=z.towns.length-1;
+  const named=z.towns.slice(1,4).map(t=>t[0]).join(', ');
   return z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st)
-    +' · '+(nz===1?[...z.zips][0]:nz+' ZIPs');
+    +' · within '+mapRadius+'mi'
+    +(others>0?' · with '+named+(others>3?' +'+(others-3)+' more':''):'');
 }
 // The drill follows the mode you were reading. Clicking a town in Resurvey
 // mode used to open the plain Start/Complete table with no reason and no
 // attribution — the two columns the map had just ranked the town by.
 function mapDrillOpts(){
-  if(mapMetric==='rs') return {mode:'resurvey',seg:'rs'};
-  if(mapMetric==='wip') return {sort:'days'};
-  if(mapMetric==='cycle') return {sort:'days'};
-  return {};
+  if(mapMetric==='rs') return {mode:'placeRs',seg:'rs'};
+  if(mapMetric==='wip') return {mode:'place',sort:'days'};
+  if(mapMetric==='cycle') return {mode:'place',sort:'days'};
+  return {mode:'place'};
 }
 function mapDrillPlace(key){
   const z=_mapPlaces.get(key); if(!z) return;
@@ -5851,8 +5934,7 @@ document.addEventListener('mousemove',e=>{
         : mapMetric==='wip'
           ? (z.avgOpen!=null?z.avgOpen.toFixed(1)+'d average in the queue':'')
           : '';
-  const nz=z.zips.size;
-  tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${nz===1?[...z.zips][0]:nz+' ZIPs'}${mapMarket==='US'?' &middot; '+z.st:''}</span><br>`
+  tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town'}${mapMarket==='US'?' &middot; '+z.states.join('/'):''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
     +(val?`<div class="mv">${val}</div>`:'')
     +`<div class="mv" style="opacity:.6;">${mapMarket==='US'?'Click to open '+esc(MAP_STATE_NAMES[z.st]||z.st):'Click for the project list'}</div>`;
@@ -5883,6 +5965,194 @@ window.addEventListener('resize',()=>{
   clearTimeout(_mapRt);
   _mapRt=setTimeout(()=>{ mapResize(); mapDrawHist(); mapDrawTicks(); },140);
 });
+
+// ═══ BILLING ══════════════════════════════════════════════
+// Third-party surveyor invoices, reconciled against Salesforce.
+//
+// The page exists because the invoice is the only place several real costs
+// are recorded, and none of them are labelled: a return visit to finish
+// somebody else's survey bills the same as a fresh one, and a travel adder
+// is a quarter of the spend. Rules and money all come from lib/billing.cjs.
+//
+// VISIBILITY. Public, like every other page — Doug's call 2026-08-25, after a
+// first pass that hid the tab behind a localStorage unlock. That gate was
+// obscurity rather than access control (the data is in the page either way),
+// so with the data committed it bought nothing and was removed rather than
+// left in to imply a protection that was not there. If this ever genuinely
+// needs to be private, the answer is Vercel Deployment Protection, not a flag.
+let _billing = null, _billingLoad = null, _billingErr = null;
+let billingFlag = 'all', billingVendor = 'all', billingQ = '';
+
+// Fetched rather than baked into the page: billing.json is written by
+// parse-radicl.js on its own cadence, which is not the daily data push.
+function billingEnsure(){
+  if(_billing||_billingLoad) return _billingLoad;
+  _billingLoad = fetch('billing.json',{cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); })
+    .then(j=>{ _billing=j; _billingErr=null; })
+    .catch(e=>{ _billingErr=e.message; })
+    .then(()=>{ _billingLoad=null; renderBilling(); });
+  return _billingLoad;
+}
+
+const _bmoney = n => n==null?'—':'$'+Math.round(n).toLocaleString();
+const _bpct = n => n==null?'—':Math.round(n*100)+'%';
+
+function billingRows(){
+  if(!_billing) return [];
+  const lines = billingVendor==='all' ? _billing.lines : _billing.lines.filter(l=>(l.vendor||'radicl')===billingVendor);
+  return OpsBilling.reconcile(lines, allRows);
+}
+
+function setBillingFlag(k){ if(billingFlag===k) return; billingFlag=k; renderBilling(); }
+function setBillingVendor(v){ if(billingVendor===v) return; billingVendor=v; renderBilling(); }
+function setBillingQ(v){ billingQ=v; _renderBillingTable(); }
+
+function renderBilling(){
+  const el=document.getElementById('billing-content'); if(!el) return;
+  if(!_billing && !_billingErr){ billingEnsure(); el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading invoice history…</div></div>'; return; }
+  if(!_billing){
+    el.innerHTML=`<div class="sec">
+      <div class="shead"><div><div class="stitle">No invoice history yet</div>
+      <div class="ssub">No statement has been imported yet.</div></div></div>
+      <div class="note" style="padding:10px 0;line-height:1.7;">
+        Import a statement locally and this page fills in:<br>
+        <code style="font-size:11px;">node parse-radicl.js "~/Downloads/&lt;statement&gt;.xlsx"</code><br>
+        <span style="color:var(--faint);">${esc(_billingErr||'')}</span>
+      </div></div>`;
+    return;
+  }
+
+  const recon=billingRows();
+  const sum=OpsBilling.summarize(recon);
+  const flags=OpsBilling.byFlag(recon);
+  const disputed=flags.filter(f=>f.sev!=='info');
+  const vendors=[...new Set(_billing.lines.map(l=>l.vendor||'radicl'))];
+  const period=(()=>{ const st=_billing.statements||[]; if(!st.length) return '';
+    return fmtDateShort(st[0].from)+' – '+fmtDateShort(st[st.length-1].to); })();
+
+  const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
+    +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
+
+  el.innerHTML=`
+    <div class="srail">
+      ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
+      ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
+      ${cell('Travel adders',_bmoney(sum.travelUsd),_bpct(sum.travelShare)+' of spend',TIP.billTravel)}
+      ${cell('Cleanup work',_bmoney(sum.cleanupUsd),sum.cleanupN+' visits',TIP.billCleanup)}
+      ${cell('Rework',_bmoney(sum.reworkUsd),sum.reworkN+' visits',TIP.billRework)}
+      ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
+    </div>
+
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">What to check</div>
+        <div class="ssub">Every rule is a prompt to check, not a verdict — the tool knows what the invoice says and what Salesforce says, not what the contract allows.</div></div>
+        ${vendors.length>1?`<div class="toggle-group">
+          <button class="tgl-btn${billingVendor==='all'?' active':''}" onclick="setBillingVendor('all')">All vendors</button>
+          ${vendors.map(v=>`<button class="tgl-btn${billingVendor===v?' active':''}" onclick="setBillingVendor('${esc(v)}')">${esc(OpsBilling.vendor(v).name)}</button>`).join('')}
+        </div>`:''}
+      </div>
+      <div class="bill-flags">
+        ${flags.filter(f=>f.n).map(f=>`
+          <div class="bill-flag drill-tgt ${billingFlag===f.k?'on':''} sev-${f.sev}" role="button" tabindex="0"
+               ${drillAttrs("setBillingFlag('"+f.k+"')")}>
+            <div class="bill-flag-n">${f.n}</div>
+            <div class="bill-flag-l">${esc(f.label)}</div>
+            <div class="bill-flag-v">${_bmoney(f.usd)}</div>
+          </div>`).join('')}
+        <div class="bill-flag drill-tgt ${billingFlag==='all'?'on':''}" role="button" tabindex="0" ${drillAttrs("setBillingFlag('all')")}>
+          <div class="bill-flag-n">${recon.filter(OpsBilling.isCharge).length}</div>
+          <div class="bill-flag-l">All charges</div>
+          <div class="bill-flag-v">${_bmoney(sum.usd)}</div>
+        </div>
+      </div>
+      <div class="note" id="bill-flag-why" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle" id="bill-table-title">Charges</div>
+        <div class="ssub" id="bill-table-sub"></div></div>
+        <input class="drill-search" id="bill-search" type="search" placeholder="Search name, address, project…"
+               oninput="setBillingQ(this.value)" style="max-width:240px;">
+      </div>
+      <div id="bill-table"></div>
+    </div>
+
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Statements imported</div>
+      <div class="ssub">History is what makes a duplicate visible — re-importing a statement replaces its lines, it never appends them twice.</div></div></div>
+      <table class="tbl"><thead><tr><th>Statement</th><th>Vendor</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
+        ${(_billing.statements||[]).map(st=>{
+          const ls=_billing.lines.filter(l=>l.statement===st.id);
+          const ch=ls.filter(OpsBilling.isCharge).reduce((a,l)=>a+Math.abs(l.units||0),0);
+          return `<tr><td>${esc(st.file||st.id)}</td><td style="color:var(--muted);">${esc(OpsBilling.vendor(st.vendor).name)}</td>
+            <td style="white-space:nowrap;color:var(--muted);">${st.from?fmtDateShort(st.from)+' – '+fmtDateShort(st.to):'—'}</td>
+            <td class="r">${st.lines}</td><td class="r">${_bmoney(OpsBilling.usd(ch,st.vendor))}</td>
+            <td style="color:var(--faint);white-space:nowrap;">${esc(st.imported||'')}</td></tr>`;
+        }).join('')}
+      </tbody></table>
+    </div>`;
+
+  _renderBillingTable();
+}
+
+function _renderBillingTable(){
+  const host=document.getElementById('bill-table'); if(!host) return;
+  const recon=billingRows();
+  const meta=billingFlag==='all'?null:OpsBilling.exceptionMeta(billingFlag);
+  let rows=billingFlag==='all'
+    ? recon.filter(OpsBilling.isCharge)
+    : recon.filter(l=>(l.flags||[]).includes(billingFlag));
+
+  if(billingQ){
+    const q=billingQ.toLowerCase();
+    rows=rows.filter(l=>[l.name,l.address,l.subtype,l.statement,(l.match||{}).project].filter(Boolean).join(' ').toLowerCase().includes(q));
+  }
+  rows=[...rows].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+
+  const why=document.getElementById('bill-flag-why');
+  if(why) why.innerHTML = meta ? esc(meta.why) : 'Every charge on every imported statement, newest first.';
+  const t=document.getElementById('bill-table-title');
+  if(t) t.textContent = meta ? meta.label : 'All charges';
+  const sub=document.getElementById('bill-table-sub');
+  if(sub){
+    const usd=OpsBilling.usd(rows.reduce((a,l)=>a+Math.abs(l.units||0),0),rows[0]&&rows[0].vendor);
+    sub.textContent = rows.length+' line'+(rows.length===1?'':'s')+' · '+_bmoney(usd);
+  }
+
+  host.innerHTML = rows.length ? `
+    <table class="tbl bill-tbl"><thead><tr>
+      <th>Date</th><th>Account</th><th>Charge</th><th class="r">Cost</th>
+      <th>Salesforce</th><th>Also flagged</th><th>Statement</th>
+    </tr></thead><tbody>
+      ${rows.slice(0,400).map(l=>{
+        const m=l.match;
+        const sf = m
+          ? `<a href="${sfUrl(m)||'#'}" target="_blank" rel="noopener" class="drill-proj-link">${esc(m.project||m.contact||'—')}</a>`
+            +`<div class="bill-sfmeta">${esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
+          : `<span class="pna">no match</span>`;
+        const others=(l.flags||[]).filter(f=>f!==billingFlag).map(f=>{
+          const em=OpsBilling.exceptionMeta(f);
+          return em?`<span class="pill bill-pill sev-${em.sev}">${esc(em.label)}</span>`:'';
+        }).join(' ');
+        const prior=(l.priorLines||[]).map(p=>`${p.subtype} ${fmtDateShort(p.date)}`).join(', ');
+        return `<tr>
+          <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}</td>
+          <td><div>${esc(l.name||'—')}</div><div class="bill-sfmeta">${esc(l.address||'')}</div></td>
+          <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="bill-sfmeta">after ${esc(prior)}</div>`:''}</td>
+          <td class="r" style="white-space:nowrap;">${_bmoney(OpsBilling.usd(Math.abs(l.units||0),l.vendor))}</td>
+          <td>${sf}</td>
+          <td>${others||'<span class="pna">—</span>'}</td>
+          <td style="color:var(--faint);font-size:10px;">${esc((l.statement||'').split('/').pop())}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>
+    ${rows.length>400?`<div class="note" style="margin-top:8px;">Showing the newest 400 of ${rows.length}. Narrow with search.</div>`:''}
+    <button class="copy-btn" onclick="copyTableEl('bill-table',this,'charges')">Copy table</button>`
+    : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
+}
 
 // ═══ SETTINGS PAGE ════════════════════════════════════════
 function renderSettings(){
