@@ -1153,7 +1153,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+const {isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2041,8 +2041,8 @@ const TIP={
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded: nothing was re-surveyed, so the survey did not fail. They are left out of this page entirely, not just out of the percentage.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land. Twenty-one days is about the 79th percentile of that lag.',
   rsCat:'What the request actually asked for, read out of the Resurvey Request Details text — the reason picklist is too coarse to act on, with "Survey Incomplete" carrying 76% of it. A request asks for 2.2 of these on average, so the shares add to more than 100%. Derived from free text, not a Salesforce field: the drill drawer carries the raw reason and the original sentence beside every row.',
-  rsPenalty:'How much longer a job takes when it comes back. Project Start → Resurvey Complete on resurveyed jobs, against Project Start → Site Survey Complete on clean ones, in calendar days. It used to be measured on ct_full (survey time plus resurvey time), which skipped the wait between the survey closing and the resurvey being requested — most of the calendar cost — and so read +5.3d against a true +20.7d.',
-  rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one.',
+  rsPenalty:'How much longer a job takes when it comes back: every calendar day after its own survey had already closed, measured Site Survey Complete → Resurvey Complete. It is the two figures below it added together — the wait before anyone flags it, plus the trip back out. Measured against the job\'s own survey rather than the clean-job average, so it stays comparable when you filter: clean cycle times range 1.1–7.8d by region and 2.8–8.5d by resource, and the old definition subtracted whichever one the filter happened to select.',
+  rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one. Half the flag waits land inside 6 days; the top 10% run past 47.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
   rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
   wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now. A resurvey and a first survey are different work with different clocks, so this is the cut to use when you want the queue the team is actually starting from scratch.',
@@ -4696,24 +4696,52 @@ function renderResurvey(){
   const fmtCt=v=>v!=null?v.toFixed(1)+'d':'—';
 
   // ── what a resurvey costs ─────────────────────────────────────────────
-  // Three facts that add up, so each one can be defended on its own:
-  //   3.2d survey  +  16.2d before anyone flags it  +  6.0d to go back
-  // The old single "cost" figure was avg(ct_full) − avg(clean ct_total), and
-  // ct_full is ct_total + ct_resurvey (parse-sf.js) — it skips the wait between
-  // the survey closing and the resurvey being requested. That wait is most of
-  // the calendar cost, so the figure read +5.3d against a true +20.7d, and it
-  // sat one line above a 6.0d resurvey cycle it was nearly a duplicate of.
-  const cleanCts=completions.filter(r=>!isResurveyDefect(r)).map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
-  const fullCts=defects.filter(r=>r.resurvey_complete&&r.start)
-    .map(r=>dDiff(r.start,r.resurvey_complete)).filter(x=>x!=null&&x>=0);
-  const cleanAvg=avg(cleanCts), cleanMed=med(cleanCts), fullAvg=avg(fullCts), fullMed=med(fullCts);
-  const costAvg=(cleanAvg!=null&&fullAvg!=null)?fullAvg-cleanAvg:null;
-  const costMed=(cleanMed!=null&&fullMed!=null)?fullMed-cleanMed:null;
+  // Measured against the job's OWN survey, not against the clean-job average:
+  // every calendar day after this survey had already closed. That makes the
+  // three figures on the hero a total and its two parts —
+  //   cost = time to flag + resurvey cycle — so they reconcile by construction.
+  //
+  // Two earlier definitions, both wrong, both worth not repeating:
+  //   1. avg(ct_full) − avg(clean ct_total). ct_full is ct_total + ct_resurvey
+  //      (parse-sf.js), which skips the wait before anyone flags the survey —
+  //      most of the calendar cost. Read +5.3d against a true +20.7d.
+  //   2. avg(start → resurvey_complete) − avg(clean ct_total). Right magnitude,
+  //      but a difference of means over two DISJOINT populations, so the number
+  //      moved with the composition of the clean rows rather than the resurveys.
+  //      The subtrahend ranges 1.1–7.8d by region, 1.4–7.1d by office and
+  //      2.8–8.5d by resource, which made the figure incomparable across the
+  //      exact cuts this page's filter bar exists to apply: Radicl's clean jobs
+  //      average 8.5d against a rep's 2.8d, so Radicl's resurveys read 5.7d
+  //      cheaper than a rep's when the true gap is 3.4d.
+  //
+  // Anchor on effectiveComplete, never raw `complete`. On a re-signed account
+  // the original survey predates the restart — 920HHEND's closed in Aug 2025
+  // against an Apr 2026 start — and raw `complete` scores its resurvey at 330
+  // days instead of 99, on its own worth ~0.6d of the national average.
+  // All three come off ONE row set, built once, or the total stops equalling
+  // its parts. Filtering each figure separately let rows fall out of one and
+  // stay in another, three ways:
+  //   · one open resurvey (request, no completion) sat in Time to flag alone
+  //   · two rows are requested BEFORE the survey they follow closed
+  //     (2115MALA, 5474DOCA) — a negative flag, dropped by the >=0 guard
+  // Requiring a coherent timeline on every row costs 3 of 379 and makes the
+  // card reconcile by construction. Excluding the open one also keeps this
+  // page's rule that no live figure appears on it: an unfinished resurvey has
+  // no cost yet.
+  const rsLegs=defects.map(r=>{
+    if(!r.resurvey_complete) return null;
+    const anchor=effectiveComplete(r);
+    const cost=dDiff(anchor,r.resurvey_complete), flag=dDiff(anchor,r.resurvey_requested), cyc=r.ct_resurvey;
+    if(cost==null||flag==null||cyc==null||cost<0||flag<0||cyc<0) return null;
+    return {cost,flag,cyc};
+  }).filter(Boolean);
+  const costVals=rsLegs.map(o=>o.cost);
+  const costAvg=avg(costVals), costMed=med(costVals);
   // Original survey closed → resurvey requested. Not the team's clock, which is
   // exactly why it is worth showing: it is the largest of the three.
-  const flagVals=defects.map(r=>dDiff(r.complete,r.resurvey_requested)).filter(x=>x!=null&&x>=0);
+  const flagVals=rsLegs.map(o=>o.flag);
   const flagAvg=avg(flagVals), flagMed=med(flagVals);
-  const ctVals=defects.filter(r=>r.resurvey_complete).map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0);
+  const ctVals=rsLegs.map(o=>o.cyc);
   const avgRsCt=avg(ctVals), medRsCt=med(ctVals);
 
   // ── FPY over time ─────────────────────────────────────────────────────
