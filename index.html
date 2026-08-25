@@ -629,6 +629,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-bvb-col{flex:1 1 190px;min-width:190px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
 .res-bvb-v{font-size:26px;font-weight:600;color:var(--text);margin:3px 0 5px;}
 .res-bvb-v.good{color:var(--green);}
+.res-bvb-v.bad{color:var(--red);}
+.res-ins{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.res-ins-row{background:var(--surface);padding:11px 13px;border-left:3px solid transparent;}
+.res-ins-row.sev-high{border-left-color:var(--red);}
+.res-ins-row.sev-med{border-left-color:var(--amber);}
+.res-ins-row.sev-info{border-left-color:var(--border-lt);}
+.res-ins-h{font-size:13px;font-weight:600;color:var(--text);}
+.res-ins-d{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
+.res-ins-d code{font-size:10.5px;background:var(--bg);padding:1px 4px;border-radius:3px;}
 
 /* Sortable drawer headers. Same vocabulary as every other table in the app —
    .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
@@ -2104,8 +2113,8 @@ const TIP={
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
   resTeam:'In-house surveyors on roster.json, placed by their home ZIP. The roster is hand-maintained — there is no Salesforce object for the team.',
   resCapacity:'What the team could do in a week if every job were close to home, from the drive-time model in lib/coverage.cjs. It is the optimistic end: capacity falls as the drive grows, and the team table shows the whole curve.',
-  resNow:'Surveys a week the in-house team is actually completing, over the span of the rows in view. Compare against capacity rather than against the vendor — the gap between these two is the cheapest volume available.',
-  resHeadroom:'Capacity minus what the team is doing. Unused in-house time is the first place outsourced volume should go, because it costs nothing extra.',
+  resNow:'Surveys a week the in-house team is actually picking up, over the last 8 weeks — the same window every other rate on this page uses. Compare against capacity rather than against the vendor — the gap between these two is the cheapest volume available.',
+  resUtil:'What the team is completing against what the drive-time model says they could. Deliberately shown as a ratio rather than as "headroom": at the current reading the gap is far more likely to mean surveying is not their whole job than to mean fifty surveys a week are sitting unused. Resolve it before trusting any hiring number.',
   resOutsourced:'Surveys a week going to a third-party vendor. Not all of it is reclaimable — most of it is nowhere near a base — which is what the market table sorts out.',
   resAbsorb:'The part of the outsourced volume sitting inside day-trip range of a base the team already has. This is the number that needs no hire, no posting and no negotiation.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
@@ -6111,6 +6120,7 @@ function resMarkets(){
     // them so a market that has gone quiet still says how big it once was.
     const recent=mem.filter(p=>p.date&&p.date>=recentFrom);
     const recentVend=recent.filter(p=>p.r.resource==='Radicl Services');
+    const recentMine=recent.filter(p=>p.r.resource==='SunPower Surveyor');
 
     const repDone=rep.filter(p=>everCompleted(p.r));
     const repDefects=repDone.filter(p=>isResurveyDefect(p.r)).length;
@@ -6125,6 +6135,7 @@ function resMarkets(){
       recentN:recent.length, recentPerWeek:recent.length/recentWeeks,
       rep:rep.length, vendor:vend.length, inhouse:inhouse.length,
       outsourcedPerWeek:recentVend.length/recentWeeks,
+      inhousePerWeek:recentMine.length/recentWeeks,
       repDone:repDone.length,
       repShare:mem.length?rep.length/mem.length:0,
       repDefectRate:repDone.length?repDefects/repDone.length:null,
@@ -6167,12 +6178,26 @@ function renderResource(){
   // Team-wide capacity at each surveyor's own home market distance, which is
   // the optimistic case: it assumes they work close in.
   const teamCap=bases.reduce((a,b)=>a+(OpsCoverage.weeklyCapacity(8,b.cfg)||0),0);
-  const inhouseNow=markets.reduce((a,m)=>a+m.inhouse,0)/weeks;
+  // Both rates read the recent window, like every other figure here. Mixing an
+  // all-time in-house average with a recent vendor rate made the utilisation
+  // ratio compare two different periods.
+  const inhouseNow=markets.reduce((a,m)=>a+m.inhousePerWeek,0);
   const outsourcedNow=markets.reduce((a,m)=>a+m.outsourcedPerWeek,0);
   const absorbable=markets.filter(m=>m.advice.k==='absorb').reduce((a,m)=>a+m.outsourcedPerWeek,0);
   const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
   const perVendor=billSum?billSum.perSurvey:null;
-  const perInhouse=teamCap?resWeeklyCost()/ (teamCap/bases.length) :null;
+
+  // Cost per in-house survey is weekly cost divided by surveys DONE, so it is
+  // meaningless without a throughput. Quoting it at modelled capacity read
+  // $115 against the vendor's $390 — a seven-fold flattery, on the same page
+  // whose first line says only 14% of that capacity is being realised.
+  //
+  // Break-even is quoted instead: how many surveys a week a surveyor must
+  // complete to match the vendor. It is the one figure here that does not
+  // depend on the capacity model being right, which is why it leads.
+  const placed=Math.max(bases.filter(b=>b.ll).length,1);
+  const breakEven=perVendor?resWeeklyCost()/perVendor:null;
+  const perSurveyNow=inhouseNow>0?resWeeklyCost()/(inhouseNow/placed):null;
 
   const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
     +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
@@ -6180,11 +6205,21 @@ function renderResource(){
   el.innerHTML=`
     <div class="srail">
       ${cell('In-house team',bases.length,bases.filter(b=>b.ll).length+' placed',TIP.resTeam)}
-      ${cell('Weekly capacity',_r1(teamCap),'surveys, close in',TIP.resCapacity)}
       ${cell('Doing now',_r1(inhouseNow),'a week',TIP.resNow)}
-      ${cell('Headroom',_r1(Math.max(teamCap-inhouseNow,0)),'unused a week',TIP.resHeadroom)}
+      ${cell('Modelled cap.',_r1(teamCap),'close in',TIP.resCapacity)}
+      ${cell('Utilisation',_rpct(teamCap?inhouseNow/teamCap:null),'of the model',TIP.resUtil)}
       ${cell('Outsourced',_r1(outsourcedNow),'a week',TIP.resOutsourced)}
-      ${cell('In reach today',_r1(absorbable),'of that, absorbable',TIP.resAbsorb)}
+      ${cell('Absorbable',_r1(absorbable),'of that, today',TIP.resAbsorb)}
+    </div>
+
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">What this says</div>
+      <div class="ssub">Derived from the rows below, not written in. Each one names what it is measured from so it can be checked.</div></div></div>
+      <div class="res-ins">${resInsights(markets,bases,{teamCap,inhouseNow,outsourcedNow,absorbable,billSum,weeks}).map(i=>`
+        <div class="res-ins-row sev-${i.sev}">
+          <div class="res-ins-h">${esc(i.headline)}</div>
+          <div class="res-ins-d">${i.detail}</div>
+        </div>`).join('')}</div>
     </div>
 
     <div class="sec">
@@ -6200,27 +6235,118 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Build vs buy</div>
-      <div class="ssub">The vendor side is measured from ${_billing?'the imported statements':'nothing yet — import a statement on the Billing page'}. The in-house side is an estimate you can correct in Settings.</div></div></div>
+      <div class="ssub">The vendor side is measured from ${_billing?'the imported statements':'nothing yet — import a statement on the Billing page'}. The in-house side depends entirely on throughput, so it is quoted as a break-even rather than as a rate.</div></div></div>
       <div class="res-bvb">
         <div class="res-bvb-col">
           <div class="klabel">Vendor, all-in</div>
           <div class="res-bvb-v">${_rmoney(perVendor)}</div>
-          <div class="note">per survey${billSum?', across '+billSum.surveys+' billed visits. Includes travel adders and demobilisation — the base rate alone understates it by 37%.':''}</div>
+          <div class="note">per survey${billSum?', across '+billSum.surveys+' billed visits. Includes travel adders and demobilisation — the base rate alone understates it by 37%.':'. Import a statement to measure this.'}</div>
         </div>
         <div class="res-bvb-col">
-          <div class="klabel">In-house, loaded</div>
-          <div class="res-bvb-v">${_rmoney(perInhouse)}</div>
-          <div class="note">per survey at ${_r1(teamCap/Math.max(bases.length,1))} a week each — ${_rmoney(resWeeklyCost())}/week fully loaded, an <b>estimate</b>. Falls as utilisation rises and rises with drive time.</div>
+          <div class="klabel">In-house break-even</div>
+          <div class="res-bvb-v ${breakEven!=null&&perSurveyNow!=null&&perSurveyNow<=perVendor?'good':''}">${breakEven!=null?_r1(breakEven):'—'}</div>
+          <div class="note">surveys a week, per surveyor, to match the vendor at ${_rmoney(resWeeklyCost())}/week loaded. <b>This is the number that does not depend on the capacity model.</b></div>
         </div>
         <div class="res-bvb-col">
-          <div class="klabel">Gap</div>
-          <div class="res-bvb-v ${perVendor&&perInhouse&&perInhouse<perVendor?'good':''}">${perVendor&&perInhouse?_rmoney(perVendor-perInhouse):'—'}</div>
-          <div class="note">per survey moved in-house, before quality. In-house also runs ${'4.2d vs 8.3d'} and 94.1% vs 87.6% first-pass yield.</div>
+          <div class="klabel">Where you are</div>
+          <div class="res-bvb-v ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor?'bad':'good'}">${_rmoney(perSurveyNow)}</div>
+          <div class="note">per in-house survey at the ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))} a week each they are doing now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
+            ? 'Above the vendor — <b>at today\'s throughput, insourcing costs more, not less</b>. The case for it rests on raising throughput or on cycle time and quality, not on price.'
+            : 'Below the vendor rate.'}</div>
         </div>
+      </div>
+      <div class="note" style="margin-top:10px;line-height:1.7;">
+        Cost per in-house survey is loaded weekly cost ÷ surveys completed, so it falls steeply with throughput:
+        ${[2,4,6,10,15].map(n=>{const c=resWeeklyCost()/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
+        The vendor sits at ${_rmoney(perVendor)} flat — it does not care how busy anyone is, which is the real trade.
+        The in-house side is an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle); correct it in Settings.
       </div>
     </div>`;
 
   _renderResBody(markets,bases,weeks);
+}
+
+// Insights are DERIVED, never a written-in narrative: each one recomputes from
+// the same markets the table shows, and states what it is measured from. A
+// panel of hand-written conclusions goes stale the first week the data moves.
+//
+// Ordered by how much they should change what Doug does this week, not by
+// severity — a large open question outranks a small confident answer.
+function resInsights(markets,bases,ctx){
+  const out=[];
+  const {teamCap,inhouseNow,outsourcedNow,absorbable,billSum}=ctx;
+
+  // 1. The biggest thing on the page is a question, not a finding. Four
+  //    surveyors modelled at 14.8/wk each would be ~59; they are doing ~8.
+  //    Printing the difference as "headroom" would assert an answer the data
+  //    does not support, so it is raised as the discrepancy it is.
+  const util=teamCap?inhouseNow/teamCap:null;
+  if(util!=null&&util<0.6){
+    out.push({sev:'high',
+      headline:'The team is running at '+_rpct(util)+' of what the model says they could do',
+      detail:`The drive-time model gives ${_r1(teamCap/Math.max(bases.length,1))} surveys a week each at a tight market; `
+        +`they are completing ${_r1(inhouseNow/Math.max(bases.length,1))}. Either surveying is not their whole job, or a knob in the model is wrong — `
+        +`most likely time on site or field hours. <b>Resolve this before any hiring number is trusted</b>, because every capacity figure on this page scales with it. `
+        +`Both are editable per surveyor in <code>roster.json</code>.`});
+  }
+
+  // 2. Reach is the whole build-vs-buy story and it is counter-intuitive:
+  //    the vendor barely operates where the team lives.
+  const near=markets.filter(m=>m.reach==='day');
+  const nearVendor=near.reduce((a,m)=>a+m.vendor,0);
+  out.push({sev: absorbable<1?'high':'info',
+    headline: absorbable<1
+      ? 'Almost none of the outsourced work is within reach of a base'
+      : _r1(absorbable)+' outsourced surveys a week sit inside day-trip range',
+    detail:`${near.length} market${near.length===1?'':'s'} fall inside a day trip of ${bases.filter(b=>b.ll).length} bases, and across all of them the vendor has done `
+      +`${nearVendor} job${nearVendor===1?'':'s'} in the whole dataset. `
+      +`The team already covers the ground it stands on; the outsourced book is somewhere else. `
+      +`That makes this a <b>deployment and hiring question, not a scheduling one</b> — there is no quick win from re-assigning work to people you already have.`});
+
+  // 3. Where a posting would actually land.
+  const dep=markets.filter(m=>m.advice.k==='deploy').sort((a,b)=>b.recentPerWeek-a.recentPerWeek);
+  if(dep.length){
+    const depOut=dep.reduce((a,m)=>a+m.outsourcedPerWeek,0);
+    const depAll=dep.reduce((a,m)=>a+m.recentPerWeek,0);
+    const mob=dep.filter(m=>m.mobileShare>=OpsCoverage.VOLATILE_SHARE);
+    out.push({sev:'med',
+      headline:_r1(depAll)+' surveys a week are in markets worth a posting, not a hire',
+      detail:`${dep.map(m=>esc(m.name)+', '+m.st).join(' · ')}. `
+        +`${_r1(depOut)} a week of that is currently outsourced. `
+        +(mob.length?`<b>${mob.length} of ${dep.length} are built on sales crews whose footprint moves</b> — measured, not assumed: their early and late footprints do not overlap. `
+          +`A fixed hire there is a bet the crew stays, and the last one relocated across state lines in a single week. `:'')
+        +`A one-to-two week posting is reversible; a lease is not.`});
+  }
+
+  // 4. Markets that have gone quiet — the reason rates use a recent window.
+  const dead=markets.filter(m=>m.advice.k==='dormant'&&m.n>=25).sort((a,b)=>b.n-a.n);
+  if(dead.length){
+    out.push({sev:'info',
+      headline:dead.length+' market'+(dead.length===1?'':'s')+' with real history have gone quiet',
+      detail:`${dead.slice(0,4).map(m=>esc(m.name)+', '+m.st+' ('+m.n+')').join(' · ')}${dead.length>4?' and '+(dead.length-4)+' more':''}. `
+        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. This is why every rate here is measured over a recent window — `
+        +`averaged across the whole dataset these markets still look staffable.`});
+  }
+
+  // 5. Coaching beats headcount where the volume is rep-done and defective.
+  const coach=markets.filter(m=>m.advice.k==='coach').sort((a,b)=>b.repDefectRate-a.repDefectRate);
+  if(coach.length){
+    out.push({sev:'med',
+      headline:'In '+coach.length+' market'+(coach.length===1?'':'s')+' the problem is rep survey quality, not capacity',
+      detail:`${coach.slice(0,4).map(m=>esc(m.name)+', '+m.st+' — '+_rpct(m.repDefectRate)+' of '+m.repDone).join(' · ')}. `
+        +`Mostly self-surveyed, at a defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, on at least ${OpsCoverage.COACH_MIN_N} completions. `
+        +`Sending a surveyor fixes the symptom for one job; the rate is a training problem.`});
+  }
+
+  // 6. What the invoice says about the same question.
+  if(billSum&&billSum.cleanupUsd){
+    out.push({sev:'med',
+      headline:_rmoney(billSum.cleanupUsd)+' of the vendor bill is finishing surveys someone else started',
+      detail:`${billSum.cleanupN} visits at the full first-visit rate, ${_rpct(billSum.cleanupUsd/billSum.usd)} of everything invoiced. `
+        +`It bills identically to a fresh survey, so it is invisible on the invoice itself. `
+        +`This is the rep-quality problem above, priced — and it lands on a vendor bill rather than in any survey metric.`});
+  }
+  return out;
 }
 
 function _renderResBody(markets,bases,weeks){
@@ -6230,20 +6356,28 @@ function _renderResBody(markets,bases,weeks){
     host.innerHTML=`
       <table class="tbl"><thead><tr>
         <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
-        <th class="r">Doing now</th><th class="r">Headroom</th><th>Constraints</th><th>Contact</th>
+        <th class="r">Markets in range</th><th class="r">In-house work there</th><th>Constraints</th><th>Contact</th>
       </tr></thead><tbody>
         ${bases.map(b=>{
           const cap=b.ll?OpsCoverage.weeklyCapacity(8,b.cfg):null;
-          const mine=b.ll?markets.filter(m=>m.base&&m.base.id===b.id):[];
-          const now=mine.reduce((a,m)=>a+m.inhouse,0)/weeks;
+          // In-house work within THIS surveyor's own day range, not markets
+          // where they happen to be nearest. Two of them are eight miles
+          // apart, so nearest-base attribution handed Portland entirely to one
+          // and printed the other at zero — which reads as "idle" and is not
+          // something the data can say. Ranges overlap on purpose; the note
+          // below says so.
+          const inRange=b.ll?markets.filter(m=>m.ll&&OpsCoverage.reachable(OpsCoverage.milesBetween(b.ll,m.ll),b.cfg)):[];
+          const load=inRange.reduce((a,m)=>a+m.inhousePerWeek,0);
+          const shared=inRange.some(m=>bases.filter(o=>o.ll&&o.id!==b.id
+            &&OpsCoverage.reachable(OpsCoverage.milesBetween(o.ll,m.ll),o.cfg)).length>0);
           const off=(b.off||[]).join(', ');
           return `<tr>
             <td>${esc(b.name)}${b.ll?'':' <span class="pill sev-high">ZIP not placed</span>'}</td>
             <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
             <td style="color:var(--muted);">${b.days}<div class="bill-sfmeta">${off?'off '+esc(off):''}</div></td>
             <td class="r">${_r1(cap)}</td>
-            <td class="r">${_r1(now)}</td>
-            <td class="r"><b>${_r1(cap!=null?Math.max(cap-now,0):null)}</b></td>
+            <td class="r">${inRange.length}<div class="bill-sfmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
+            <td class="r">${_r1(load)}${shared?'<div class="bill-sfmeta">shared range</div>':''}</td>
             <td>${((b.constraints||[]).map(c=>`<span class="pill">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
             <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
           </tr>`;
@@ -6252,8 +6386,11 @@ function _renderResBody(markets,bases,weeks){
       <div class="note" style="margin-top:10px;line-height:1.7;">
         Capacity is the drive-time model at a tight 8-mile market — the optimistic case. It falls as the drive grows:
         ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
-        Every knob (hours, time on site, admin, speed, day radius) is per-surveyor and overridable in roster.json.
+        Every knob (hours, time on site, admin, speed, day radius) is per-surveyor and overridable in <code>roster.json</code>.
         <b>Constraints are recorded, not yet modelled</b> — nothing here divides capacity by them.
+        <br><b>The last column is not a personal workload.</b> Salesforce records the resource that did a survey, never which surveyor,
+        so in-house work can only be attributed to a place. Where two surveyors cover the same ground the same work appears against both,
+        marked <i>shared range</i> — Portland is inside the day radius of two of these bases.
       </div>`;
     return;
   }
