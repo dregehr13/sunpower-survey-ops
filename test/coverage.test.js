@@ -137,6 +137,30 @@ test('surveyorConfig overrides only what it is given', () => {
   assert.deepEqual(C.surveyorConfig(null), C.DEFAULT_SURVEYOR);
 });
 
+test('setModel moves the base every capacity figure reads', () => {
+  // The Settings knobs work by rewriting the base config once, so a change has
+  // to reach a caller that was never handed a cfg at all — that is the whole
+  // point of doing it here rather than threading an argument through the page.
+  const base = C.weeklyCapacity(8);
+  try {
+    C.setModel({ fieldHoursPerDay: 10 });
+    assert.ok(C.weeklyCapacity(8) > base, 'a longer day must fit more jobs');
+    assert.equal(C.getModel().fieldHoursPerDay, 10);
+    // A per-surveyor override still wins: it is merged after the model.
+    assert.equal(C.surveyorConfig({ fieldHoursPerDay: 8 }).fieldHoursPerDay, 8);
+    // Blank and non-numeric entries fall back rather than poisoning the model,
+    // because these values arrive from a text input.
+    C.setModel({ fieldHoursPerDay: '', avgSpeedMph: 'fast' });
+    assert.deepEqual(C.getModel(), C.DEFAULT_SURVEYOR);
+    // roadFactor is a knob like the rest now, not a buried multiplication.
+    C.setModel({ roadFactor: 2.6 });
+    assert.equal(C.driveMinutes(10), C.driveMinutes(20, { roadFactor: 1.3 }));
+  } finally {
+    C.setModel(null);
+  }
+  assert.equal(C.weeklyCapacity(8), base, 'setModel(null) must restore the shipped model');
+});
+
 test('reachable respects a per-surveyor limit', () => {
   assert.equal(C.reachable(40), true);
   assert.equal(C.reachable(90), false);

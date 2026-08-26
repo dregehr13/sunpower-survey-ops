@@ -405,7 +405,7 @@ to undo:
   - the market detail row's `colspan` was one wider than the table
 
 - **Panel titles are noun phrases** (2026-08-26). *What this says* → **Findings**,
-  *What to do, market by market* → **Markets** / **The team**, switching with the
+  *What to do, market by market* → **Markets**, switching with the
   toggle the way `Resurveys by <group>` already does. Every other title in the
   app is a noun phrase; three question-shaped ones on one page read as a
   different product
@@ -417,6 +417,59 @@ to undo:
   four hand-mixed `rgba()` values and a `#7b5aa6` purple that exists nowhere
   else in the app; `coach` is `--red-bg` and `deploy` uses `--blue-bg`/`--blue-dk`,
   added to both `:root` blocks
+
+### The 2026-08-26 second pass (model in Settings, team in the hero, no filter bar)
+Doug's ask: show where the modelled capacity comes from, make the figures behind
+it editable, move *The team* into the split, and drop the filter bar. Things not
+to undo:
+- **The page has NO filter bar, and therefore does not read `GF`.** Region,
+  office, status and a completion date range are survey-reporting vocabulary;
+  none of them frame a staffing question. `GF` is one object shared by every
+  page, so *removing the bar while still calling `gfDim()`* would have left a
+  region picked on Performance narrowing this page invisibly — the `?type=`
+  defect again. `resScope()` is the page's own population: every row in
+  `DEFAULT_STATUSES`, whatever any other page's controls hold. Both `resPoints()`
+  and `resSplit()` go through it
+- **The capacity model is editable in Settings → Resource model**, and it works
+  by `OpsCoverage.setModel()` rewriting the base `surveyorConfig()` merges from
+  — **one assignment point**, the same discipline `applyAnchor()` follows for
+  `r.start`. There are callers that are never handed a cfg at all
+  (`weeklyCapacity(25)` in three notes), which is exactly why it is done in
+  `lib/coverage.cjs` rather than by threading an argument through the page. A
+  surveyor's own knobs in `roster.json` are passed as `partial` and still win
+- **`roadFactor` is a knob on the config now**, not a constant multiplied inside
+  `driveMinutes()`. `ROAD_FACTOR` survives as the shipped value and the fallback
+- **`S.resModel` / `S.resCost` are nested objects holding only the OVERRIDES.**
+  An empty object is what says "still the shipped estimate", which is what the
+  *edited* badges and the reset button read. `applyResModel()` runs on boot,
+  before anything asks what a surveyor can do in a week
+- **`perDiem` and `lodging` were deleted from `RES_COST_DEFAULTS`.** They fed no
+  figure on any page. A setting that changes no number is worse than a missing
+  one — it reads as though somebody already accounted for travel
+- **The derivation is printed, not just the result.** The page said "59.2
+  modelled" with nothing on it saying where 59.2 came from. `resModelLine()`
+  renders the arithmetic from the LIVE model (Settings, and the team drawer's
+  note), and `TIP.resCapacity` carries the short version on the hero itself.
+  59.2 = 4 surveyors × 14.8/wk at an 8-mile market — the optimistic end
+- **The team moved out of the market toggle and into the split hero.** It was a
+  third cut of a control whose other two states slice 182 markets; a roster is
+  not a way of slicing markets. Each of the three columns now opens the people
+  behind its own numbers: SPWR → the roster, Outsourced → the vendor registry
+  (from `OpsBilling.VENDORS`, so a vendor with a spec and no invoice still shows
+  at zero), Sales reps → best and worst ten
+- **One full-width drawer under the three columns, never three drawers under
+  three 230px columns.** `resExpand` holds at most one id, and `setResExpand()`
+  toggles (an expander closes when you click the one that is open — unlike
+  `setResGroup()`, which assigns because a segmented control must no-op on the
+  segment you are already in)
+- **The rep lists rank on the Quality page's rule, not a new one**: self-surveyed
+  completions only (`resource === 'Sales Rep'` — grouping every completion by
+  `sales_rep` charges a rep for a Radicl surveyor's defect), floored at
+  `RS_MIN_CELL`, ranked on the defect rate behind the FPY column. `RS_MIN_CELL`
+  is module scope now so there is one floor, not one per surface
+- **The column expanders sit on one line.** `.res-col` is a flex column and the
+  button takes `margin-top:auto`: the notes above them run to different lengths,
+  and three carets at three heights read as three unrelated controls
 
 ## Billing page (added 2026-08-25)
 Third-party surveyor invoices reconciled against Salesforce. Built because the

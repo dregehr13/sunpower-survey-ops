@@ -335,6 +335,22 @@ tr:hover td{background:var(--bg);}
 .set-control select,.set-control input[type=number]{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;width:120px;}
 .set-control input[type=number]{width:80px;}
 .set-control input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;}
+/* ── Resource model ───────────────────────────────────────────────────────
+   Two columns of knobs over one derivation line. The line is the point of the
+   section: the Resource page used to print "59.2 modelled" with nothing on it
+   saying where 59.2 came from, so the arithmetic is spelled out here, recomputed
+   from the live model, directly under the inputs that move it. */
+.set-model{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;}
+.set-model>div+div{border-left:1px solid var(--border-lt);padding-left:26px;}
+.set-unit{display:flex;align-items:baseline;gap:6px;}
+.set-unit>span{font-size:10px;color:var(--faint);width:26px;}
+.set-edited{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-dk);
+  background:var(--blue-bg);border-radius:3px;padding:1px 5px;margin-left:5px;vertical-align:1px;}
+.set-derive{margin-top:14px;border-top:1px solid var(--border-lt);padding-top:12px;
+  font-size:11px;color:var(--muted);line-height:1.8;}
+.set-derive b{color:var(--text);}
+@media(max-width:860px){.set-model{grid-template-columns:1fr;}
+  .set-model>div+div{border-left:none;padding-left:0;border-top:1px solid var(--border-lt);padding-top:12px;margin-top:12px;}}
 .set-sf-row{display:flex;gap:8px;align-items:center;}
 .set-sf-row input{flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;}
 .set-sf-row input:focus{border-color:#8f8f98;}
@@ -703,7 +719,10 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    bar directly beneath a full-width segmented bar reads as a doubled bar, and
    the share numeral below is already drawn in the resource's own hue, which
    identifies the column on its own. */
-.res-col{padding-top:12px;}
+/* Flex column so the three expanders sit on ONE line across the row: the notes
+   above them run to different lengths, and three carets at three heights read
+   as three unrelated controls. */
+.res-col{padding-top:12px;display:flex;flex-direction:column;}
 .res-col-name{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:baseline;gap:7px;}
 .res-col-share{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--text);margin:5px 0 0;}
 .res-col-rate{font-size:11px;color:var(--muted);margin-bottom:11px;}
@@ -721,6 +740,27 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-m-v.bad{color:var(--red);}
 .res-m-v small{display:block;font-size:10px;font-weight:400;color:var(--faint);text-align:right;margin-top:1px;}
 .res-col-note{font-size:10px;color:var(--faint);line-height:1.6;margin-top:9px;}
+/* Each column opens the people behind its numbers. A caret and a name rather
+   than a clickable column: "hover means this opens something" is a promise, and
+   a promise is easier to read on a control that says what it opens. */
+.res-col-more{display:flex;align-items:center;gap:5px;margin-top:auto;padding:9px 0 0;
+  font:inherit;font-size:11px;font-weight:600;color:var(--muted);background:none;border:none;
+  border-top:1px solid var(--border-lt);width:100%;text-align:left;cursor:pointer;transition:color .15s;}
+.res-col-more:hover{color:var(--text);}
+.res-col-more .wip-expand{transition:transform .15s;}
+.res-col.open .res-col-more{color:var(--text);}
+/* The drawer is ONE full-width panel under the three columns, not three drawers
+   under three 230px columns — a roster does not fit in a third of a row, and a
+   table that reflows to a different width per column reads as three products. */
+.res-drawer{border-top:1px solid var(--border);margin-top:2px;padding-top:14px;}
+.res-drawer-h{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.res-drawer-t{font-size:13px;font-weight:700;color:var(--text);}
+.res-drawer-s{font-size:11px;color:var(--faint);flex:1;}
+.res-two{display:flex;flex-wrap:wrap;gap:0 22px;}
+.res-half{flex:1 1 320px;min-width:300px;}
+.res-half+.res-half{border-left:1px solid var(--border-lt);padding-left:22px;}
+.res-half-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+@media(max-width:860px){.res-half+.res-half{border-left:none;padding-left:0;}}
 
 /* ── Intake trend ─────────────────────────────────────────────────────────
    Three windows as three bars plus a word. The bars are there so a thin sample
@@ -1254,7 +1294,7 @@ body{padding-left:180px;}
 <div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
 <div id="page-map"         class="page">     <div id="fb-map"></div>         <div id="map-content"></div></div>
-<div id="page-resource"    class="page">     <div id="fb-resource"></div>    <div id="res-content"></div></div>
+<div id="page-resource"    class="page">     <div id="res-content"></div></div>
 <div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
@@ -1485,6 +1525,12 @@ const SETTING_DEFAULTS = {
   sfRid:                '',        // Salesforce report ID
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
   anchor:               'opened',  // 'opened' | 'start' — see applyAnchor()
+  // Resource page model overrides, empty until Doug edits one. Nested objects
+  // rather than nine flat keys: they are one model, they reset together, and
+  // an empty object is what says "still the shipped estimate". Applied through
+  // applyResModel() → OpsCoverage.setModel(), never read knob by knob.
+  resModel:             {},        // capacity knobs — RES_MODEL_FIELDS
+  resCost:              {},        // SPWR cost knobs — RES_COST_FIELDS
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -2365,6 +2411,7 @@ const TIP={
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
   resSplit:'How the survey work divides across the three resources, each measured on what matters for it: capacity for the team we employ, price for the vendor we buy, volume and yield for the reps. Volume is the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on. The columns are equal width on purpose — their job is comparing yield against yield, and the bar above already says who does how much.',
+  resCapacity:'A modelled ceiling, not an observation. One surveyor\'s day is field hours minus daily overhead minus the drive to the market, divided by time on site plus admin plus a hop between jobs — at an 8-mile market that is about 3 a day, so ~15 a week each, and the team total is the roster summed at that distance. Every knob in it is an estimate calibrated to what Doug has seen, and every one is editable in Settings → Resource model (a surveyor\'s own knobs in roster.json still win). Read the gap against it as a question, not as headroom: if the team completes a fraction of this, either surveying is not their whole job or the model is wrong.',
   resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A recommendation is a case to check, never a verdict — the thresholds behind it are fitted to this team\'s own history, not to an industry standard. Grouped rows get theirs from the same rules a single market does.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an SPWR surveyor against, not the base rate.',
@@ -4997,6 +5044,12 @@ function renderAgingWIP(){
 // rolling line five weeks short of the data, hiding the whole of the July
 // recovery, which is the period anyone opening this page wants to see.
 const RS_MATURE_DAYS=21;
+// The sample floor under every rate on the Quality page — and now under the
+// Resource page's best/worst rep lists, which rank on the same defect rate and
+// would otherwise lead with somebody's single survey. Module scope so there is
+// one number, not one per surface: at 5 completions a single defect is 20% and
+// names a rep off noise.
+const RS_MIN_CELL=10;
 // Reasons are a Salesforce multi-select: "Survey Incomplete; Re-Roof".
 const rsReasons=r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).filter(Boolean);
 // Category labels and their one-line hints live in lib/metrics.cjs beside the
@@ -5130,8 +5183,8 @@ function renderResurvey(){
   //
   // A per-resource FPY split produced 80 populated cells, 39 of them under 10
   // completions and each rendered as a confident coloured pill. Cells under the
-  // floor show their completion count instead of a rate.
-  const RS_MIN_CELL=10;
+  // floor show their completion count instead of a rate. RS_MIN_CELL is module
+  // scope — the Resource page's rep lists rank on the same floor.
   // Office is only present in exports taken after 2026-08-06; fall back to
   // region on older data rather than rendering an empty table.
   const hasOfficeData=completions.some(r=>(r.sales_office||'').trim());
@@ -6269,24 +6322,128 @@ let _outlook = null, _outlookLoad = null, _outlookErr = null;
 // `team` is the third segment of the same control because it answers the same
 // question from the other side: markets ask what the work needs, the team asks
 // what the people can reach.
-const RES_GROUPS = { state: 'By state', rec: 'By recommendation', team: 'The team' };
+//
+// "The team" used to be a third cut of this toggle, which put the four people
+// we employ inside a control whose other two states are ways of slicing 182
+// markets — a different object under the same heading. It lives in the split
+// hero now (2026-08-26, Doug's ask): each of the three columns opens the roster
+// behind it, which is where the question "who are they" is actually asked.
+const RES_GROUPS = { state: 'By state', rec: 'By recommendation' };
 let resGroup = 'state';
+// Which resource column in the split hero is open, if any: 'spwr' | 'vendor'
+// | 'rep'. One at a time — the drawer is a full-width panel under the three
+// columns, not three drawers under three narrow columns.
+let resExpand = null;
 // Which groups and markets are expanded, and whether the quiet tail is shown.
 // Sets rather than a single key: closing one group should not close the others.
 let resOpen = new Set(), resMktOpen = new Set(), resInsOpen = new Set();
 let resShowQuiet = false;
 let _outlookEditing = null;
 
-// Cost assumptions. Doug has the vendor side exactly (billing.json); the
-// SPWR side is an estimate until he supplies it, so it lives in Settings and
-// the page says so rather than presenting a guess as a finding.
-const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900, perDiem: 65, lodging: 140 };
+// Cost assumptions. Doug has the vendor side exactly (billing.json); the SPWR
+// side is an estimate, so it is editable in Settings → Resource model and the
+// page says so rather than presenting a guess as a finding.
+//
+// Only what is actually multiplied lives here. A per-diem and a lodging rate
+// sat in this object for a day and fed nothing: a setting that changes no
+// number on any page is worse than a missing one, because it reads as though
+// somebody already accounted for travel.
+const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900 };
 function resCost(){
   const s = (S && S.resCost) || {};
-  return { ...RES_COST_DEFAULTS, ...s };
+  const out = { ...RES_COST_DEFAULTS };
+  Object.entries(s).forEach(([k,v])=>{ if(v!=null&&v!==''&&isFinite(v)) out[k]=Number(v); });
+  return out;
 }
 // Fully loaded weekly cost of one SPWR surveyor, before travel.
 const resWeeklyCost = () => (resCost().surveyorAnnual / 52) + (resCost().vehicleMonthly * 12 / 52);
+
+// ── The capacity model, in the open ────────────────────────────────────────
+// Every capacity figure on this page — the gauge, the utilisation percentage,
+// the modelled team total — is one arithmetic line applied four times, and it
+// was invisible: the page printed "59.2 modelled" with nothing on it saying
+// where 59.2 came from. This is that line, rendered from the LIVE model, so it
+// moves the moment a knob in Settings does.
+const RES_MODEL_MI = 8;   // the market distance the headline capacity assumes
+function resModelLine(mi){
+  const c=OpsCoverage.surveyorConfig();
+  const m=mi==null?RES_MODEL_MI:mi;
+  const r0=x=>Math.round(x);
+  const day=c.fieldHoursPerDay*60;
+  const drive=OpsCoverage.driveMinutes(m,c)*2;
+  const hop=OpsCoverage.driveMinutes(c.hopMi,c);
+  const perJob=c.onSiteMinutes+c.adminMinutesPerJob+hop;
+  const perDay=OpsCoverage.jobsPerDayExact(m,c);
+  return `<b>${r0(day)} min</b> in the field &minus; ${r0(c.dailyOverheadMinutes)} overhead &minus; ${r0(drive)} driving `
+    +`(${m}mi each way at ${c.avgSpeedMph}mph &times; ${c.roadFactor} road) &plus; ${r0(hop)} first-hop credit, `
+    +`over <b>${r0(perJob)} min a job</b> (${r0(c.onSiteMinutes)} on site &plus; ${r0(c.adminMinutesPerJob)} admin &plus; ${r0(hop)} hop) `
+    +`= <b>${perDay==null?'—':perDay.toFixed(2)} a day</b>, &times; ${c.daysAvailable} days worked `
+    +`= <b>${_r1(OpsCoverage.weeklyCapacity(m,c))} a week</b> each.`;
+}
+
+// The knobs, in the order a day is spent. `step`/`min`/`max` are the input's,
+// not the model's — nothing here clamps a value, because a number that looks
+// wrong to the model may be what Doug actually observes.
+const RES_MODEL_FIELDS = [
+  {k:'fieldHoursPerDay',    label:'Hours in the field',   unit:'h',   step:0.5, min:1, max:16, desc:'The working day before overhead comes out of it'},
+  {k:'dailyOverheadMinutes',label:'Daily overhead',       unit:'min', step:5,   min:0, max:480, desc:'Staging, dispatch and close-out — once a day, not per job'},
+  {k:'onSiteMinutes',       label:'Time on site',         unit:'min', step:5,   min:5, max:480, desc:'Measure, photograph, verify'},
+  {k:'adminMinutesPerJob',  label:'Admin per job',        unit:'min', step:5,   min:0, max:240, desc:'Write-up, upload, QA'},
+  {k:'avgSpeedMph',         label:'Average speed',        unit:'mph', step:1,   min:5, max:80,  desc:'Door to door in a metro, not a highway cruise'},
+  {k:'roadFactor',          label:'Road factor',          unit:'×',   step:0.05,min:1, max:3,   desc:'Straight-line miles → road miles. Every distance in the app is straight-line; this is the one place it is converted'},
+  {k:'hopMi',               label:'Hop between jobs',     unit:'mi',  step:1,   min:0, max:60,  desc:'Typical distance between two jobs inside one market'},
+  {k:'maxOneWayMi',         label:'Day-trip radius',      unit:'mi',  step:5,   min:10, max:250,desc:'Past this a market stops being a day trip and becomes a posting'},
+  {k:'daysAvailable',       label:'Days worked a week',   unit:'d',   step:1,   min:1, max:7,   desc:'The default. A surveyor’s own days come from their `off` list in roster.json and always win'},
+];
+const RES_COST_FIELDS = [
+  {k:'surveyorAnnual',  label:'Surveyor, fully loaded', unit:'$/yr', step:1000, min:0, max:400000, desc:'Salary plus burden. Divided by 52'},
+  {k:'vehicleMonthly',  label:'Vehicle',                unit:'$/mo', step:50,   min:0, max:10000,  desc:'Lease, fuel, insurance. Divided by 52 after ×12'},
+];
+
+// Both setters mirror setSetting(): write, persist, apply, re-render whatever
+// is on screen. Kept separate from it because these two live in nested objects
+// and because the capacity knobs have to reach lib/coverage.cjs, which nothing
+// else in SETTING_DEFAULTS does.
+function applyResModel(){ OpsCoverage.setModel((S&&S.resModel)||null); }
+function _resSet(bag,k,v){
+  const next={...((S&&S[bag])||{})};
+  if(v==null||v===''||!isFinite(v)) delete next[k]; else next[k]=Number(v);
+  S[bag]=next; saveSettings();
+  if(bag==='resModel') applyResModel();
+  if(currentPage==='settings') renderSettings(); else if(currentPage==='resource') renderResource();
+}
+function setResModel(k,v){ _resSet('resModel',k,v); }
+function setResCost(k,v){ _resSet('resCost',k,v); }
+function resetResModel(){
+  S.resModel={}; S.resCost={}; saveSettings(); applyResModel();
+  if(currentPage==='settings') renderSettings(); else if(currentPage==='resource') renderResource();
+  toast('Resource model reset to the shipped estimate.');
+}
+const resModelEdited = () => Object.keys((S&&S.resModel)||{}).length+Object.keys((S&&S.resCost)||{}).length;
+
+// The roster's own capacity total, spelled out per surveyor. Needs the roster
+// but NOT the geography, so Settings can print it without loading geo/ — the
+// Resource page's teamCap sums the same per-surveyor figures, rounded the same
+// way, so the two can never disagree.
+function _resTeamCapLine(){
+  if(!_roster){
+    if(!_rosterErr) resEnsure();
+    return `<span style="color:var(--faint);">${_rosterErr?'roster.json could not be loaded — '+esc(_rosterErr):'Loading the roster…'}</span>`;
+  }
+  const svs=_roster.surveyors||[];
+  const per=svs.map(sv=>({ name:String(sv.name||'').split(' ')[0],
+    cap:OpsCoverage.weeklyCapacity(RES_MODEL_MI,OpsCoverage.surveyorCfg(sv)) }));
+  const tot=per.reduce((a,x)=>a+(x.cap||0),0);
+  return `Across the roster: ${per.map(x=>esc(x.name)+' '+_r1(x.cap)).join(' &middot; ')}`
+    +` = <b>${_r1(tot)} a week modelled</b> for ${svs.length} surveyor${svs.length===1?'':'s'}`
+    +` &mdash; the "of ${_r1(tot)} modelled" on the Resource page.`;
+}
+
+// The vendor's all-in rate, which is the only thing the SPWR cost has to beat.
+const _resVendorPerSurvey = () => {
+  if(!_billing){ if(!_billingErr) billingEnsure(); return null; }
+  return OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)).perSurvey;
+};
 
 function resEnsure(){
   if(_roster||_rosterLoad) return _rosterLoad;
@@ -6294,7 +6451,9 @@ function resEnsure(){
     .then(r=>{ if(!r.ok) throw new Error('no roster.json ('+r.status+')'); return r.json(); })
     .then(j=>{ _roster=j; _rosterErr=null; })
     .catch(e=>{ _rosterErr=e.message; })
-    .then(()=>{ _rosterLoad=null; renderResource(); });
+    // Settings prints the roster's capacity total too, so the loader has to
+    // re-render whichever page is waiting on it — not always Resource.
+    .then(()=>{ _rosterLoad=null; if(currentPage==='settings') renderSettings(); else renderResource(); });
   return _rosterLoad;
 }
 
@@ -6337,10 +6496,25 @@ function resBases(){
   }));
 }
 
+// ── This page's population ─────────────────────────────────────────────────
+// The Resource page has NO filter bar (2026-08-26, Doug's call: region, office,
+// status and a completion date range are survey-reporting vocabulary and none
+// of them frame a staffing question). GF is one shared object across every
+// page, so continuing to read it here would leave a region picked on
+// Performance silently narrowing this page with nothing on screen saying so —
+// exactly the invisible `?type=` filter that was removed in August.
+//
+// So the page anchors on its own fixed scope: every row in the default status
+// set, whatever any other page's controls hold. Same rule scopeRows() applies,
+// against DEFAULT_STATUSES rather than GF.statuses.
+function resScope(){
+  return allRows.filter(r=>DEFAULT_STATUSES.includes(r.project_status)||isComplete(r));
+}
+
 // Every in-scope row that can be placed, carrying what the market maths needs.
 function resPoints(){
   const out=[];
-  rows.filter(gfDim).forEach(r=>{
+  resScope().forEach(r=>{
     const m=(r.address||'').match(MAP_ZIP_RE); if(!m) return;
     const ll=MAPGEO.zips&&MAPGEO.zips[m[2]]; if(!ll) return;
     out.push({ r, ll, st:m[1].toUpperCase(), zip:m[2], office:r.sales_office||'', date:r.start });
@@ -6371,12 +6545,13 @@ function resRecentFrom(){
 // the least work, so the page opened by burying its own headline — the reps do
 // 54% of the surveys at the worst yield on the board.
 //
-// Reads live rows through gfDim like the rest of the page, NOT `filtered`: a
-// staffing decision is about the current book. Volume uses the recent window;
+// Reads live rows through resScope(), NOT `filtered` and no longer through
+// gfDim: a staffing decision is about the current book, and this page has no
+// filter bar to say which book it is looking at. Volume uses the recent window;
 // yield and cycle use every completion, because a defect rate over eight weeks
 // of one resource's work is too thin to band.
 function resSplit(){
-  const inScope=rows.filter(gfDim);
+  const inScope=resScope();
   const from=resRecentFrom(), rw=OpsCoverage.RECENT_WEEKS;
   const recentAll=inScope.filter(r=>r.start&&r.start>=from);
   const out=RES_TRIO.map(t=>{
@@ -6612,6 +6787,10 @@ function resGroupsFor(markets){
 }
 
 function setResGroup(v){ if(resGroup===v) return; resGroup=v; resOpen=new Set(); resMktOpen=new Set(); renderResource(); }
+// The hero columns toggle: clicking the open one closes it, which is what an
+// expander does — unlike setResGroup, which assigns because a segmented control
+// must no-op on the segment you are already in.
+function setResExpand(id){ resExpand = resExpand===id?null:id; renderResource(); }
 function resToggleGroup(k){ if(resOpen.has(k)) resOpen.delete(k); else resOpen.add(k); _renderResBody(); }
 function resToggleMkt(k){ if(resMktOpen.has(k)) resMktOpen.delete(k); else resMktOpen.add(k); _renderResBody(); }
 function resToggleQuiet(){ resShowQuiet=!resShowQuiet; _renderResBody(); }
@@ -6681,7 +6860,7 @@ function renderResource(){
   const cost=[perSurveyNow, perVendor, null];
   const leads=[
     `<div class="res-gauge"><span style="width:${Math.min(Math.round((util||0)*100),100)}%;background:var(--res-spwr);"></span></div>`
-      +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled &middot; ${_rpct(util)} used`,
+      +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled${kinfo(TIP.resCapacity)} &middot; ${_rpct(util)} used`,
     `<b style="color:var(--text);">No ceiling.</b> Capacity is whatever is invoiced &mdash; `
       +`${billSum?_rpct(billSum.travelShare)+' of the bill is travel':'import a statement to price it'}.`,
     `<b style="color:var(--text);">${split.res[2].n.toLocaleString()}</b> surveys from the field. `
@@ -6699,10 +6878,20 @@ function renderResource(){
       +`${split.res[2].done.toLocaleString()} rep surveys came back.`,
   ];
 
+  // What each column opens. The drawer is the answer to "who are these people",
+  // which is the question a column of rates provokes and could not answer while
+  // the roster sat in the market table's group toggle.
+  const opens=[
+    { n:bases.length, label:b=>b+' SPWR surveyor'+(b===1?'':'s') },
+    { n:Object.keys(OpsBilling.VENDORS).length, label:b=>b===1?'The vendor':b+' vendors' },
+    { n:0, label:()=>'Best and worst reps' },
+  ];
+
   const col=(r,i)=>{
     const m=(label,val,cls,sub)=>`<div class="res-m"><span class="res-m-l">${label}</span>`
       +`<span class="res-m-v${cls?' '+cls:''}">${val}${sub?`<small>${sub}</small>`:''}</span></div>`;
-    return `<div class="res-col">
+    const open=resExpand===r.id;
+    return `<div class="res-col${open?' open':''}">
       <div class="res-col-name">${esc(r.full)}</div>
       <div class="res-col-share" style="color:var(${r.css});">${r.share==null?'—':Math.round(r.share*100)+'%'}</div>
       <div class="res-col-rate">${_r1(r.perWeek)} a week &middot; ${r.recentN.toLocaleString()} in the last ${OpsCoverage.RECENT_WEEKS} weeks</div>
@@ -6717,8 +6906,12 @@ function renderResource(){
           cost[i]!=null&&perVendor&&i===0?(cost[i]>perVendor?'bad':'good'):'',
           i===0?'at today’s throughput':i===1?'all-in, flat':'not billed')}
       <div class="res-col-note">${notes[i]}</div>
+      <button class="res-col-more" aria-expanded="${open}" aria-controls="res-drawer" onclick="setResExpand('${r.id}')">
+        <span class="wip-expand"${open?' style="transform:rotate(90deg);"':''}>&#9656;</span>${esc(opens[i].label(opens[i].n))}</button>
     </div>`;
   };
+
+  const drawer=resExpand?_resDrawer(resExpand,markets,bases,billSum):'';
 
   const insights=resInsights(markets,bases,{teamCap,inhouseNow,outsourcedNow,absorbable,billSum,util});
   const worst=insights.some(i=>i.sev==='high')?'high':insights.some(i=>i.sev==='med')?'med':'info';
@@ -6734,14 +6927,13 @@ function renderResource(){
         ${split.res.filter(r=>r.recentN>0).map(r=>`<span style="width:${(r.share||0)*100}%;background:var(${r.css});" title="${esc(r.label)}: ${r.recentN}"></span>`).join('')}
       </div>
       <div class="res-cols">${split.res.map(col).join('')}</div>
+      ${drawer}
     </div>
 
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">${resGroup==='team'?'The team':resGroup==='rec'?'Recommendations':'Markets'}</div>
-        <div class="ssub">${resGroup==='team'
-          ? 'SPWR surveyors from roster.json, placed by home ZIP'
-          : `${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} &middot; reach, volume, durability and rep defect rate decide each one${kinfo(TIP.resRec)}`}</div></div>
+        <div><div class="stitle">${resGroup==='rec'?'Recommendations':'Markets'}</div>
+        <div class="ssub">${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} &middot; reach, volume, durability and rep defect rate decide each one${kinfo(TIP.resRec)}</div></div>
         <div class="toggle-group">
           ${Object.entries(RES_GROUPS).map(([v,l])=>`<button class="tgl-btn${resGroup===v?' active':''}" aria-pressed="${resGroup===v}" onclick="setResGroup('${v}')">${l}</button>`).join('')}
         </div>
@@ -6775,7 +6967,8 @@ function renderResource(){
         Loaded weekly cost ÷ surveys completed, so it falls with throughput:
         ${[2,4,6,10,15].map(n=>{const c=resWeeklyCost()/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
         The vendor rate is flat at ${_rmoney(perVendor)} whatever the volume.
-        SPWR figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle) — edit in Settings.
+        SPWR figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle = ${_rmoney(resWeeklyCost())}/week loaded)
+        &mdash; edit them, and every knob in the capacity model, in <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>.
       </div>
     </div>
 
@@ -6896,8 +7089,6 @@ function _renderResBody(){
   const host=document.getElementById('res-body'); if(!host) return;
   const bases=resBases();
   const markets=resMarkets();
-
-  if(resGroup==='team'){ host.innerHTML=_resTeamTable(markets,bases); return; }
 
   const groups=resGroupsFor(markets);
   // A group with no work in the recent window is not a staffing decision — it
@@ -7076,6 +7267,138 @@ function saveOutlook(){
     .catch(e=>{ btn.disabled=false; msg.innerHTML=`<b style="color:var(--red);">${esc(e.message)}</b>`; });
 }
 
+// ── The split drawer ───────────────────────────────────────────────────────
+// One panel under the three columns, never three panels under three 230px
+// columns. Each column's numbers are about a group of people, and this is the
+// group: the roster we employ, the vendors we buy from, and the two ends of the
+// rep distribution. It replaced "The team" as a third cut of the market
+// toggle — a roster is not a way of slicing 182 markets.
+function _resDrawer(id,markets,bases,billSum){
+  const t=RES_TRIO.find(x=>x.id===id); if(!t) return '';
+  const body = id==='spwr'   ? _resTeamTable(markets,bases)
+             : id==='vendor' ? _resVendorTable(billSum)
+             :                 _resRepTable();
+  const sub = id==='spwr'   ? 'From roster.json, placed by home ZIP &middot; capacity is the drive-time model, editable in Settings'
+            : id==='vendor' ? 'Vendor specs from lib/billing.cjs, cost from the imported statements'
+            :                 `Self-surveyed completions only, ${RS_MIN_CELL}+ per rep &middot; ranked on the defect rate behind the FPY column`;
+  return `<div class="res-drawer" id="res-drawer">
+    <div class="res-drawer-h">
+      <span class="ld" style="background:var(${t.css});"></span>
+      <span class="res-drawer-t">${esc(t.full)}</span>
+      <span class="res-drawer-s">${sub}</span>
+      <button class="res-out-btn" onclick="setResExpand('${id}')">Close</button>
+    </div>
+    ${body}</div>`;
+}
+
+// The vendors, from the spec registry rather than from whoever happens to be on
+// the last statement: a vendor with a spec and no invoice is a vendor we could
+// buy from, and printing it at zero is more useful than omitting it. Salesforce
+// and the invoice are shown side by side because they count different things —
+// SF counts surveys assigned, the statement counts visits billed, and the gap
+// between them is the point of the Billing page.
+function _resVendorTable(billSum){
+  const scope=resScope(), from=resRecentFrom();
+  const lines=(_billing&&_billing.lines)||[];
+  const rowsOut=Object.values(OpsBilling.VENDORS).map(v=>{
+    const mine=lines.filter(l=>l.vendor===v.id);
+    const sum=mine.length?OpsBilling.summarize(mine):null;
+    const sf=scope.filter(r=>r.resource===v.sfResource);
+    const recent=sf.filter(r=>r.start&&r.start>=from);
+    const done=sf.filter(r=>everCompleted(r));
+    const cts=done.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+    const sts=((_billing&&_billing.statements)||[]).filter(st=>st.vendor===v.id)
+      .sort((a,b)=>String(a.from).localeCompare(String(b.from)));
+    return { v, sum, sf:sf.length, recent:recent.length, perWeek:recent.length/OpsCoverage.RECENT_WEEKS,
+      fpyV:fpy(done), done:done.length, ct:avg(cts), sts };
+  }).sort((a,b)=>b.recent-a.recent);
+
+  return `
+    <div class="xscroll"><table id="res-vendor-tbl" class="tbl tbl-static"><thead><tr>
+      <th>Vendor</th><th>Status</th><th class="r">Jobs/wk</th><th class="r">Cost per survey</th>
+      <th class="r">Travel</th><th class="r">Cleanup</th><th class="r">FPY</th><th class="r">Cycle</th><th>Statements</th>
+    </tr></thead><tbody>
+      ${rowsOut.map(d=>`<tr>
+        <td><b>${esc(d.v.name)}</b><div class="cmeta">${esc(d.v.sfResource||'no SF resource')} &middot; ${_rmoney(d.v.unitUsd)}/${esc(d.v.unit)}</div></td>
+        <td>${d.recent?'<span class="pill pg">Active</span>':d.sf?'<span class="pill pn">No recent work</span>':'<span class="pill pn">On file only</span>'}</td>
+        <td class="r">${_r1(d.perWeek)}<div class="cmeta">${d.sf.toLocaleString()} all-time</div></td>
+        <td class="r">${d.sum?_rmoney(d.sum.perSurvey):'<span class="pna">—</span>'}${d.sum?`<div class="cmeta">${d.sum.surveys} billed visits</div>`:''}</td>
+        <td class="r">${d.sum&&d.sum.travelShare!=null?_rpct(d.sum.travelShare):'<span class="pna">—</span>'}${d.sum?`<div class="cmeta">${_rmoney(d.sum.travelUsd)}</div>`:''}</td>
+        <td class="r">${d.sum&&d.sum.cleanupN?_rmoney(d.sum.cleanupUsd):'<span class="pna">—</span>'}${d.sum&&d.sum.cleanupN?`<div class="cmeta">${d.sum.cleanupN} visits</div>`:''}</td>
+        <td class="r"><span class="res-m-v ${resFpyBand(d.fpyV)}" style="font-size:12px;">${d.fpyV==null?'—':d.fpyV.toFixed(1)+'%'}</span><div class="cmeta">${d.done.toLocaleString()} completed</div></td>
+        <td class="r">${d.ct==null?'<span class="pna">—</span>':d.ct.toFixed(1)+'d'}</td>
+        <td>${d.sts.length?d.sts.map(st=>`<div class="cmeta">${esc(fmtDateShort(st.from))}&ndash;${esc(fmtDateShort(st.to))} &middot; ${st.lines} lines</div>`).join(''):'<span class="pna">none imported</span>'}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+    <div class="note">
+      Jobs/wk is the last ${OpsCoverage.RECENT_WEEKS} weeks of Salesforce work; cost, travel and cleanup are the imported statements,
+      which cover their own periods and not that window &mdash; the two columns are deliberately not the same population.
+      <b>Cleanup</b> is a return visit finishing a survey somebody else started, billed at the full first-visit rate.
+      ${billSum?'':'No statement imported yet — import one on the Billing page to price any of this.'}
+      Adding a vendor is a spec object in <code>lib/billing.cjs</code>, never a second parser.
+    </div>
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-vendor-tbl',this,'vendors')">Copy table</button></div>`;
+}
+
+// Best and worst ten reps, on the resource that does 55% of the surveys and
+// carries the worst yield — which is why this column has a drawer at all.
+//
+// Self-surveyed completions ONLY (`resource === 'Sales Rep'`), the same rule
+// the Quality page's rep cut follows: grouping every completion by sales_rep
+// charges a rep for a Radicl surveyor's defect. Ranked on the defect rate
+// behind the FPY column, floored at RS_MIN_CELL — with no floor a rep with one
+// clean survey leads the board at 100%.
+function _resRepTable(){
+  const done=resScope().filter(r=>r.resource==='Sales Rep'&&everCompleted(r));
+  const by=new Map();
+  done.forEach(r=>{
+    const k=r.sales_rep||'(no rep)';
+    let e=by.get(k); if(!e){ e={rep:k,rows:[],off:new Map()}; by.set(k,e); }
+    e.rows.push(r);
+    const o=r.sales_office||r.region||''; if(o) e.off.set(o,(e.off.get(o)||0)+1);
+  });
+  const all=[...by.values()].map(e=>{
+    const cts=e.rows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+    return { rep:e.rep, n:e.rows.length, fpy:fpy(e.rows), ct:avg(cts),
+      defects:e.rows.filter(r=>isResurveyDefect(r)).length,
+      off:[...e.off.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0])[0]||'' };
+  });
+  const rated=all.filter(d=>d.n>=RS_MIN_CELL);
+  const k=Math.min(10,Math.floor(rated.length/2));
+  const byRate=[...rated].sort((a,b)=>b.fpy-a.fpy||b.n-a.n);
+  const best=byRate.slice(0,k), worst=[...byRate].reverse().slice(0,k);
+
+  const tbl=(id,title,ds,worstSide)=>`
+    <div class="res-half">
+      <div class="res-half-t">${title}</div>
+      <div class="xscroll"><table id="${id}" class="tbl tbl-static"><thead><tr>
+        <th>Rep</th><th class="r">Surveys</th><th class="r">Came back</th><th class="r">FPY</th><th class="r">Cycle</th>
+      </tr></thead><tbody>
+        ${ds.length?ds.map(d=>`<tr>
+          <td><b>${esc(d.rep)}</b>${d.off?`<div class="cmeta">${esc(d.off)}</div>`:''}</td>
+          <td class="r">${d.n}</td>
+          <td class="r">${d.defects}</td>
+          <td class="r"><span class="res-m-v ${resFpyBand(d.fpy)}" style="font-size:12px;">${d.fpy.toFixed(1)}%</span></td>
+          <td class="r">${d.ct==null?'<span class="pna">—</span>':d.ct.toFixed(1)+'d'}</td>
+        </tr>`).join(''):`<tr><td colspan="5" class="pna">No rep clears ${RS_MIN_CELL} self-surveyed completions.</td></tr>`}
+      </tbody></table></div>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${id}',this,'${worstSide?'the worst reps':'the best reps'}')">Copy table</button></div>
+    </div>`;
+
+  return `
+    <div class="res-two">
+      ${tbl('res-rep-best','Best '+k,best,false)}
+      ${tbl('res-rep-worst','Worst '+k,worst,true)}
+    </div>
+    <div class="note">
+      ${rated.length} of ${all.length} reps clear the ${RS_MIN_CELL}-completion floor, covering
+      ${rated.reduce((a,d)=>a+d.n,0).toLocaleString()} of ${done.length.toLocaleString()} self-surveyed completions.
+      <b>Came back</b> is resurveys attributed to a defect &mdash; the same population the Quality page ranks on, so the two agree by construction.
+      Reps below the floor are not ranked and not hidden from Quality; a rate on five surveys names somebody off noise.
+      <b>No activity cutoff</b>: a rep who has left still did the surveys they did. The Quality page carries the idle-days label for that.
+    </div>`;
+}
+
 function _resTeamTable(markets,bases){
   return `
     <div class="xscroll"><table id="res-team-tbl" class="tbl tbl-static"><thead><tr>
@@ -7109,7 +7432,9 @@ function _resTeamTable(markets,bases){
     <div class="note">
       Capacity is the drive-time model at an 8-mile market, the optimistic end. It falls as the drive grows:
       ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
-      Hours, time on site, admin, speed and day radius are per surveyor in <code>roster.json</code>.
+      ${resModelLine()}
+      Every knob in it &mdash; hours, time on site, admin, speed, road factor, day radius &mdash; is editable in
+      <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>, and a surveyor can override any of them in <code>roster.json</code>.
       <b>Constraints are recorded, not modelled</b> — nothing here divides capacity by them.
       <br><b>SPWR work there is not a personal workload.</b> Salesforce records the resource, never which surveyor,
       so the work can only be attributed to a place. Overlapping ranges count the same work against both surveyors, marked <i>shared range</i>.
@@ -7181,7 +7506,10 @@ function billingEnsure(){
     // Resource page's Vendor cost column reads the same history and used to sit
     // empty on a first visit — it only filled in after a trip to Billing and
     // back, which looked like missing data rather than a missing re-render.
-    .then(()=>{ _billingLoad=null; if(currentPage==='resource') renderResource(); else renderBilling(); });
+    .then(()=>{ _billingLoad=null;
+      if(currentPage==='resource') renderResource();
+      else if(currentPage==='settings') renderSettings();
+      else renderBilling(); });
   return _billingLoad;
 }
 
@@ -7831,6 +8159,64 @@ function renderSettings(){
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
+        <div class="set-title">Resource Model${resModelEdited()?' <span class="pill pn" style="margin-left:6px;">'+resModelEdited()+' edited</span>':''}</div>
+        <div style="font-size:10px;color:var(--faint);line-height:1.7;margin-bottom:10px;">
+          Every capacity and SPWR cost figure on the Resource page comes from these two sets of numbers, and nothing else does &mdash;
+          no survey metric, no cycle time, no yield. They are an <b>estimate calibrated to what Doug has seen</b>, not a measurement,
+          which is why they are editable here rather than fixed in the code. A surveyor's own knobs in <code>roster.json</code> still win over them.
+        </div>
+        <div class="set-model">
+          <div>
+            <div class="klabel" style="margin-bottom:6px;">A surveyor's day</div>
+            ${RES_MODEL_FIELDS.map(f=>{
+              const cur=OpsCoverage.getModel()[f.k];
+              const edited=((S.resModel||{})[f.k]!=null);
+              return `<div class="set-row">
+                <div><div class="set-label">${esc(f.label)}${edited?' <span class="set-edited">edited</span>':''}</div>
+                  <div class="set-desc">${f.desc}</div></div>
+                <div class="set-control set-unit"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}"
+                  value="${cur}" onchange="setResModel('${f.k}',parseFloat(this.value))"><span>${f.unit}</span></div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div>
+            <div class="klabel" style="margin-bottom:6px;">What a surveyor costs</div>
+            ${RES_COST_FIELDS.map(f=>{
+              const cur=resCost()[f.k];
+              const edited=((S.resCost||{})[f.k]!=null);
+              return `<div class="set-row">
+                <div><div class="set-label">${esc(f.label)}${edited?' <span class="set-edited">edited</span>':''}</div>
+                  <div class="set-desc">${f.desc}</div></div>
+                <div class="set-control set-unit"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}"
+                  value="${cur}" onchange="setResCost('${f.k}',parseFloat(this.value))"><span>${f.unit}</span></div>
+              </div>`;
+            }).join('')}
+            <div class="set-row"><div><div class="set-label">Loaded weekly cost</div>
+              <div class="set-desc">Annual ÷ 52 + vehicle × 12 ÷ 52. This is the numerator of every SPWR cost per survey on the page</div></div>
+              <div class="set-control"><b style="font-size:14px;">${_rmoney(resWeeklyCost())}</b><span style="color:var(--faint);font-size:10px;">/wk</span></div></div>
+            <div class="set-row"><div><div class="set-label">Break-even</div>
+              <div class="set-desc">Surveys a week per surveyor to match the vendor's all-in rate. The one figure here that does not rest on the capacity model</div></div>
+              <div class="set-control">${(()=>{const v=_resVendorPerSurvey();
+                return v?`<b style="font-size:14px;">${_r1(resWeeklyCost()/v)}</b><span style="color:var(--faint);font-size:10px;">/wk at ${_rmoney(v)}</span>`
+                        :'<span class="pna">no statement imported</span>';})()}</div></div>
+          </div>
+        </div>
+        <div class="set-derive">
+          <div class="klabel" style="margin-bottom:5px;">Where the modelled capacity comes from</div>
+          ${resModelLine()}
+          <div style="margin-top:6px;">${_resTeamCapLine()}</div>
+          <div style="margin-top:6px;color:var(--faint);">
+            It falls as the drive grows: ${[8,25,45,60].map(mi=>`<b>${mi}mi</b> ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' &middot; ')}.
+            The Resource page quotes the 8-mile figure, which is the optimistic end &mdash; and prints the gap against what the team actually completes rather than treating the difference as headroom.
+          </div>
+        </div>
+        <div class="set-row" style="padding-top:10px;">
+          <div style="font-size:10px;color:var(--faint);line-height:1.6;">Saved to this browser like every other setting. Blank a box to put that knob back to its shipped value.</div>
+          <button class="fbtn" onclick="resetResModel()">Reset the model</button>
+        </div>
+      </div>
+
+      <div class="set-sec" style="grid-column:1/-1;">
         <div class="set-title">Field Registry Status</div>
         <div style="margin-bottom:8px;font-size:10px;color:var(--muted);font-weight:600;">${activeFields.length} active · no pending fields</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
@@ -8152,6 +8538,9 @@ document.addEventListener('click',function(e){
 
 window.addEventListener('load',()=>{
   loadSettings();
+  // The capacity model lives in lib/coverage.cjs, not in S — push the saved
+  // overrides into it before anything asks what a surveyor can do in a week.
+  applyResModel();
   // allRows was already built once at script-eval time, before localStorage was
   // read — so it used SETTING_DEFAULTS for BOTH the cutoff and the anchor.
   // Rebuild if the saved settings disagree with either.
