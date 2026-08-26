@@ -165,7 +165,53 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - The **"Rep day" pill stays.** The handoff has no slot for it, but printing `0d` would misreport whose clock is running
   - Under 640px rows stack two-line rather than scrolling sideways
 - **The nav badge beside WIP is the open count**, neutral grey. It was the "needs attention" count until 2026-08-17, when that whole concept came out: `attnItems()`, `attnKey()`, `dismissAttn()`, the per-row "Reviewed ✓" buttons and the `ops_dismissed` localStorage store are gone. It was a saved filter dressed as a view — every row it held is reachable from Past due plus the age bands — and the dismissals made the badge disagree with Salesforce for anyone who had clicked one. Its toggle slot went to **Open resurveys**, a population with no live home before then. Grey, not red: an open queue is the normal state, and a red badge on every page load teaches you to ignore red
-- Main cycle metric: **Project Start Date → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
+- Main cycle metric: **anchor → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
+- **The cycle-time anchor is one variable, and it is `r.start`** (added 2026-08-25).
+  Settings → Data → *Cycle time anchor* switches every cycle time and every
+  queue age between Project Start Date (Spec 12744) and `opened`, the TaskRay
+  task's own creation date. **Default is `opened`** — nobody on the team can
+  touch a survey before the task exists, so that is when this team's clock
+  actually starts. Things not to undo:
+  - **It works by rewriting `r.start` itself**, once, in `applyAnchor()` inside
+    `loadAll()`. There are ~50 readers of `r.start` across index.html and
+    lib/metrics.cjs; teaching each of them about a second date is exactly how
+    the three SS ratios came to disagree by 34%. One assignment, and every
+    reader is correct by construction. `test/surfaces.test.js` asserts there is
+    **exactly one** `r.start =` per surface
+  - **`lib/metrics.cjs` is anchor-blind and must stay that way.** Rows arrive
+    already anchored. That is why the toggle needed no changes there and why
+    the golden snapshot did not move. A test asserts metrics.cjs never mentions
+    `r.opened` or `ct_open`
+  - **`RAW` is never mutated.** Every `loadAll()` call site passes
+    `JSON.parse(JSON.stringify(RAW))` or a fresh upload, so flipping back is a
+    reload, not an undo. Toggling out and back returns byte-identical figures
+  - **Both cycles are baked at parse time** (`ct_total` from start, `ct_open`
+    from opened) so the toggle is a swap, not a recomputation — no surface ever
+    computes a cycle time itself. `ct_open` deliberately has no
+    `field_survey_complete` fallback twin: that branch reconstructs a *missing
+    completion*, which is orthogonal to the anchor
+  - **compose reads the same `ops_settings.anchor`** (same origin). It keeps its
+    own copy of the data and its own `ct_total` reads, so leaving it out would
+    have the Monday recap quoting a different cycle time than the page it was
+    written from — the 2026-08-14 defect again
+  - **`opened` is `filterable:false`.** A date filter on it would let you filter
+    by one anchor while measuring by the other
+  - **`Open date` is a datetime** (`8/24/2026, 8:31 PM`). Typed `date` in the
+    FIELDS registry so `cleanDate()` takes the date part — that is what keeps it
+    off the `fmtReviewDay()` rake `last_reviewed_date` (typed `text`) needs
+  - Measured impact, unfiltered: mean 4.02 → 3.84, **median 2.00 unchanged**,
+    p90 10 → 9, ≤3d 65.2% → 66.4%, negative cycles **40 → 3**. In-scope
+    population identical (2,444 rows, none gained or lost). 79.9% of rows are
+    unchanged; the mean moves mostly on ~36 rows whose task was created 5–70
+    days after project start. Per resource the delta runs −0.37 to +0.16
+  - **The import sanity report watches immutability.** The whole case for this
+    anchor is that Open date never moves; `parse-sf.js` diffs every row's
+    `opened` against the current data.json by `task_id` and warns if any
+    changed. Evidence it holds: 449 of 469 resurveys carry an Open date at
+    project start rather than at the resurvey request, so it survives a reopen
+  - To revert the feature entirely, set `anchor` back to `'start'` in
+    `SETTING_DEFAULTS` — every other part of it is inert while the anchor is
+    `'start'`
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export
 - New fields must not break old rows (import defaults missing sfCols to `''`)

@@ -1231,6 +1231,10 @@ const FIELDS = [
   {key:'sales_rep_email',      sfCol:'Project Event : Opportunity : Sales Rep Email',              label:'Sales Rep Email',  type:'text',     filterable:false, editable:false},
   {key:'agreement_signed',     sfCol:'Agreement Signed',                                           label:'Agreement Signed', type:'date',     filterable:false, editable:false},
   {key:'start',                sfCol:'Project Start Date',                                         label:'Project Start',    type:'date',     filterable:true,  editable:true},
+  // Carried, never filtered on. The Settings anchor toggle folds this into
+  // `start` at load time, so a second date filter here would be a way to
+  // filter by one anchor while measuring by the other.
+  {key:'opened',               sfCol:'Open date',                                                  label:'Task Opened',      type:'date',     filterable:false, editable:false},
   {key:'requested',            sfCol:'Site Survey Requested',                                      label:'Requested',        type:'date',     filterable:false, editable:true},
   {key:'scheduled',            sfCol:'Site Survey Scheduled',                                      label:'Scheduled',        type:'date',     filterable:false, editable:true},
   {key:'complete',             sfCol:'Site Survey Complete',                                       label:'Complete',         type:'date',     filterable:false, editable:true},
@@ -1256,6 +1260,7 @@ const FIELDS = [
   {key:'ct_s2r',     computed:true, label:'Start→Req (d)',      type:'number'},
   {key:'ct_r2s',     computed:true, label:'Req→Sched (d)',      type:'number'},
   {key:'ct_total',   computed:true, label:'Total (d)',           type:'number'},
+  {key:'ct_open',    computed:true, label:'Open→Done (d)',       type:'number'},
   {key:'ct_resurvey',computed:true, label:'Resurvey Cycle (d)',  type:'number'},
   {key:'ct_full',    computed:true, label:'Full Cycle (d)',      type:'number'},
 ];
@@ -1272,6 +1277,7 @@ const SETTING_DEFAULTS = {
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
+  anchor:               'opened',  // 'opened' | 'start' — see applyAnchor()
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -1291,6 +1297,10 @@ function setSetting(key, value){
   saveSettings();
   // Propagate changes that affect live state
   if(key==='dataCutoff'){ DATA_CUTOFF=value; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); }
+  // Same full reload as dataCutoff: applyAnchor() runs inside loadAll(), so
+  // re-deriving allRows from RAW is what makes the swap take effect everywhere
+  // at once. Anything short of this leaves half the page on the old anchor.
+  if(key==='anchor'){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
@@ -1305,7 +1315,35 @@ let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
 // the global Status filter (GF.statuses) can be widened via the filter bar
 // to include At-Risk / Canceled / Complete projects when needed.
 // (parse-sf.js already applies the fixups below at parse time; kept for older data files)
+// ═══ THE ANCHOR ══════════════════════════════════════════
+// Every cycle time and every age in this app measures from r.start — about
+// fifty references across this file and lib/metrics.cjs. Rather than teach
+// each of them about a second date (which is how the three SS ratios ended up
+// disagreeing by 34%), this rewrites r.start ITSELF, once, on the deep copy
+// loadAll() is handed. Downstream code is untouched and structurally cannot
+// disagree with itself: there is one anchor, and this is the only line that
+// decides what it is.
+//
+// RAW is never mutated — every loadAll() call site passes
+// JSON.parse(JSON.stringify(RAW)) or a freshly parsed upload — so flipping the
+// toggle back is a reload, not an undo.
+//
+// 'opened'  — the TaskRay task's creation date. When this team can first act.
+// 'start'   — Project Start Date. What Spec 12744 defines the metric on.
+//
+// To revert the whole feature to pre-toggle behaviour, change the default in
+// SETTING_DEFAULTS to 'start'; every other change in this feature is inert
+// while the anchor is 'start'.
+function applyAnchor(r){
+  if(S.anchor!=='opened') return;          // Spec 12744 behaviour, unchanged
+  if(!r.opened) return;                    // no Open date: keep Project Start
+  r.start = r.opened;
+  if(r.ct_open!==undefined) r.ct_total = r.ct_open;
+}
 function loadAll(src){
+  // Before the cutoff filter, so the cutoff applies to the same date every
+  // metric downstream measures from.
+  src.forEach(applyAnchor);
   const out = src.filter(r=>r.start>=DATA_CUTOFF);
   out.forEach(r=>{ r.sales_rep=OpsMetrics.normalizeName(r.sales_rep); if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
   return out;
@@ -2002,6 +2040,12 @@ function recalc(r){
   if(r.ct_total===null&&!r.requested&&r.field_survey_complete)
     r.ct_total=dDiff(r.start,subtractDays(r.field_survey_complete,2));
   if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0;
+  // ct_total above is already anchored — applyAnchor() folded the chosen date
+  // into r.start before this row was ever handed to the editor. ct_open is
+  // recomputed from the raw Open date only so the source table doesn't show a
+  // stale figure beside an edited one; nothing measures from it after load.
+  r.ct_open=dDiff(r.opened,OpsMetrics.effectiveComplete(r));
+  if(r.ct_open!=null&&r.ct_open<0) r.ct_open=0;
   r.ct_resurvey=dDiff(r.resurvey_requested,r.resurvey_complete);
   if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0;
   r.ct_full=(r.ct_total!=null&&r.ct_resurvey!=null)?Math.round((r.ct_total+r.ct_resurvey)*10)/10:null;
@@ -6863,6 +6907,15 @@ function renderSettings(){
       <div class="set-sec">
         <div class="set-title">Data</div>
         <div class="set-row">
+          <div><div class="set-label">Cycle time anchor</div><div class="set-desc">What every cycle time and queue age measures from. Project Start is the Spec 12744 definition; Task Opened is when the Site Survey task was created, which is the first point this team can act.</div></div>
+          <div class="set-control">
+            <select onchange="setSetting('anchor',this.value)">
+              <option value="opened"${S.anchor==='opened'?' selected':''}>Task Opened</option>
+              <option value="start"${S.anchor==='start'?' selected':''}>Project Start (Spec 12744)</option>
+            </select>
+          </div>
+        </div>
+        <div class="set-row">
           <div><div class="set-label">Data cutoff date</div><div class="set-desc">Earliest project start included in all metrics and charts — currently ${DATA_CUTOFF}</div></div>
           <div class="set-control"><input type="date" value="${S.dataCutoff}" onchange="setSetting('dataCutoff',this.value)"></div>
         </div>
@@ -7190,7 +7243,12 @@ document.addEventListener('click',function(e){
 
 window.addEventListener('load',()=>{
   loadSettings();
+  // allRows was already built once at script-eval time, before localStorage was
+  // read — so it used SETTING_DEFAULTS for BOTH the cutoff and the anchor.
+  // Rebuild if the saved settings disagree with either.
+  const _reanchor = S.anchor!==SETTING_DEFAULTS.anchor;
   if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
+  else if(_reanchor){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
   scopeRows(); // re-scope based on restored GF.statuses
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';

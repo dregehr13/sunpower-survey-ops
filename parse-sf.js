@@ -29,6 +29,15 @@ const FIELDS = [
   // and start is never earlier. Context only — cycle time stays on start.
   { key:'agreement_signed',    sfCol:'Agreement Signed',                                        type:'date' },
   { key:'start',                sfCol:'Project Start Date',                                      type:'date' },
+  // The TaskRay task's own creation timestamp — when the Site Survey task
+  // actually opened, which is the first moment anyone on this team can act.
+  // Ships as a datetime ("8/24/2026, 8:31 PM"); cleanDate() splits on the
+  // comma, so typing it 'date' here is what keeps it off the fmtReviewDay()
+  // rake that last_reviewed_date (type 'text') has to step around.
+  // Selected as the live anchor by the Settings toggle — see applyAnchor()
+  // in index.html. Verified immutable across reopens: 449 of 469 resurveys
+  // carry an Open date at project start rather than at the resurvey request.
+  { key:'opened',               sfCol:'Open date',                                               type:'date' },
   { key:'requested',            sfCol:'Site Survey Requested',                                   type:'date' },
   { key:'scheduled',            sfCol:'Site Survey Scheduled',                                   type:'date' },
   { key:'complete',             sfCol:'Site Survey Complete',                                    type:'date' },
@@ -117,7 +126,7 @@ const rows = [];
 allData.slice(headerRowIdx + 1).forEach((row, i) => {
   const cells = row.map(normalizeCell);
   if (cells.every(c => c === '')) return; // skip blank rows
-  const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null, ct_resurvey: null, ct_full: null };
+  const r = { id: i, ct_s2r: null, ct_r2s: null, ct_total: null, ct_open: null, ct_resurvey: null, ct_full: null };
   FIELDS.forEach(f => {
     r[f.key] = colIdx[f.key] !== undefined
       ? (f.type === 'date' ? cleanDate(cells[colIdx[f.key]] || '') : (cells[colIdx[f.key]] || ''))
@@ -136,6 +145,15 @@ allData.slice(headerRowIdx + 1).forEach((row, i) => {
   if (r.ct_total === null && !r.requested && r.field_survey_complete)
     r.ct_total  = dDiff(r.start, subtractDays(r.field_survey_complete, 2));
   if (r.ct_total != null && r.ct_total < 0) r.ct_total = 0;
+  // The same cycle measured from the task's Open date. Both are baked so the
+  // Settings anchor toggle is a swap rather than a recomputation — nothing
+  // downstream ever computes a cycle time itself.
+  // No field_survey_complete fallback twin on purpose: that branch reconstructs
+  // a MISSING completion date, which is orthogonal to which anchor it measures
+  // from. Giving it one would silently make ct_open the only figure carrying a
+  // reconstructed endpoint on some rows and not others.
+  r.ct_open = dDiff(r.opened, OpsMetrics.effectiveComplete(r));
+  if (r.ct_open != null && r.ct_open < 0) r.ct_open = 0;
   r.ct_resurvey = dDiff(r.resurvey_requested, r.resurvey_complete);
   if (r.ct_resurvey != null && r.ct_resurvey < 0) r.ct_resurvey = 0;
   r.ct_full     = (r.ct_total != null && r.ct_resurvey != null) ? Math.round((r.ct_total + r.ct_resurvey) * 10) / 10 : null;
@@ -204,12 +222,36 @@ const stale = `${cutoff60.getFullYear()}-${String(cutoff60.getMonth() + 1).padSt
 const staleSched = rows.filter(r => !OpsMetrics.isComplete(r) && r.scheduled && r.scheduled < stale);
 if (staleSched.length) warnings.push(`${staleSched.length} open row(s) with scheduled dates >60 days past: ${sample(staleSched, r => `${label(r)} (${r.scheduled})`)}`);
 
+// Open date missing — it is the live cycle-time anchor by default, so a blank
+// one silently drops that row's ct_open to null and takes it out of every
+// average. Was 0/2529 on the export this was built against.
+const noOpen = rows.filter(r => !r.opened);
+if (noOpen.length) warnings.push(`${noOpen.length} row(s) with no Open date — these carry no cycle time while the anchor is set to Open date: ${sample(noOpen, r => label(r))}`);
+
+// Task opened after its own survey completed. Not fatal (ct_open clamps to 0)
+// but it means the task record was created retroactively, so the row is
+// telling you nothing about how long the work took.
+const openedLate = rows.filter(r => r.opened && r.complete && r.complete < r.opened);
+if (openedLate.length) warnings.push(`${openedLate.length} row(s) whose task opened AFTER the survey completed (retroactive task record): ${sample(openedLate, r => `${label(r)} (opened ${r.opened}, surveyed ${r.complete})`)}`);
+
 // Row-count swing vs the current data.json
 try {
   const prev = JSON.parse(readFileSync(new URL('./data.json', import.meta.url), 'utf8'));
   if (Array.isArray(prev) && prev.length) {
     const swing = (rows.length - prev.length) / prev.length;
     if (Math.abs(swing) > 0.2) warnings.push(`row count swung ${(swing * 100).toFixed(0)}% vs current data.json (${prev.length.toLocaleString()} → ${rows.length.toLocaleString()}) — check the report filters`);
+
+    // The entire case for anchoring on Open date is that it never moves. The
+    // resurvey population says it doesn't — 449 of 469 resurveys carry an Open
+    // date at project start rather than at the resurvey request, so it plainly
+    // survives a reopen. But that is one export's word for it, and the field
+    // is load-bearing for every cycle time in the app. This is how we find out
+    // otherwise, on the morning it happens, without anyone going looking.
+    // Keyed on task_id, not id — id is the row index and shifts whenever the
+    // report's sort order does.
+    const was = new Map(prev.filter(r => r.task_id).map(r => [r.task_id, r.opened]));
+    const drifted = rows.filter(r => r.task_id && was.get(r.task_id) && r.opened && was.get(r.task_id) !== r.opened);
+    if (drifted.length) warnings.push(`${drifted.length} row(s) Open date MOVED since the last export — it is not a stable anchor, check the Settings toggle: ${sample(drifted, r => `${label(r)} (${was.get(r.task_id)} → ${r.opened})`)}`);
   }
 } catch { /* no existing data.json — first import, nothing to compare */ }
 

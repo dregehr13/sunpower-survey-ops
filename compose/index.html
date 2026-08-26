@@ -272,6 +272,20 @@ function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
        businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
+// The cycle-time anchor, read from the same ops_settings the dashboard writes
+// (same origin, so this is the dashboard's own toggle). compose keeps its own
+// copy of the data and its own ct_total reads, so leaving it out would have the
+// Monday recap quoting a different cycle time than the page it was written
+// from — the exact defect fixed on 2026-08-14 when the SS RATIO card and the
+// line beneath it disagreed by 38%.
+// Mirrors applyAnchor() in index.html; the fifty-odd r.start readers below are
+// untouched because r.start IS the anchor by the time they see it.
+(function anchorRows(){
+  let mode='opened';
+  try{ mode = (JSON.parse(localStorage.getItem('ops_settings')||'{}').anchor) || 'opened'; }catch(e){}
+  if(mode!=='opened') return;
+  RAW.forEach(r=>{ if(!r.opened) return; r.start=r.opened; if(r.ct_open!==undefined) r.ct_total=r.ct_open; });
+})();
 const ROWS = OpsMetrics.filterRows(RAW);
 
 // ─── STATS HELPERS ────────────────────────────────────────

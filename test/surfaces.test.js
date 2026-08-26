@@ -51,6 +51,34 @@ test('no surface reads a data.js const off window', () => {
   assert.deepEqual(bad, [], `use a bare typeof guard instead:\n${bad.join('\n')}`);
 });
 
+test('the cycle-time anchor is assigned in exactly one place per surface', () => {
+  // Every cycle time and queue age measures from r.start — ~50 readers across
+  // index.html and lib/metrics.cjs. The Settings toggle works by rewriting
+  // r.start itself, once, inside applyAnchor() (index.html) / anchorRows()
+  // (compose). That is only safe while it stays the SOLE assignment: a second
+  // one, anywhere, and half the app measures from a different date than the
+  // other half with nothing on screen to say so.
+  const found = [];
+  for (const f of SURFACES) {
+    linesMatching(read(f), /\br\.start\s*=(?!=)/)
+      .forEach(({ n, line }) => found.push(`${f}:${n}  ${line.slice(0, 90)}`));
+  }
+  assert.equal(found.length, 2,
+    `expected exactly one r.start assignment per surface (the anchor swap), got:\n${found.join('\n')}`);
+  assert.ok(found[0].startsWith('index.html:'), `index.html must carry one:\n${found.join('\n')}`);
+  assert.ok(found[1].startsWith('compose/'), `compose must carry one:\n${found.join('\n')}`);
+});
+
+test('lib/metrics.cjs never reads the raw Open date', () => {
+  // metrics.cjs is deliberately anchor-blind: rows reach it already anchored,
+  // which is why the toggle needed no changes there and the golden snapshot
+  // did not move. A reference to r.opened in here would mean a metric that
+  // ignores the toggle.
+  const bad = linesMatching(read('lib/metrics.cjs'), /\br\.opened\b|\bct_open\b/)
+    .map(({ n, line }) => `lib/metrics.cjs:${n}  ${line.slice(0, 90)}`);
+  assert.deepEqual(bad, [], `metrics.cjs must stay anchor-blind:\n${bad.join('\n')}`);
+});
+
 test('status bands are never computed inline', () => {
   // Colour must come from bandFor()/ssRatioBand(), which band on the DISPLAYED
   // value. An inline threshold against a raw value re-opens the "card reads
