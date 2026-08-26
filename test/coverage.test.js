@@ -347,12 +347,84 @@ test('advice: thin markets stay with the vendor', () => {
   assert.equal(C.marketAdvice(mkt({ reach: C.REACH.FAR, recentPerWeek: 0.4, outsourcedPerWeek: 0.4, repShare: 0 })).k, 'vendor');
 });
 
-test('advice always returns a labelled action with at least one reason', () => {
+test('advice always returns a labelled recommendation with at least one reason', () => {
   const cases = [mkt(), mkt({ mobileShare: 1 }), mkt({ reach: C.REACH.FAR }), mkt({ reach: C.REACH.DEPLOY }),
     mkt({ outsourcedPerWeek: 0, repShare: 1, repDefectRate: 0.5 }), mkt({ recentPerWeek: 0, outsourcedPerWeek: 0 })];
   cases.forEach(c => {
     const a = C.marketAdvice(c);
-    assert.ok(a.label && a.k && a.rank, 'every action is labelled and ranked');
-    assert.ok(a.reasons.length >= 1, 'an action with no reason is not actionable');
+    assert.ok(a.label && a.k && a.rank, 'every recommendation is labelled and ranked');
+    assert.ok(a.reasons.length >= 1, 'a recommendation with no reason is not actionable');
   });
+});
+
+// ── Intake trend ───────────────────────────────────────────────────────────
+// The one leading indicator in the data: is more work arriving from here, or
+// is this market emptying out? Three windows, because two cannot tell those
+// apart — see the note on intakeTrend().
+
+// Dates n days before the fixed "export date" every case below anchors on.
+const AS_OF = '2026-08-26';
+const ago = n => {
+  const d = new Date(2026, 7, 26); d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+// `counts` is [oldest window, middle, newest]; each job lands mid-window so no
+// case rests on which side of an edge a boundary date falls.
+const intake = counts => counts.flatMap((n, i) => Array.from({ length: n }, () => ago(14 + (2 - i) * 28)));
+
+test('intakeTrend: three windows, oldest first', () => {
+  const t = C.intakeTrend(intake([5, 10, 20]), AS_OF);
+  assert.deepEqual(t.windows, [5, 10, 20]);
+});
+
+test('intakeTrend: a crew arriving and a crew leaving are not the same shape', () => {
+  // The Virginia and Pennsylvania readings that motivated three windows.
+  const va = C.intakeTrend(intake([6, 201, 179]), AS_OF);
+  const pa = C.intakeTrend(intake([220, 39, 23]), AS_OF);
+  assert.equal(va.k, 'steady');
+  assert.equal(pa.k, 'slowing');
+  // Two windows would have scored them alike; the oldest window is what separates them.
+  assert.ok(va.windows[0] < va.windows[1] && pa.windows[0] > pa.windows[1]);
+});
+
+test('intakeTrend: growing and slowing sit outside the band, steady inside it', () => {
+  assert.equal(C.intakeTrend(intake([0, 20, 40]), AS_OF).k, 'growing');
+  assert.equal(C.intakeTrend(intake([0, 40, 20]), AS_OF).k, 'slowing');
+  assert.equal(C.intakeTrend(intake([0, 20, 22]), AS_OF).k, 'steady');
+  // Exactly on the band edge counts as a direction, not as steady.
+  assert.equal(C.intakeTrend(intake([0, 20, 25]), AS_OF).k, 'growing');
+});
+
+test('intakeTrend: nothing arriving is quiet at any sample size', () => {
+  // Tested before the thinness guard on purpose: "no work came in" is knowable
+  // from one job, unlike a direction.
+  assert.equal(C.intakeTrend(intake([200, 40, 0]), AS_OF).k, 'quiet');
+  assert.equal(C.intakeTrend(intake([1, 0, 0]), AS_OF).k, 'quiet');
+  assert.equal(C.intakeTrend([], AS_OF).k, 'quiet');
+});
+
+test('intakeTrend: a thin sample names no direction but still reports its shape', () => {
+  const t = C.intakeTrend(intake([1, 4, 2]), AS_OF);   // the live Ohio reading
+  assert.equal(t.k, 'thin');
+  assert.equal(t.label, '');
+  assert.equal(t.pct, null);
+  assert.deepEqual(t.windows, [1, 4, 2], 'the bars still render — thinness is shown, not hidden');
+});
+
+test('intakeTrend: "just opened" needs a real sample, not one job against nothing', () => {
+  assert.equal(C.intakeTrend(intake([0, 0, 18]), AS_OF).k, 'new');
+  assert.equal(C.intakeTrend(intake([0, 0, 1]), AS_OF).k, 'thin');
+});
+
+test('intakeTrend: anchored on the export date, not the wall clock', () => {
+  // The same jobs read as current against their own export and quiet against a
+  // later one — the rule that stops a stale upload emptying every market.
+  const jobs = intake([0, 10, 30]);
+  assert.equal(C.intakeTrend(jobs, AS_OF).k, 'growing');
+  assert.equal(C.intakeTrend(jobs, '2026-12-01').k, 'quiet');
+});
+
+test('intakeTrend: dates after the export date are ignored', () => {
+  const t = C.intakeTrend([...intake([0, 20, 20]), '2027-01-01', '2027-02-01'], AS_OF);
+  assert.deepEqual(t.windows, [0, 20, 20]);
 });

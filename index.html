@@ -24,6 +24,12 @@
   /* Charts + categorical — deliberately muted so status stays loudest */
   --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#d94f4e;
   --accent:#f59e0b;
+  /* The three resources. Already hardcoded in four charts as RES_COLORS; named
+     here so the Resource page's hero can tint a whole column from one token
+     instead of a fifth copy of the same three hex values. */
+  --res-spwr:#64748b;--res-spwr-bg:#eff1f4;
+  --res-vendor:#8677b8;--res-vendor-bg:#f1eef7;
+  --res-rep:#4f7fae;--res-rep-bg:#e9f0f7;
   --navy1:#1e3a5f;--navy2:#0f2440;
   --radius:8px;--radius-lg:12px;
   --shadow:0 1px 2px rgba(20,20,25,.05),0 2px 8px rgba(20,20,25,.05);
@@ -639,6 +645,12 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    means the rail above counts those charges twice, and a page that reads high
    without saying so is worse than one that reads low. Amber, not red: the
    statements are not wrong, the total just is not settled yet. */
+/* The quiet twin of .bill-warn: overlapping statements are how this vendor
+   issues them, and the import stores one copy, so this states a fact rather
+   than raising an alarm. Amber would say something is wrong. */
+.bill-note{margin:0 0 14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);
+  background:var(--surface);font-size:12px;line-height:1.6;color:var(--muted);}
+.bill-note strong{font-weight:600;color:var(--text);}
 .bill-warn{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;
   border:1px solid #f0dcae;border-radius:var(--radius-lg);background:var(--amber-bg);
   font-size:12px;line-height:1.6;color:var(--amber);}
@@ -649,21 +661,119 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s;}
 .bill-warn-btn:hover{background:#fff;border-color:var(--amber);}
 
-/* Resource. The action tag is the page's verdict, so it carries the only
-   colour in the table; the mix bar beside it is deliberately muted, because
-   the split is context for the verdict rather than a second reading.
+/* Resource. The recommendation tag is the page's verdict, so it carries the
+   only colour in the table; the mix bar beside it is deliberately muted,
+   because the split is context for the verdict rather than a second reading.
    Tints come from the palette's own -bg tokens — the tag used four hand-mixed
    rgba() values and a purple that exists nowhere else in the app. */
-.res-act{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:3px;white-space:nowrap;}
-.res-act-absorb{background:var(--green-bg);color:var(--green);}
-.res-act-deploy{background:var(--blue-bg);color:var(--blue-dk);}
-.res-act-hire{background:var(--amber-bg);color:var(--amber);}
-.res-act-coach{background:var(--red-bg);color:var(--red);}
-.res-act-vendor{background:var(--bg);color:var(--faint);}
+.res-rec{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:3px;white-space:nowrap;}
+.res-rec-absorb{background:var(--green-bg);color:var(--green);}
+.res-rec-deploy{background:var(--blue-bg);color:var(--blue-dk);}
+.res-rec-hire{background:var(--amber-bg);color:var(--amber);}
+.res-rec-coach{background:var(--red-bg);color:var(--red);}
+.res-rec-vendor{background:var(--bg);color:var(--faint);}
+/* Dormant had no rule at all, so "Gone quiet" rendered as unstyled inline text
+   in a column where every other value is a tag. */
+.res-rec-dormant{background:var(--bg);color:var(--faint);}
 .res-mix{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;min-width:80px;max-width:130px;}
 .res-seg{display:block;height:100%;}
 .res-tbl td{vertical-align:top;}
-.res-why{max-width:240px;white-space:normal;color:var(--muted);font-size:11px;}
+.res-why{white-space:normal;color:var(--muted);font-size:11px;line-height:1.6;}
+
+/* ── The resource split ───────────────────────────────────────────────────
+   The page's first object, and the one Doug asked to see "visually distinct":
+   how the work divides across the three resources, each with the measures that
+   matter for THAT resource. It replaced a six-cell stat rail whose figures were
+   all about the SPWR team, which buried the fact that the team does 9% of
+   the work.
+
+   One shared proportional bar carries the split; the three columns below are
+   EQUAL width, because their job is comparing yield against yield and cycle
+   against cycle. Sizing the columns by share was tried and is wrong — a 10%
+   column cannot hold a number, and the bar already says 10%. */
+.res-split-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin:2px 0 4px;}
+.res-split-bar>span{display:block;height:100%;}
+.res-split-key{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--muted);margin-bottom:2px;}
+.res-split-key b{color:var(--text);font-weight:700;}
+.res-cols{display:flex;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:14px;}
+.res-col{flex:1 1 230px;min-width:230px;padding:0 18px 4px 0;border-right:1px solid var(--border);}
+.res-col:last-child{border-right:none;padding-right:0;}
+.res-col:not(:first-child){padding-left:18px;}
+/* No colour cap on the column. One was tried and removed the same day: a 3px
+   bar directly beneath a full-width segmented bar reads as a doubled bar, and
+   the share numeral below is already drawn in the resource's own hue, which
+   identifies the column on its own. */
+.res-col{padding-top:12px;}
+.res-col-name{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:baseline;gap:7px;}
+.res-col-share{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--text);margin:5px 0 0;}
+.res-col-rate{font-size:11px;color:var(--muted);margin-bottom:11px;}
+/* The one row that differs per column: capacity for the team, the rate for the
+   vendor, share of all work for the reps. Everything below it is comparable. */
+.res-col-lead{padding:9px 0;border-top:1px solid var(--border-lt);font-size:11px;color:var(--muted);line-height:1.55;}
+.res-gauge{height:6px;border-radius:3px;background:var(--bg);overflow:hidden;margin:0 0 6px;}
+.res-gauge>span{display:block;height:100%;border-radius:3px;}
+.res-m{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 0;border-top:1px solid var(--border-lt);font-size:11px;}
+.res-m-l{color:var(--muted);}
+.res-m-v{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+.res-m-v.good{color:var(--green);}
+.res-m-v.warn{color:var(--amber);}
+.res-m-v.bad{color:var(--red);}
+.res-m-v small{display:block;font-size:10px;font-weight:400;color:var(--faint);text-align:right;margin-top:1px;}
+.res-col-note{font-size:10px;color:var(--faint);line-height:1.6;margin-top:9px;}
+
+/* ── Intake trend ─────────────────────────────────────────────────────────
+   Three windows as three bars plus a word. The bars are there so a thin sample
+   reads as thin: a market whose direction is unnameable still shows its shape
+   rather than an empty cell. Height is share of the largest of the three, with
+   a 2px floor so an empty window is a visible gap and not a missing bar. */
+.res-trend{display:flex;align-items:flex-end;gap:2px;height:16px;}
+.res-trend>span{width:6px;background:var(--border);border-radius:1px;display:block;}
+.res-trend>span:last-child{background:var(--faint);}
+.res-trend-l{font-size:10px;margin-top:3px;white-space:nowrap;color:var(--faint);}
+.res-trend-l.growing{color:var(--green);font-weight:600;}
+.res-trend-l.slowing{color:var(--amber);font-weight:600;}
+.res-trend-l.new{color:var(--blue-dk);font-weight:600;}
+
+/* ── Grouped market table ─────────────────────────────────────────────────
+   One grouping, two cuts (state · recommendation), the pattern Performance and
+   Quality already use. The group row is the readable unit — 14 active states
+   instead of 182 markets — and the markets inside it are one click away, the
+   same expand affordance the WIP queue uses. */
+.res-grp>td{background:var(--bg);border-top:1px solid var(--border);}
+.res-grp-name{font-size:13px;font-weight:700;color:var(--text);}
+.res-grp-sub{font-size:10px;color:var(--faint);font-weight:400;margin-top:2px;}
+.res-kid>td:first-child{padding-left:30px;}
+.res-kid>td{background:var(--surface);}
+.res-quiet>td{color:var(--faint);}
+/* The "why" and the towns behind a market, opened from the market row. Keeps
+   a 240px wall of prose out of every row of the default view. */
+.res-detail>td{padding:0;background:var(--bg);}
+.res-detail-in{padding:11px 16px 13px 30px;font-size:11px;color:var(--muted);line-height:1.7;}
+
+/* ── Outlook ──────────────────────────────────────────────────────────────
+   Doug's own read on an area, which the export cannot know. Deliberately looks
+   like a note and not like a metric: no big numeral, a byline, and it never
+   changes the recommendation beside it. */
+.res-out{font-size:11px;line-height:1.6;}
+.res-out-flag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  padding:2px 6px;border-radius:3px;white-space:nowrap;}
+.res-out-growing{background:var(--green-bg);color:var(--green);}
+.res-out-steady{background:var(--bg);color:var(--muted);}
+.res-out-winding_down{background:var(--amber-bg);color:var(--amber);}
+.res-out-unknown{background:var(--bg);color:var(--faint);}
+.res-out-note{color:var(--muted);margin-top:3px;}
+.res-out-by{color:var(--faint);font-size:10px;margin-top:2px;}
+.res-out-btn{font:inherit;font-size:10px;font-weight:600;padding:3px 8px;border:1px solid var(--border);
+  border-radius:5px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;
+  transition:border-color .15s,color .15s;}
+.res-out-btn:hover{border-color:var(--muted);color:var(--text);}
+.res-fld{margin-bottom:12px;}
+.res-fld label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+.res-fld select,.res-fld input,.res-fld textarea{width:100%;padding:7px 10px;border:1px solid var(--border);
+  border-radius:var(--radius);font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);}
+.res-fld textarea{resize:vertical;line-height:1.5;}
+
 /* Three figures separated by hairlines rather than three bordered boxes on a
    panel that already has a border — the same flattening .exec-hero .srail
    does, and for the same reason: nested chrome reads as two objects. */
@@ -674,15 +784,32 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-bvb-v{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1;color:var(--text);margin:3px 0 5px;}
 .res-bvb-v.good{color:var(--green);}
 .res-bvb-v.bad{color:var(--red);}
+
+/* ── Findings ─────────────────────────────────────────────────────────────
+   Collapsed and moved below the table 2026-08-26, Doug's ask: it was six
+   paragraphs above the thing they are about. The derivation stays — every line
+   recomputes from the same markets the table shows — but headlines carry it,
+   and the detail opens on demand. The one exception is the capacity caveat,
+   which stays visible in the split above because every capacity figure on the
+   page is wrong if it is wrong. */
 .res-ins{display:flex;flex-direction:column;}
-.res-ins-row{padding:11px 0 11px 12px;border-top:1px solid var(--border-lt);border-left:3px solid transparent;}
+.res-ins-row{border-top:1px solid var(--border-lt);border-left:3px solid transparent;}
 .res-ins-row:first-child{border-top:none;}
 .res-ins-row.sev-high{border-left-color:var(--red);}
 .res-ins-row.sev-med{border-left-color:var(--amber);}
 .res-ins-row.sev-info{border-left-color:var(--border);}
-.res-ins-h{font-size:13px;font-weight:700;color:var(--text);}
-.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;margin-top:3px;}
+.res-ins-h{font-size:12px;font-weight:700;color:var(--text);padding:10px 0 10px 12px;width:100%;text-align:left;
+  background:none;border:none;font-family:inherit;cursor:pointer;display:flex;align-items:baseline;gap:8px;}
+.res-ins-h:hover{color:var(--blue-dk);}
+.res-ins-h .wip-expand{margin-right:0;}
+.res-ins-row.open .wip-expand{transform:rotate(90deg);}
+.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;padding:0 0 12px 32px;}
 .res-ins-d code{font-size:10px;background:var(--bg);padding:1px 4px;border-radius:3px;}
+/* A collapsed panel still has to say how many findings it holds and whether
+   any is urgent, or collapsing it just hides a red line. */
+.res-ins-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--faint);margin-left:5px;}
+.res-ins-dot.sev-high{background:var(--red);}
+.res-ins-dot.sev-med{background:var(--amber);}
 
 /* Sortable drawer headers. Same vocabulary as every other table in the app —
    .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
@@ -971,6 +1098,9 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   --blue:#4f7fae;--blue-bg:#e9f0f7;--blue-dk:#33608c;
   --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#c9542f;
   --accent:#f7941d;
+  --res-spwr:#64748b;--res-spwr-bg:#eff0f2;
+  --res-vendor:#8677b8;--res-vendor-bg:#f0edf5;
+  --res-rep:#4f7fae;--res-rep-bg:#e9f0f7;
   --navy1:#ffffff;--navy2:#ffffff;
   --radius:6px;--radius-lg:10px;
   --shadow:0 1px 2px rgba(20,20,25,.04);
@@ -1204,6 +1334,23 @@ body{padding-left:180px;}
     </div>
     <p class="msub">Runs the same parser as <code>node parse-radicl.js</code> and commits the result &mdash; live for everyone in about 30 seconds.</p>
     <div id="bill-imp-body"></div>
+  </div>
+</div>
+
+<!-- OUTLOOK MODAL -->
+<!-- Doug's own read on whether more sales are coming from an area — the one
+     staffing input the Salesforce export cannot hold. Committed to the repo
+     rather than kept in localStorage: this page exists to make a case to
+     someone else, and the WIP badge already showed what happens when a
+     judgement lives in one browser. -->
+<div class="mback hidden" id="outlookModal">
+  <div class="modal" style="width:460px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <h2>Outlook</h2>
+      <button onclick="closeOutlook()" aria-label="Close" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <p class="msub">Sits beside the recommendation and never changes it &mdash; commits to the repo, live for everyone in about 30 seconds.</p>
+    <div id="outlook-body"></div>
   </div>
 </div>
 
@@ -2057,6 +2204,7 @@ document.addEventListener('keydown',e=>{
     closeDrill();
     closeUpdateModal();
     closeBillImport();
+    closeOutlook();
     // Status was never in this list, so Escape closed two of the three filter
     // dropdowns and left the third open.
     if(rgDropOpenPage!==null||offDropOpenPage!==null||statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; statusDropOpen=false; renderFBars(); }
@@ -2216,14 +2364,10 @@ const TIP={
   mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a market for its average days open.',
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
-  resTeam:'In-house surveyors on roster.json, placed by their home ZIP. The roster is hand-maintained — there is no Salesforce object for the team.',
-  resCapacity:'What the team could do in a week if every job were close to home, from the drive-time model in lib/coverage.cjs. The optimistic end: capacity falls as the drive grows, and the team table shows the whole curve.',
-  resNow:'Surveys a week the in-house team is actually picking up, over the last 8 weeks — the same window every other rate on this page uses. Compare it against capacity, not against the vendor.',
-  resUtil:'What the team completes against what the drive-time model says they could. Shown as a ratio rather than as "headroom": at the current reading the gap more likely means surveying is not their whole job than that fifty surveys a week are sitting unused. Settle it before trusting any hiring number.',
-  resOutsourced:'Surveys a week going to a third-party vendor. Not all of it is reclaimable: most of it is nowhere near a base, which is what the market table sorts out.',
-  resAbsorb:'The part of the outsourced volume sitting inside day-trip range of a base the team already has — the part that needs no hire and no posting.',
+  resSplit:'How the survey work divides across the three resources, each measured on what matters for it: capacity for the team we employ, price for the vendor we buy, volume and yield for the reps. Volume is the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on. The columns are equal width on purpose — their job is comparing yield against yield, and the bar above already says who does how much.',
+  resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A recommendation is a case to check, never a verdict — the thresholds behind it are fitted to this team\'s own history, not to an industry standard. Grouped rows get theirs from the same rules a single market does.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
-  billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an in-house surveyor against, not the base rate.',
+  billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an SPWR surveyor against, not the base rate.',
   billTravel:'Adders applied beyond the vendor\'s free radius. Not an error. Tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
   billCleanup:'Return visits to finish a survey another resource started, billed at the full first-visit rate. This is what an incomplete first survey costs, and the invoice is the only place it is recorded.',
   billRework:'Return visits to a job this vendor already did, billed at the full first-visit rate like everything else. Whether that is contractually right is a contract question.',
@@ -6110,7 +6254,7 @@ window.addEventListener('resize',()=>{
 // Who should be doing the work, where, and what it costs.
 //
 // The other six pages measure the work. This one measures the PEOPLE against
-// it: what the in-house team can reach, what is going outside the team that
+// it: what the SPWR team can reach, what is going outside the team that
 // need not, and which markets would carry a body. Geography and capacity come
 // from lib/coverage.cjs, vendor cost from lib/billing.cjs — nothing here
 // redefines either.
@@ -6119,17 +6263,29 @@ window.addEventListener('resize',()=>{
 // book, and a date range that excluded last month would silently answer a
 // different question. The filter bar's region/office cuts still apply.
 let _roster = null, _rosterLoad = null, _rosterErr = null;
-let resView = 'markets';
+let _outlook = null, _outlookLoad = null, _outlookErr = null;
+
+// One grouping, two cuts — the pattern Performance and Quality already use.
+// `team` is the third segment of the same control because it answers the same
+// question from the other side: markets ask what the work needs, the team asks
+// what the people can reach.
+const RES_GROUPS = { state: 'By state', rec: 'By recommendation', team: 'The team' };
+let resGroup = 'state';
+// Which groups and markets are expanded, and whether the quiet tail is shown.
+// Sets rather than a single key: closing one group should not close the others.
+let resOpen = new Set(), resMktOpen = new Set(), resInsOpen = new Set();
+let resShowQuiet = false;
+let _outlookEditing = null;
 
 // Cost assumptions. Doug has the vendor side exactly (billing.json); the
-// in-house side is an estimate until he supplies it, so it lives in Settings
-// and the page says so rather than presenting a guess as a finding.
+// SPWR side is an estimate until he supplies it, so it lives in Settings and
+// the page says so rather than presenting a guess as a finding.
 const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900, perDiem: 65, lodging: 140 };
 function resCost(){
   const s = (S && S.resCost) || {};
   return { ...RES_COST_DEFAULTS, ...s };
 }
-// Fully loaded weekly cost of one in-house surveyor, before travel.
+// Fully loaded weekly cost of one SPWR surveyor, before travel.
 const resWeeklyCost = () => (resCost().surveyorAnnual / 52) + (resCost().vehicleMonthly * 12 / 52);
 
 function resEnsure(){
@@ -6142,9 +6298,32 @@ function resEnsure(){
   return _rosterLoad;
 }
 
+// Doug's own read on an area — fetched, not baked in, because the page writes
+// it back through api/update-outlook.js on its own cadence. A missing file is
+// not an error: the page works without any notes at all.
+function outlookEnsure(){
+  if(_outlook||_outlookLoad) return _outlookLoad;
+  _outlookLoad = fetch('outlook.json',{cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('no outlook.json ('+r.status+')'); return r.json(); })
+    .then(j=>{ _outlook=j; _outlookErr=null; })
+    .catch(e=>{ _outlookErr=e.message; _outlook={states:{}}; })
+    .then(()=>{ _outlookLoad=null; if(currentPage==='resource') renderResource(); });
+  return _outlookLoad;
+}
+const resOutlookFor = st => ((_outlook&&_outlook.states)||{})[st] || null;
+
 const _rmoney = n => n==null?'—':'$'+Math.round(n).toLocaleString();
 const _rpct = n => n==null?'—':Math.round(n*100)+'%';
 const _r1 = n => n==null?'—':(Math.round(n*10)/10).toFixed(1);
+
+// The three resources, in the order the page reads them: ours, bought, the
+// reps'. Colours come from the --res-* tokens so the hero, the mix bars and the
+// four existing charts cannot drift apart.
+const RES_TRIO = [
+  { k:'SunPower Surveyor', id:'spwr',   label:'SPWR',       full:'SPWR surveyors',      css:'--res-spwr' },
+  { k:'Radicl Services',   id:'vendor', label:'Outsourced', full:'Outsourced (Radicl)', css:'--res-vendor' },
+  { k:'Sales Rep',         id:'rep',    label:'Sales reps', full:'Sales reps',          css:'--res-rep' },
+];
 
 // Surveyor bases, placed by the ZIP on the roster. A surveyor whose ZIP is not
 // in geo/zips.json is kept and shown unplaced rather than dropped — a missing
@@ -6177,10 +6356,56 @@ function resWeeks(pts){
   return Math.max((dDiff(ds[0],ds[ds.length-1])||7)/7, 1);
 }
 
-// Per-market cost actually invoiced, from the billing history. Only markets
-// whose billed lines matched a Salesforce row can be costed, so this is
-// reported where it exists and left blank where it does not — an average
-// stamped on an unmatched market would be a guess wearing a measurement's face.
+// The start of the recent window, anchored on the export date rather than the
+// wall clock — the same rule WIP, Map and every market rate here already use,
+// so a stale upload does not report the whole country as quiet.
+function resRecentFrom(){
+  const [y,m,d]=_mapToday().split('-').map(Number);
+  return localISO(new Date(y,m-1,d-OpsCoverage.RECENT_WEEKS*7));
+}
+
+// ── The resource split ─────────────────────────────────────────────────────
+// How the work divides across the three resources, each measured on what
+// matters for it. This replaced a six-cell stat rail (2026-08-26, Doug's ask):
+// five of those six cells were about the SPWR team, which is the resource doing
+// the least work, so the page opened by burying its own headline — the reps do
+// 54% of the surveys at the worst yield on the board.
+//
+// Reads live rows through gfDim like the rest of the page, NOT `filtered`: a
+// staffing decision is about the current book. Volume uses the recent window;
+// yield and cycle use every completion, because a defect rate over eight weeks
+// of one resource's work is too thin to band.
+function resSplit(){
+  const inScope=rows.filter(gfDim);
+  const from=resRecentFrom(), rw=OpsCoverage.RECENT_WEEKS;
+  const recentAll=inScope.filter(r=>r.start&&r.start>=from);
+  const out=RES_TRIO.map(t=>{
+    const all=inScope.filter(r=>r.resource===t.k);
+    const recent=all.filter(r=>r.start&&r.start>=from);
+    const done=all.filter(r=>everCompleted(r));
+    const cts=done.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
+    const defects=done.filter(r=>isResurveyDefect(r)).length;
+    return { ...t,
+      n:all.length, done:done.length, open:all.filter(r=>isWIP(r)).length,
+      recentN:recent.length, perWeek:recent.length/rw,
+      share:recentAll.length?recent.length/recentAll.length:null,
+      // fpy() from lib/metrics.cjs, on the 0-100 scale every other surface
+      // reads it on — never a local (n - defects) / n.
+      fpy:fpy(done),
+      defects, ctAvg:avg(cts), ctMed:med(cts),
+    };
+  });
+  return { res:out, recentN:recentAll.length, perWeek:recentAll.length/rw };
+}
+
+// Per-ZIP cost actually invoiced, from the billing history. Only lines that
+// matched a Salesforce row can be placed, so this is reported where it exists
+// and left blank where it does not — an average stamped on an unmatched market
+// would be a guess wearing a measurement's face.
+//
+// Callers must sum over a market's DISTINCT zips. Summing over its members
+// added each ZIP's whole total once per job in that ZIP, which read Bend, OR
+// as 379 billed visits against a true 19 and moved its per-survey rate by $13.
 function resVendorCostByZip(){
   const out={};
   if(!_billing) return out;
@@ -6199,12 +6424,8 @@ function resVendorCostByZip(){
 function resMarkets(){
   const pts=resPoints();
   const weeks=resWeeks(pts);
-  // The recent window is anchored on the export date, not the wall clock, so a
-  // stale upload does not silently empty every market — the same rule the WIP
-  // and Map pages use for ages.
   const today=_mapToday();
-  const recentFrom=(()=>{ const [y,m,d]=today.split('-').map(Number);
-    return localISO(new Date(y,m-1,d-OpsCoverage.RECENT_WEEKS*7)); })();
+  const recentFrom=resRecentFrom();
   const recentWeeks=OpsCoverage.RECENT_WEEKS;
   const bases=resBases().filter(b=>b.ll);
   const mobility=OpsCoverage.officeMobility(pts, d=>weekOf(d));
@@ -6230,12 +6451,15 @@ function resMarkets(){
     const repDone=rep.filter(p=>everCompleted(p.r));
     const repDefects=repDone.filter(p=>isResurveyDefect(p.r)).length;
 
-    const vendorUsd=mem.reduce((a,p)=>a+((vendorZip[p.zip]||{}).usd||0),0);
-    const vendorVisits=mem.reduce((a,p)=>a+((vendorZip[p.zip]||{}).visits||0),0);
+    // Distinct ZIPs, not members — see resVendorCostByZip().
+    const zips=[...new Set(mem.map(p=>p.zip))];
+    const vendorUsd=zips.reduce((a,z)=>a+((vendorZip[z]||{}).usd||0),0);
+    const vendorVisits=zips.reduce((a,z)=>a+((vendorZip[z]||{}).visits||0),0);
 
     const m={
       key:c.seed.st+'|'+ranked[0][0]+'|'+c.seedIndex,
       name:ranked[0][0], st:c.seed.st, towns:ranked, ll, rows:mem.map(p=>p.r),
+      dates:mem.map(p=>p.date).filter(Boolean),
       n:mem.length, perWeek:mem.length/weeks,
       recentN:recent.length, recentPerWeek:recent.length/recentWeeks,
       rep:rep.length, vendor:vend.length, inhouse:inhouse.length,
@@ -6252,13 +6476,164 @@ function resMarkets(){
       vendorUsd:vendorVisits?vendorUsd:null, vendorVisits,
       vendorPerSurvey:vendorVisits?vendorUsd/vendorVisits:null,
     };
-    m.capacity = near ? OpsCoverage.weeklyCapacity(near.miles, near.base.cfg) : null;
+    m.trend = OpsCoverage.intakeTrend(m.dates, today);
     m.advice = OpsCoverage.marketAdvice(m);
     return m;
   }).sort((a,b)=>a.advice.rank-b.advice.rank || b.outsourcedPerWeek-a.outsourcedPerWeek || b.n-a.n);
 }
 
-function setResView(v){ if(resView===v) return; resView=v; renderResource(); }
+// ── Rolling markets up ─────────────────────────────────────────────────────
+// The page showed 182 markets through a top-40 window, and 26 of those 40 said
+// "leave with vendor" at under 1.6 jobs a week — a decision surface that was
+// two-thirds noise. Rolled to states it is 14 rows, four of which carry 80% of
+// the work.
+//
+// Counts, rates and money SUM. The recommendation does not.
+//
+// The first version built the group to a market's shape and ran marketAdvice()
+// on the sum, which is tidy and wrong: a state is not a place. Ohio came out
+// "Absorb now" while all five of its live markets said "Leave with vendor" —
+// reach was taken from the state's nearest corner (a dormant market 59mi from
+// Detroit) while the outsourced volume was summed from markets 102 to 228mi
+// away. A group row that contradicts every one of its own children reads as a
+// bug, and here it was one.
+//
+// So a group's recommendation is ELECTED BY ITS MARKETS: whichever one carries
+// the most recent volume wins, ties going to the more urgent. That can never
+// contradict the rows underneath it, it needs no synthetic reach, and it still
+// has exactly one recommendation definition — marketAdvice(), applied where it
+// is true, to a single market.
+//
+// The fields that genuinely do not sum — reach, nearest base — still take the
+// best case across the group, but they are now display only.
+function resRollUp(markets, keyOf, nameOf){
+  const groups=new Map();
+  markets.forEach(m=>{
+    const k=keyOf(m);
+    let g=groups.get(k);
+    if(!g){ g={ key:k, name:nameOf(m), markets:[] }; groups.set(k,g); }
+    g.markets.push(m);
+  });
+  const sum=(a,f)=>a.reduce((x,m)=>x+(f(m)||0),0);
+  return [...groups.values()].map(g=>{
+    const ms=g.markets;
+    const repDone=sum(ms,m=>m.repDone);
+    const repDefects=sum(ms,m=>m.repDefectRate!=null?m.repDefectRate*m.repDone:0);
+    const n=sum(ms,m=>m.n);
+    // Reach is the best any market in the group has: if one corner of a state
+    // is a day trip, the state is reachable — which market is the question the
+    // expanded rows answer.
+    const reachRank={ [OpsCoverage.REACH.DAY]:0, [OpsCoverage.REACH.DEPLOY]:1, [OpsCoverage.REACH.FAR]:2 };
+    const best=ms.filter(m=>m.baseMiles!=null).sort((a,b)=>a.baseMiles-b.baseMiles)[0]||null;
+    const vendorVisits=sum(ms,m=>m.vendorVisits);
+    const vendorUsd=sum(ms,m=>m.vendorUsd);
+    const g2={
+      key:g.key, name:g.name, markets:ms, isGroup:true,
+      rows:ms.flatMap(m=>m.rows), dates:ms.flatMap(m=>m.dates),
+      n, recentN:sum(ms,m=>m.recentN),
+      recentPerWeek:sum(ms,m=>m.recentPerWeek),
+      outsourcedPerWeek:sum(ms,m=>m.outsourcedPerWeek),
+      inhousePerWeek:sum(ms,m=>m.inhousePerWeek),
+      rep:sum(ms,m=>m.rep), vendor:sum(ms,m=>m.vendor), inhouse:sum(ms,m=>m.inhouse),
+      repDone, repShare:n?sum(ms,m=>m.rep)/n:0,
+      repDefectRate:repDone?repDefects/repDone:null,
+      // Volume-weighted, so one three-job market on a mobile crew cannot flag
+      // a whole state.
+      mobileShare:n?sum(ms,m=>m.mobileShare*m.n)/n:0,
+      baseName:best?best.baseName:'—', baseMiles:best?best.baseMiles:null,
+      reach:ms.map(m=>m.reach).sort((a,b)=>reachRank[a]-reachRank[b])[0]||OpsCoverage.REACH.FAR,
+      vendorVisits, vendorUsd:vendorVisits?vendorUsd:null,
+      vendorPerSurvey:vendorVisits?vendorUsd/vendorVisits:null,
+    };
+    g2.trend = OpsCoverage.intakeTrend(g2.dates, _mapToday());
+    g2.advice = resGroupAdvice(ms);
+    return g2;
+  });
+}
+
+// The recommendation a group's own markets vote for, weighted by the work
+// behind them. Volume rather than a headcount of markets: Oregon is 15 markets
+// of which one (Tigard, 9.9/wk) is most of the state, and one-market-one-vote
+// would let fourteen markets averaging 0.4/wk outvote it.
+//
+// A group with nothing recent has no volume to weigh, so it falls back to
+// counting markets — which for a quiet group is unanimous anyway.
+function resGroupAdvice(markets){
+  const live=markets.filter(m=>m.recentN>0);
+  const pool=live.length?live:markets;
+  const tally=new Map();
+  pool.forEach(m=>{
+    const w=live.length?m.recentPerWeek:1;
+    const e=tally.get(m.advice.k)||{advice:m.advice,weight:0,n:0};
+    e.weight+=w; e.n++; tally.set(m.advice.k,e);
+  });
+  const ranked=[...tally.values()].sort((a,b)=>b.weight-a.weight || a.advice.rank-b.advice.rank);
+  const win=ranked[0];
+  if(!win) return { ...OpsCoverage.RECOMMENDATIONS.DORMANT, reasons:['no markets'] };
+  const total=ranked.reduce((a,e)=>a+e.weight,0);
+  const reasons=[
+    win.n+' of '+markets.length+' market'+(markets.length===1?'':'s')
+      +(live.length?', '+Math.round(win.weight/(total||1)*100)+'% of the work here':''),
+    // The winning markets' own reasoning, not a second rule invented for
+    // groups — so opening the row shows where the line came from.
+    ...(pool.find(m=>m.advice.k===win.advice.k)||{advice:{reasons:[]}}).advice.reasons,
+  ];
+  return { ...win.advice, reasons };
+}
+
+// State names, so a group row reads "Virginia" rather than "VA". Only the
+// states the data actually reaches need to be here; anything else falls back to
+// its code, which is still a correct label.
+const RES_STATE_NAMES = { AL:'Alabama',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',
+  CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',ID:'Idaho',IL:'Illinois',IN:'Indiana',
+  IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',
+  MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',
+  NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',
+  OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+  SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',
+  WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'Washington DC' };
+const resStateName = st => RES_STATE_NAMES[st] || st;
+
+// The groups behind the current cut, ordered so the rows that need a decision
+// come first. Both cuts sort by recommendation rank then by recent volume —
+// the same order the flat table used, which is what keeps "Absorb now" at the
+// top rather than whichever state happens to be alphabetically first.
+function resGroupsFor(markets){
+  const gs = resGroup==='rec'
+    ? resRollUp(markets, m=>m.advice.k, m=>m.advice.label)
+    : resRollUp(markets, m=>m.st, m=>resStateName(m.st));
+  if(resGroup==='rec'){
+    // Grouped BY recommendation, the group's own recommendation is its key —
+    // re-deriving it from the sum would let a group titled "Coach the reps"
+    // carry a different tag, which reads as a bug.
+    gs.forEach(g=>{ g.advice = { ...(Object.values(OpsCoverage.RECOMMENDATIONS).find(a=>a.k===g.key)||g.advice), reasons:g.advice.reasons }; });
+  }
+  return gs.sort((a,b)=>a.advice.rank-b.advice.rank || b.recentPerWeek-a.recentPerWeek || b.n-a.n);
+}
+
+function setResGroup(v){ if(resGroup===v) return; resGroup=v; resOpen=new Set(); resMktOpen=new Set(); renderResource(); }
+function resToggleGroup(k){ if(resOpen.has(k)) resOpen.delete(k); else resOpen.add(k); _renderResBody(); }
+function resToggleMkt(k){ if(resMktOpen.has(k)) resMktOpen.delete(k); else resMktOpen.add(k); _renderResBody(); }
+function resToggleQuiet(){ resShowQuiet=!resShowQuiet; _renderResBody(); }
+function resToggleIns(i){ if(resInsOpen.has(i)) resInsOpen.delete(i); else resInsOpen.add(i); renderResource(); }
+
+// FPY bands, the mirror of the Quality page's rate bands (5 / 15 there, so
+// 95 / 85 here). Written against the DISPLAYED value so a column reading 94.0%
+// can never be coloured on a hidden 94.04.
+function resFpyBand(v){ if(v==null) return ''; const shown=Math.round(v*10)/10;
+  return shown>=95?'good':shown>=85?'warn':'bad'; }
+
+// Three windows as three bars. Heights are share of the group's own largest
+// window, so a shape is readable whether the area does 400 jobs or 12; a 2px
+// floor keeps an empty window a visible gap rather than a missing bar.
+function resTrendBars(t){
+  if(!t) return '';
+  const mx=Math.max(...t.windows,1);
+  const bars=t.windows.map((n,i)=>`<span style="height:${Math.max(Math.round(n/mx*16),2)}px;"`
+    +` title="${n} in the ${['oldest','middle','most recent'][i]} of three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows"></span>`).join('');
+  return `<div class="res-trend" aria-hidden="true">${bars}</div>`
+    +`<div class="res-trend-l ${t.k}">${t.label?esc(t.label):'<span style="color:var(--faint);">too few</span>'}</div>`;
+}
 
 function renderResource(){
   const el=document.getElementById('res-content'); if(!el) return;
@@ -6275,66 +6650,100 @@ function renderResource(){
     return;
   }
   if(!_billing&&!_billingErr) billingEnsure();
+  if(!_outlook&&!_outlookErr) outlookEnsure();
 
   const bases=resBases();
   const markets=resMarkets();
-  const pts=resPoints(), weeks=resWeeks(pts);
+  const split=resSplit();
 
   // Team-wide capacity at each surveyor's own home market distance, which is
   // the optimistic case: it assumes they work close in.
   const teamCap=bases.reduce((a,b)=>a+(OpsCoverage.weeklyCapacity(8,b.cfg)||0),0);
-  // Both rates read the recent window, like every other figure here. Mixing an
-  // all-time in-house average with a recent vendor rate made the utilisation
-  // ratio compare two different periods.
-  const inhouseNow=markets.reduce((a,m)=>a+m.inhousePerWeek,0);
-  const outsourcedNow=markets.reduce((a,m)=>a+m.outsourcedPerWeek,0);
+  const placed=Math.max(bases.filter(b=>b.ll).length,1);
+  const inhouseNow=split.res[0].perWeek;
+  const outsourcedNow=split.res[1].perWeek;
   const absorbable=markets.filter(m=>m.advice.k==='absorb').reduce((a,m)=>a+m.outsourcedPerWeek,0);
   const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
   const perVendor=billSum?billSum.perSurvey:null;
+  const util=teamCap?inhouseNow/teamCap:null;
 
-  // Cost per in-house survey is weekly cost divided by surveys DONE, so it is
+  // Cost per SPWR survey is weekly cost divided by surveys DONE, so it is
   // meaningless without a throughput. Quoting it at modelled capacity read
   // $115 against the vendor's $390 — a seven-fold flattery, on the same page
-  // whose first line says only 14% of that capacity is being realised.
-  //
-  // Break-even is quoted instead: how many surveys a week a surveyor must
-  // complete to match the vendor. It is the one figure here that does not
-  // depend on the capacity model being right, which is why it leads.
-  const placed=Math.max(bases.filter(b=>b.ll).length,1);
+  // whose first line says only a seventh of that capacity is being realised.
   const breakEven=perVendor?resWeeklyCost()/perVendor:null;
   const perSurveyNow=inhouseNow>0?resWeeklyCost()/(inhouseNow/placed):null;
 
-  const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
-    +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
+  // The three columns. `lead` is the one row that differs per resource — what
+  // its ceiling is — and everything under it is the same three measures in the
+  // same order, which is what makes 94% / 87% / 80% readable as a comparison
+  // rather than as three separate facts.
+  const cost=[perSurveyNow, perVendor, null];
+  const leads=[
+    `<div class="res-gauge"><span style="width:${Math.min(Math.round((util||0)*100),100)}%;background:var(--res-spwr);"></span></div>`
+      +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled &middot; ${_rpct(util)} used`,
+    `<b style="color:var(--text);">No ceiling.</b> Capacity is whatever is invoiced &mdash; `
+      +`${billSum?_rpct(billSum.travelShare)+' of the bill is travel':'import a statement to price it'}.`,
+    `<b style="color:var(--text);">${split.res[2].n.toLocaleString()}</b> surveys from the field. `
+      +`No cost line of its own &mdash; the rework it causes lands on the vendor bill.`,
+  ];
+  const notes=[
+    util!=null&&util<0.6
+      ? `<b>Modelled at ${_r1(teamCap/Math.max(bases.length,1))}/wk each; they complete ${_r1(inhouseNow/placed)}.</b> `
+        +`Either surveying is not their whole job or the model is wrong — every capacity figure on this page scales with it.`
+      : 'Capacity is the drive-time model in <code>lib/coverage.cjs</code>, at a tight market.',
+    billSum&&billSum.cleanupUsd
+      ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, billed at the full first-visit rate.`
+      : 'One vendor on file. A second needs a spec object, not a second parser.',
+    `Yield here is the whole team's biggest quality lever: ${split.res[2].defects.toLocaleString()} of the `
+      +`${split.res[2].done.toLocaleString()} rep surveys came back.`,
+  ];
+
+  const col=(r,i)=>{
+    const m=(label,val,cls,sub)=>`<div class="res-m"><span class="res-m-l">${label}</span>`
+      +`<span class="res-m-v${cls?' '+cls:''}">${val}${sub?`<small>${sub}</small>`:''}</span></div>`;
+    return `<div class="res-col">
+      <div class="res-col-name">${esc(r.full)}</div>
+      <div class="res-col-share" style="color:var(${r.css});">${r.share==null?'—':Math.round(r.share*100)+'%'}</div>
+      <div class="res-col-rate">${_r1(r.perWeek)} a week &middot; ${r.recentN.toLocaleString()} in the last ${OpsCoverage.RECENT_WEEKS} weeks</div>
+      <div class="res-col-lead">${leads[i]}</div>
+      ${m('First-pass yield', r.fpy==null?'—':r.fpy.toFixed(1)+'%', resFpyBand(r.fpy), r.done.toLocaleString()+' completed')}
+      ${m('Cycle time', r.ctAvg==null?'—':r.ctAvg.toFixed(1)+'d', bandFor(r.ctAvg,S.targetAvg), r.ctMed==null?'':'median '+r.ctMed+'d')}
+      ${m('Cost per survey', _rmoney(cost[i]),
+          // Only the SPWR figure is banded, and only against the vendor it is
+          // being compared with. The vendor rate is the benchmark, so it bands
+          // against nothing; the reps have no cost line, and a green dash would
+          // read as "cheapest" about a resource that is simply not invoiced.
+          cost[i]!=null&&perVendor&&i===0?(cost[i]>perVendor?'bad':'good'):'',
+          i===0?'at today’s throughput':i===1?'all-in, flat':'not billed')}
+      <div class="res-col-note">${notes[i]}</div>
+    </div>`;
+  };
+
+  const insights=resInsights(markets,bases,{teamCap,inhouseNow,outsourcedNow,absorbable,billSum,util});
+  const worst=insights.some(i=>i.sev==='high')?'high':insights.some(i=>i.sev==='med')?'med':'info';
 
   el.innerHTML=`
-    <div class="srail">
-      ${cell('In-house team',bases.length,bases.filter(b=>b.ll).length+' placed',TIP.resTeam)}
-      ${cell('Doing now',_r1(inhouseNow),'a week',TIP.resNow)}
-      ${cell('Capacity',_r1(teamCap),'modelled',TIP.resCapacity)}
-      ${cell('Utilisation',_rpct(teamCap?inhouseNow/teamCap:null),'of model',TIP.resUtil)}
-      ${cell('Outsourced',_r1(outsourcedNow),'a week',TIP.resOutsourced)}
-      ${cell('Absorbable',_r1(absorbable),'of that',TIP.resAbsorb)}
-    </div>
-
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Findings</div>
-      <div class="ssub">Measured from the markets below · each one says what it is counted from</div></div></div>
-      <div class="res-ins">${resInsights(markets,bases,{teamCap,inhouseNow,outsourcedNow,absorbable,billSum,weeks}).map(i=>`
-        <div class="res-ins-row sev-${i.sev}">
-          <div class="res-ins-h">${esc(i.headline)}</div>
-          <div class="res-ins-d">${i.detail}</div>
-        </div>`).join('')}</div>
+      <div class="shead"><div><div class="stitle">Where the work goes</div>
+      <div class="ssub">${split.recentN.toLocaleString()} surveys started in the last ${OpsCoverage.RECENT_WEEKS} weeks &middot; ${_r1(split.perWeek)} a week &middot; yield and cycle over every completion${kinfo(TIP.resSplit)}</div></div></div>
+      <div class="res-split-key">
+        ${split.res.map(r=>`<span><span class="ld" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(${r.css});margin-right:6px;"></span>${esc(r.label)} <b>${r.share==null?'—':Math.round(r.share*100)+'%'}</b></span>`).join('')}
+      </div>
+      <div class="res-split-bar">
+        ${split.res.filter(r=>r.recentN>0).map(r=>`<span style="width:${(r.share||0)*100}%;background:var(${r.css});" title="${esc(r.label)}: ${r.recentN}"></span>`).join('')}
+      </div>
+      <div class="res-cols">${split.res.map(col).join('')}</div>
     </div>
 
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">${resView==='team'?'The team':'Markets'}</div>
-        <div class="ssub">${resView==='team'
-          ? 'In-house surveyors from roster.json, placed by home ZIP'
-          : `One action per market, from reach, volume, durability and rep defect rate · ${mapRadius}-mile clusters, set by the Map's radius control`}</div></div>
+        <div><div class="stitle">${resGroup==='team'?'The team':resGroup==='rec'?'Recommendations':'Markets'}</div>
+        <div class="ssub">${resGroup==='team'
+          ? 'SPWR surveyors from roster.json, placed by home ZIP'
+          : `${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} &middot; reach, volume, durability and rep defect rate decide each one${kinfo(TIP.resRec)}`}</div></div>
         <div class="toggle-group">
-          ${['markets','team'].map(v=>`<button class="tgl-btn${resView===v?' active':''}" onclick="setResView('${v}')">${v==='markets'?'Markets':'The team'}</button>`).join('')}
+          ${Object.entries(RES_GROUPS).map(([v,l])=>`<button class="tgl-btn${resGroup===v?' active':''}" aria-pressed="${resGroup===v}" onclick="setResGroup('${v}')">${l}</button>`).join('')}
         </div>
       </div>
       <div id="res-body"></div>
@@ -6342,7 +6751,7 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Build vs buy</div>
-      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} · in-house cost depends on throughput, so it is quoted as a break-even</div></div></div>
+      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} &middot; SPWR cost depends on throughput, so it is quoted as a break-even</div></div></div>
       <div class="res-bvb">
         <div class="res-bvb-col">
           <div class="klabel">Vendor, all-in</div>
@@ -6350,14 +6759,14 @@ function renderResource(){
           <div class="note">${billSum?'Per survey across '+billSum.surveys+' billed visits, travel adders and demobilisation included. The base rate alone is 37% lower.':'Per survey. Import a statement to measure this.'}</div>
         </div>
         <div class="res-bvb-col">
-          <div class="klabel">In-house break-even</div>
-          <div class="res-bvb-v ${breakEven!=null&&perSurveyNow!=null&&perSurveyNow<=perVendor?'good':''}">${breakEven!=null?_r1(breakEven):'—'}</div>
+          <div class="klabel">SPWR break-even</div>
+          <div class="res-bvb-v ${breakEven!=null&&perSurveyNow!=null&&perVendor&&perSurveyNow<=perVendor?'good':''}">${breakEven!=null?_r1(breakEven):'—'}</div>
           <div class="note">Surveys a week per surveyor to match the vendor, at ${_rmoney(resWeeklyCost())}/week loaded. The one figure here that does not rest on the capacity model.</div>
         </div>
         <div class="res-bvb-col">
           <div class="klabel">Where you are</div>
           <div class="res-bvb-v ${perSurveyNow==null||!perVendor?'':(perSurveyNow>perVendor?'bad':'good')}">${_rmoney(perSurveyNow)}</div>
-          <div class="note">Per in-house survey at the ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
+          <div class="note">Per SPWR survey at the ${_r1(inhouseNow/placed)} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
             ? 'Above the vendor: at this throughput insourcing costs more. The case for it is throughput, cycle time or quality, not price.'
             : perVendor ? 'Below the vendor rate.' : ''}</div>
         </div>
@@ -6366,33 +6775,45 @@ function renderResource(){
         Loaded weekly cost ÷ surveys completed, so it falls with throughput:
         ${[2,4,6,10,15].map(n=>{const c=resWeeklyCost()/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
         The vendor rate is flat at ${_rmoney(perVendor)} whatever the volume.
-        In-house figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle) — edit in Settings.
+        SPWR figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle) — edit in Settings.
       </div>
+    </div>
+
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">Findings<span class="res-ins-dot sev-${worst}"></span></div>
+      <div class="ssub">${insights.length} derived from the markets above &middot; open one for what it is counted from</div></div></div>
+      <div class="res-ins">${insights.map((i,ix)=>`
+        <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}">
+          <button class="res-ins-h" aria-expanded="${resInsOpen.has(ix)}" onclick="resToggleIns(${ix})">
+            <span class="wip-expand">&#9656;</span><span>${esc(i.headline)}</span></button>
+          ${resInsOpen.has(ix)?`<div class="res-ins-d">${i.detail}</div>`:''}
+        </div>`).join('')}</div>
     </div>`;
 
-  _renderResBody(markets,bases,weeks);
+  _renderResBody();
 }
 
 // Insights are DERIVED, never a written-in narrative: each one recomputes from
 // the same markets the table shows, and states what it is measured from. A
 // panel of hand-written conclusions goes stale the first week the data moves.
 //
-// Ordered by how much they should change what Doug does this week, not by
-// severity — a large open question outranks a small confident answer.
+// Collapsed and moved below the table 2026-08-26 (Doug's ask) — six paragraphs
+// above the thing they describe. The derivation stays; only the prominence
+// changed. The capacity caveat is the exception and is repeated in the split at
+// the top of the page, because every capacity figure is wrong if it is wrong.
 function resInsights(markets,bases,ctx){
   const out=[];
-  const {teamCap,inhouseNow,outsourcedNow,absorbable,billSum}=ctx;
+  const {teamCap,inhouseNow,outsourcedNow,absorbable,billSum,util}=ctx;
 
   // 1. The biggest thing on the page is a question, not a finding. Four
-  //    surveyors modelled at 14.8/wk each would be ~59; they are doing ~8.
+  //    surveyors modelled at 14.8/wk each would be ~59; they are doing ~9.
   //    Printing the difference as "headroom" would assert an answer the data
   //    does not support, so it is raised as the discrepancy it is.
-  const util=teamCap?inhouseNow/teamCap:null;
   if(util!=null&&util<0.6){
     out.push({sev:'high',
       headline:'The team is at '+_rpct(util)+' of modelled capacity',
       detail:`The drive-time model gives ${_r1(teamCap/Math.max(bases.length,1))} surveys a week each at a tight market; `
-        +`they complete ${_r1(inhouseNow/Math.max(bases.length,1))}. Either surveying is not their whole job, or the model's time-on-site or field-hours setting is wrong. `
+        +`they complete ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))}. Either surveying is not their whole job, or the model's time-on-site or field-hours setting is wrong. `
         +`<b>Every capacity figure here scales with this</b>, so settle it before using any hiring number. `
         +`Both settings are per surveyor in <code>roster.json</code>.`});
   }
@@ -6453,81 +6874,247 @@ function resInsights(markets,bases,ctx){
         +`It bills the same as a fresh survey, so the invoice does not name it. `
         +`This is the rep-quality problem, priced — it lands on a vendor bill rather than in any survey metric.`});
   }
+
+  // 7. Where intake is going, which is the only leading indicator in the data.
+  const growing=markets.filter(m=>m.trend&&m.trend.k==='growing').sort((a,b)=>b.recentPerWeek-a.recentPerWeek);
+  const slowing=markets.filter(m=>m.trend&&m.trend.k==='slowing').sort((a,b)=>b.n-a.n);
+  if(growing.length||slowing.length){
+    out.push({sev:'info',
+      headline:(growing.length?growing.length+' market'+(growing.length===1?'':'s')+' filling up':'')
+        +(growing.length&&slowing.length?', ':'')
+        +(slowing.length?slowing.length+' emptying out':''),
+      detail:(growing.length?`<b>Growing:</b> ${growing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
+        +(slowing.length?`<b>Slowing:</b> ${slowing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
+        +`Measured from project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows, which is a sale landing rather than a survey finishing. `
+        +`It says what has arrived, not what is coming — the Outlook column beside it is for what you know that this cannot.`});
+  }
   return out;
 }
 
-function _renderResBody(markets,bases,weeks){
+// ── The table ──────────────────────────────────────────────────────────────
+function _renderResBody(){
   const host=document.getElementById('res-body'); if(!host) return;
+  const bases=resBases();
+  const markets=resMarkets();
 
-  if(resView==='team'){
-    host.innerHTML=`
-      <div class="xscroll"><table id="res-team-tbl" class="tbl tbl-static"><thead><tr>
-        <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
-        <th class="r">Markets in range</th><th class="r">In-house work there</th><th>Constraints</th><th>Contact</th>
-      </tr></thead><tbody>
-        ${bases.map(b=>{
-          const cap=b.ll?OpsCoverage.weeklyCapacity(8,b.cfg):null;
-          // In-house work within THIS surveyor's own day range, not markets
-          // where they happen to be nearest. Two of them are eight miles
-          // apart, so nearest-base attribution handed Portland entirely to one
-          // and printed the other at zero — which reads as "idle" and is not
-          // something the data can say. Ranges overlap on purpose; the note
-          // below says so.
-          const inRange=b.ll?markets.filter(m=>m.ll&&OpsCoverage.reachable(OpsCoverage.milesBetween(b.ll,m.ll),b.cfg)):[];
-          const load=inRange.reduce((a,m)=>a+m.inhousePerWeek,0);
-          const shared=inRange.some(m=>bases.filter(o=>o.ll&&o.id!==b.id
-            &&OpsCoverage.reachable(OpsCoverage.milesBetween(o.ll,m.ll),o.cfg)).length>0);
-          const off=(b.off||[]).join(', ');
-          return `<tr>
-            <td>${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
-            <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
-            <td style="color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
-            <td class="r">${_r1(cap)}</td>
-            <td class="r">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
-            <td class="r">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
-            <td>${((b.constraints||[]).map(c=>`<span class="pill pn">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
-            <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
-          </tr>`;
-        }).join('')}
-      </tbody></table></div>
-      <div class="note">
-        Capacity is the drive-time model at an 8-mile market, the optimistic end. It falls as the drive grows:
-        ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
-        Hours, time on site, admin, speed and day radius are per surveyor in <code>roster.json</code>.
-        <b>Constraints are recorded, not modelled</b> — nothing here divides capacity by them.
-        <br><b>In-house work there is not a personal workload.</b> Salesforce records the resource, never which surveyor,
-        so the work can only be attributed to a place. Overlapping ranges count the same work against both surveyors, marked <i>shared range</i>.
-      </div>
-      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-team-tbl',this,'the team')">Copy table</button></div>`;
-    return;
-  }
+  if(resGroup==='team'){ host.innerHTML=_resTeamTable(markets,bases); return; }
 
-  const act=a=>`<span class="res-act res-act-${a.k}">${esc(a.label)}</span>`;
+  const groups=resGroupsFor(markets);
+  // A group with no work in the recent window is not a staffing decision — it
+  // is history. 95 of 182 markets are in that state, and leaving them in the
+  // default view is what made the old table two-thirds noise. They are counted
+  // and reachable, never silently dropped.
+  const live=groups.filter(g=>g.recentN>0), quiet=groups.filter(g=>!g.recentN);
+  const showRec=resGroup!=='rec';       // grouped BY it, the column is the group
+  const showOutlook=resGroup==='state'; // an outlook is a judgement about a place
+
+  const cols=['Area', ...(showRec?['Recommendation']:[]), 'Jobs/wk', 'Who does it now',
+    'Nearest base', 'Intake trend', 'Vendor cost', ...(showOutlook?['Outlook']:[])];
+
+  const rowsHtml=live.map(g=>_resGroupRow(g,showRec,showOutlook)).join('')
+    + (quiet.length?`<tr class="res-grp"><td colspan="${cols.length}">
+        <button class="res-out-btn" onclick="resToggleQuiet()" aria-expanded="${resShowQuiet}">
+          ${resShowQuiet?'Hide':'Show'} ${quiet.length} ${resGroup==='rec'?'group':'area'}${quiet.length===1?'':'s'} with nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks</button>
+        <span class="cmeta" style="margin-left:9px;">${quiet.reduce((a,g)=>a+g.n,0).toLocaleString()} surveys all-time</span></td></tr>`:'')
+    + (resShowQuiet?quiet.map(g=>_resGroupRow(g,showRec,showOutlook,true)).join(''):'');
+
   host.innerHTML=`
     <div class="xscroll"><table id="res-mkt-tbl" class="tbl tbl-static res-tbl"><thead><tr>
-      <th>Market</th><th>Action</th><th class="r">Jobs/wk<span class="th-sub">last ${OpsCoverage.RECENT_WEEKS}wk</span></th><th>Who does it now</th>
-      <th class="r">Nearest base</th><th class="r">Vendor cost</th><th>Why</th>
+      ${cols.map(c=>`<th${['Jobs/wk','Vendor cost'].includes(c)?' class="r"':''}>${c}${
+        c==='Jobs/wk'?`<span class="th-sub">last ${OpsCoverage.RECENT_WEEKS}wk</span>`
+        :c==='Intake trend'?'<span class="th-sub">3 &times; 4wk</span>':''}</th>`).join('')}
+    </tr></thead><tbody>${rowsHtml}</tbody></table></div>
+    <div class="note">
+      ${live.length} active ${resGroup==='rec'?'group':'area'}${live.length===1?'':'s'} over
+      ${live.reduce((a,g)=>a+g.markets.length,0)} markets &middot; open a row for the markets inside it, and a market for why.
+      Markets are ${mapRadius}-mile clusters, set by the Map page's radius control.
+      <b>Intake trend</b> counts project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows &mdash; what has arrived, not what is forecast.
+      ${showOutlook?'<b>Outlook</b> is a hand-written judgement and never changes the recommendation beside it.':''}
+    </div>
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-mkt-tbl',this,'markets')">Copy table</button></div>`;
+}
+
+const _resRecTag = a => `<span class="res-rec res-rec-${a.k}">${esc(a.label)}</span>`;
+
+function _resMixCell(m){
+  const tot=Math.max(m.rep+m.vendor+m.inhouse,1);
+  const bar=[['rep',m.rep,'var(--res-rep)'],['vendor',m.vendor,'var(--res-vendor)'],['SPWR',m.inhouse,'var(--res-spwr)']]
+    .filter(x=>x[1]>0)
+    .map(x=>`<span class="res-seg" style="width:${x[1]/tot*100}%;background:${x[2]};" title="${x[1]} ${x[0]}"></span>`).join('');
+  return `<div class="res-mix">${bar}</div><div class="cmeta">${m.rep} rep &middot; ${m.vendor} vendor &middot; ${m.inhouse} SPWR</div>`;
+}
+const _resReachLbl = r => r==='day'?'day trip':r==='deploy'?'posting':'out of range';
+
+function _resBaseCell(m){
+  return `${m.baseMiles!=null?Math.round(m.baseMiles)+'mi':'—'}`
+    +`<div class="cmeta">${esc(m.baseName)} &middot; ${_resReachLbl(m.reach)}</div>`;
+}
+function _resCostCell(m){
+  return m.vendorPerSurvey!=null
+    ? _rmoney(m.vendorPerSurvey)+`<div class="cmeta">${m.vendorVisits} billed</div>`
+    : '<span class="pna">—</span>';
+}
+
+// One group row plus, when open, its markets. Both levels render through the
+// same cells, so a state and a market can never disagree about what a column
+// means — the group is literally a market built by summing markets.
+function _resGroupRow(g,showRec,showOutlook,quiet){
+  const open=resOpen.has(g.key);
+  const sub=resGroup==='rec'
+    ? g.markets.length+' market'+(g.markets.length===1?'':'s')
+    : g.markets.length+' market'+(g.markets.length===1?'':'s')+' &middot; '+g.n.toLocaleString()+' all-time';
+  const out=[`<tr class="res-grp${quiet?' res-quiet':''}">
+    <td><button class="res-out-btn" style="border:none;background:none;padding:0;font-size:inherit;text-align:left;"
+        aria-expanded="${open}" onclick="resToggleGroup('${escAttrJs(g.key)}')">
+      <span class="wip-expand" style="${open?'transform:rotate(90deg);':''}">&#9656;</span>
+      <span class="res-grp-name">${esc(g.name)}</span></button>
+      <div class="res-grp-sub">${sub}</div></td>
+    ${showRec?`<td>${_resRecTag(g.advice)}</td>`:''}
+    <td class="r">${_r1(g.recentPerWeek)}</td>
+    <td>${_resMixCell(g)}</td>
+    <td class="r" style="white-space:nowrap;">${_resBaseCell(g)}</td>
+    <td>${resTrendBars(g.trend)}</td>
+    <td class="r" style="white-space:nowrap;">${_resCostCell(g)}</td>
+    ${showOutlook?`<td>${_resOutlookCell(g.key)}</td>`:''}
+  </tr>`];
+
+  if(!open) return out.join('');
+
+  // Inside a group, the same recency rule: markets with nothing recent are
+  // history and sink to the bottom, greyed, rather than being hidden — at this
+  // depth the reader has already asked for detail.
+  const ms=[...g.markets].sort((a,b)=>(b.recentN>0)-(a.recentN>0)
+    || b.recentPerWeek-a.recentPerWeek || b.n-a.n);
+  ms.forEach(m=>{
+    const mo=resMktOpen.has(m.key);
+    out.push(`<tr class="res-kid${m.recentN?'':' res-quiet'}">
+      <td><button class="res-out-btn" style="border:none;background:none;padding:0;font-size:inherit;text-align:left;"
+          aria-expanded="${mo}" onclick="resToggleMkt('${escAttrJs(m.key)}')">
+        <span class="wip-expand" style="${mo?'transform:rotate(90deg);':''}">&#9656;</span>
+        <b>${esc(m.name)}</b>, ${esc(m.st)}</button>
+        <div class="cmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' &middot; '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
+      ${showRec?`<td>${_resRecTag(m.advice)}</td>`:''}
+      <td class="r">${_r1(m.recentPerWeek)}${m.recentN?'':`<div class="cmeta">${m.n} all-time</div>`}</td>
+      <td>${_resMixCell(m)}</td>
+      <td class="r" style="white-space:nowrap;">${_resBaseCell(m)}</td>
+      <td>${resTrendBars(m.trend)}</td>
+      <td class="r" style="white-space:nowrap;">${_resCostCell(m)}</td>
+      ${showOutlook?'<td></td>':''}
+    </tr>`);
+    if(mo){
+      out.push(`<tr class="res-detail"><td colspan="${6+(showRec?1:0)+(showOutlook?1:0)}"><div class="res-detail-in">
+        <b>Why ${esc(m.advice.label.toLowerCase())}:</b> ${m.advice.reasons.map(esc).join('; ')}.
+        <br><b>Towns:</b> ${m.towns.slice(0,8).map(([t,n])=>esc(t)+' ('+n+')').join(' &middot; ')}${m.towns.length>8?' and '+(m.towns.length-8)+' more':''}.
+        <br><button class="res-out-btn" style="margin-top:7px;" onclick="openDrill('${escAttrJs(m.name)}', '${m.n} jobs &middot; ${_resReachLbl(m.reach)}', _resRows('${escAttrJs(m.key)}'), {mode:'place'})">Open the ${m.n} surveys</button>
+      </div></td></tr>`);
+    }
+  });
+  return out.join('');
+}
+
+// ── Outlook ────────────────────────────────────────────────────────────────
+// What Doug knows that the export cannot: whether more sales are coming from
+// an area. Deliberately reads as a note with a byline rather than as a metric,
+// and never feeds marketAdvice() — a judgement that silently changed a
+// recommendation would be indistinguishable from a measurement.
+const RES_OUTLOOK_FLAGS = { growing:'Growing', steady:'Steady', winding_down:'Winding down', unknown:'—' };
+function _resOutlookCell(st){
+  const o=resOutlookFor(st);
+  const btn=`<button class="res-out-btn" onclick="openOutlook('${esc(st)}')">${o?'Edit':'Add a note'}</button>`;
+  if(!o) return `<div class="res-out">${btn}</div>`;
+  return `<div class="res-out">
+    <span class="res-out-flag res-out-${o.flag}">${RES_OUTLOOK_FLAGS[o.flag]||o.flag}</span>
+    ${o.note?`<div class="res-out-note">${esc(o.note)}</div>`:''}
+    <div class="res-out-by">${esc(o.by||'')} &middot; ${esc(o.at||'')} &nbsp;${btn}</div>
+  </div>`;
+}
+
+function openOutlook(st){
+  _outlookEditing=st;
+  const o=resOutlookFor(st)||{flag:'unknown',note:''};
+  const body=document.getElementById('outlook-body');
+  body.innerHTML=`
+    <div class="res-fld"><label for="ol-flag">Are more sales coming from ${esc(resStateName(st))}?</label>
+      <select id="ol-flag">${Object.entries(RES_OUTLOOK_FLAGS).map(([k,l])=>
+        `<option value="${k}"${o.flag===k?' selected':''}>${k==='unknown'?'Not sure':l}</option>`).join('')}</select></div>
+    <div class="res-fld"><label for="ol-note">What you know that the data does not</label>
+      <textarea id="ol-note" rows="3" maxlength="280" placeholder="e.g. Austin crew lands Sept 15, expect 20/wk">${esc(o.note||'')}</textarea></div>
+    <div class="res-fld"><label for="ol-pw">Update password</label>
+      <input id="ol-pw" type="password" autocomplete="off"></div>
+    <div id="ol-msg" class="note" style="min-height:16px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <button class="mbtn" onclick="closeOutlook()">Cancel</button>
+      <button class="mbtn" id="ol-save" onclick="saveOutlook()">Save &amp; commit</button>
+    </div>`;
+  document.getElementById('outlookModal').classList.remove('hidden');
+  setTimeout(()=>{ const f=document.getElementById('ol-note'); if(f) f.focus(); },30);
+}
+function closeOutlook(){
+  _outlookEditing=null;
+  const m=document.getElementById('outlookModal'); if(m) m.classList.add('hidden');
+}
+function saveOutlook(){
+  const st=_outlookEditing; if(!st) return;
+  const msg=document.getElementById('ol-msg'), btn=document.getElementById('ol-save');
+  const body={ state:st,
+    flag:document.getElementById('ol-flag').value,
+    note:document.getElementById('ol-note').value,
+    password:document.getElementById('ol-pw').value, by:'Doug' };
+  if(!body.password){ msg.innerHTML='<b style="color:var(--red);">Enter the update password.</b>'; return; }
+  btn.disabled=true; msg.textContent='Committing…';
+  fetch('/api/update-outlook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(r=>r.json().then(j=>({ok:r.ok,j})))
+    .then(({ok,j})=>{
+      if(!ok) throw new Error(j.error||'save failed');
+      // Applied in memory at once; the commit is live for everyone else in
+      // about 30 seconds, the same as the Salesforce and billing pushes.
+      _outlook=j.outlook;
+      closeOutlook();
+      toast('Outlook saved'+(j.commit?' · '+j.commit:''));
+      renderResource();
+    })
+    .catch(e=>{ btn.disabled=false; msg.innerHTML=`<b style="color:var(--red);">${esc(e.message)}</b>`; });
+}
+
+function _resTeamTable(markets,bases){
+  return `
+    <div class="xscroll"><table id="res-team-tbl" class="tbl tbl-static"><thead><tr>
+      <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
+      <th class="r">Markets in range</th><th class="r">SPWR work there</th><th>Constraints</th><th>Contact</th>
     </tr></thead><tbody>
-      ${markets.filter(m=>m.n>=3).slice(0,40).map(m=>{
-        const tot=Math.max(m.rep+m.vendor+m.inhouse,1);
-        const bar=[['rep',m.rep,'var(--faint)'],['vendor',m.vendor,'var(--amber)'],['inhouse',m.inhouse,'var(--blue)']]
-          .filter(x=>x[1]>0)
-          .map(x=>`<span class="res-seg" style="width:${x[1]/tot*100}%;background:${x[2]};" title="${x[1]} ${x[0]}"></span>`).join('');
-        const reachLbl=m.reach==='day'?'day trip':m.reach==='deploy'?'posting':'out of range';
-        return `<tr class="drill-tgt" role="button" tabindex="0"
-          ${drillAttrs("openDrill('"+String(m.name).replace(/'/g,"\\'")+"', '"+m.n+" jobs · "+reachLbl+"', _resRows('"+m.key.replace(/'/g,"\\'")+"'), {mode:'place'})")}>
-          <td><b>${esc(m.name)}</b>, ${esc(m.st)}<div class="cmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' · '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
-          <td>${act(m.advice)}</td>
-          <td class="r">${_r1(m.recentPerWeek)}${m.advice.k==='dormant'?`<div class="cmeta">${m.n} all-time</div>`:''}</td>
-          <td><div class="res-mix">${bar}</div><div class="cmeta">${m.rep} rep · ${m.vendor} vendor · ${m.inhouse} in-house</div></td>
-          <td class="r" style="white-space:nowrap;">${m.baseMiles!=null?Math.round(m.baseMiles)+'mi':'—'}<div class="cmeta">${esc(m.baseName)} · ${reachLbl}</div></td>
-          <td class="r" style="white-space:nowrap;">${m.vendorPerSurvey!=null?_rmoney(m.vendorPerSurvey):'<span class="pna">—</span>'}${m.vendorVisits?`<div class="cmeta">${m.vendorVisits} billed</div>`:''}</td>
-          <td class="res-why">${m.advice.reasons.map(esc).join('; ')}</td>
+      ${bases.map(b=>{
+        const cap=b.ll?OpsCoverage.weeklyCapacity(8,b.cfg):null;
+        // SPWR work within THIS surveyor's own day range, not markets where
+        // they happen to be nearest. Two of them are eight miles apart, so
+        // nearest-base attribution handed Portland entirely to one and printed
+        // the other at zero — which reads as "idle" and is not something the
+        // data can say. Ranges overlap on purpose; the note below says so.
+        const inRange=b.ll?markets.filter(m=>m.ll&&OpsCoverage.reachable(OpsCoverage.milesBetween(b.ll,m.ll),b.cfg)):[];
+        const load=inRange.reduce((a,m)=>a+m.inhousePerWeek,0);
+        const shared=inRange.some(m=>bases.filter(o=>o.ll&&o.id!==b.id
+          &&OpsCoverage.reachable(OpsCoverage.milesBetween(o.ll,m.ll),o.cfg)).length>0);
+        const off=(b.off||[]).join(', ');
+        return `<tr>
+          <td>${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
+          <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
+          <td style="color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
+          <td class="r">${_r1(cap)}</td>
+          <td class="r">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
+          <td class="r">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
+          <td>${((b.constraints||[]).map(c=>`<span class="pill pn">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
+          <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
         </tr>`;
       }).join('')}
     </tbody></table></div>
-    <div class="note">Markets under 3 jobs omitted · ${markets.filter(m=>m.n<3).length} of ${markets.length} · rows open the surveys behind them</div>
-    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-mkt-tbl',this,'markets')">Copy table</button></div>`;
+    <div class="note">
+      Capacity is the drive-time model at an 8-mile market, the optimistic end. It falls as the drive grows:
+      ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
+      Hours, time on site, admin, speed and day radius are per surveyor in <code>roster.json</code>.
+      <b>Constraints are recorded, not modelled</b> — nothing here divides capacity by them.
+      <br><b>SPWR work there is not a personal workload.</b> Salesforce records the resource, never which surveyor,
+      so the work can only be attributed to a place. Overlapping ranges count the same work against both surveyors, marked <i>shared range</i>.
+    </div>
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-team-tbl',this,'the team')">Copy table</button></div>`;
 }
 
 // Drill support: markets are rebuilt per render, so the drill resolves by key.
@@ -6590,7 +7177,11 @@ function billingEnsure(){
     .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); })
     .then(j=>{ _billing=j; _billingErr=null; _billRecon=null; })
     .catch(e=>{ _billingErr=e.message; })
-    .then(()=>{ _billingLoad=null; renderBilling(); });
+    // Re-render whatever page is waiting on this, not always Billing. The
+    // Resource page's Vendor cost column reads the same history and used to sit
+    // empty on a first visit — it only filled in after a trip to Billing and
+    // back, which looked like missing data rather than a missing re-render.
+    .then(()=>{ _billingLoad=null; if(currentPage==='resource') renderResource(); else renderBilling(); });
   return _billingLoad;
 }
 
@@ -6843,9 +7434,16 @@ function _renderBillMain(){
   const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
     +`<div class="srail-val">${val}${sub?`<wbr><span class="srail-sub">${sub}</span>`:''}</div></div>`;
 
+  // Two different things, and only one of them is a problem:
+  //   · lines the import kept ONE copy of, because two overlapping statements
+  //     both reported them. Worth stating — it is why a statement's own line
+  //     count is larger than what it added — but the totals are correct
+  //   · cross_statement flags: same charge type, two statements, different
+  //     dates. Nothing deduped those, and that is the shape a double bill takes
   const overlaps=billOverlaps();
-  const dupes=scoped.filter(l=>(l.flags||[]).includes('cross_statement'));
-  const dupeUsd=OpsBilling.usd(dupes.reduce((a,l)=>a+Math.abs(l.units||0),0),dupes[0]&&dupes[0].vendor);
+  const rebilled=scoped.filter(l=>(l.flags||[]).includes('cross_statement'));
+  const rebilledUsd=OpsBilling.usd(rebilled.reduce((a,l)=>a+Math.abs(l.units||0),0),rebilled[0]&&rebilled[0].vendor);
+  const alsoOn=scoped.filter(l=>(l.alsoOn||[]).length);
 
   host.innerHTML=`
     <div class="srail">
@@ -6857,13 +7455,18 @@ function _renderBillMain(){
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
     </div>
 
-    ${overlaps.length&&dupes.length?`<div class="bill-warn"><div>
-      <strong>${esc(overlaps[0][0].file||overlaps[0][0].id)}</strong> and <strong>${esc(overlaps[0][1].file||overlaps[0][1].id)}</strong>
-      cover overlapping periods${overlaps.length>1?` (and ${overlaps.length-1} other pair${overlaps.length>2?'s':''} do too)`:''}.
-      ${dupes.length} charge${dupes.length===1?'':'s'} worth ${_bmoney(dupeUsd)} appear on both statements, and every figure above counts each of them as invoiced.
-      Both copies are kept on purpose — that is what makes a double-billed charge visible — but the totals read high until it is settled with the vendor.
+    ${rebilled.length?`<div class="bill-warn"><div>
+      ${rebilled.length} charge${rebilled.length===1?'':'s'} worth ${_bmoney(rebilledUsd)}
+      ${rebilled.length===1?'was':'were'} billed on two different statements under a different date each time.
+      A genuine second visit looks like this too, so each one is a prompt to check rather than a verdict — but neither statement
+      shows the other, which is how a double bill gets paid.
       </div>
       <button class="bill-warn-btn" onclick="setBillingFlag('cross_statement')">Show them</button>
+    </div>`:overlaps.length&&alsoOn.length?`<div class="bill-note">
+      <strong>${esc(overlaps[0][0].file||overlaps[0][0].id)}</strong> and <strong>${esc(overlaps[0][1].file||overlaps[0][1].id)}</strong>
+      cover overlapping periods${overlaps.length>1?` (and ${overlaps.length-1} other pair${overlaps.length>2?'s':''} do too)`:''},
+      so ${alsoOn.length} charge${alsoOn.length===1?'':'s'} here ${alsoOn.length===1?'was':'were'} reported on both.
+      The import stores one copy of each, so every figure above counts them once.
     </div>`:''}
 
     <div class="sec">
@@ -7049,17 +7652,21 @@ function openBillImport(){
     </div>
     ${st.length?`<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--border);">
       <div class="klabel" style="margin-bottom:7px;">Already imported</div>
-      <table class="tbl tbl-static" style="font-size:11px;"><thead><tr><th>Statement</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
+      <table class="tbl tbl-static" style="font-size:11px;"><thead><tr><th>Statement</th><th>Period</th><th class="r">Lines</th><th class="r">Added</th><th>Imported</th></tr></thead><tbody>
         ${st.map(s=>{
           const ls=_billing.lines.filter(l=>l.statement===s.id);
           const ch=ls.filter(OpsBilling.isCharge).reduce((a,l)=>a+Math.abs(l.units||0),0);
+          // Lines is the statement as invoiced; Added is what it put into the
+          // history. They differ by the charges an earlier statement had
+          // already reported, which is worth seeing before importing another.
           return `<tr><td>${esc(s.file||s.id)}<div class="cmeta">${esc(OpsBilling.vendor(s.vendor).name)}</div></td>
             <td style="white-space:nowrap;color:var(--muted);">${s.from?fmtDateShort(s.from)+' – '+fmtDateShort(s.to):'—'}</td>
-            <td class="r">${s.lines}</td><td class="r">${_bmoney(OpsBilling.usd(ch,s.vendor))}</td>
+            <td class="r">${s.lines}${s.dupes?`<div class="cmeta">${s.dupes} already billed</div>`:''}</td>
+            <td class="r">${ls.length}<div class="cmeta">${_bmoney(OpsBilling.usd(ch,s.vendor))}</div></td>
             <td style="color:var(--faint);white-space:nowrap;">${esc(s.imported||'')}</td></tr>`;
         }).join('')}
       </tbody></table>
-      <div class="note">Re-importing a statement replaces its own lines · every other statement is kept, which is what makes a double-billed charge visible.</div>
+      <div class="note">Re-importing a statement replaces its own lines · a charge an earlier statement already carried is stored once, so overlapping periods do not inflate the totals.</div>
     </div>`:''}`;
   _billImpFile=null;
   back.classList.remove('hidden');
@@ -7104,6 +7711,7 @@ async function billingImportSave(){
     _billing=data.history; _billingErr=null; _billRecon=null;
     status.style.color='var(--green)';
     status.textContent=`Imported — ${data.report.lines} lines, ${_bmoney(data.report.usd)}`
+      +(data.report.deduped?`, ${data.report.deduped} of them already billed on an earlier statement and kept once`:'')
       +(data.report.replaced?` (replaced ${data.report.replaced} previously imported line${data.report.replaced===1?'':'s'})`:'')
       +'. Live for everyone in ~30 seconds.';
     btn.textContent='Imported';
