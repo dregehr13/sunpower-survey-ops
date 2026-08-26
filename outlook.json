@@ -1,5 +1,12 @@
 {
   "_comment": "Doug's own read on whether more sales are coming from an area — the one thing the survey export cannot know. lib/coverage.cjs measures intake direction from project starts, which says what HAS arrived; this file says what is expected to. Keyed by two-letter state, because that is the unit a sales crew moves in and the only key stable across clustering-radius changes. Written from the Resource page (Settings-style password, committed via api/update-outlook.js) or by hand. `flag` is one of growing | steady | winding_down | unknown, and a flag never changes a recommendation — it sits beside one, so a judgement call can never be mistaken for a measurement.",
-  "updated": null,
-  "states": {}
+  "updated": "2026-08-26",
+  "states": {
+    "VA": {
+      "flag": "winding_down",
+      "note": "",
+      "by": "Doug",
+      "at": "2026-08-26"
+    }
+  }
 }
