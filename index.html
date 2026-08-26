@@ -634,6 +634,20 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .bill-pill.sev-med{background:var(--amber-bg);color:var(--amber);}
 .bill-pill.sev-info{background:var(--bg);color:var(--muted);}
 .bill-tbl td{vertical-align:top;}
+/* The overlap notice. Two statements are allowed to cover the same days and
+   both are kept — that is what makes a double-billed charge visible — but it
+   means the rail above counts those charges twice, and a page that reads high
+   without saying so is worse than one that reads low. Amber, not red: the
+   statements are not wrong, the total just is not settled yet. */
+.bill-warn{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;
+  border:1px solid #f0dcae;border-radius:var(--radius-lg);background:var(--amber-bg);
+  font-size:12px;line-height:1.6;color:var(--amber);}
+.bill-warn strong{font-weight:700;}
+.bill-warn>div{flex:1 1 300px;min-width:0;}
+.bill-warn-btn{font:inherit;font-size:11px;font-weight:600;padding:5px 11px;margin-left:auto;
+  border:1px solid #dcc38a;border-radius:6px;background:rgba(255,255,255,.6);color:var(--amber);
+  cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s;}
+.bill-warn-btn:hover{background:#fff;border-color:var(--amber);}
 
 /* Resource. The action tag is the page's verdict, so it carries the only
    colour in the table; the mix bar beside it is deliberately muted, because
@@ -1175,6 +1189,21 @@ body{padding-left:180px;}
       <button class="mbtn" id="upd-done-btn" onclick="closeUpdateModal()">Done</button>
       <a id="upd-gate-dismiss" href="#" onclick="dismissStaleGate();return false;" style="display:none;font-size:11px;color:var(--faint);text-decoration:underline;cursor:pointer;"></a>
     </div>
+  </div>
+</div>
+
+<!-- BILLING IMPORT MODAL -->
+<!-- Off the Billing bar's top-right button. It used to be the last panel on the
+     page, below 1,033 table rows, which is exactly the wrong place for the one
+     thing you come to this page to do. -->
+<div class="mback hidden" id="billImportModal">
+  <div class="modal" style="width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <h2>Import a statement</h2>
+      <button onclick="closeBillImport()" aria-label="Close" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <p class="msub">Runs the same parser as <code>node parse-radicl.js</code> and commits the result &mdash; live for everyone in about 30 seconds.</p>
+    <div id="bill-imp-body"></div>
   </div>
 </div>
 
@@ -2027,6 +2056,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     closeDrill();
     closeUpdateModal();
+    closeBillImport();
     // Status was never in this list, so Escape closed two of the three filter
     // dropdowns and left the third open.
     if(rgDropOpenPage!==null||offDropOpenPage!==null||statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; statusDropOpen=false; renderFBars(); }
@@ -6520,10 +6550,37 @@ function _resRows(key){
 // so with the data committed it bought nothing and was removed rather than
 // left in to imply a protection that was not there. If this ever genuinely
 // needs to be private, the answer is Vercel Deployment Protection, not a flag.
+//
+// SHAPE (rebuilt 2026-08-26). Bar · rail · one panel. It was five stacked
+// sections printing every row of both tables — 39,897px, 44 screens, with the
+// import controls at the very bottom of it. What changed and why:
+//   · ONE PANEL, TWO LENSES. Charges and Cost per account were two full-length
+//     tables of the same money, 710 rows then 323, printed back to back. They
+//     are one table with a cut now, the way Performance and Quality already
+//     resolved the same shape
+//   · PAGED, NOT CAPPED. Both tables rendered up to 400 rows on load, which is
+//     what made the page 44 screens tall. BILL_PAGE rows show, with the rest a
+//     click away. Copy still copies everything — billCopy() expands first
+//   · IMPORT IS A MODAL off the bar, not the last panel on the page. The
+//     statements list went with it: what is already imported is the context
+//     for importing, and its other job — naming a period — is the bar's now
+//   · EVERY CONTROL SCOPES EVERY NUMBER. The rail, the chips and the table all
+//     read billScoped(), so a date range or a state narrows the page rather
+//     than narrowing one table under a national rail. This is the rule Quality
+//     and Map are already held to
 let _billing = null, _billingLoad = null, _billingErr = null;
-let billingFlag = 'all', billingVendor = 'all', billingQ = '';
-let billAcctSortKey = 'usd', billAcctSortAsc = false;
+let _billRecon = null, _billReconFor = null;   // memoized reconcile of the whole history
 let _billImpFile = null;
+// One filter object, one Reset. Deliberately NOT persisted to ops_filters:
+// that store is the survey filter bar's, whose region/office/status mean
+// nothing to an invoice line, and a remembered date range on a page you visit
+// monthly is a trap rather than a convenience.
+const BILL_F0 = { flag:'all', vendor:'all', statement:'all', subtype:'all', state:'all', from:'', to:'', q:'' };
+let billF = { ...BILL_F0 };
+let billLens = 'charges';            // charges | accounts
+let billSort = { charges:{k:'date',asc:false}, accounts:{k:'usd',asc:false} };
+const BILL_PAGE = 50;
+let billLimit = BILL_PAGE;
 
 // Fetched rather than baked into the page: billing.json is written by
 // parse-radicl.js on its own cadence, which is not the daily data push.
@@ -6531,7 +6588,7 @@ function billingEnsure(){
   if(_billing||_billingLoad) return _billingLoad;
   _billingLoad = fetch('billing.json',{cache:'no-store'})
     .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); })
-    .then(j=>{ _billing=j; _billingErr=null; })
+    .then(j=>{ _billing=j; _billingErr=null; _billRecon=null; })
     .catch(e=>{ _billingErr=e.message; })
     .then(()=>{ _billingLoad=null; renderBilling(); });
   return _billingLoad;
@@ -6546,21 +6603,138 @@ const _bpct = n => n==null?'—':Math.round(n*100)+'%';
 const _billState = l => { const m=(l&&l.match&&l.match.address||'').match(MAP_ZIP_RE); return m?m[1].toUpperCase():null; };
 const _billAcctState = entry => { const m=(entry.lines||[]).find(l=>l.match); return m?_billState(m):null; };
 
-function billingRows(){
+// Reconcile ONCE, over the whole history, and filter the result afterwards.
+// The duplicate and cross-statement rules read every line an account ever
+// drew, so narrowing the input first would quietly switch them off — pick a
+// single statement and "appears on two statements" could never fire again.
+// The memo keys on the identity of allRows as well, because every path that
+// changes the survey data — a fresh upload, the anchor toggle, a row deleted
+// in the editor — assigns a NEW array. Before the memo this function ran on
+// every render and could not go stale; keying it this way keeps that true
+// without a second place to remember to invalidate.
+function billingReconciled(){
   if(!_billing) return [];
-  const lines = billingVendor==='all' ? _billing.lines : _billing.lines.filter(l=>(l.vendor||'radicl')===billingVendor);
-  return OpsBilling.reconcile(lines, allRows);
+  if(!_billRecon || _billReconFor!==allRows){
+    _billRecon = OpsBilling.reconcile(_billing.lines, allRows);
+    _billReconFor = allRows;
+  }
+  return _billRecon;
 }
 
-function setBillingFlag(k){ if(billingFlag===k) return; billingFlag=k; renderBilling(); }
-function setBillingVendor(v){ if(billingVendor===v) return; billingVendor=v; renderBilling(); }
-function setBillingQ(v){ billingQ=v; _renderBillingTable(); _renderBillingAccounts(); }
-// Text columns open A to Z, numeric ones highest-first — same rule Performance
-// and Quality's group tables use.
-function billAcctSortBy(k){
-  if(billAcctSortKey===k) billAcctSortAsc=!billAcctSortAsc;
-  else { billAcctSortKey=k; billAcctSortAsc=(k==='name'||k==='state'); }
-  _renderBillingAccounts();
+// Charge lines after every control in the bar. The exception chips are NOT
+// applied here — they select rows inside this population, and their own counts
+// are read from it.
+function billScoped(){
+  const q=(billF.q||'').toLowerCase();
+  return billingReconciled().filter(l=>{
+    if(!OpsBilling.isCharge(l)) return false;
+    if(billF.vendor!=='all' && (l.vendor||OpsBilling.DEFAULT_VENDOR)!==billF.vendor) return false;
+    if(billF.statement!=='all' && l.statement!==billF.statement) return false;
+    if(billF.from && String(l.date||'')<billF.from) return false;
+    if(billF.to   && String(l.date||'')>billF.to)   return false;
+    if(billF.subtype!=='all' && (l.subtype||l.type||'')!==billF.subtype) return false;
+    if(billF.state!=='all' && (_billState(l)||'')!==billF.state) return false;
+    if(q && ![l.name,l.address,l.subtype,l.statement,(l.match||{}).project].filter(Boolean).join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+const billFlagged = ls => billF.flag==='all' ? ls : ls.filter(l=>(l.flags||[]).includes(billF.flag));
+
+// ── Bar state ────────────────────────────────────────────────────────────
+// Presets anchor on the newest charge in the imported history, not on the wall
+// clock: a statement arrives weeks after the work, so "this month" measured
+// from today is empty for the first days of every month.
+function billAnchorDate(){
+  const ds=billingReconciled().filter(OpsBilling.isCharge).map(l=>l.date).filter(Boolean).sort();
+  return ds[ds.length-1] || localISO(new Date());
+}
+function billMonthRange(back){
+  const a=billAnchorDate(), y=+a.slice(0,4), m=+a.slice(5,7)-1;
+  const from=new Date(y,m-back,1), to=new Date(y,m-back+1,0);
+  return { from:localISO(from), to:localISO(to),
+    label:from.toLocaleDateString('en-US',{month:'short'}) };
+}
+function billDaysRange(n){
+  const a=billAnchorDate(), d=new Date(a+'T00:00:00'); d.setDate(d.getDate()-(n-1));
+  return { from:localISO(d), to:a };
+}
+function setBillDates(from,to){ billF.from=from; billF.to=to; billCustomOpen=false; billLimit=BILL_PAGE; renderBilling(); }
+function setBillF(k,v){ billF[k]=v; billLimit=BILL_PAGE; renderBilling(); }
+function setBillLens(v){ if(billLens===v) return; billLens=v; billLimit=BILL_PAGE; renderBilling(); }
+function setBillingFlag(k){ billF.flag = billF.flag===k?'all':k; billLimit=BILL_PAGE; renderBilling(); }
+function billReset(){ billF={...BILL_F0}; billCustomOpen=false; billLimit=BILL_PAGE; renderBilling(); }
+function billMore(all){ billLimit = all?Infinity:billLimit+BILL_PAGE; _renderBillMain(); }
+// Search re-renders the numbers but never the bar, so the caret stays put.
+function setBillQ(v){ billF.q=v; billLimit=BILL_PAGE; _renderBillMain(); }
+let billCustomOpen=false;
+function toggleBillCustom(){ billCustomOpen=!billCustomOpen; renderBilling(); }
+
+// Sorting. Text columns open A to Z and numeric ones highest-first — the same
+// rule Performance, Quality and the drill drawer follow. Blanks sink in both
+// directions: a column of dashes at the top is never the answer to "sort by
+// this".
+const BILL_SORTS = {
+  charges: {
+    date:  l=>l.date||'',
+    name:  l=>(l.name||'').toLowerCase(),
+    state: l=>_billState(l)||'',
+    charge:l=>(l.subtype||l.type||'').toLowerCase(),
+    cost:  l=>Math.abs(l.units||0),
+    sf:    l=>l.match?((l.match.project||l.match.contact||'')+'').toLowerCase():'',
+    flags: l=>(l.flags||[]).length,
+    statement: l=>(l.statement||'').toLowerCase(),
+  },
+  accounts: {
+    name:  a=>(a.name||'').toLowerCase(),
+    state: a=>_billAcctState(a)||'',
+    vendor:a=>OpsBilling.vendor(a.vendor).name,
+    visits:a=>a.visits,
+    lines: a=>a.lines.length,
+    usd:   a=>a.usd,
+    flagn: a=>a.flagN||0,
+  },
+};
+const BILL_TEXT_COLS = ['name','state','charge','sf','vendor','statement'];
+function billSortBy(k){
+  const s=billSort[billLens];
+  if(s.k===k) s.asc=!s.asc;
+  else { s.k=k; s.asc=BILL_TEXT_COLS.includes(k); }
+  billLimit=BILL_PAGE; _renderBillMain();
+}
+function billSorted(list){
+  const s=billSort[billLens], val=BILL_SORTS[billLens][s.k]||BILL_SORTS[billLens][billSort[billLens].k];
+  if(!val) return list;
+  const dir=s.asc?1:-1;
+  return [...list].sort((a,b)=>{
+    const av=val(a), bv=val(b);
+    if(av===''||av==null) return 1; if(bv===''||bv==null) return -1;
+    return typeof av==='string'?dir*av.localeCompare(bv):dir*(av-bv);
+  });
+}
+function billTh(k,label,cls){
+  const s=billSort[billLens], on=s.k===k, arrow=on?(s.asc?'sarr-up':'sarr-dn'):'sarr-no';
+  return `<th class="${cls||''}" tabindex="0" role="button" aria-sort="${on?(s.asc?'ascending':'descending'):'none'}"
+    onclick="billSortBy('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();billSortBy('${k}');}"
+    style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
+}
+
+// Statements whose periods overlap. lib/statement-import.cjs has its own
+// overlapWarnings() for the same idea, but that module requires xlsx and is
+// never loaded into the page; it also only compares consecutive statements and
+// returns log strings. This one returns the PAIR, because the notice names both
+// files.
+//
+// Two statements are allowed to overlap and
+// both are kept — that is the whole point of billing.json accumulating — but
+// it means the same charge can be invoiced twice, and every total on this page
+// counts both. Saying so once, in prose, is the difference between a page you
+// can trust and a page that quietly reads high.
+function billOverlaps(){
+  const st=(_billing&&_billing.statements||[]).filter(s=>s.from&&s.to);
+  const out=[];
+  for(let i=0;i<st.length;i++) for(let j=i+1;j<st.length;j++)
+    if(st[i].from<=st[j].to && st[j].from<=st[i].to) out.push([st[i],st[j]]);
+  return out;
 }
 
 function renderBilling(){
@@ -6569,32 +6743,111 @@ function renderBilling(){
   if(!_billing){
     el.innerHTML=`<div class="sec">
       <div class="shead"><div><div class="stitle">No invoice history yet</div>
-      <div class="ssub">Nothing to reconcile until a statement is imported</div></div></div>
+      <div class="ssub">Nothing to reconcile until a statement is imported</div></div>
+      <button class="fbtn" onclick="openBillImport()">Import statement</button></div>
       <div class="note" style="padding:10px 0;">
-        Import one from the terminal and this page fills in:<br>
+        Import one here, or from the terminal:<br>
         <code>node parse-radicl.js "~/Downloads/&lt;statement&gt;.xlsx"</code><br>
         <span>${esc(_billingErr||'')}</span>
       </div></div>`;
     return;
   }
+  el.innerHTML=`<div id="bill-bar"></div><div id="bill-main"></div>`;
+  _renderBillBar();
+  _renderBillMain();
+}
 
-  const recon=billingRows();
-  const sum=OpsBilling.summarize(recon);
-  const flags=OpsBilling.byFlag(recon);
-  const vendors=[...new Set(_billing.lines.map(l=>l.vendor||'radicl'))];
+function _renderBillBar(){
+  const host=document.getElementById('bill-bar'); if(!host) return;
+  const charges=billingReconciled().filter(OpsBilling.isCharge);
+  const statements=(_billing.statements||[]);
+  const vendors=[...new Set(charges.map(l=>l.vendor||OpsBilling.DEFAULT_VENDOR))];
+
+  const d30=billDaysRange(30), m0=billMonthRange(0), m1=billMonthRange(1);
+  const isRange=(r)=>billF.from===r.from&&billF.to===r.to;
+  const isAll=!billF.from&&!billF.to;
+  const isCustom=!isAll&&!isRange(d30)&&!isRange(m0)&&!isRange(m1);
+  const showDates=billCustomOpen||isCustom;
+
+  // Subtypes in taxonomy order (first visit, cleanup, rework, travel, other)
+  // rather than alphabetically — the order says what the charges mean.
+  const ROLE_ORDER=['first','cleanup','rework','travel','other'];
+  const subtypes=[...new Set(charges.map(l=>l.subtype||l.type||'').filter(Boolean))]
+    .sort((a,b)=>{
+      const ra=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:a,vendor:charges[0]&&charges[0].vendor}));
+      const rb=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:b,vendor:charges[0]&&charges[0].vendor}));
+      return ra-rb || a.localeCompare(b);
+    });
+  const states=[...new Set(charges.map(_billState).filter(Boolean))].sort();
+
+  const sel=(key,label,opts)=>{
+    const on=billF[key]&&billF[key]!=='all';
+    return `<div class="fsep"></div><span class="fselgrp${on?' on':''}"><span class="fsel-label">${esc(label)}</span>
+      <select aria-label="Filter by ${esc(label)}" onchange="setBillF('${key}',this.value)">
+        <option value="all">All</option>
+        ${opts.map(o=>`<option value="${esc(o.v)}"${billF[key]===o.v?' selected':''}>${esc(o.l)}</option>`).join('')}
+      </select></span>`;
+  };
+  const dirty=Object.keys(BILL_F0).some(k=>billF[k]!==BILL_F0[k]);
+
+  host.innerHTML=`<div class="fbar">
+    <div class="fbtn-group" role="group" aria-label="Mission date range">
+      <button class="fbtn${isAll?' fbtn-active':''}" onclick="setBillDates('','')">All</button>
+      <button class="fbtn${isRange(d30)?' fbtn-active':''}" onclick="setBillDates('${d30.from}','${d30.to}')">30d</button>
+      <button class="fbtn${isRange(m0)?' fbtn-active':''}" onclick="setBillDates('${m0.from}','${m0.to}')">${m0.label}</button>
+      <button class="fbtn${isRange(m1)?' fbtn-active':''}" onclick="setBillDates('${m1.from}','${m1.to}')">${m1.label}</button>
+      <button class="fbtn${isCustom?' fbtn-active':''}" onclick="toggleBillCustom()">Custom</button>
+    </div>
+    ${showDates?`<div class="fgroup">
+      <input type="date" aria-label="Mission date from" value="${billF.from}" onchange="setBillF('from',this.value)">
+      <span style="color:var(--faint);font-size:10px;">–</span>
+      <input type="date" aria-label="Mission date to" value="${billF.to}" onchange="setBillF('to',this.value)">
+    </div>`:''}
+    ${statements.length>1?sel('statement','Statement',statements.map(s=>({v:s.id,l:s.file||s.id}))):''}
+    ${vendors.length>1?sel('vendor','Vendor',vendors.map(v=>({v,l:OpsBilling.vendor(v).name}))):''}
+    ${subtypes.length>1?sel('subtype','Charge',subtypes.map(v=>({v,l:v}))):''}
+    ${states.length>1?sel('state','State',states.map(v=>({v,l:v}))):''}
+    <div class="fsep"></div>
+    <input class="drill-search" id="bill-search" type="search" placeholder="Search name, address, project…"
+           value="${esc(billF.q)}" oninput="setBillQ(this.value)" style="flex:1 1 150px;min-width:130px;max-width:230px;">
+    <div class="fgroup" style="margin-left:auto;">
+      ${dirty?`<button class="fbtn" onclick="billReset()">Reset</button>`:''}
+      <button class="fbtn" onclick="openBillImport()">Import statement</button>
+    </div>
+  </div>`;
+}
+
+function _renderBillMain(){
+  const host=document.getElementById('bill-main'); if(!host) return;
+  const scoped=billScoped();
+  const sum=OpsBilling.summarize(scoped);
+  const flags=OpsBilling.byFlag(scoped);
+  const meta=billF.flag==='all'?null:OpsBilling.exceptionMeta(billF.flag);
+
   // Months only. .srail-sub sits inline beside the value, and next to a figure
   // as wide as $81,557 the cell has room for about nine characters — "Jul 1 –
-  // Aug 8" wraps to a second line and stops matching its five neighbours. The
-  // exact span of every statement is in the Statements imported table below.
-  const period=(()=>{ const st=_billing.statements||[]; if(!st.length) return '';
-    const mon=d=>d?(fmtDateShort(d)||'').split(' ')[0]:'';
-    const a=mon(st[0].from), b=mon(st[st.length-1].to);
-    return a&&b&&a!==b ? a+'–'+b : (a||b); })();
+  // Aug 8" wraps to a second line and stops matching its five neighbours.
+  const period=(()=>{ const ds=scoped.map(l=>l.date).filter(Boolean).sort(); if(!ds.length) return '';
+    const mon=d=>(fmtDateShort(d)||'').split(' ')[0];
+    const a=mon(ds[0]), b=mon(ds[ds.length-1]);
+    // nowrap: the cell is ~9 characters wide beside a $165,702 value, and a
+    // break at the dash drops "Aug" onto a second line, unmatching its five
+    // neighbours.
+    return `<span style="white-space:nowrap;">${a&&b&&a!==b ? a+'–'+b : (a||b)}</span>`; })();
 
+  // <wbr> between the value and its inline sub. There is no whitespace between
+  // them, so without a break opportunity "$165,702Jul–Aug" is one unbreakable
+  // run and the period overflows into the next cell below about 1280px instead
+  // of dropping to a second line. The other rails' subs all contain a space of
+  // their own, which is why this only bites here.
   const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
-    +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
+    +`<div class="srail-val">${val}${sub?`<wbr><span class="srail-sub">${sub}</span>`:''}</div></div>`;
 
-  el.innerHTML=`
+  const overlaps=billOverlaps();
+  const dupes=scoped.filter(l=>(l.flags||[]).includes('cross_statement'));
+  const dupeUsd=OpsBilling.usd(dupes.reduce((a,l)=>a+Math.abs(l.units||0),0),dupes[0]&&dupes[0].vendor);
+
+  host.innerHTML=`
     <div class="srail">
       ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
       ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
@@ -6604,125 +6857,94 @@ function renderBilling(){
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
     </div>
 
+    ${overlaps.length&&dupes.length?`<div class="bill-warn"><div>
+      <strong>${esc(overlaps[0][0].file||overlaps[0][0].id)}</strong> and <strong>${esc(overlaps[0][1].file||overlaps[0][1].id)}</strong>
+      cover overlapping periods${overlaps.length>1?` (and ${overlaps.length-1} other pair${overlaps.length>2?'s':''} do too)`:''}.
+      ${dupes.length} charge${dupes.length===1?'':'s'} worth ${_bmoney(dupeUsd)} appear on both statements, and every figure above counts each of them as invoiced.
+      Both copies are kept on purpose — that is what makes a double-billed charge visible — but the totals read high until it is settled with the vendor.
+      </div>
+      <button class="bill-warn-btn" onclick="setBillingFlag('cross_statement')">Show them</button>
+    </div>`:''}
+
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle" id="bill-table-title">Charges</div>
+        <div><div class="stitle" id="bill-table-title"></div>
         <div class="ssub" id="bill-table-sub"></div></div>
-        ${vendors.length>1?`<div class="toggle-group">
-          <button class="tgl-btn${billingVendor==='all'?' active':''}" onclick="setBillingVendor('all')">All vendors</button>
-          ${vendors.map(v=>`<button class="tgl-btn${billingVendor===v?' active':''}" onclick="setBillingVendor('${esc(v)}')">${esc(OpsBilling.vendor(v).name)}</button>`).join('')}
-        </div>`:''}
-        <input class="drill-search" id="bill-search" type="search" placeholder="Search name, address, project…"
-               oninput="setBillingQ(this.value)" style="max-width:240px;">
+        <div class="toggle-group">
+          <button class="tgl-btn${billLens==='charges'?' active':''}" onclick="setBillLens('charges')">Charges</button>
+          <button class="tgl-btn${billLens==='accounts'?' active':''}" onclick="setBillLens('accounts')">By account</button>
+        </div>
       </div>
-      <div class="bill-flags${billingFlag==='all'?'':' narrowed'}">
-        <button class="bill-flag bill-flag-all${billingFlag==='all'?' on':''}" aria-pressed="${billingFlag==='all'}" onclick="setBillingFlag('all')">
+      <div class="bill-flags${billF.flag==='all'?'':' narrowed'}">
+        <button class="bill-flag bill-flag-all${billF.flag==='all'?' on':''}" aria-pressed="${billF.flag==='all'}" onclick="setBillingFlag('all')">
           All charges
-          <span class="bill-flag-n">${recon.filter(OpsBilling.isCharge).length}</span>
+          <span class="bill-flag-n">${scoped.length}</span>
           <span class="bill-flag-v">${_bmoney(sum.usd)}</span>
         </button>
         ${flags.filter(f=>f.n).map(f=>`
-          <button class="bill-flag sev-${f.sev}${billingFlag===f.k?' on':''}" aria-pressed="${billingFlag===f.k}" onclick="setBillingFlag('${f.k}')">
+          <button class="bill-flag sev-${f.sev}${billF.flag===f.k?' on':''}" aria-pressed="${billF.flag===f.k}" onclick="setBillingFlag('${f.k}')">
             <span class="bill-flag-sw"></span>${esc(f.label)}
             <span class="bill-flag-n">${f.n}</span>
             <span class="bill-flag-v">${_bmoney(f.usd)}</span>
           </button>`).join('')}
       </div>
-      <div class="note" id="bill-flag-why"></div>
+      <div class="note" id="bill-flag-why">${meta?esc(meta.why)
+        :billLens==='accounts'?'Every account that drew a charge, and what it cost across all of its lines.'
+        :'Every charge on every imported statement.'}</div>
       <div id="bill-table"></div>
-    </div>
-
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">Cost per account</div>
-        <div class="ssub">Every line an account drew — survey, travel adders, rework — added up</div></div>
-      </div>
-      <div id="bill-accounts"></div>
-    </div>
-
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">Statements imported</div>
-      <div class="ssub">Re-importing a statement replaces its own lines · every other statement is kept, which is what makes a double-billed charge visible</div></div></div>
-      <div class="xscroll"><table class="tbl tbl-static"><thead><tr><th>Statement</th><th>Vendor</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
-        ${(_billing.statements||[]).map(st=>{
-          const ls=_billing.lines.filter(l=>l.statement===st.id);
-          const ch=ls.filter(OpsBilling.isCharge).reduce((a,l)=>a+Math.abs(l.units||0),0);
-          return `<tr><td>${esc(st.file||st.id)}</td><td style="color:var(--muted);">${esc(OpsBilling.vendor(st.vendor).name)}</td>
-            <td style="white-space:nowrap;color:var(--muted);">${st.from?fmtDateShort(st.from)+' – '+fmtDateShort(st.to):'—'}</td>
-            <td class="r">${st.lines}</td><td class="r">${_bmoney(OpsBilling.usd(ch,st.vendor))}</td>
-            <td style="color:var(--faint);white-space:nowrap;">${esc(st.imported||'')}</td></tr>`;
-        }).join('')}
-      </tbody></table></div>
-    </div>
-
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle">Import statement</div>
-        <div class="ssub">Same parser as <code>node parse-radicl.js</code> · commits the result, live for everyone in ~30 seconds</div></div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        ${Object.keys(OpsBilling.VENDORS).length>1?`
-        <select id="bill-imp-vendor" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text);">
-          ${Object.values(OpsBilling.VENDORS).map(v=>`<option value="${esc(v.id)}"${v.id===OpsBilling.DEFAULT_VENDOR?' selected':''}>${esc(v.name)}</option>`).join('')}
-        </select>`:''}
-        <input type="file" id="bill-imp-file" accept=".xlsx,.xls" style="display:none;" onchange="billingImportPick(this.files[0])">
-        <button class="fbtn" onclick="document.getElementById('bill-imp-file').click()">Choose statement…</button>
-        <span id="bill-imp-filename" style="font-size:12px;color:var(--muted);"></span>
-      </div>
-      <div id="bill-imp-save" style="display:none;margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
-        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;" id="bill-imp-summary"></div>
-        <div style="display:flex;gap:8px;">
-          <input type="password" id="bill-imp-password" placeholder="Update password" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
-          <button class="mbtn" onclick="billingImportSave()" id="bill-imp-btn">Import</button>
-        </div>
-        <div id="bill-imp-status" style="font-size:12px;color:var(--muted);margin-top:7px;min-height:16px;"></div>
-      </div>
     </div>`;
 
-  _renderBillingTable();
-  _renderBillingAccounts();
+  if(billLens==='charges') _renderBillingTable(scoped,meta);
+  else _renderBillingAccounts(scoped,meta);
 }
 
-function _renderBillingTable(){
+// Paging footer. Both tables used to render up to 400 rows on load, which is
+// what made this page 44 screens tall. Copy is unaffected: billCopy() expands
+// to everything first, so "Copy table" never quietly copies the visible page.
+function _billFoot(shown,total,tblId,label){
+  const rest=total-shown;
+  return `<div class="tbl-foot${rest>0?' split':''}">
+    ${rest>0?`<div class="note" style="margin:0;">Showing ${shown} of ${total}
+      <button class="fbtn" style="margin-left:8px;" onclick="billMore(false)">Show ${Math.min(BILL_PAGE,rest)} more</button>
+      <button class="fbtn" onclick="billMore(true)">Show all ${total}</button></div>`:''}
+    <button class="copy-btn" onclick="billCopy('${tblId}',this,'${label}')">Copy table</button>
+  </div>`;
+}
+function billCopy(id,btn,label){
+  if(billLimit!==Infinity){ billLimit=Infinity; _renderBillMain(); }
+  copyTableEl(id,document.querySelector('#bill-table .copy-btn')||btn,label);
+}
+
+function _renderBillingTable(scoped,meta){
   const host=document.getElementById('bill-table'); if(!host) return;
-  const recon=billingRows();
-  const meta=billingFlag==='all'?null:OpsBilling.exceptionMeta(billingFlag);
-  let rows=billingFlag==='all'
-    ? recon.filter(OpsBilling.isCharge)
-    : recon.filter(l=>(l.flags||[]).includes(billingFlag));
+  const all=billSorted(billFlagged(scoped));
+  const rows=all.slice(0,billLimit);
 
-  if(billingQ){
-    const q=billingQ.toLowerCase();
-    rows=rows.filter(l=>[l.name,l.address,l.subtype,l.statement,(l.match||{}).project].filter(Boolean).join(' ').toLowerCase().includes(q));
-  }
-  rows=[...rows].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-
-  const why=document.getElementById('bill-flag-why');
-  if(why) why.innerHTML = meta ? esc(meta.why) : 'Every charge on every imported statement, newest first.';
   const t=document.getElementById('bill-table-title');
-  if(t) t.textContent = meta ? meta.label : 'All charges';
+  if(t) t.textContent = meta ? meta.label : 'Charges';
   const sub=document.getElementById('bill-table-sub');
   if(sub){
-    const usd=OpsBilling.usd(rows.reduce((a,l)=>a+Math.abs(l.units||0),0),rows[0]&&rows[0].vendor);
-    sub.textContent = rows.length+' line'+(rows.length===1?'':'s')+' · '+_bmoney(usd);
+    const usd=OpsBilling.usd(all.reduce((a,l)=>a+Math.abs(l.units||0),0),all[0]&&all[0].vendor);
+    sub.textContent = all.length+' line'+(all.length===1?'':'s')+' · '+_bmoney(usd)
+      +(billF.q?' · matching "'+billF.q+'"':'');
   }
 
   // The Statement column prints the same filename on every row while only one
-  // statement exists — the rule the vendor toggle already follows.
-  const multiSt=(_billing.statements||[]).length>1;
+  // statement is in view — the rule the vendor toggle already follows.
+  const multiSt=(_billing.statements||[]).length>1 && billF.statement==='all';
 
   host.innerHTML = rows.length ? `
-    <div class="xscroll"><table id="bill-charges-tbl" class="tbl tbl-static bill-tbl"><thead><tr>
-      <th>Date</th><th>Account</th><th>State</th><th>Charge</th><th class="r">Cost</th>
-      <th>Salesforce</th><th>Also flagged</th>${multiSt?'<th>Statement</th>':''}
+    <div class="xscroll"><table id="bill-charges-tbl" class="tbl bill-tbl"><thead><tr>
+      ${billTh('date','Date')}${billTh('name','Account')}${billTh('state','State')}${billTh('charge','Charge')}${billTh('cost','Cost','r')}
+      ${billTh('sf','Salesforce')}${billTh('flags','Also flagged')}${multiSt?billTh('statement','Statement'):''}
     </tr></thead><tbody>
-      ${rows.slice(0,400).map(l=>{
+      ${rows.map(l=>{
         const m=l.match;
         const sf = m
           ? `<a href="${sfUrl(m)||'#'}" target="_blank" rel="noopener" class="drill-proj-link">${esc(m.project||m.contact||'—')}</a>`
             +`<div class="cmeta">${esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
           : `<span class="pna">no match</span>`;
-        const others=(l.flags||[]).filter(f=>f!==billingFlag).map(f=>{
+        const others=(l.flags||[]).filter(f=>f!==billF.flag).map(f=>{
           const em=OpsBilling.exceptionMeta(f);
           return em?`<span class="pill bill-pill sev-${em.sev}">${esc(em.label)}</span>`:'';
         }).join(' ');
@@ -6739,45 +6961,40 @@ function _renderBillingTable(){
         </tr>`;
       }).join('')}
     </tbody></table></div>
-    ${rows.length>400?`<div class="note">Newest 400 of ${rows.length} · narrow with search</div>`:''}
-    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('bill-charges-tbl',this,'charges')">Copy table</button></div>`
-    : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
+    ${_billFoot(rows.length,all.length,'bill-charges-tbl','charges')}`
+    : '<div class="note" style="padding:10px 0;">Nothing matches these filters.</div>';
 }
 
-function _renderBillingAccounts(){
-  const host=document.getElementById('bill-accounts'); if(!host) return;
-  const recon=billingRows();
-  let accounts=OpsBilling.byAccount(recon);
+function _renderBillingAccounts(scoped,meta){
+  const host=document.getElementById('bill-table'); if(!host) return;
+  // Accounts are built from every scoped line the account drew, then narrowed
+  // to those carrying the selected flag. Filtering the LINES first would make
+  // the total the cost of the flagged lines rather than what the account cost,
+  // which is the one thing this cut exists to say.
+  let accounts=OpsBilling.byAccount(scoped).map(a=>({...a,
+    flagN:billF.flag==='all'?0:a.lines.filter(l=>(l.flags||[]).includes(billF.flag)).length,
+    flagUsd:billF.flag==='all'?0:OpsBilling.usd(a.lines.filter(l=>(l.flags||[]).includes(billF.flag))
+      .reduce((s,l)=>s+Math.abs(l.units||0),0),a.vendor)}));
+  if(billF.flag!=='all') accounts=accounts.filter(a=>a.flagN);
+  const all=billSorted(accounts);
+  const rows=all.slice(0,billLimit);
 
-  if(billingQ){
-    const q=billingQ.toLowerCase();
-    accounts=accounts.filter(a=>[a.name,a.address].filter(Boolean).join(' ').toLowerCase().includes(q));
-  }
+  const t=document.getElementById('bill-table-title');
+  if(t) t.textContent = meta ? meta.label+' · by account' : 'Cost per account';
+  const sub=document.getElementById('bill-table-sub');
+  if(sub) sub.textContent = all.length+' account'+(all.length===1?'':'s')+' · '
+    +_bmoney(all.reduce((s,a)=>s+(a.usd||0),0))
+    +' · every line the account drew, added up'+(meta?', for accounts carrying this flag':'');
 
-  const multiVendor=new Set(accounts.map(a=>a.vendor)).size>1;
-  const val={
-    name:a=>(a.name||'').toLowerCase(), state:a=>_billAcctState(a)||'',
-    vendor:a=>OpsBilling.vendor(a.vendor).name, visits:a=>a.visits, lines:a=>a.lines.length, usd:a=>a.usd,
-  }[billAcctSortKey]||(a=>a.usd);
-  const dir=billAcctSortAsc?1:-1;
-  // Blanks sink in both directions, same rule as every other sortable table.
-  const sorted=[...accounts].sort((a,b)=>{
-    const av=val(a), bv=val(b);
-    if(av===''||av==null) return 1; if(bv===''||bv==null) return -1;
-    return typeof av==='string'?dir*av.localeCompare(bv):dir*(av-bv);
-  });
+  const multiVendor=new Set(all.map(a=>a.vendor)).size>1;
 
-  const th=(k,label,cls)=>{
-    const on=billAcctSortKey===k, arrow=on?(billAcctSortAsc?'sarr-up':'sarr-dn'):'sarr-no';
-    return `<th class="${cls||''}" tabindex="0" role="button" aria-sort="${on?(billAcctSortAsc?'ascending':'descending'):'none'}" onclick="billAcctSortBy('${k}')" style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
-  };
-
-  host.innerHTML = sorted.length ? `
+  host.innerHTML = rows.length ? `
     <div class="xscroll"><table id="bill-acct-tbl" class="tbl bill-tbl"><thead><tr>
-      ${th('name','Account')}${th('state','State')}${multiVendor?th('vendor','Vendor'):''}
-      ${th('visits','Visits','r')}${th('lines','Lines','r')}${th('usd','Total cost','r')}
+      ${billTh('name','Account')}${billTh('state','State')}${multiVendor?billTh('vendor','Vendor'):''}
+      ${billTh('visits','Visits','r')}${billTh('lines','Lines','r')}
+      ${meta?billTh('flagn',esc(meta.label),'r'):''}${billTh('usd','Total cost','r')}
     </tr></thead><tbody>
-      ${sorted.slice(0,400).map(a=>{
+      ${rows.map(a=>{
         const counts={};
         a.lines.forEach(l=>{ const k=l.subtype||l.type||'—'; counts[k]=(counts[k]||0)+1; });
         const breakdown=Object.entries(counts).map(([k,n])=>`${n} ${k}`).join(' + ');
@@ -6787,29 +7004,79 @@ function _renderBillingAccounts(){
           ${multiVendor?`<td style="color:var(--muted);">${esc(OpsBilling.vendor(a.vendor).name)}</td>`:''}
           <td class="r">${a.visits}</td>
           <td class="r">${a.lines.length}<div class="cmeta">${esc(breakdown)}</div></td>
+          ${meta?`<td class="r">${a.flagN}<div class="cmeta">${_bmoney(a.flagUsd)}</div></td>`:''}
           <td class="r" style="white-space:nowrap;">${_bmoney(a.usd)}</td>
         </tr>`;
       }).join('')}
     </tbody></table></div>
-    ${sorted.length>400?`<div class="note">Top 400 of ${sorted.length} by the current sort</div>`:''}
-    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('bill-acct-tbl',this,'account costs')">Copy table</button></div>`
-    : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
+    ${_billFoot(rows.length,all.length,'bill-acct-tbl','account costs')}`
+    : '<div class="note" style="padding:10px 0;">Nothing matches these filters.</div>';
 }
 
 // ── Import statement (in-app) ────────────────────────────────────────────
+// A modal off the bar rather than the last panel on the page: importing is the
+// one thing you come to this page to DO, and it used to sit below 1,033 table
+// rows. The statements already imported live in here with it — what is loaded
+// is the context for loading another, and it is what a re-import replaces.
+//
 // Parses through the exact same lib/statement-import.cjs the CLI runs
 // (api/update-billing.js), so an upload here and `node parse-radicl.js`
 // from the terminal behave identically — one parser, two entry points.
+function openBillImport(){
+  const back=document.getElementById('billImportModal');
+  const vsel=Object.keys(OpsBilling.VENDORS).length>1?`
+    <select id="bill-imp-vendor" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text);">
+      ${Object.values(OpsBilling.VENDORS).map(v=>`<option value="${esc(v.id)}"${v.id===OpsBilling.DEFAULT_VENDOR?' selected':''}>${esc(v.name)}</option>`).join('')}
+    </select>`:'';
+  const st=(_billing&&_billing.statements||[]);
+  document.getElementById('bill-imp-body').innerHTML=`
+    ${vsel?`<div style="margin-bottom:8px;">${vsel}</div>`:''}
+    <input type="file" id="bill-imp-file" accept=".xlsx,.xls" style="display:none;" onchange="billingImportPick(this.files[0])">
+    <div class="upd-drophere" id="bill-imp-drop" onclick="document.getElementById('bill-imp-file').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over');"
+      ondragleave="this.classList.remove('drag-over');"
+      ondrop="event.preventDefault();this.classList.remove('drag-over');billingImportPick(event.dataTransfer.files[0]);">
+      <strong>Drop the .xlsx statement here</strong>
+      or click to browse
+    </div>
+    <div id="bill-imp-save" style="display:none;margin-top:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;" id="bill-imp-summary"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="password" id="bill-imp-password" placeholder="Update password" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;background:var(--bg);">
+        <button class="mbtn" onclick="billingImportSave()" id="bill-imp-btn">Import</button>
+      </div>
+      <div id="bill-imp-status" style="font-size:12px;color:var(--muted);margin-top:7px;min-height:16px;"></div>
+    </div>
+    ${st.length?`<div style="margin-top:16px;padding-top:13px;border-top:1px solid var(--border);">
+      <div class="klabel" style="margin-bottom:7px;">Already imported</div>
+      <table class="tbl tbl-static" style="font-size:11px;"><thead><tr><th>Statement</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
+        ${st.map(s=>{
+          const ls=_billing.lines.filter(l=>l.statement===s.id);
+          const ch=ls.filter(OpsBilling.isCharge).reduce((a,l)=>a+Math.abs(l.units||0),0);
+          return `<tr><td>${esc(s.file||s.id)}<div class="cmeta">${esc(OpsBilling.vendor(s.vendor).name)}</div></td>
+            <td style="white-space:nowrap;color:var(--muted);">${s.from?fmtDateShort(s.from)+' – '+fmtDateShort(s.to):'—'}</td>
+            <td class="r">${s.lines}</td><td class="r">${_bmoney(OpsBilling.usd(ch,s.vendor))}</td>
+            <td style="color:var(--faint);white-space:nowrap;">${esc(s.imported||'')}</td></tr>`;
+        }).join('')}
+      </tbody></table>
+      <div class="note">Re-importing a statement replaces its own lines · every other statement is kept, which is what makes a double-billed charge visible.</div>
+    </div>`:''}`;
+  _billImpFile=null;
+  back.classList.remove('hidden');
+}
+function closeBillImport(){ const m=document.getElementById('billImportModal'); if(m) m.classList.add('hidden'); }
+document.getElementById('billImportModal').addEventListener('click',e=>{ if(e.target.id==='billImportModal') closeBillImport(); });
 function billingImportPick(file){
   if(!file) return;
   _billImpFile=file;
-  document.getElementById('bill-imp-filename').textContent=file.name;
+  document.getElementById('bill-imp-drop').innerHTML=`<strong>${esc(file.name)}</strong>click to choose a different file`;
   document.getElementById('bill-imp-summary').textContent=`Ready to import "${file.name}".`;
   document.getElementById('bill-imp-save').style.display='';
   const status=document.getElementById('bill-imp-status');
   status.textContent=''; status.style.color='';
   const btn=document.getElementById('bill-imp-btn');
   btn.disabled=false; btn.textContent='Import';
+  document.getElementById('bill-imp-password').focus();
 }
 function _fileToBase64(file){
   return new Promise((resolve,reject)=>{
@@ -6834,7 +7101,7 @@ async function billingImportSave(){
       body:JSON.stringify({fileBase64,filename:_billImpFile.name,vendor,password:pw})});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'Unknown error');
-    _billing=data.history; _billingErr=null;
+    _billing=data.history; _billingErr=null; _billRecon=null;
     status.style.color='var(--green)';
     status.textContent=`Imported — ${data.report.lines} lines, ${_bmoney(data.report.usd)}`
       +(data.report.replaced?` (replaced ${data.report.replaced} previously imported line${data.report.replaced===1?'':'s'})`:'')
@@ -6842,7 +7109,7 @@ async function billingImportSave(){
     btn.textContent='Imported';
     document.getElementById('bill-imp-password').value='';
     _billImpFile=null;
-    setTimeout(renderBilling,1500);
+    setTimeout(()=>{ closeBillImport(); renderBilling(); },1500);
   }catch(err){
     status.style.color='var(--red)';
     status.textContent='Error: '+err.message;

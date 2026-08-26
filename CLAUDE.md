@@ -424,8 +424,58 @@ labelled. Things not to undo:
     say "error" about rules that are deliberately informational
   - They are `<button>`s, not `.drill-tgt` divs. Lift-and-shadow is reserved for
     things that open something; a filter darkens its border and does not move
-- **The Statement column is hidden while one statement exists**, the same rule
-  the vendor toggle follows — it printed the same filename on all 343 rows
+- **The Statement column is hidden while one statement is in view**, the same
+  rule the vendor toggle follows — it printed the same filename on all 343 rows.
+  Picking one statement in the bar hides it again for the same reason
+- **Bar · rail · one panel** (2026-08-26). It was five stacked sections that
+  printed every row of both tables: 39,897px, 44 screens, with the import
+  controls at the very bottom of it. It is 2,915px now. Things not to undo:
+  - **One panel, two lenses — Charges · By account.** They were two
+    full-length tables of the same money, 710 rows then 323, printed back to
+    back. Same "one grouping, N cuts, one table" shape Performance and Quality
+    already resolved. The exception chips apply to both: under the account lens
+    they keep accounts *carrying* a flagged line, and the total stays what the
+    account cost across every line it drew — filtering the lines first would
+    make it the cost of the flagged lines, which is the one thing this cut
+    exists not to say
+  - **Paged, not capped.** Both tables rendered up to 400 rows on load, which
+    is what made the page 44 screens. `BILL_PAGE` (50) show, the rest is a
+    click. `billCopy()` expands to everything *before* copying, so "Copy table"
+    never quietly copies only the visible page
+  - **Import is a modal off the bar's top-right**, not the last panel on the
+    page — it is the one thing you come here to do, and it sat below 1,033
+    rows. *Statements imported* went into the modal with it: what is already
+    loaded is the context for loading another, and it is what a re-import
+    replaces. Its other job — naming the period — is the bar's now
+  - **Billing has its own filter bar and it is not `buildFBar`.** Region,
+    office, status and the survey date range are survey-row vocabulary; an
+    invoice line has a mission date, a statement, a vendor, a charge type and
+    (via its matched row) a state. The bar owns `billF`, which is deliberately
+    **not** persisted to `ops_filters` — a remembered date range on a page you
+    visit monthly is a trap
+  - **Every control scopes every number.** The rail, the chips and the table
+    all read `billScoped()`, so a date range or a state narrows the page rather
+    than narrowing one table under a national rail — the rule Quality and Map
+    are already held to. Search is the exception only in *where* it re-renders:
+    `setBillQ` redraws `#bill-main` and never the bar, so the caret stays put
+  - **Reconcile once, over the whole history, then filter the result.** The
+    duplicate and cross-statement rules read every line an account ever drew,
+    so narrowing the input first would quietly switch them off — pick a single
+    statement and "appears on two statements" could never fire again
+  - **Date presets anchor on the newest charge, not on the wall clock.** A
+    statement arrives weeks after the work, so "this month" measured from today
+    is empty for the first days of every month
+  - **The overlap notice is prose, not a chip.** The two live statements both
+    cover Aug 1–8: 67 charges worth $19,028 are on both, and every figure in
+    the rail counts each of them as invoiced. Keeping both copies is the point
+    of `billing.json` accumulating, but a page that reads high without saying
+    so is worse than one that reads low. It only appears when overlapping lines
+    are actually in scope, and its button selects the `cross_statement` rule.
+    Amber, not red: the statements are not wrong, the total is not settled
+  - **Both tables sort through `billTh`/`billSorted`.** Text columns open A to
+    Z and numeric ones highest-first, blanks sink in both directions — the same
+    vocabulary as Performance, Quality and the drill drawer. The charges table
+    had no sort at all before, only a hardcoded newest-first
 
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
