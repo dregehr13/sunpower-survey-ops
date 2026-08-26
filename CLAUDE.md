@@ -593,6 +593,39 @@ labelled. Things not to undo:
     say "error" about rules that are deliberately informational
   - They are `<button>`s, not `.drill-tgt` divs. Lift-and-shadow is reserved for
     things that open something; a filter darkens its border and does not move
+- **Cost by project outcome is the third lens** (added 2026-08-26). Charges ·
+  By account · **By outcome** — `byOutcome()` in `lib/billing.cjs`, grouping
+  charge lines by the matched survey's `project_status`. Live: **14% of vendor
+  spend ($19,230) is on projects since canceled, 8% more on At-Risk**. It was
+  invisible before the same day's report change, which brought canceled
+  projects into the SF export — until then exactly ONE canceled row was in
+  scope and every dollar looked like it had been spent on a live deal. Things
+  not to undo:
+  - **It is not an exception and is not coloured.** Every one of these surveys
+    was performed before its project resolved; nobody surveyed a house knowing
+    the deal was lost. Doug's call 2026-08-26 — it is the cost of doing
+    business, and a severity tint would call it an error. Same rule that has
+    cleanup reported as cost rather than as a fault
+  - **`dead` marks Canceled only.** At-Risk is a project on its way somewhere,
+    not a loss; adding the two would report a number that keeps moving as those
+    projects resolve either way. The two sit as separate rows and the reader
+    adds them if they want to
+  - **Cut by `project_status`, never `opp_stage`.** Stage disagrees with status
+    on 4 rows in 3,791 and on 2 billed lines out of 624, so cutting by it would
+    draw the same picture from a field with no history behind it. A test asserts
+    `lib/billing.cjs` never mentions `opp_stage`
+  - **The unmatched bucket is called "No project matched", not "No Salesforce
+    record".** That is the `no_sf_match` exception's label, and that rule fires
+    only on WORK lines — the chip and the bucket would carry one name and two
+    amounts on the same screen ($2,272 against $2,942, the gap being the travel
+    adders those visits drew). The Visits column still reconciles to the chip
+    exactly; the name is what has to differ
+  - **The chips filter the LINES here, unlike the account lens.** An account's
+    total means "what this account cost", so narrowing it to flagged lines would
+    change what the number is; an outcome group is just a set of lines, so
+    "what the flagged lines cost, by outcome" is an honest reading
+  - The bar is a share of the **largest group**, not of the total: at 73% for
+    one row every other bar would be a stub
 - **The Statement column is hidden while one statement is in view**, the same
   rule the vendor toggle follows — it printed the same filename on all 343 rows.
   Picking one statement in the bar hides it again for the same reason
@@ -686,6 +719,48 @@ context only and no UI reads them.
   spread than the same cut by region.
 - `m1a_approved` is a downstream approval, not a booking date: median 0 days
   from project start and *earlier* than start on 43% of rows.
+
+## The 2026-08-26 report change (canceled projects + two columns)
+Doug widened the SF report: it now carries every project, not only live ones,
+and added two columns. Row count 2,530 → 4,706, nothing dropped.
+- **The canceled rows are the valuable half and are permanent.** 2,171 of the
+  2,176 added rows are Canceled. They fixed Billing's reconciliation (**"No
+  Salesforce record" 53 → 13**) and made *Cost by project outcome* possible
+- **`inScope()` already handled them and needed no change.** A completed survey
+  counts regardless of project status; only non-complete rows get the status
+  test. So WIP was **unaffected (60 → 60)** — the 126 open tasks on canceled
+  projects, median age 119 days, never reach the queue. The rule was written for
+  this population and had one row to act on until now
+- **History restated, and one metric is biased by it.** Completions 2,381 →
+  3,731. Cycle time is unbiased (within each resource the canceled rows sit
+  within a few tenths, so the 4.02 → 3.71 move is a mix shift — canceled work is
+  86% rep against 72% for active). **FPY is not**: 84.0% → 86.7%, and the whole
+  gap is Sales Rep (canceled 92.5% vs active 81.6%, against Radicl −0.2 and
+  SunPower −6.2). A rep-surveyed job that cancels never has its photos reviewed,
+  so the resurvey is never logged — the defect existed, nobody recorded it. Old
+  cohorts corroborate: January's gap is 1.2 points, June's is 16.5. **Raised
+  with Doug and left as-is**; the fix, if ever wanted, is excluding canceled
+  from the FPY denominator only, never from volume or cycle
+- **Recent weeks barely move** (4–10%), old ones move 33–71%: cancellation is a
+  ratchet, so the further back you look the more of that week has since died.
+  The Monday recap is essentially unaffected; the Trends line is not
+- **`opp_stage`** (Project Event : Opportunity : Stage) — carried, nothing
+  computes with it. **99.75% predicted by `project_status === 'Canceled'`**; 4
+  rows in 3,791 disagree. Keep it for the handful where the deal is lost but the
+  survey task is live; do not build on it
+- **`holding_reason`** — 5 values, multi-select, and **never cleared**: 50% of
+  COMPLETED rows still carry one, so it reads "was ever held for X", never "is
+  held for X". Two of its values (Site Survey Requested, Resurvey Requested)
+  restate `requested` and `isOpenResurvey` and agree with them only 68% of the
+  time over history — **the derived versions are better, don't switch**. The
+  photo-missing values are the new information and nothing else in the export
+  carries them: 19.8% of completions, worth **+2.2d cycle and −6.4 FPY points**,
+  consistent across all three resources. Not yet on any surface
+- **The parser's "Open date MOVED" warning fired on 913 rows and was a false
+  alarm.** Both exports carry byte-identical Open dates; the committed data.json
+  was exactly +1 day on all 913, 876 of them evening timestamps, i.e. built by
+  an older UTC-shifting parse. The current parser is right and it self-cleared
+  on the next push. The anchor's immutability claim holds
 
 ## Targets (Spec 12744)
 - Median: 3 days | Avg: 4 days

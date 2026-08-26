@@ -189,3 +189,71 @@ test('a second vendor needs a spec, not a second code path', () => {
     'rules below the vendor registry must not name a vendor');
   assert.ok(!/\b14\.2\b|\bunitUsd\s*[:=]\s*20\b/.test(body), 'no vendor price may be hardcoded in the rules');
 });
+
+// ── Cost by project outcome ────────────────────────────────────────────────
+// Added 2026-08-26, when the SF export started carrying canceled projects. The
+// cut is only meaningful because of that: before it, one canceled row was in
+// scope and every dollar looked like it had been spent on a live deal.
+test('byOutcome cuts spend by the matched survey project status', () => {
+  const rows = [
+    survey({ contact: 'Jane Smith',  address: '123 Main St Springfield, IL 62704', project_status: 'In Progress' }),
+    survey({ contact: 'Bob Jones',   address: '9 Oak Ave Dayton, OH 45402',        project_status: 'Canceled' }),
+    survey({ contact: 'Amy Fisher',  address: '77 Elm Rd Akron, OH 44301',         project_status: 'Canceled' }),
+  ];
+  const lines = [
+    line({ name: 'Jane Smith', address: '123 Main St, Springfield' }),
+    line({ name: 'Bob Jones',  address: '9 Oak Ave, Dayton',  line: 2 }),
+    line({ name: 'Amy Fisher', address: '77 Elm Rd, Akron',   line: 3 }),
+    line({ name: 'Amy Fisher', address: '77 Elm Rd, Akron',   subtype: 'Travel', units: -9, line: 4 }),
+  ];
+  const out = B.byOutcome(B.reconcile(lines, rows));
+  const by = Object.fromEntries(out.map(o => [o.status, o]));
+
+  assert.equal(by.Canceled.visits, 2, 'two survey visits on canceled projects');
+  assert.equal(by.Canceled.n, 3, 'travel adders count as spend on that outcome too');
+  assert.equal(by.Canceled.accounts, 2);
+  assert.equal(by.Canceled.usd, 284 + 284 + 180);
+  assert.equal(by.Canceled.dead, true);
+  assert.equal(by['In Progress'].dead, false, 'only a settled outcome is dead');
+
+  // Doug, 2026-08-26: At-Risk is a project on its way somewhere, not a loss.
+  // Folding it in would report a number that moves as those projects resolve.
+  const atRisk = B.byOutcome(B.reconcile([line()], [survey({ project_status: 'At-Risk' })]));
+  assert.equal(atRisk[0].dead, false);
+});
+
+test('byOutcome reconciles with summarize and its shares sum to one', () => {
+  const rows = [
+    survey({ contact: 'Jane Smith', address: '123 Main St Springfield, IL 62704', project_status: 'In Progress' }),
+    survey({ contact: 'Bob Jones',  address: '9 Oak Ave Dayton, OH 45402',        project_status: 'Canceled' }),
+  ];
+  // A line that matches nothing must not be dropped, or the parts stop adding
+  // up to the invoiced total — it is the same population no_sf_match counts.
+  const lines = [
+    line({ name: 'Jane Smith', address: '123 Main St, Springfield' }),
+    line({ name: 'Bob Jones',  address: '9 Oak Ave, Dayton', line: 2 }),
+    line({ name: 'Nobody Here', address: '1 Nowhere Ln, Atlantis', line: 3 }),
+    line({ type: 'Credits Added', subtype: '', units: 1000, line: 4 }),   // top-up, never a charge
+  ];
+  const rec = B.reconcile(lines, rows);
+  const out = B.byOutcome(rec);
+
+  // summarize() converts units to dollars once over the whole set; the cut
+  // converts per group, so the two differ in the last float bit, not in money.
+  assert.ok(Math.abs(out.reduce((s, o) => s + o.usd, 0) - B.summarize(rec).usd) < 1e-6,
+    'the outcome cut must add up to the invoiced total');
+  assert.ok(Math.abs(out.reduce((s, o) => s + o.share, 0) - 1) < 1e-9);
+  assert.ok(out.some(o => o.status === B.OUTCOME_UNMATCHED && o.matched === false),
+    'unmatched lines get their own bucket rather than being dropped');
+  assert.ok(!out.some(o => o.n === 0), 'an outcome with no lines is never emitted');
+});
+
+test('byOutcome never reads the opportunity stage', () => {
+  // Stage disagrees with project_status on 4 rows in 3,791 and on 2 billed
+  // lines out of 624, so cutting by it would draw the same picture from a
+  // field with no history behind it.
+  const src = require('node:fs').readFileSync(new URL('../lib/billing.cjs', import.meta.url), 'utf8')
+    .replace(/\/\/.*$/gm, '');
+  assert.ok(!/opp_stage/.test(src), 'billing must cut by project_status, not opp_stage');
+  assert.ok(/project_status/.test(src), 'and it must actually read project_status');
+});

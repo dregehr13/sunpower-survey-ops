@@ -13,6 +13,11 @@ if (!file) { console.error('Usage: node parse-sf.js <report.xls>'); process.exit
 // Must mirror the FIELDS registry in index.html
 const FIELDS = [
   { key:'project_status',       sfCol:'Project Status',                                          type:'text' },
+  // The opportunity's own stage. 99.75% predicted by project_status ===
+  // 'Canceled' — 4 rows out of 3,791 disagree — so nothing computes with it.
+  // Carried as context for the handful of rows where the deal is lost but the
+  // survey task is still live. Billing cuts by project_status, never by this.
+  { key:'opp_stage',            sfCol:'Project Event : Opportunity : Stage',                     type:'text' },
   { key:'contact',              sfCol:'Primary Contact',                                         type:'text' },
   { key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',               type:'text' },
   { key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',               type:'text' },
@@ -46,6 +51,19 @@ const FIELDS = [
   { key:'reviewed_by',          sfCol:'Reviewed By',                                             type:'text' },
   { key:'last_reviewed_date',   sfCol:'Last Reviewed',                                           type:'text' },
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
+  // FOR THE ACTIVE WIP PARETO, AND NOTHING ELSE — Doug, 2026-08-26. It is a
+  // multi-select picklist, semicolon-joined, and it is NEVER CLEARED: 50% of
+  // COMPLETED rows still carry one. So it is a life-of-task accumulator, not a
+  // live state, and the only population it describes truthfully is the open
+  // queue — "why is this held right now". Never aggregate it over completions
+  // and never put it on a finished row; both read as history dressed as status.
+  //
+  // Two of its five values (Site Survey Requested, Resurvey Requested) restate
+  // `requested` and isOpenResurvey and agree with them only 68% of the time
+  // over history — the derived versions are better, don't switch to these. The
+  // photo-missing values are the new information and nothing else in the export
+  // carries them: 16 of the 60 live WIP rows.
+  { key:'holding_reason',       sfCol:'Holding Reason',                                         type:'text' },
   { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
   { key:'list',                 sfCol:'List',                                                    type:'text' },
   { key:'task_id',             sfCol:'TaskRay Task ID',                                          type:'text' },

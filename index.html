@@ -1460,6 +1460,10 @@ const {isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOp
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
   {key:'project_status',       sfCol:'Project Status',                                            label:'Project Status',   type:'text',     filterable:false, editable:false},
+  // Context only, nothing computes with it: 99.75% predicted by project_status
+  // === 'Canceled' (4 of 3,791 rows disagree). filterable:false — a control for
+  // it would sit beside Status saying almost the same thing.
+  {key:'opp_stage',            sfCol:'Project Event : Opportunity : Stage',                     label:'Opportunity Stage',type:'text',filterable:false, editable:false},
   {key:'contact',              sfCol:'Primary Contact',                                           label:'Contact',          type:'text',     filterable:false, editable:true},
   {key:'contact_phone',        sfCol:'TaskRay Project : Primary Contact : Phone',                  label:'Contact Phone',    type:'text',     filterable:false, editable:false},
   {key:'contact_email',        sfCol:'TaskRay Project : Primary Contact : Email',                  label:'Contact Email',    type:'text',     filterable:false, editable:false},
@@ -1488,6 +1492,12 @@ const FIELDS = [
   {key:'reviewed_by',          sfCol:'Reviewed By',                                                label:'Reviewed By',      type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
+  // Active WIP only — Doug, 2026-08-26. Never cleared by SF, so half of all
+  // COMPLETED rows still carry one: this is "why is this held right now", not
+  // "why was it ever held". Read it on open rows to build the queue pareto;
+  // never aggregate it over completions and never render it on a finished row.
+  // filterable:false so a global filter cannot silently mix the two readings.
+  {key:'holding_reason',       sfCol:'Holding Reason',                                          label:'Holding Reason',   type:'text',     filterable:false, editable:false},
   {key:'resource',      sfCol:'Site Survey Resource', label:'Resource',      type:'category', filterable:true,  editable:true},
   {key:'survey_type',   sfCol:'Site Survey Type',    label:'Survey Type',   type:'category', filterable:false, editable:true},
   {key:'last_comment',         sfCol:'Last Reviewed Comments',                                    label:'Last Note',        type:'text',     filterable:false, editable:false},
@@ -7489,8 +7499,8 @@ let _billImpFile = null;
 // monthly is a trap rather than a convenience.
 const BILL_F0 = { flag:'all', vendor:'all', statement:'all', subtype:'all', state:'all', from:'', to:'', q:'' };
 let billF = { ...BILL_F0 };
-let billLens = 'charges';            // charges | accounts
-let billSort = { charges:{k:'date',asc:false}, accounts:{k:'usd',asc:false} };
+let billLens = 'charges';            // charges | accounts | outcome
+let billSort = { charges:{k:'date',asc:false}, accounts:{k:'usd',asc:false}, outcome:{k:'usd',asc:false} };
 const BILL_PAGE = 50;
 let billLimit = BILL_PAGE;
 
@@ -7603,6 +7613,14 @@ const BILL_SORTS = {
     flags: l=>(l.flags||[]).length,
     statement: l=>(l.statement||'').toLowerCase(),
   },
+  outcome: {
+    status:o=>(o.status||'').toLowerCase(),
+    visits:o=>o.visits,
+    accounts:o=>o.accounts,
+    lines: o=>o.n,
+    per:   o=>o.perSurvey==null?null:o.perSurvey,
+    usd:   o=>o.usd,
+  },
   accounts: {
     name:  a=>(a.name||'').toLowerCase(),
     state: a=>_billAcctState(a)||'',
@@ -7613,7 +7631,7 @@ const BILL_SORTS = {
     flagn: a=>a.flagN||0,
   },
 };
-const BILL_TEXT_COLS = ['name','state','charge','sf','vendor','statement'];
+const BILL_TEXT_COLS = ['name','state','charge','sf','vendor','statement','status'];
 function billSortBy(k){
   const s=billSort[billLens];
   if(s.k===k) s.asc=!s.asc;
@@ -7804,6 +7822,7 @@ function _renderBillMain(){
         <div class="toggle-group">
           <button class="tgl-btn${billLens==='charges'?' active':''}" onclick="setBillLens('charges')">Charges</button>
           <button class="tgl-btn${billLens==='accounts'?' active':''}" onclick="setBillLens('accounts')">By account</button>
+          <button class="tgl-btn${billLens==='outcome'?' active':''}" onclick="setBillLens('outcome')">By outcome</button>
         </div>
       </div>
       <div class="bill-flags${billF.flag==='all'?'':' narrowed'}">
@@ -7821,11 +7840,13 @@ function _renderBillMain(){
       </div>
       <div class="note" id="bill-flag-why">${meta?esc(meta.why)
         :billLens==='accounts'?'Every account that drew a charge, and what it cost across all of its lines.'
+        :billLens==='outcome'?'What the work cost, cut by what became of the project it was done for.'
         :'Every charge on every imported statement.'}</div>
       <div id="bill-table"></div>
     </div>`;
 
   if(billLens==='charges') _renderBillingTable(scoped,meta);
+  else if(billLens==='outcome') _renderBillingOutcome(scoped,meta);
   else _renderBillingAccounts(scoped,meta);
 }
 
@@ -7893,6 +7914,77 @@ function _renderBillingTable(scoped,meta){
       }).join('')}
     </tbody></table></div>
     ${_billFoot(rows.length,all.length,'bill-charges-tbl','charges')}`
+    : '<div class="note" style="padding:10px 0;">Nothing matches these filters.</div>';
+}
+
+// What the work cost, cut by what became of the project — the third lens.
+//
+// Only possible since the 2026-08-26 report change brought canceled projects
+// into the SF export: before it there was exactly ONE canceled row in scope, so
+// every vendor dollar appeared to have been spent on a live deal. It turns out
+// a fifth of the spend is on projects that are dead or dying, which nothing
+// else on this page could show.
+//
+// Deliberately NOT an exception chip and deliberately uncoloured. Every one of
+// these surveys was performed before its project resolved — nobody surveyed a
+// house knowing the deal was lost — so it is the cost of doing business rather
+// than a billing error, and a severity tint would say otherwise. Doug's call
+// 2026-08-26. It follows the page's existing rule that cleanup is reported as
+// cost, not as an error.
+//
+// Unlike the account lens, the exception chips filter the LINES here before
+// grouping. An account's total means "what this account cost", so narrowing it
+// to flagged lines would change what the number IS; an outcome group is just a
+// set of lines, so "what the flagged lines cost, by outcome" is an honest
+// reading of the same cut.
+function _renderBillingOutcome(scoped,meta){
+  const host=document.getElementById('bill-table'); if(!host) return;
+  const list=billFlagged(scoped);
+  const all=billSorted(OpsBilling.byOutcome(list));
+
+  const totUsd=all.reduce((s,o)=>s+o.usd,0);
+  const totN=all.reduce((s,o)=>s+o.n,0);
+  const totVisits=all.reduce((s,o)=>s+o.visits,0);
+  const totAccts=OpsBilling.byAccount(list).length;
+  const dead=all.filter(o=>o.dead);
+  const deadUsd=dead.reduce((s,o)=>s+o.usd,0);
+  const deadShare=dead.reduce((s,o)=>s+(o.share||0),0);
+  // The bar is a share of the largest group, not of the total: at 73% for one
+  // row every other bar would be a stub and the cut would be unreadable.
+  const mx=Math.max(...all.map(o=>o.share||0),0.0001);
+
+  const t=document.getElementById('bill-table-title');
+  if(t) t.textContent = meta ? meta.label+' · by outcome' : 'Cost by project outcome';
+  const sub=document.getElementById('bill-table-sub');
+  if(sub) sub.textContent = all.length+' outcome'+(all.length===1?'':'s')+' · '+_bmoney(totUsd)
+    +(dead.length?' · '+_bmoney(deadUsd)+' ('+_bpct(deadShare)+') on projects since canceled':'')
+    +(meta?', for lines carrying this flag':'');
+
+  host.innerHTML = all.length ? `
+    <div class="xscroll"><table id="bill-outcome-tbl" class="tbl bill-tbl"><thead><tr>
+      ${billTh('status','Outcome')}${billTh('accounts','Accounts','r')}${billTh('visits','Visits','r')}
+      ${billTh('lines','Lines','r')}${billTh('per','Per survey','r')}${billTh('usd','Total cost','r')}
+    </tr></thead><tbody>
+      ${all.map(o=>`<tr>
+        <td><div>${esc(o.status)}</div>${o.dead?`<div class="cmeta">project canceled after the survey</div>`
+          :!o.matched?`<div class="cmeta">no project to attribute it to · includes their travel adders</div>`:''}</td>
+        <td class="r">${o.accounts}</td>
+        <td class="r">${o.visits}</td>
+        <td class="r">${o.n}</td>
+        <td class="r" style="white-space:nowrap;">${o.perSurvey==null?'<span class="pna">—</span>':_bmoney(o.perSurvey)}</td>
+        <td class="r"><div class="q-rate-cell">
+          <div class="q-rate-track"><div class="q-rate-fill" style="width:${Math.min((o.share||0)/mx*100,100)}%;background:var(--muted);"></div></div>
+          <span class="q-rate-val" style="width:62px;">${_bmoney(o.usd)}</span>
+        </div><div class="cmeta">${_bpct(o.share)}</div></td>
+      </tr>`).join('')}
+    </tbody>
+    <tfoot><tr class="q-rate-all">
+      <td><strong>All charges</strong></td>
+      <td class="r">${totAccts}</td><td class="r">${totVisits}</td><td class="r">${totN}</td>
+      <td class="r" style="white-space:nowrap;">${totVisits?_bmoney(totUsd/totVisits):'<span class="pna">—</span>'}</td>
+      <td class="r" style="white-space:nowrap;"><strong>${_bmoney(totUsd)}</strong></td>
+    </tr></tfoot></table></div>
+    ${_billFoot(all.length,all.length,'bill-outcome-tbl','cost by outcome')}`
     : '<div class="note" style="padding:10px 0;">Nothing matches these filters.</div>';
 }
 
