@@ -20,6 +20,7 @@
   --amber-bg:#fdf1dc;--amber:#9a5b13;
   --red-bg:#fdeaea;--red:#b42323;
   --blue:#2563eb;--sf:#0070d2;
+  --blue-bg:#e8effa;--blue-dk:#1d4ed8;
   /* Charts + categorical — deliberately muted so status stays loudest */
   --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#d94f4e;
   --accent:#f59e0b;
@@ -182,11 +183,20 @@ tr:hover td{background:var(--bg);}
 .pg{background:var(--green-bg);color:var(--green);}
 .pam{background:var(--amber-bg);color:var(--amber);}
 .pr{background:var(--red-bg);color:var(--red);}
+/* Neutral fill. A bare .pill has no background at all, so it rendered as
+   indented plain text; three call sites had already worked around that with
+   their own inline greys. */
+.pn{background:var(--bg);color:var(--muted);}
 .pna{color:var(--faint);font-size:12px;}
 /* --faint measures 2.5:1 on the card surface, which is fine for a bare em-dash
    but not for a sample size — in the Resurveys breakdowns "n=4" IS the value in
    most rows. --muted is 5.7:1 and clears AA. */
 .pna-n{color:var(--muted);font-size:12px;}
+/* Second line inside a table cell — the address under an account, the town
+   count under a market. Footnote rank on the label scale: 10px/400/--faint. */
+.cmeta{font-size:10px;color:var(--faint);margin-top:2px;}
+/* Qualifier under a column head — axis-tick rank, not a second header. */
+.th-sub{display:block;font-weight:400;color:var(--faint);}
 .rs-idle{font-size:10px;font-weight:400;color:var(--faint);white-space:nowrap;}
 .wip-rs-why{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:0;}
 .wip-rs-why b{color:var(--text);font-weight:600;}
@@ -594,50 +604,71 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    every open, so that mode gets a wider drawer instead. */
 .drill-panel.wide{width:min(820px,100vw);}
 
-/* Billing. The flag chips are the page's control: each is a rule, its count
-   and what it is worth. Severity colours the left edge only — a whole tinted
-   card would say "error" about rules that are deliberately informational. */
-.bill-flags{display:flex;flex-wrap:wrap;gap:8px;}
-.bill-flag{flex:1 1 150px;min-width:150px;padding:10px 12px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;}
-.bill-flag.sev-high{border-left-color:var(--red);}
-.bill-flag.sev-med{border-left-color:var(--amber);}
-.bill-flag.sev-info{border-left-color:var(--border);}
-.bill-flag.on{background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);}
-.bill-flag-n{font-size:19px;font-weight:700;color:var(--text);line-height:1.2;font-variant-numeric:tabular-nums;}
-.bill-flag-l{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
-.bill-flag-v{font-size:11px;color:var(--faint);margin-top:3px;}
-.bill-sfmeta{font-size:10px;color:var(--faint);margin-top:2px;}
+/* Billing exception filters. These select rows in the table directly below
+   them, so they are filter chips in the same vocabulary the WIP status bar
+   uses — a swatch, a label, a count — not cards. They were six 19px KPI cards
+   under a six-cell stat rail, which opened the page on twelve big numbers and
+   said two of them twice. Severity is the swatch only: a tinted chip would say
+   "error" about rules that are deliberately informational. */
+.bill-flags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px;}
+.bill-flag{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:11px;font-weight:600;
+  line-height:1;padding:6px 10px;border:1px solid var(--border);border-radius:99px;
+  background:var(--surface);color:var(--muted);cursor:pointer;
+  transition:border-color .15s,color .15s,opacity .15s;}
+.bill-flag:hover{border-color:var(--faint);color:var(--text);}
+.bill-flag.on{border-color:var(--text);color:var(--text);}
+.bill-flag:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+/* Dim the rest only once a rule is picked — "All charges" is the unfiltered
+   state, so on load nothing is narrowed and nothing should read as excluded. */
+.bill-flags.narrowed .bill-flag:not(.on){opacity:.45;}
+.bill-flag-sw{width:7px;height:7px;border-radius:99px;flex-shrink:0;background:var(--border);}
+.bill-flag.sev-high .bill-flag-sw{background:var(--red);}
+.bill-flag.sev-med .bill-flag-sw{background:var(--amber);}
+.bill-flag-n{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.bill-flag-v{font-weight:400;color:var(--faint);padding-left:7px;border-left:1px solid var(--border);}
+#bill-flag-why{margin:0 0 10px;}
+/* "Also flagged" cells. Tinted like every other pill in the app — .bill-pill
+   set a colour and no background, which renders as indented plain text. */
 .bill-pill{font-size:10px;}
-.bill-pill.sev-high{color:var(--red);}
-.bill-pill.sev-med{color:var(--amber);}
-.bill-pill.sev-info{color:var(--muted);}
+.bill-pill.sev-high{background:var(--red-bg);color:var(--red);}
+.bill-pill.sev-med{background:var(--amber-bg);color:var(--amber);}
+.bill-pill.sev-info{background:var(--bg);color:var(--muted);}
 .bill-tbl td{vertical-align:top;}
 
 /* Resource. The action tag is the page's verdict, so it carries the only
    colour in the table; the mix bar beside it is deliberately muted, because
-   the split is context for the verdict rather than a second reading. */
-.res-act{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:4px;white-space:nowrap;}
-.res-act-absorb{background:rgba(45,125,70,.12);color:var(--green);}
-.res-act-deploy{background:rgba(60,110,190,.12);color:var(--blue);}
-.res-act-hire{background:rgba(190,140,30,.14);color:var(--amber);}
-.res-act-coach{background:rgba(140,90,180,.12);color:#7b5aa6;}
+   the split is context for the verdict rather than a second reading.
+   Tints come from the palette's own -bg tokens — the tag used four hand-mixed
+   rgba() values and a purple that exists nowhere else in the app. */
+.res-act{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:3px;white-space:nowrap;}
+.res-act-absorb{background:var(--green-bg);color:var(--green);}
+.res-act-deploy{background:var(--blue-bg);color:var(--blue-dk);}
+.res-act-hire{background:var(--amber-bg);color:var(--amber);}
+.res-act-coach{background:var(--red-bg);color:var(--red);}
 .res-act-vendor{background:var(--bg);color:var(--faint);}
 .res-mix{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;min-width:80px;max-width:130px;}
 .res-seg{display:block;height:100%;}
 .res-tbl td{vertical-align:top;}
-.res-bvb{display:flex;gap:14px;flex-wrap:wrap;}
-.res-bvb-col{flex:1 1 190px;min-width:190px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
-.res-bvb-v{font-size:26px;font-weight:600;color:var(--text);margin:3px 0 5px;}
+.res-why{max-width:240px;white-space:normal;color:var(--muted);font-size:11px;}
+/* Three figures separated by hairlines rather than three bordered boxes on a
+   panel that already has a border — the same flattening .exec-hero .srail
+   does, and for the same reason: nested chrome reads as two objects. */
+.res-bvb{display:flex;flex-wrap:wrap;border-top:1px solid var(--border);}
+.res-bvb-col{flex:1 1 210px;min-width:210px;padding:13px 18px 2px 0;border-right:1px solid var(--border);}
+.res-bvb-col:last-child{border-right:none;}
+.res-bvb-col:not(:first-child){padding-left:18px;}
+.res-bvb-v{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1;color:var(--text);margin:3px 0 5px;}
 .res-bvb-v.good{color:var(--green);}
 .res-bvb-v.bad{color:var(--red);}
-.res-ins{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
-.res-ins-row{background:var(--surface);padding:11px 13px;border-left:3px solid transparent;}
+.res-ins{display:flex;flex-direction:column;}
+.res-ins-row{padding:11px 0 11px 12px;border-top:1px solid var(--border-lt);border-left:3px solid transparent;}
+.res-ins-row:first-child{border-top:none;}
 .res-ins-row.sev-high{border-left-color:var(--red);}
 .res-ins-row.sev-med{border-left-color:var(--amber);}
-.res-ins-row.sev-info{border-left-color:var(--border-lt);}
-.res-ins-h{font-size:13px;font-weight:600;color:var(--text);}
-.res-ins-d{font-size:11.5px;color:var(--muted);line-height:1.65;margin-top:3px;}
-.res-ins-d code{font-size:10.5px;background:var(--bg);padding:1px 4px;border-radius:3px;}
+.res-ins-row.sev-info{border-left-color:var(--border);}
+.res-ins-h{font-size:13px;font-weight:700;color:var(--text);}
+.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;margin-top:3px;}
+.res-ins-d code{font-size:10px;background:var(--bg);padding:1px 4px;border-radius:3px;}
 
 /* Sortable drawer headers. Same vocabulary as every other table in the app —
    .sarr glyphs, Enter/Space via the global th handler — so a drill sorts the
@@ -923,7 +954,7 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   --green-bg:#e6f2ea;--green:#2e7a52;
   --amber-bg:#f7efd9;--amber:#8a6413;
   --red-bg:#f9e7e4;--red:#b3402e;
-  --blue:#4f7fae;
+  --blue:#4f7fae;--blue-bg:#e9f0f7;--blue-dk:#33608c;
   --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#c9542f;
   --accent:#f7941d;
   --navy1:#ffffff;--navy2:#ffffff;
@@ -2156,17 +2187,17 @@ const TIP={
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
   resTeam:'In-house surveyors on roster.json, placed by their home ZIP. The roster is hand-maintained — there is no Salesforce object for the team.',
-  resCapacity:'What the team could do in a week if every job were close to home, from the drive-time model in lib/coverage.cjs. It is the optimistic end: capacity falls as the drive grows, and the team table shows the whole curve.',
-  resNow:'Surveys a week the in-house team is actually picking up, over the last 8 weeks — the same window every other rate on this page uses. Compare against capacity rather than against the vendor — the gap between these two is the cheapest volume available.',
-  resUtil:'What the team is completing against what the drive-time model says they could. Deliberately shown as a ratio rather than as "headroom": at the current reading the gap is far more likely to mean surveying is not their whole job than to mean fifty surveys a week are sitting unused. Resolve it before trusting any hiring number.',
-  resOutsourced:'Surveys a week going to a third-party vendor. Not all of it is reclaimable — most of it is nowhere near a base — which is what the market table sorts out.',
-  resAbsorb:'The part of the outsourced volume sitting inside day-trip range of a base the team already has. This is the number that needs no hire, no posting and no negotiation.',
+  resCapacity:'What the team could do in a week if every job were close to home, from the drive-time model in lib/coverage.cjs. The optimistic end: capacity falls as the drive grows, and the team table shows the whole curve.',
+  resNow:'Surveys a week the in-house team is actually picking up, over the last 8 weeks — the same window every other rate on this page uses. Compare it against capacity, not against the vendor.',
+  resUtil:'What the team completes against what the drive-time model says they could. Shown as a ratio rather than as "headroom": at the current reading the gap more likely means surveying is not their whole job than that fifty surveys a week are sitting unused. Settle it before trusting any hiring number.',
+  resOutsourced:'Surveys a week going to a third-party vendor. Not all of it is reclaimable: most of it is nowhere near a base, which is what the market table sorts out.',
+  resAbsorb:'The part of the outsourced volume sitting inside day-trip range of a base the team already has — the part that needs no hire and no posting.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an in-house surveyor against, not the base rate.',
-  billTravel:'Adders applied beyond the vendor\'s free radius. Not an error, and tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
+  billTravel:'Adders applied beyond the vendor\'s free radius. Not an error. Tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
   billCleanup:'Return visits to finish a survey another resource started, billed at the full first-visit rate. This is what an incomplete first survey costs, and the invoice is the only place it is recorded.',
-  billRework:'Return visits to a job this vendor already did. Billed at the full first-visit rate like everything else — whether that is contractually right is the question the queue raises.',
-  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict — the tool compares the invoice to Salesforce and does not know the contract.',
+  billRework:'Return visits to a job this vendor already did, billed at the full first-visit rate like everything else. Whether that is contractually right is a contract question.',
+  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict: the tool compares the invoice with Salesforce and does not know the contract.',
   mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
@@ -6250,15 +6281,15 @@ function renderResource(){
     <div class="srail">
       ${cell('In-house team',bases.length,bases.filter(b=>b.ll).length+' placed',TIP.resTeam)}
       ${cell('Doing now',_r1(inhouseNow),'a week',TIP.resNow)}
-      ${cell('Modelled cap.',_r1(teamCap),'close in',TIP.resCapacity)}
-      ${cell('Utilisation',_rpct(teamCap?inhouseNow/teamCap:null),'of the model',TIP.resUtil)}
+      ${cell('Capacity',_r1(teamCap),'modelled',TIP.resCapacity)}
+      ${cell('Utilisation',_rpct(teamCap?inhouseNow/teamCap:null),'of model',TIP.resUtil)}
       ${cell('Outsourced',_r1(outsourcedNow),'a week',TIP.resOutsourced)}
-      ${cell('Absorbable',_r1(absorbable),'of that, today',TIP.resAbsorb)}
+      ${cell('Absorbable',_r1(absorbable),'of that',TIP.resAbsorb)}
     </div>
 
     <div class="sec">
-      <div class="shead"><div><div class="stitle">What this says</div>
-      <div class="ssub">Derived from the rows below, not written in. Each one names what it is measured from so it can be checked.</div></div></div>
+      <div class="shead"><div><div class="stitle">Findings</div>
+      <div class="ssub">Measured from the markets below · each one says what it is counted from</div></div></div>
       <div class="res-ins">${resInsights(markets,bases,{teamCap,inhouseNow,outsourcedNow,absorbable,billSum,weeks}).map(i=>`
         <div class="res-ins-row sev-${i.sev}">
           <div class="res-ins-h">${esc(i.headline)}</div>
@@ -6268,8 +6299,10 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">What to do, market by market</div>
-        <div class="ssub">One action per market from four facts: can we reach it, is there enough work, is that work durable, and who is doing it badly. Markets are ${mapRadius}-mile clusters — the Map's radius control sets this too.</div></div>
+        <div><div class="stitle">${resView==='team'?'The team':'Markets'}</div>
+        <div class="ssub">${resView==='team'
+          ? 'In-house surveyors from roster.json, placed by home ZIP'
+          : `One action per market, from reach, volume, durability and rep defect rate · ${mapRadius}-mile clusters, set by the Map's radius control`}</div></div>
         <div class="toggle-group">
           ${['markets','team'].map(v=>`<button class="tgl-btn${resView===v?' active':''}" onclick="setResView('${v}')">${v==='markets'?'Markets':'The team'}</button>`).join('')}
         </div>
@@ -6279,31 +6312,31 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Build vs buy</div>
-      <div class="ssub">The vendor side is measured from ${_billing?'the imported statements':'nothing yet — import a statement on the Billing page'}. The in-house side depends entirely on throughput, so it is quoted as a break-even rather than as a rate.</div></div></div>
+      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} · in-house cost depends on throughput, so it is quoted as a break-even</div></div></div>
       <div class="res-bvb">
         <div class="res-bvb-col">
           <div class="klabel">Vendor, all-in</div>
           <div class="res-bvb-v">${_rmoney(perVendor)}</div>
-          <div class="note">per survey${billSum?', across '+billSum.surveys+' billed visits. Includes travel adders and demobilisation — the base rate alone understates it by 37%.':'. Import a statement to measure this.'}</div>
+          <div class="note">${billSum?'Per survey across '+billSum.surveys+' billed visits, travel adders and demobilisation included. The base rate alone is 37% lower.':'Per survey. Import a statement to measure this.'}</div>
         </div>
         <div class="res-bvb-col">
           <div class="klabel">In-house break-even</div>
           <div class="res-bvb-v ${breakEven!=null&&perSurveyNow!=null&&perSurveyNow<=perVendor?'good':''}">${breakEven!=null?_r1(breakEven):'—'}</div>
-          <div class="note">surveys a week, per surveyor, to match the vendor at ${_rmoney(resWeeklyCost())}/week loaded. <b>This is the number that does not depend on the capacity model.</b></div>
+          <div class="note">Surveys a week per surveyor to match the vendor, at ${_rmoney(resWeeklyCost())}/week loaded. The one figure here that does not rest on the capacity model.</div>
         </div>
         <div class="res-bvb-col">
           <div class="klabel">Where you are</div>
-          <div class="res-bvb-v ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor?'bad':'good'}">${_rmoney(perSurveyNow)}</div>
-          <div class="note">per in-house survey at the ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))} a week each they are doing now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
-            ? 'Above the vendor — <b>at today\'s throughput, insourcing costs more, not less</b>. The case for it rests on raising throughput or on cycle time and quality, not on price.'
-            : 'Below the vendor rate.'}</div>
+          <div class="res-bvb-v ${perSurveyNow==null||!perVendor?'':(perSurveyNow>perVendor?'bad':'good')}">${_rmoney(perSurveyNow)}</div>
+          <div class="note">Per in-house survey at the ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
+            ? 'Above the vendor: at this throughput insourcing costs more. The case for it is throughput, cycle time or quality, not price.'
+            : perVendor ? 'Below the vendor rate.' : ''}</div>
         </div>
       </div>
-      <div class="note" style="margin-top:10px;line-height:1.7;">
-        Cost per in-house survey is loaded weekly cost ÷ surveys completed, so it falls steeply with throughput:
+      <div class="note">
+        Loaded weekly cost ÷ surveys completed, so it falls with throughput:
         ${[2,4,6,10,15].map(n=>{const c=resWeeklyCost()/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
-        The vendor sits at ${_rmoney(perVendor)} flat — it does not care how busy anyone is, which is the real trade.
-        The in-house side is an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle); correct it in Settings.
+        The vendor rate is flat at ${_rmoney(perVendor)} whatever the volume.
+        In-house figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle) — edit in Settings.
       </div>
     </div>`;
 
@@ -6327,11 +6360,11 @@ function resInsights(markets,bases,ctx){
   const util=teamCap?inhouseNow/teamCap:null;
   if(util!=null&&util<0.6){
     out.push({sev:'high',
-      headline:'The team is running at '+_rpct(util)+' of what the model says they could do',
+      headline:'The team is at '+_rpct(util)+' of modelled capacity',
       detail:`The drive-time model gives ${_r1(teamCap/Math.max(bases.length,1))} surveys a week each at a tight market; `
-        +`they are completing ${_r1(inhouseNow/Math.max(bases.length,1))}. Either surveying is not their whole job, or a knob in the model is wrong — `
-        +`most likely time on site or field hours. <b>Resolve this before any hiring number is trusted</b>, because every capacity figure on this page scales with it. `
-        +`Both are editable per surveyor in <code>roster.json</code>.`});
+        +`they complete ${_r1(inhouseNow/Math.max(bases.length,1))}. Either surveying is not their whole job, or the model's time-on-site or field-hours setting is wrong. `
+        +`<b>Every capacity figure here scales with this</b>, so settle it before using any hiring number. `
+        +`Both settings are per surveyor in <code>roster.json</code>.`});
   }
 
   // 2. Reach is the whole build-vs-buy story and it is counter-intuitive:
@@ -6340,12 +6373,12 @@ function resInsights(markets,bases,ctx){
   const nearVendor=near.reduce((a,m)=>a+m.vendor,0);
   out.push({sev: absorbable<1?'high':'info',
     headline: absorbable<1
-      ? 'Almost none of the outsourced work is within reach of a base'
-      : _r1(absorbable)+' outsourced surveys a week sit inside day-trip range',
-    detail:`${near.length} market${near.length===1?'':'s'} fall inside a day trip of ${bases.filter(b=>b.ll).length} bases, and across all of them the vendor has done `
-      +`${nearVendor} job${nearVendor===1?'':'s'} in the whole dataset. `
-      +`The team already covers the ground it stands on; the outsourced book is somewhere else. `
-      +`That makes this a <b>deployment and hiring question, not a scheduling one</b> — there is no quick win from re-assigning work to people you already have.`});
+      ? 'Almost no outsourced work is within reach of a base'
+      : _r1(absorbable)+' outsourced surveys a week are within day-trip range',
+    detail:`${near.length} market${near.length===1?'':'s'} sit within a day trip of ${bases.filter(b=>b.ll).length} bases, and the vendor has done `
+      +`${nearVendor} job${nearVendor===1?'':'s'} across all of them. `
+      +`The outsourced work is somewhere else, so re-assigning it to the current team wins nothing. `
+      +`<b>This is a deployment and hiring question, not a scheduling one.</b>`});
 
   // 3. Where a posting would actually land.
   const dep=markets.filter(m=>m.advice.k==='deploy').sort((a,b)=>b.recentPerWeek-a.recentPerWeek);
@@ -6354,41 +6387,41 @@ function resInsights(markets,bases,ctx){
     const depAll=dep.reduce((a,m)=>a+m.recentPerWeek,0);
     const mob=dep.filter(m=>m.mobileShare>=OpsCoverage.VOLATILE_SHARE);
     out.push({sev:'med',
-      headline:_r1(depAll)+' surveys a week are in markets worth a posting, not a hire',
+      headline:_r1(depAll)+' surveys a week are in markets worth a posting',
       detail:`${dep.map(m=>esc(m.name)+', '+m.st).join(' · ')}. `
-        +`${_r1(depOut)} a week of that is currently outsourced. `
-        +(mob.length?`<b>${mob.length} of ${dep.length} are built on sales crews whose footprint moves</b> — measured, not assumed: their early and late footprints do not overlap. `
-          +`A fixed hire there is a bet the crew stays, and the last one relocated across state lines in a single week. `:'')
-        +`A one-to-two week posting is reversible; a lease is not.`});
+        +`${_r1(depOut)} a week of it is outsourced. `
+        +(mob.length?`<b>${mob.length} of ${dep.length} sit on sales crews whose footprint moves</b>: their early and late footprints do not overlap. `
+          +`The last one relocated across state lines in a single week. `:'')
+        +`A one- to two-week posting is reversible; a hire is not.`});
   }
 
   // 4. Markets that have gone quiet — the reason rates use a recent window.
   const dead=markets.filter(m=>m.advice.k==='dormant'&&m.n>=25).sort((a,b)=>b.n-a.n);
   if(dead.length){
     out.push({sev:'info',
-      headline:dead.length+' market'+(dead.length===1?'':'s')+' with real history have gone quiet',
+      headline:dead.length+' market'+(dead.length===1?'':'s')+' with history have gone quiet',
       detail:`${dead.slice(0,4).map(m=>esc(m.name)+', '+m.st+' ('+m.n+')').join(' · ')}${dead.length>4?' and '+(dead.length-4)+' more':''}. `
-        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. This is why every rate here is measured over a recent window — `
-        +`averaged across the whole dataset these markets still look staffable.`});
+        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. Averaged over the whole dataset they still look staffable, `
+        +`which is why every rate here uses a recent window.`});
   }
 
   // 5. Coaching beats headcount where the volume is rep-done and defective.
   const coach=markets.filter(m=>m.advice.k==='coach').sort((a,b)=>b.repDefectRate-a.repDefectRate);
   if(coach.length){
     out.push({sev:'med',
-      headline:'In '+coach.length+' market'+(coach.length===1?'':'s')+' the problem is rep survey quality, not capacity',
+      headline:'In '+coach.length+' market'+(coach.length===1?'':'s')+' the problem is rep survey quality',
       detail:`${coach.slice(0,4).map(m=>esc(m.name)+', '+m.st+' — '+_rpct(m.repDefectRate)+' of '+m.repDone).join(' · ')}. `
-        +`Mostly self-surveyed, at a defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, on at least ${OpsCoverage.COACH_MIN_N} completions. `
-        +`Sending a surveyor fixes the symptom for one job; the rate is a training problem.`});
+        +`Mostly self-surveyed, defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, at least ${OpsCoverage.COACH_MIN_N} completions. `
+        +`A surveyor fixes one job; the rate is a training problem.`});
   }
 
   // 6. What the invoice says about the same question.
   if(billSum&&billSum.cleanupUsd){
     out.push({sev:'med',
-      headline:_rmoney(billSum.cleanupUsd)+' of the vendor bill is finishing surveys someone else started',
+      headline:_rmoney(billSum.cleanupUsd)+' of the vendor bill finishes surveys someone else started',
       detail:`${billSum.cleanupN} visits at the full first-visit rate, ${_rpct(billSum.cleanupUsd/billSum.usd)} of everything invoiced. `
-        +`It bills identically to a fresh survey, so it is invisible on the invoice itself. `
-        +`This is the rep-quality problem above, priced — and it lands on a vendor bill rather than in any survey metric.`});
+        +`It bills the same as a fresh survey, so the invoice does not name it. `
+        +`This is the rep-quality problem, priced — it lands on a vendor bill rather than in any survey metric.`});
   }
   return out;
 }
@@ -6398,7 +6431,7 @@ function _renderResBody(markets,bases,weeks){
 
   if(resView==='team'){
     host.innerHTML=`
-      <table class="tbl"><thead><tr>
+      <div class="xscroll"><table id="res-team-tbl" class="tbl tbl-static"><thead><tr>
         <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
         <th class="r">Markets in range</th><th class="r">In-house work there</th><th>Constraints</th><th>Contact</th>
       </tr></thead><tbody>
@@ -6416,33 +6449,33 @@ function _renderResBody(markets,bases,weeks){
             &&OpsCoverage.reachable(OpsCoverage.milesBetween(o.ll,m.ll),o.cfg)).length>0);
           const off=(b.off||[]).join(', ');
           return `<tr>
-            <td>${esc(b.name)}${b.ll?'':' <span class="pill sev-high">ZIP not placed</span>'}</td>
+            <td>${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
             <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
-            <td style="color:var(--muted);">${b.days}<div class="bill-sfmeta">${off?'off '+esc(off):''}</div></td>
+            <td style="color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
             <td class="r">${_r1(cap)}</td>
-            <td class="r">${inRange.length}<div class="bill-sfmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
-            <td class="r">${_r1(load)}${shared?'<div class="bill-sfmeta">shared range</div>':''}</td>
-            <td>${((b.constraints||[]).map(c=>`<span class="pill">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
+            <td class="r">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
+            <td class="r">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
+            <td>${((b.constraints||[]).map(c=>`<span class="pill pn">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
             <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
           </tr>`;
         }).join('')}
-      </tbody></table>
-      <div class="note" style="margin-top:10px;line-height:1.7;">
-        Capacity is the drive-time model at a tight 8-mile market — the optimistic case. It falls as the drive grows:
+      </tbody></table></div>
+      <div class="note">
+        Capacity is the drive-time model at an 8-mile market, the optimistic end. It falls as the drive grows:
         ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
-        Every knob (hours, time on site, admin, speed, day radius) is per-surveyor and overridable in <code>roster.json</code>.
-        <b>Constraints are recorded, not yet modelled</b> — nothing here divides capacity by them.
-        <br><b>The last column is not a personal workload.</b> Salesforce records the resource that did a survey, never which surveyor,
-        so in-house work can only be attributed to a place. Where two surveyors cover the same ground the same work appears against both,
-        marked <i>shared range</i> — Portland is inside the day radius of two of these bases.
-      </div>`;
+        Hours, time on site, admin, speed and day radius are per surveyor in <code>roster.json</code>.
+        <b>Constraints are recorded, not modelled</b> — nothing here divides capacity by them.
+        <br><b>In-house work there is not a personal workload.</b> Salesforce records the resource, never which surveyor,
+        so the work can only be attributed to a place. Overlapping ranges count the same work against both surveyors, marked <i>shared range</i>.
+      </div>
+      <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-team-tbl',this,'the team')">Copy table</button></div>`;
     return;
   }
 
   const act=a=>`<span class="res-act res-act-${a.k}">${esc(a.label)}</span>`;
   host.innerHTML=`
-    <table class="tbl res-tbl"><thead><tr>
-      <th>Market</th><th>Action</th><th class="r">Jobs/wk<br><span style="font-weight:400;color:var(--faint);">last 8wk</span></th><th>Who does it now</th>
+    <div class="xscroll"><table id="res-mkt-tbl" class="tbl tbl-static res-tbl"><thead><tr>
+      <th>Market</th><th>Action</th><th class="r">Jobs/wk<span class="th-sub">last ${OpsCoverage.RECENT_WEEKS}wk</span></th><th>Who does it now</th>
       <th class="r">Nearest base</th><th class="r">Vendor cost</th><th>Why</th>
     </tr></thead><tbody>
       ${markets.filter(m=>m.n>=3).slice(0,40).map(m=>{
@@ -6453,18 +6486,18 @@ function _renderResBody(markets,bases,weeks){
         const reachLbl=m.reach==='day'?'day trip':m.reach==='deploy'?'posting':'out of range';
         return `<tr class="drill-tgt" role="button" tabindex="0"
           ${drillAttrs("openDrill('"+String(m.name).replace(/'/g,"\\'")+"', '"+m.n+" jobs · "+reachLbl+"', _resRows('"+m.key.replace(/'/g,"\\'")+"'), {mode:'place'})")}>
-          <td><b>${esc(m.name)}</b>, ${esc(m.st)}<div class="bill-sfmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' · '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
+          <td><b>${esc(m.name)}</b>, ${esc(m.st)}<div class="cmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' · '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
           <td>${act(m.advice)}</td>
-          <td class="r">${_r1(m.recentPerWeek)}${m.advice.k==='dormant'?`<div class="bill-sfmeta">${m.n} all-time</div>`:''}</td>
-          <td><div class="res-mix">${bar}</div><div class="bill-sfmeta">${m.rep} rep · ${m.vendor} vendor · ${m.inhouse} in-house</div></td>
-          <td class="r" style="white-space:nowrap;">${m.baseMiles!=null?Math.round(m.baseMiles)+'mi':'—'}<div class="bill-sfmeta">${esc(m.baseName)} · ${reachLbl}</div></td>
-          <td class="r" style="white-space:nowrap;">${m.vendorPerSurvey!=null?_rmoney(m.vendorPerSurvey):'<span class="pna">—</span>'}${m.vendorVisits?`<div class="bill-sfmeta">${m.vendorVisits} billed</div>`:''}</td>
-          <td style="max-width:230px;white-space:normal;color:var(--muted);font-size:11px;">${m.advice.reasons.map(esc).join('; ')}</td>
+          <td class="r">${_r1(m.recentPerWeek)}${m.advice.k==='dormant'?`<div class="cmeta">${m.n} all-time</div>`:''}</td>
+          <td><div class="res-mix">${bar}</div><div class="cmeta">${m.rep} rep · ${m.vendor} vendor · ${m.inhouse} in-house</div></td>
+          <td class="r" style="white-space:nowrap;">${m.baseMiles!=null?Math.round(m.baseMiles)+'mi':'—'}<div class="cmeta">${esc(m.baseName)} · ${reachLbl}</div></td>
+          <td class="r" style="white-space:nowrap;">${m.vendorPerSurvey!=null?_rmoney(m.vendorPerSurvey):'<span class="pna">—</span>'}${m.vendorVisits?`<div class="cmeta">${m.vendorVisits} billed</div>`:''}</td>
+          <td class="res-why">${m.advice.reasons.map(esc).join('; ')}</td>
         </tr>`;
       }).join('')}
-    </tbody></table>
-    <div class="note" style="margin-top:10px;">Markets under 3 jobs are omitted — ${markets.filter(m=>m.n<3).length} of ${markets.length}. Rows open the underlying surveys.</div>
-    <button class="copy-btn" onclick="copyTableEl('res-body',this,'markets')">Copy table</button>`;
+    </tbody></table></div>
+    <div class="note">Markets under 3 jobs omitted · ${markets.filter(m=>m.n<3).length} of ${markets.length} · rows open the surveys behind them</div>
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-mkt-tbl',this,'markets')">Copy table</button></div>`;
 }
 
 // Drill support: markets are rebuilt per render, so the drill resolves by key.
@@ -6536,11 +6569,11 @@ function renderBilling(){
   if(!_billing){
     el.innerHTML=`<div class="sec">
       <div class="shead"><div><div class="stitle">No invoice history yet</div>
-      <div class="ssub">No statement has been imported yet.</div></div></div>
-      <div class="note" style="padding:10px 0;line-height:1.7;">
-        Import a statement locally and this page fills in:<br>
-        <code style="font-size:11px;">node parse-radicl.js "~/Downloads/&lt;statement&gt;.xlsx"</code><br>
-        <span style="color:var(--faint);">${esc(_billingErr||'')}</span>
+      <div class="ssub">Nothing to reconcile until a statement is imported</div></div></div>
+      <div class="note" style="padding:10px 0;">
+        Import one from the terminal and this page fills in:<br>
+        <code>node parse-radicl.js "~/Downloads/&lt;statement&gt;.xlsx"</code><br>
+        <span>${esc(_billingErr||'')}</span>
       </div></div>`;
     return;
   }
@@ -6548,10 +6581,15 @@ function renderBilling(){
   const recon=billingRows();
   const sum=OpsBilling.summarize(recon);
   const flags=OpsBilling.byFlag(recon);
-  const disputed=flags.filter(f=>f.sev!=='info');
   const vendors=[...new Set(_billing.lines.map(l=>l.vendor||'radicl'))];
+  // Months only. .srail-sub sits inline beside the value, and next to a figure
+  // as wide as $81,557 the cell has room for about nine characters — "Jul 1 –
+  // Aug 8" wraps to a second line and stops matching its five neighbours. The
+  // exact span of every statement is in the Statements imported table below.
   const period=(()=>{ const st=_billing.statements||[]; if(!st.length) return '';
-    return fmtDateShort(st[0].from)+' – '+fmtDateShort(st[st.length-1].to); })();
+    const mon=d=>d?(fmtDateShort(d)||'').split(' ')[0]:'';
+    const a=mon(st[0].from), b=mon(st[st.length-1].to);
+    return a&&b&&a!==b ? a+'–'+b : (a||b); })();
 
   const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
     +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
@@ -6560,7 +6598,7 @@ function renderBilling(){
     <div class="srail">
       ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
       ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
-      ${cell('Travel adders',_bmoney(sum.travelUsd),_bpct(sum.travelShare)+' of spend',TIP.billTravel)}
+      ${cell('Travel adders',_bmoney(sum.travelUsd),_bpct(sum.travelShare),TIP.billTravel)}
       ${cell('Cleanup work',_bmoney(sum.cleanupUsd),sum.cleanupN+' visits',TIP.billCleanup)}
       ${cell('Rework',_bmoney(sum.reworkUsd),sum.reworkN+' visits',TIP.billRework)}
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
@@ -6568,52 +6606,44 @@ function renderBilling(){
 
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">What to check</div>
-        <div class="ssub">Every rule is a prompt to check, not a verdict — the tool knows what the invoice says and what Salesforce says, not what the contract allows.</div></div>
+        <div><div class="stitle" id="bill-table-title">Charges</div>
+        <div class="ssub" id="bill-table-sub"></div></div>
         ${vendors.length>1?`<div class="toggle-group">
           <button class="tgl-btn${billingVendor==='all'?' active':''}" onclick="setBillingVendor('all')">All vendors</button>
           ${vendors.map(v=>`<button class="tgl-btn${billingVendor===v?' active':''}" onclick="setBillingVendor('${esc(v)}')">${esc(OpsBilling.vendor(v).name)}</button>`).join('')}
         </div>`:''}
-      </div>
-      <div class="bill-flags">
-        ${flags.filter(f=>f.n).map(f=>`
-          <div class="bill-flag drill-tgt ${billingFlag===f.k?'on':''} sev-${f.sev}" role="button" tabindex="0"
-               ${drillAttrs("setBillingFlag('"+f.k+"')")}>
-            <div class="bill-flag-n">${f.n}</div>
-            <div class="bill-flag-l">${esc(f.label)}</div>
-            <div class="bill-flag-v">${_bmoney(f.usd)}</div>
-          </div>`).join('')}
-        <div class="bill-flag drill-tgt ${billingFlag==='all'?'on':''}" role="button" tabindex="0" ${drillAttrs("setBillingFlag('all')")}>
-          <div class="bill-flag-n">${recon.filter(OpsBilling.isCharge).length}</div>
-          <div class="bill-flag-l">All charges</div>
-          <div class="bill-flag-v">${_bmoney(sum.usd)}</div>
-        </div>
-      </div>
-      <div class="note" id="bill-flag-why" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="sec">
-      <div class="shead">
-        <div><div class="stitle" id="bill-table-title">Charges</div>
-        <div class="ssub" id="bill-table-sub"></div></div>
         <input class="drill-search" id="bill-search" type="search" placeholder="Search name, address, project…"
                oninput="setBillingQ(this.value)" style="max-width:240px;">
       </div>
+      <div class="bill-flags${billingFlag==='all'?'':' narrowed'}">
+        <button class="bill-flag bill-flag-all${billingFlag==='all'?' on':''}" aria-pressed="${billingFlag==='all'}" onclick="setBillingFlag('all')">
+          All charges
+          <span class="bill-flag-n">${recon.filter(OpsBilling.isCharge).length}</span>
+          <span class="bill-flag-v">${_bmoney(sum.usd)}</span>
+        </button>
+        ${flags.filter(f=>f.n).map(f=>`
+          <button class="bill-flag sev-${f.sev}${billingFlag===f.k?' on':''}" aria-pressed="${billingFlag===f.k}" onclick="setBillingFlag('${f.k}')">
+            <span class="bill-flag-sw"></span>${esc(f.label)}
+            <span class="bill-flag-n">${f.n}</span>
+            <span class="bill-flag-v">${_bmoney(f.usd)}</span>
+          </button>`).join('')}
+      </div>
+      <div class="note" id="bill-flag-why"></div>
       <div id="bill-table"></div>
     </div>
 
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Cost per account</div>
-        <div class="ssub">What an account actually cost across every line it drew — a survey plus its travel adders and any rework, not a per-survey average.</div></div>
+        <div class="ssub">Every line an account drew — survey, travel adders, rework — added up</div></div>
       </div>
       <div id="bill-accounts"></div>
     </div>
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Statements imported</div>
-      <div class="ssub">History is what makes a duplicate visible — re-importing a statement replaces its lines, it never appends them twice.</div></div></div>
-      <table class="tbl"><thead><tr><th>Statement</th><th>Vendor</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
+      <div class="ssub">Re-importing a statement replaces its own lines · every other statement is kept, which is what makes a double-billed charge visible</div></div></div>
+      <div class="xscroll"><table class="tbl tbl-static"><thead><tr><th>Statement</th><th>Vendor</th><th>Period</th><th class="r">Lines</th><th class="r">Charged</th><th>Imported</th></tr></thead><tbody>
         ${(_billing.statements||[]).map(st=>{
           const ls=_billing.lines.filter(l=>l.statement===st.id);
           const ch=ls.filter(OpsBilling.isCharge).reduce((a,l)=>a+Math.abs(l.units||0),0);
@@ -6622,13 +6652,13 @@ function renderBilling(){
             <td class="r">${st.lines}</td><td class="r">${_bmoney(OpsBilling.usd(ch,st.vendor))}</td>
             <td style="color:var(--faint);white-space:nowrap;">${esc(st.imported||'')}</td></tr>`;
         }).join('')}
-      </tbody></table>
+      </tbody></table></div>
     </div>
 
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Import statement</div>
-        <div class="ssub">Parses a vendor statement the same way the terminal import does (<code style="font-size:11px;">node parse-radicl.js</code>), then commits it — live for everyone in ~30 seconds.</div></div>
+        <div class="ssub">Same parser as <code>node parse-radicl.js</code> · commits the result, live for everyone in ~30 seconds</div></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         ${Object.keys(OpsBilling.VENDORS).length>1?`
@@ -6677,16 +6707,20 @@ function _renderBillingTable(){
     sub.textContent = rows.length+' line'+(rows.length===1?'':'s')+' · '+_bmoney(usd);
   }
 
+  // The Statement column prints the same filename on every row while only one
+  // statement exists — the rule the vendor toggle already follows.
+  const multiSt=(_billing.statements||[]).length>1;
+
   host.innerHTML = rows.length ? `
-    <table class="tbl bill-tbl"><thead><tr>
+    <div class="xscroll"><table id="bill-charges-tbl" class="tbl tbl-static bill-tbl"><thead><tr>
       <th>Date</th><th>Account</th><th>State</th><th>Charge</th><th class="r">Cost</th>
-      <th>Salesforce</th><th>Also flagged</th><th>Statement</th>
+      <th>Salesforce</th><th>Also flagged</th>${multiSt?'<th>Statement</th>':''}
     </tr></thead><tbody>
       ${rows.slice(0,400).map(l=>{
         const m=l.match;
         const sf = m
           ? `<a href="${sfUrl(m)||'#'}" target="_blank" rel="noopener" class="drill-proj-link">${esc(m.project||m.contact||'—')}</a>`
-            +`<div class="bill-sfmeta">${esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
+            +`<div class="cmeta">${esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
           : `<span class="pna">no match</span>`;
         const others=(l.flags||[]).filter(f=>f!==billingFlag).map(f=>{
           const em=OpsBilling.exceptionMeta(f);
@@ -6695,18 +6729,18 @@ function _renderBillingTable(){
         const prior=(l.priorLines||[]).map(p=>`${p.subtype} ${fmtDateShort(p.date)}`).join(', ');
         return `<tr>
           <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}</td>
-          <td><div>${esc(l.name||'—')}</div><div class="bill-sfmeta">${esc(l.address||'')}</div></td>
+          <td><div>${esc(l.name||'—')}</div><div class="cmeta">${esc(l.address||'')}</div></td>
           <td style="color:var(--muted);">${esc(_billState(l)||'—')}</td>
-          <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="bill-sfmeta">after ${esc(prior)}</div>`:''}</td>
+          <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="cmeta">after ${esc(prior)}</div>`:''}</td>
           <td class="r" style="white-space:nowrap;">${_bmoney(OpsBilling.usd(Math.abs(l.units||0),l.vendor))}</td>
           <td>${sf}</td>
           <td>${others||'<span class="pna">—</span>'}</td>
-          <td style="color:var(--faint);font-size:10px;">${esc((l.statement||'').split('/').pop())}</td>
+          ${multiSt?`<td style="color:var(--faint);font-size:10px;">${esc((l.statement||'').split('/').pop())}</td>`:''}
         </tr>`;
       }).join('')}
-    </tbody></table>
-    ${rows.length>400?`<div class="note" style="margin-top:8px;">Showing the newest 400 of ${rows.length}. Narrow with search.</div>`:''}
-    <button class="copy-btn" onclick="copyTableEl('bill-table',this,'charges')">Copy table</button>`
+    </tbody></table></div>
+    ${rows.length>400?`<div class="note">Newest 400 of ${rows.length} · narrow with search</div>`:''}
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('bill-charges-tbl',this,'charges')">Copy table</button></div>`
     : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
 }
 
@@ -6739,7 +6773,7 @@ function _renderBillingAccounts(){
   };
 
   host.innerHTML = sorted.length ? `
-    <table class="tbl bill-tbl"><thead><tr>
+    <div class="xscroll"><table id="bill-acct-tbl" class="tbl bill-tbl"><thead><tr>
       ${th('name','Account')}${th('state','State')}${multiVendor?th('vendor','Vendor'):''}
       ${th('visits','Visits','r')}${th('lines','Lines','r')}${th('usd','Total cost','r')}
     </tr></thead><tbody>
@@ -6748,17 +6782,17 @@ function _renderBillingAccounts(){
         a.lines.forEach(l=>{ const k=l.subtype||l.type||'—'; counts[k]=(counts[k]||0)+1; });
         const breakdown=Object.entries(counts).map(([k,n])=>`${n} ${k}`).join(' + ');
         return `<tr>
-          <td><div>${esc(a.name||'—')}</div><div class="bill-sfmeta">${esc(a.address||'')}</div></td>
+          <td><div>${esc(a.name||'—')}</div><div class="cmeta">${esc(a.address||'')}</div></td>
           <td style="color:var(--muted);">${esc(_billAcctState(a)||'—')}</td>
           ${multiVendor?`<td style="color:var(--muted);">${esc(OpsBilling.vendor(a.vendor).name)}</td>`:''}
           <td class="r">${a.visits}</td>
-          <td class="r">${a.lines.length}<div class="bill-sfmeta">${esc(breakdown)}</div></td>
+          <td class="r">${a.lines.length}<div class="cmeta">${esc(breakdown)}</div></td>
           <td class="r" style="white-space:nowrap;">${_bmoney(a.usd)}</td>
         </tr>`;
       }).join('')}
-    </tbody></table>
-    ${sorted.length>400?`<div class="note" style="margin-top:8px;">Showing the top 400 of ${sorted.length} by the current sort.</div>`:''}
-    <button class="copy-btn" onclick="copyTableEl('bill-accounts',this,'account costs')">Copy table</button>`
+    </tbody></table></div>
+    ${sorted.length>400?`<div class="note">Top 400 of ${sorted.length} by the current sort</div>`:''}
+    <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('bill-acct-tbl',this,'account costs')">Copy table</button></div>`
     : '<div class="note" style="padding:10px 0;">Nothing matches.</div>';
 }
 

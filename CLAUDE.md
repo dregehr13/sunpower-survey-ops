@@ -323,6 +323,19 @@ region/office cuts still apply. Things not to undo:
   purpose and are marked *shared range*
 - Insights are **derived from the same markets the table shows**, never a
   written-in narrative, and each states what it is measured from
+- **Panel titles are noun phrases** (2026-08-26). *What this says* → **Findings**,
+  *What to do, market by market* → **Markets** / **The team**, switching with the
+  toggle the way `Resurveys by <group>` already does. Every other title in the
+  app is a noun phrase; three question-shaped ones on one page read as a
+  different product
+- **Build vs buy is a hairline-divided row, not three cards.** The columns were
+  bordered `--surface` boxes on a `--surface` panel, so the fill did nothing and
+  the border doubled the panel's own — the same nesting `.exec-hero .srail`
+  flattens. Value is `.kval`'s 24/700, not a fifth numeral size
+- **The action tag's tints come from the palette's `-bg` tokens.** It carried
+  four hand-mixed `rgba()` values and a `#7b5aa6` purple that exists nowhere
+  else in the app; `coach` is `--red-bg` and `deploy` uses `--blue-bg`/`--blue-dk`,
+  added to both `:root` blocks
 
 ## Billing page (added 2026-08-25)
 Third-party surveyor invoices reconciled against Salesforce. Built because the
@@ -333,6 +346,13 @@ labelled. Things not to undo:
   2026-08-25 was that a second subcontractor be easy to add — that means a spec
   object plus `--vendor <id>`, never a second parser or a second rule set. A
   test asserts nothing below the vendor registry names a vendor or its price
+- **A vendor spec column may list several accepted labels, newest first.**
+  Radicl's 08.24.26 statement renamed *Credits* → *Total Credits* and *Running
+  Credit Balance* → *Running Balance*, and inserted an *Organization* column
+  before Address. The old labels stay in the map so re-importing an older
+  statement still parses, and columns are found by label rather than position,
+  so an inserted column costs nothing. This is the failure mode to expect from
+  a vendor: fix it in `VENDORS.<id>.columns`, never in the parser
 - **`billing.json` is the master history and only ever grows.** Re-importing a
   statement replaces that statement's lines in place; two DIFFERENT statements
   carrying the same charge are both kept, because that is exactly the thing
@@ -387,6 +407,25 @@ labelled. Things not to undo:
   carry a State column, read off the matched Salesforce row's address with
   `MAP_ZIP_RE` — the same ", ST ZIP" capture the Map page uses. A statement's
   own address column has no state on it, and an unmatched line has none either
+- **The exceptions are filter chips inside the Charges panel** (2026-08-26).
+  They were six KPI-style cards in a panel of their own titled *What to check*,
+  sitting under a six-cell stat rail — the page opened on twelve big numbers,
+  and the rail and the cards said Cleanup and Rework twice in different
+  vocabularies (rail "Rework $2,556 · 9 visits" against a card reading
+  "1 · REWORK ON THEIR OWN DEFECT · $284"). Card grids for a control are the
+  pattern every other page already replaced. Things not to undo:
+  - **They select rows in the table directly below them, so they live in that
+    panel**, the way the WIP status bar sits in the queue panel. One panel, one
+    control, one table. The rule's `why` prints between the chips and the table
+  - **`.bill-flags` gets `narrowed` only when a rule is picked.** "All charges"
+    is the unfiltered state; dimming the other chips on load would say five
+    populations are excluded when nothing is filtered
+  - Severity is a **7px dot**, not a tint or a left edge — a coloured chip would
+    say "error" about rules that are deliberately informational
+  - They are `<button>`s, not `.drill-tgt` divs. Lift-and-shadow is reserved for
+    things that open something; a filter darkens its border and does not move
+- **The Statement column is hidden while one statement exists**, the same rule
+  the vendor toggle follows — it printed the same filename on all 343 rows
 
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads

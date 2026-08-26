@@ -29,6 +29,23 @@ test('parseWorkbookLines finds the header row and reads billable lines', () => {
   assert.equal(lines[0].balance, 500);
 });
 
+// Radicl's 08.24.26 statement renamed two columns and inserted a third.
+// The old labels are still accepted, so re-importing an older statement
+// keeps working — both header shapes must parse to the same line.
+test('parseWorkbookLines reads a renamed column and an inserted one', () => {
+  const sheet = XLSX.utils.aoa_to_sheet([
+    ['Name', 'Organization', 'Address', 'Mission Date', 'Type', 'Sub Type', 'Total Credits', 'Running Balance'],
+    ['Jane Smith', 'SunPower', '123 Main St, Springfield', '2026-08-01', 'Survey', 'Base', -14.2, 500],
+  ]);
+  const lines = SI.parseWorkbookLines({ SheetNames: ['Sheet1'], Sheets: { Sheet1: sheet } }, 'radicl');
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].name, 'Jane Smith', 'a column inserted before the mapped ones must not shift the read');
+  assert.equal(lines[0].address, '123 Main St, Springfield');
+  assert.equal(lines[0].units, -14.2, '"Total Credits" is the same column "Credits" was');
+  assert.equal(lines[0].balance, 500, '"Running Balance" is the same column "Running Credit Balance" was');
+  assert.equal(lines[0].subtype, 'Base');
+});
+
 test('parseWorkbookLines throws with the vendor name when no header matches', () => {
   const wb = { SheetNames: ['Sheet1'], Sheets: { Sheet1: XLSX.utils.aoa_to_sheet([['not', 'a', 'statement']]) } };
   assert.throws(() => SI.parseWorkbookLines(wb, 'radicl'), /Radicl/);
