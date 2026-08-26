@@ -63,8 +63,9 @@ export default async function handler(req, res) {
     const currentSha = got.sha;
     const history = JSON.parse(Buffer.from(got.content, 'base64').toString('utf8'));
 
-    // 2. Merge — replaces this statement's own lines, keeps every other one.
-    const { history: next, meta, replaced, charged } = mergeStatement(history, vendorId, filename, lines);
+    // 2. Merge — replaces this statement's own lines, keeps every other one,
+    //    and stores one copy of any charge another statement already carried.
+    const { history: next, meta, replaced, deduped, charged } = mergeStatement(history, vendorId, filename, lines);
     const warnings = overlapWarnings(next);
 
     // 3. Commit the merged file back.
@@ -85,7 +86,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       ok: true,
       history: next,
-      report: { id: meta.id, lines: lines.length, replaced, from: meta.from, to: meta.to,
+      report: { id: meta.id, lines: lines.length, replaced, deduped, from: meta.from, to: meta.to,
         charged, usd: OpsBilling.usd(charged, vendorId) },
       warnings,
       commit: putJson.commit && putJson.commit.sha ? putJson.commit.sha.slice(0, 7) : null,

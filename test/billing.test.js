@@ -99,14 +99,37 @@ test('the same charge type twice on one account IS a duplicate', () => {
   assert.equal(out[1].priorLines[0].date, '2026-07-13');
 });
 
-test('an identical charge on two statements is caught across periods', () => {
-  // The whole reason billing.json accumulates instead of being replaced.
+test('the same charge on the same date across two statements is not flagged', () => {
+  // Statement periods overlap, so a charge is routinely re-reported. Doug's
+  // call 2026-08-26: that is not a double bill and must not read as one. The
+  // import stores one copy of it (dedupeHistory), so an identical pair should
+  // not reach reconcile at all — this pins the rule for the case where it does.
   const out = B.reconcile([
     line({ subtype: 'Base', date: '2026-07-13', statement: 'radicl/july', line: 1 }),
     line({ subtype: 'Base', date: '2026-07-13', statement: 'radicl/august', line: 1 }),
   ], [survey()]);
+  assert.ok(!out[1].flags.includes('cross_statement'));
+});
+
+test('the same charge on two statements under different dates is flagged', () => {
+  // Neither statement shows the other, so this is the shape a double bill
+  // takes. A genuine second visit looks the same, which is why the earlier
+  // line travels with it as priorLines.
+  const out = B.reconcile([
+    line({ subtype: 'Base', date: '2026-07-13', statement: 'radicl/july', line: 1 }),
+    line({ subtype: 'Base', date: '2026-07-20', statement: 'radicl/august', line: 1 }),
+  ], [survey()]);
   assert.ok(out[1].flags.includes('cross_statement'));
   assert.equal(out[1].priorLines[0].statement, 'radicl/july');
+});
+
+test('two dates within ONE statement are a duplicate, never a cross-statement one', () => {
+  const out = B.reconcile([
+    line({ subtype: 'Base', date: '2026-07-13', statement: 'radicl/july', line: 1 }),
+    line({ subtype: 'Base', date: '2026-07-20', statement: 'radicl/july', line: 2 }),
+  ], [survey()]);
+  assert.ok(out[1].flags.includes('duplicate_charge'));
+  assert.ok(!out[1].flags.includes('cross_statement'));
 });
 
 test('billed work with no Salesforce row is flagged', () => {

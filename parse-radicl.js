@@ -56,9 +56,9 @@ for (const file of files) {
     lines = parseWorkbookLines(wb, vendorId);
   } catch (e) { console.error('SKIP  ' + basename(file) + ': ' + e.message); continue; }
 
-  const { history: next, meta, replaced, charged } = mergeStatement(history, vendorId, file, lines);
+  const { history: next, meta, replaced, deduped, charged } = mergeStatement(history, vendorId, file, lines);
   history = next;
-  report.push({ id: meta.id, lines: lines.length, replaced, from: meta.from, to: meta.to, charged });
+  report.push({ id: meta.id, lines: lines.length, replaced, deduped, from: meta.from, to: meta.to, charged });
 }
 
 writeFileSync(HISTORY, JSON.stringify(history, null, 2) + '\n');
@@ -72,6 +72,10 @@ report.forEach(r => {
   e(`  ${r.id}`);
   e(`    ${r.from} → ${r.to} · ${r.lines} lines · ${r.charged.toFixed(2)} ${SPEC.unit}s (${money(OpsBilling.usd(r.charged, vendorId))})`
     + (r.replaced ? `  [replaced ${r.replaced} previously imported lines]` : ''));
+  // Not a warning: overlapping periods are how these statements are issued.
+  // It is reported because it is the difference between what the statement
+  // charges and what this import adds to the history.
+  if (r.deduped) e(`    ${r.deduped} of those lines were already billed on an earlier statement — one copy kept`);
 });
 e(`  history: ${history.statements.length} statement(s), ${history.lines.length} lines, `
   + `${new Set(history.statements.map(s => s.vendor)).size} vendor(s)`);

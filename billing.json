@@ -7,7 +7,8 @@
       "from": "2026-07-01",
       "to": "2026-08-08",
       "lines": 347,
-      "imported": "2026-08-25"
+      "imported": "2026-08-25",
+      "dupes": 0
     },
     {
       "id": "radicl/Sunpower 08.24.26",
@@ -16,7 +17,8 @@
       "from": "2026-08-01",
       "to": "2026-08-24",
       "lines": 395,
-      "imported": "2026-08-26"
+      "imported": "2026-08-26",
+      "dupes": 118
     }
   ],
   "lines": [
@@ -2776,81 +2778,12 @@
       "type": "Survey",
       "subtype": "Base",
       "units": -14.2,
-      "balance": 238.22500000000002,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 1
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jeff Wisdom",
-      "address": "2637 Commons Pkwy, Belleville",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 224.02500000000003,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 2
-    },
-    {
-      "vendor": "radicl",
-      "name": "Tyler Nokes",
-      "address": "1622 SW 25th St, Redmond",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 209.82500000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 3
-    },
-    {
-      "vendor": "radicl",
-      "name": "William Howard",
-      "address": "3166 Northeast Coho Street, Bend",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": 195.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 4
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jeff Wisdom",
-      "address": "2637 Commons Pkwy, Belleville",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 186.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 5
-    },
-    {
-      "vendor": "radicl",
-      "name": "Tyler Nokes",
-      "address": "1622 SW 25th St, Redmond",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 177.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 6
-    },
-    {
-      "vendor": "radicl",
-      "name": "Caleb Kelly",
-      "address": "479 Spruce Ave, Fowler",
-      "date": "2026-08-01",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
       "balance": 238.22499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 230
+      "line": 230,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -2862,7 +2795,10 @@
       "units": -14.2,
       "balance": 224.02499999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 231
+      "line": 231,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -2874,7 +2810,10 @@
       "units": -14.2,
       "balance": 209.825,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 232
+      "line": 232,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -2886,7 +2825,10 @@
       "units": -14.2,
       "balance": 195.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 233
+      "line": 233,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -2898,7 +2840,10 @@
       "units": -9,
       "balance": 186.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 234
+      "line": 234,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -2910,163 +2855,10 @@
       "units": -9,
       "balance": 177.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 235
-    },
-    {
-      "vendor": "radicl",
-      "name": "Rashawn Proctor",
-      "address": "6202 Gallop Dr, Fredericksburg",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 168.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 7
-    },
-    {
-      "vendor": "radicl",
-      "name": "Michael Ortiz",
-      "address": "7 Maroochy Ct, Fredericksburg",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 159.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 8
-    },
-    {
-      "vendor": "radicl",
-      "name": "Roberta Moro",
-      "address": "1425 Fergus Rd, Grove City",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 150.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 9
-    },
-    {
-      "vendor": "radicl",
-      "name": "Faruk Akguc",
-      "address": "122 islands water way, Apollo beach",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 141.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 10
-    },
-    {
-      "vendor": "radicl",
-      "name": "John Walesby",
-      "address": "6602 stingray court, apollo beach",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 132.62500000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 11
-    },
-    {
-      "vendor": "radicl",
-      "name": "Timothy Sherry",
-      "address": "350 Tanner Street, Ebensburg",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": 118.42500000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 12
-    },
-    {
-      "vendor": "radicl",
-      "name": "Rashawn Proctor",
-      "address": "6202 Gallop Dr, Fredericksburg",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 104.22500000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 13
-    },
-    {
-      "vendor": "radicl",
-      "name": "Michael Ortiz",
-      "address": "7 Maroochy Ct, Fredericksburg",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 90.02500000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 14
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ray Montgomery",
-      "address": "15145 Lime St, Hesperia",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 75.82500000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 15
-    },
-    {
-      "vendor": "radicl",
-      "name": "Michael May",
-      "address": "1048 Monterey Vista Way, Encinitas",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 61.62500000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 16
-    },
-    {
-      "vendor": "radicl",
-      "name": "Roberta Moro",
-      "address": "1425 Fergus Rd, Grove City",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 47.42500000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 17
-    },
-    {
-      "vendor": "radicl",
-      "name": "Faruk Akguc",
-      "address": "122 islands water way, Apollo beach",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 33.22500000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 18
-    },
-    {
-      "vendor": "radicl",
-      "name": "John Walesby",
-      "address": "6602 stingray court, apollo beach",
-      "date": "2026-08-03",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": 19.025000000000038,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 19
+      "line": 235,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3078,7 +2870,10 @@
       "units": -9,
       "balance": 168.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 236
+      "line": 236,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3090,7 +2885,10 @@
       "units": -9,
       "balance": 159.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 237
+      "line": 237,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3102,7 +2900,10 @@
       "units": -9,
       "balance": 150.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 238
+      "line": 238,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3114,7 +2915,10 @@
       "units": -9,
       "balance": 141.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 239
+      "line": 239,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3126,7 +2930,10 @@
       "units": -9,
       "balance": 132.625,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 240
+      "line": 240,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3138,7 +2945,10 @@
       "units": -14.2,
       "balance": 118.425,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 241
+      "line": 241,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3150,7 +2960,10 @@
       "units": -14.2,
       "balance": 104.225,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 242
+      "line": 242,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3162,7 +2975,10 @@
       "units": -14.2,
       "balance": 90.02499999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 243
+      "line": 243,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3174,7 +2990,10 @@
       "units": -14.2,
       "balance": 75.82499999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 244
+      "line": 244,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3186,7 +3005,10 @@
       "units": -14.2,
       "balance": 61.624999999999986,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 245
+      "line": 245,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3198,7 +3020,10 @@
       "units": -14.2,
       "balance": 47.42499999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 246
+      "line": 246,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3210,7 +3035,10 @@
       "units": -14.2,
       "balance": 33.22499999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 247
+      "line": 247,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3222,223 +3050,10 @@
       "units": -14.2,
       "balance": 19.02499999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 248
-    },
-    {
-      "vendor": "radicl",
-      "name": "Christina Perrine",
-      "address": "823 Chatham Road, Fairless Hills",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Demob",
-      "units": -4.45,
-      "balance": 14.575000000000038,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 20
-    },
-    {
-      "vendor": "radicl",
-      "name": "Michael Vines",
-      "address": "9399 John Wickham Way, Ashland",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": 5.575000000000038,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 21
-    },
-    {
-      "vendor": "radicl",
-      "name": "Robert Nootbaar",
-      "address": "2342 St James Way, Central Point",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -3.4249999999999616,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 22
-    },
-    {
-      "vendor": "radicl",
-      "name": "Eliezer Fernandez",
-      "address": "11083 Quail Whistle Dr, Glen Allen",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -12.424999999999962,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 23
-    },
-    {
-      "vendor": "radicl",
-      "name": "Tiffani Hartrick",
-      "address": "42 Echo Way, Eagle Point",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -21.42499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 24
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ravichandra Adusumilli",
-      "address": "5408 McFall Ct, Glen Allen",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -30.42499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 25
-    },
-    {
-      "vendor": "radicl",
-      "name": "Nerissa Sarra",
-      "address": "5842 Autumnleaf Dr, Richmond",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -39.42499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 26
-    },
-    {
-      "vendor": "radicl",
-      "name": "Christina Perrine",
-      "address": "823 Chatham Road, Fairless Hills",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Go Back",
-      "units": -14.2,
-      "balance": -53.62499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 27
-    },
-    {
-      "vendor": "radicl",
-      "name": "E Snead",
-      "address": "8187 Woodbridge Road, Mechanicsville",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -67.82499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 28
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ann  Macdonald",
-      "address": "5496 Potomac Landing Drive, King George",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -82.02499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 29
-    },
-    {
-      "vendor": "radicl",
-      "name": "Sarah Owens",
-      "address": "3274 South Newton Street, Denver",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -96.22499999999997,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 30
-    },
-    {
-      "vendor": "radicl",
-      "name": "Scott Marshall",
-      "address": "541 Solitude Lane, Grants Pass",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -110.42499999999997,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 31
-    },
-    {
-      "vendor": "radicl",
-      "name": "Michael Vines",
-      "address": "9399 John Wickham Way, Ashland",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -124.62499999999997,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 32
-    },
-    {
-      "vendor": "radicl",
-      "name": "Robert Nootbaar",
-      "address": "2342 St James Way, Central Point",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -138.82499999999996,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 33
-    },
-    {
-      "vendor": "radicl",
-      "name": "Eliezer Fernandez",
-      "address": "11083 Quail Whistle Dr, Glen Allen",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -153.02499999999995,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 34
-    },
-    {
-      "vendor": "radicl",
-      "name": "Tiffani Hartrick",
-      "address": "42 Echo Way, Eagle Point",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -167.22499999999994,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 35
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ravichandra Adusumilli",
-      "address": "5408 McFall Ct, Glen Allen",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -181.42499999999993,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 36
-    },
-    {
-      "vendor": "radicl",
-      "name": "Nerissa Sarra",
-      "address": "5842 Autumnleaf Dr, Richmond",
-      "date": "2026-08-04",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -195.62499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 37
+      "line": 248,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3450,7 +3065,10 @@
       "units": -4.45,
       "balance": 14.574999999999982,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 249
+      "line": 249,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3462,7 +3080,10 @@
       "units": -9,
       "balance": 5.5749999999999815,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 250
+      "line": 250,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3474,7 +3095,10 @@
       "units": -9,
       "balance": -3.4250000000000185,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 251
+      "line": 251,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3486,7 +3110,10 @@
       "units": -9,
       "balance": -12.425000000000018,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 252
+      "line": 252,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3498,7 +3125,10 @@
       "units": -9,
       "balance": -21.42500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 253
+      "line": 253,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3510,7 +3140,10 @@
       "units": -9,
       "balance": -30.42500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 254
+      "line": 254,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3522,7 +3155,10 @@
       "units": -9,
       "balance": -39.42500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 255
+      "line": 255,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3534,7 +3170,10 @@
       "units": -14.2,
       "balance": -53.625000000000014,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 256
+      "line": 256,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3546,7 +3185,10 @@
       "units": -14.2,
       "balance": -67.82500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 257
+      "line": 257,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3558,7 +3200,10 @@
       "units": -14.2,
       "balance": -82.02500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 258
+      "line": 258,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3570,7 +3215,10 @@
       "units": -14.2,
       "balance": -96.22500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 259
+      "line": 259,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3582,7 +3230,10 @@
       "units": -14.2,
       "balance": -110.42500000000003,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 260
+      "line": 260,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3594,7 +3245,10 @@
       "units": -14.2,
       "balance": -124.62500000000003,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 261
+      "line": 261,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3606,7 +3260,10 @@
       "units": -14.2,
       "balance": -138.82500000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 262
+      "line": 262,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3618,7 +3275,10 @@
       "units": -14.2,
       "balance": -153.025,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 263
+      "line": 263,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3630,7 +3290,10 @@
       "units": -14.2,
       "balance": -167.225,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 264
+      "line": 264,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3642,7 +3305,10 @@
       "units": -14.2,
       "balance": -181.42499999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 265
+      "line": 265,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -3654,343 +3320,10 @@
       "units": -14.2,
       "balance": -195.62499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 266
-    },
-    {
-      "vendor": "radicl",
-      "name": "Mary Dugan-Reinert",
-      "address": "1228 W Whitehall St, Allentown",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -1.75,
-      "balance": -197.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 38
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jeremiah Poague",
-      "address": "122 Ridgewood Court, Columbia",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -206.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 39
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jerry Wolfe",
-      "address": "3009 Mallow Rd, Covington",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -215.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 40
-    },
-    {
-      "vendor": "radicl",
-      "name": "Patrick Byers",
-      "address": "916 Walnut Dr, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -224.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 41
-    },
-    {
-      "vendor": "radicl",
-      "name": "Bonny Graham",
-      "address": "167 Denison St, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -233.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 42
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ralph Stoots",
-      "address": "7233 Meadowview Dr, Radford",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -242.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 43
-    },
-    {
-      "vendor": "radicl",
-      "name": "Daniel Genn",
-      "address": "7 Sylvan Ct, Falmouth",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -251.37499999999991,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 44
-    },
-    {
-      "vendor": "radicl",
-      "name": "Zacharaih Kwasniewski",
-      "address": "23 Colemans Mill Dr, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -260.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 45
-    },
-    {
-      "vendor": "radicl",
-      "name": "Anthony Dicarlo",
-      "address": "15 Chaney Dr, Garner",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -269.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 46
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jennifer Grunert",
-      "address": "9004 Willowbrook Dr, Richmond",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -278.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 47
-    },
-    {
-      "vendor": "radicl",
-      "name": "David Hauke",
-      "address": "83 Little Whim Rd, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -287.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 48
-    },
-    {
-      "vendor": "radicl",
-      "name": "David Twining",
-      "address": "5292 Rockingham Dr, Williamsburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -296.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 49
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kynneth Baker",
-      "address": "3401 Rosebush Dr, Zebulon",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -305.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 50
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kristina Schuster",
-      "address": "2321 S Lewis Ave, Covington",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -314.3749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 51
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jeremiah Poague",
-      "address": "122 Ridgewood Court, Columbia",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Go Back",
-      "units": -14.2,
-      "balance": -328.5749999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 52
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jerry Wolfe",
-      "address": "3009 Mallow Rd, Covington",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -342.77499999999986,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 53
-    },
-    {
-      "vendor": "radicl",
-      "name": "Patrick Byers",
-      "address": "916 Walnut Dr, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -356.97499999999985,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 54
-    },
-    {
-      "vendor": "radicl",
-      "name": "Bonny Graham",
-      "address": "167 Denison St, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -371.17499999999984,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 55
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ralph Stoots",
-      "address": "7233 Meadowview Dr, Radford",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -385.37499999999983,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 56
-    },
-    {
-      "vendor": "radicl",
-      "name": "Daniel Genn",
-      "address": "7 Sylvan Ct, Falmouth",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -399.5749999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 57
-    },
-    {
-      "vendor": "radicl",
-      "name": "Zacharaih Kwasniewski",
-      "address": "23 Colemans Mill Dr, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -413.7749999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 58
-    },
-    {
-      "vendor": "radicl",
-      "name": "Anthony Dicarlo",
-      "address": "15 Chaney Dr, Garner",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -427.9749999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 59
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jennifer Grunert",
-      "address": "9004 Willowbrook Dr, Richmond",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -442.1749999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 60
-    },
-    {
-      "vendor": "radicl",
-      "name": "Mary Dugan-Reinert",
-      "address": "1228 W Whitehall St, Allentown",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -456.3749999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 61
-    },
-    {
-      "vendor": "radicl",
-      "name": "David Hauke",
-      "address": "83 Little Whim Rd, Fredericksburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -470.57499999999976,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 62
-    },
-    {
-      "vendor": "radicl",
-      "name": "David Twining",
-      "address": "5292 Rockingham Dr, Williamsburg",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -484.77499999999975,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 63
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kynneth Baker",
-      "address": "3401 Rosebush Dr, Zebulon",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -498.97499999999974,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 64
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kristina Schuster",
-      "address": "2321 S Lewis Ave, Covington",
-      "date": "2026-08-05",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -513.1749999999997,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 65
+      "line": 266,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4002,7 +3335,10 @@
       "units": -1.75,
       "balance": -197.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 267
+      "line": 267,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4014,7 +3350,10 @@
       "units": -9,
       "balance": -206.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 268
+      "line": 268,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4026,7 +3365,10 @@
       "units": -9,
       "balance": -215.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 269
+      "line": 269,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4038,7 +3380,10 @@
       "units": -9,
       "balance": -224.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 270
+      "line": 270,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4050,7 +3395,10 @@
       "units": -9,
       "balance": -233.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 271
+      "line": 271,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4062,7 +3410,10 @@
       "units": -9,
       "balance": -242.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 272
+      "line": 272,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4074,7 +3425,10 @@
       "units": -9,
       "balance": -251.37499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 273
+      "line": 273,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4086,7 +3440,10 @@
       "units": -9,
       "balance": -260.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 274
+      "line": 274,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4098,7 +3455,10 @@
       "units": -9,
       "balance": -269.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 275
+      "line": 275,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4110,7 +3470,10 @@
       "units": -9,
       "balance": -278.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 276
+      "line": 276,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4122,7 +3485,10 @@
       "units": -9,
       "balance": -287.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 277
+      "line": 277,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4134,7 +3500,10 @@
       "units": -9,
       "balance": -296.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 278
+      "line": 278,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4146,7 +3515,10 @@
       "units": -9,
       "balance": -305.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 279
+      "line": 279,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4158,7 +3530,10 @@
       "units": -9,
       "balance": -314.375,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 280
+      "line": 280,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4170,7 +3545,10 @@
       "units": -14.2,
       "balance": -328.575,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 281
+      "line": 281,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4182,7 +3560,10 @@
       "units": -14.2,
       "balance": -342.775,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 282
+      "line": 282,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4194,7 +3575,10 @@
       "units": -14.2,
       "balance": -356.97499999999997,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 283
+      "line": 283,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4206,7 +3590,10 @@
       "units": -14.2,
       "balance": -371.17499999999995,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 284
+      "line": 284,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4218,7 +3605,10 @@
       "units": -14.2,
       "balance": -385.37499999999994,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 285
+      "line": 285,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4230,7 +3620,10 @@
       "units": -14.2,
       "balance": -399.57499999999993,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 286
+      "line": 286,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4242,7 +3635,10 @@
       "units": -14.2,
       "balance": -413.7749999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 287
+      "line": 287,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4254,7 +3650,10 @@
       "units": -14.2,
       "balance": -427.9749999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 288
+      "line": 288,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4266,7 +3665,10 @@
       "units": -14.2,
       "balance": -442.1749999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 289
+      "line": 289,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4278,7 +3680,10 @@
       "units": -14.2,
       "balance": -456.3749999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 290
+      "line": 290,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4290,7 +3695,10 @@
       "units": -14.2,
       "balance": -470.5749999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 291
+      "line": 291,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4302,7 +3710,10 @@
       "units": -14.2,
       "balance": -484.77499999999986,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 292
+      "line": 292,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4314,7 +3725,10 @@
       "units": -14.2,
       "balance": -498.97499999999985,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 293
+      "line": 293,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4326,319 +3740,10 @@
       "units": -14.2,
       "balance": -513.1749999999998,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 294
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ramakrishna Manmari",
-      "address": "11400 Country Oaks Court, Glen Allen",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Demob",
-      "units": -4.45,
-      "balance": -517.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 66
-    },
-    {
-      "vendor": "radicl",
-      "name": "Loretta Rodgers",
-      "address": "2298 N 1450 East Rd, White Heath",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -526.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 67
-    },
-    {
-      "vendor": "radicl",
-      "name": "Angela Rader",
-      "address": "145 New Cameron Dr, Lexington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -535.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 68
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dwayne Shaw",
-      "address": "603 Mary Wilson Dr, Lancaster",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -544.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 69
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dale Unroe",
-      "address": "511 Fairview Ave, Clifton Forge",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -553.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 70
-    },
-    {
-      "vendor": "radicl",
-      "name": "Billy Fortner",
-      "address": "18115 Coolidge Ln, Bowling Green",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -562.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 71
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jane Austin",
-      "address": "9309 N Star Dr, Mechanicsville",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -571.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 72
-    },
-    {
-      "vendor": "radicl",
-      "name": "Marika Whack",
-      "address": "3123 Progressive Church Rd, Princeton",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -580.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 73
-    },
-    {
-      "vendor": "radicl",
-      "name": "John Hayes",
-      "address": "7930 Trumpetvine Ln, Mechanicsville",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -589.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 74
-    },
-    {
-      "vendor": "radicl",
-      "name": "Richard Paxton",
-      "address": "808 McCormick Blvd, Clifton Forge",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -598.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 75
-    },
-    {
-      "vendor": "radicl",
-      "name": "Garvin Greene",
-      "address": "209 Donald St, Lexington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -607.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 76
-    },
-    {
-      "vendor": "radicl",
-      "name": "Karen Gibson",
-      "address": "1301 McAllister Dr, Covington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -616.6249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 77
-    },
-    {
-      "vendor": "radicl",
-      "name": "Thanh Lam",
-      "address": "1212 Preston Ct, Upland",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Go Back",
-      "units": -14.2,
-      "balance": -630.8249999999998,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 78
-    },
-    {
-      "vendor": "radicl",
-      "name": "Loretta Rodgers",
-      "address": "2298 N 1450 East Rd, White Heath",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Go Back",
-      "units": -14.2,
-      "balance": -645.0249999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 79
-    },
-    {
-      "vendor": "radicl",
-      "name": "Ramakrishna Manmari",
-      "address": "11400 Country Oaks Court, Glen Allen",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -659.2249999999999,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 80
-    },
-    {
-      "vendor": "radicl",
-      "name": "Angela Rader",
-      "address": "145 New Cameron Dr, Lexington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -673.425,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 81
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dwayne Shaw",
-      "address": "603 Mary Wilson Dr, Lancaster",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -687.625,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 82
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dale Unroe",
-      "address": "511 Fairview Ave, Clifton Forge",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -701.825,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 83
-    },
-    {
-      "vendor": "radicl",
-      "name": "Billy Fortner",
-      "address": "18115 Coolidge Ln, Bowling Green",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -716.0250000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 84
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jane Austin",
-      "address": "9309 N Star Dr, Mechanicsville",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -730.2250000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 85
-    },
-    {
-      "vendor": "radicl",
-      "name": "Marika Whack",
-      "address": "3123 Progressive Church Rd, Princeton",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -744.4250000000002,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 86
-    },
-    {
-      "vendor": "radicl",
-      "name": "John Hayes",
-      "address": "7930 Trumpetvine Ln, Mechanicsville",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -758.6250000000002,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 87
-    },
-    {
-      "vendor": "radicl",
-      "name": "Richard Paxton",
-      "address": "808 McCormick Blvd, Clifton Forge",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -772.8250000000003,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 88
-    },
-    {
-      "vendor": "radicl",
-      "name": "Thomas Vaughan",
-      "address": "8833 Abby Ln, Orland Park",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -787.0250000000003,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 89
-    },
-    {
-      "vendor": "radicl",
-      "name": "Garvin Greene",
-      "address": "209 Donald St, Lexington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -801.2250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 90
-    },
-    {
-      "vendor": "radicl",
-      "name": "Karen Gibson",
-      "address": "1301 McAllister Dr, Covington",
-      "date": "2026-08-06",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -815.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 91
+      "line": 294,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4650,7 +3755,10 @@
       "units": -4.45,
       "balance": -517.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 295
+      "line": 295,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4662,7 +3770,10 @@
       "units": -9,
       "balance": -526.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 296
+      "line": 296,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4674,7 +3785,10 @@
       "units": -9,
       "balance": -535.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 297
+      "line": 297,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4686,7 +3800,10 @@
       "units": -9,
       "balance": -544.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 298
+      "line": 298,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4698,7 +3815,10 @@
       "units": -9,
       "balance": -553.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 299
+      "line": 299,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4710,7 +3830,10 @@
       "units": -9,
       "balance": -562.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 300
+      "line": 300,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4722,7 +3845,10 @@
       "units": -9,
       "balance": -571.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 301
+      "line": 301,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4734,7 +3860,10 @@
       "units": -9,
       "balance": -580.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 302
+      "line": 302,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4746,7 +3875,10 @@
       "units": -9,
       "balance": -589.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 303
+      "line": 303,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4758,7 +3890,10 @@
       "units": -9,
       "balance": -598.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 304
+      "line": 304,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4770,7 +3905,10 @@
       "units": -9,
       "balance": -607.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 305
+      "line": 305,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4782,7 +3920,10 @@
       "units": -9,
       "balance": -616.6249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 306
+      "line": 306,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4794,7 +3935,10 @@
       "units": -14.2,
       "balance": -630.8249999999999,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 307
+      "line": 307,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4806,7 +3950,10 @@
       "units": -14.2,
       "balance": -645.025,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 308
+      "line": 308,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4818,7 +3965,10 @@
       "units": -14.2,
       "balance": -659.225,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 309
+      "line": 309,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4830,7 +3980,10 @@
       "units": -14.2,
       "balance": -673.4250000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 310
+      "line": 310,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4842,7 +3995,10 @@
       "units": -14.2,
       "balance": -687.6250000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 311
+      "line": 311,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4854,7 +4010,10 @@
       "units": -14.2,
       "balance": -701.8250000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 312
+      "line": 312,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4866,7 +4025,10 @@
       "units": -14.2,
       "balance": -716.0250000000002,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 313
+      "line": 313,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4878,7 +4040,10 @@
       "units": -14.2,
       "balance": -730.2250000000003,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 314
+      "line": 314,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4890,7 +4055,10 @@
       "units": -14.2,
       "balance": -744.4250000000003,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 315
+      "line": 315,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4902,7 +4070,10 @@
       "units": -14.2,
       "balance": -758.6250000000003,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 316
+      "line": 316,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4914,7 +4085,10 @@
       "units": -14.2,
       "balance": -772.8250000000004,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 317
+      "line": 317,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4926,7 +4100,10 @@
       "units": -14.2,
       "balance": -787.0250000000004,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 318
+      "line": 318,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4938,7 +4115,10 @@
       "units": -14.2,
       "balance": -801.2250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 319
+      "line": 319,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -4950,211 +4130,10 @@
       "units": -14.2,
       "balance": -815.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 320
-    },
-    {
-      "vendor": "radicl",
-      "name": "Joseph Tuminello",
-      "address": "7243 Fairview Dr, Mechanicsville",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -824.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 92
-    },
-    {
-      "vendor": "radicl",
-      "name": "Arthur Butterfield",
-      "address": "116 Gill St, Bowling Green",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -833.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 93
-    },
-    {
-      "vendor": "radicl",
-      "name": "Liza Schwarz",
-      "address": "61139 Parrell Rd, Bend",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -842.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 94
-    },
-    {
-      "vendor": "radicl",
-      "name": "James Morgan JR",
-      "address": "1 Randolph Dr, Windsor",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -851.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 95
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kevin Walker",
-      "address": "4261 Alexis Ln, King George",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -860.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 96
-    },
-    {
-      "vendor": "radicl",
-      "name": "Sandra Leonard",
-      "address": "443 S Bear Creek Rd, Liberty Hill",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -869.4250000000004,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 97
-    },
-    {
-      "vendor": "radicl",
-      "name": "Jennifer  Farney",
-      "address": "105 3 Chop Circle, Altavista",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -883.6250000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 98
-    },
-    {
-      "vendor": "radicl",
-      "name": "Mary  Davies",
-      "address": "2901 Ridgewood Park Court, Glen Allen",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -897.8250000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 99
-    },
-    {
-      "vendor": "radicl",
-      "name": "Tollie Rogers",
-      "address": "820 Northeast Ochoco Avenue, Prineville",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -912.0250000000005,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 100
-    },
-    {
-      "vendor": "radicl",
-      "name": "Roy  Carter",
-      "address": "11600 Hickory Lake Terrace, Glen Allen",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Partial Survey",
-      "units": -14.2,
-      "balance": -926.2250000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 101
-    },
-    {
-      "vendor": "radicl",
-      "name": "Diane Shaw",
-      "address": "37756 Carriage Circle, Common Fremont",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -940.4250000000006,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 102
-    },
-    {
-      "vendor": "radicl",
-      "name": "Joseph Tuminello",
-      "address": "7243 Fairview Dr, Mechanicsville",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -954.6250000000007,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 103
-    },
-    {
-      "vendor": "radicl",
-      "name": "Arthur Butterfield",
-      "address": "116 Gill St, Bowling Green",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -968.8250000000007,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 104
-    },
-    {
-      "vendor": "radicl",
-      "name": "Liza Schwarz",
-      "address": "61139 Parrell Rd, Bend",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -983.0250000000008,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 105
-    },
-    {
-      "vendor": "radicl",
-      "name": "James Morgan JR",
-      "address": "1 Randolph Dr, Windsor",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -997.2250000000008,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 106
-    },
-    {
-      "vendor": "radicl",
-      "name": "Kevin Walker",
-      "address": "4261 Alexis Ln, King George",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1011.4250000000009,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 107
-    },
-    {
-      "vendor": "radicl",
-      "name": "Sandra Leonard",
-      "address": "443 S Bear Creek Rd, Liberty Hill",
-      "date": "2026-08-07",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1025.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 108
+      "line": 320,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5166,7 +4145,10 @@
       "units": -9,
       "balance": -824.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 321
+      "line": 321,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5178,7 +4160,10 @@
       "units": -9,
       "balance": -833.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 322
+      "line": 322,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5190,7 +4175,10 @@
       "units": -9,
       "balance": -842.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 323
+      "line": 323,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5202,7 +4190,10 @@
       "units": -9,
       "balance": -851.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 324
+      "line": 324,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5214,7 +4205,10 @@
       "units": -9,
       "balance": -860.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 325
+      "line": 325,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5226,7 +4220,10 @@
       "units": -9,
       "balance": -869.4250000000005,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 326
+      "line": 326,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5238,7 +4235,10 @@
       "units": -14.2,
       "balance": -883.6250000000006,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 327
+      "line": 327,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5250,7 +4250,10 @@
       "units": -14.2,
       "balance": -897.8250000000006,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 328
+      "line": 328,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5262,7 +4265,10 @@
       "units": -14.2,
       "balance": -912.0250000000007,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 329
+      "line": 329,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5274,7 +4280,10 @@
       "units": -14.2,
       "balance": -926.2250000000007,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 330
+      "line": 330,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5286,7 +4295,10 @@
       "units": -14.2,
       "balance": -940.4250000000008,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 331
+      "line": 331,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5298,7 +4310,10 @@
       "units": -14.2,
       "balance": -954.6250000000008,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 332
+      "line": 332,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5310,7 +4325,10 @@
       "units": -14.2,
       "balance": -968.8250000000008,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 333
+      "line": 333,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5322,7 +4340,10 @@
       "units": -14.2,
       "balance": -983.0250000000009,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 334
+      "line": 334,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5334,7 +4355,10 @@
       "units": -14.2,
       "balance": -997.2250000000009,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 335
+      "line": 335,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5346,7 +4370,10 @@
       "units": -14.2,
       "balance": -1011.425000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 336
+      "line": 336,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5358,127 +4385,10 @@
       "units": -14.2,
       "balance": -1025.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 337
-    },
-    {
-      "vendor": "radicl",
-      "name": "Anatoli Doutov",
-      "address": "15 Rubins Walk, Fredericksburg",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -1034.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 109
-    },
-    {
-      "vendor": "radicl",
-      "name": "Maria Sauceda",
-      "address": "4860 Thyme Ave NE, Salem",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -1043.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 110
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dana Stone",
-      "address": "8711 7 Hills Dr, Alton",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -1052.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 111
-    },
-    {
-      "vendor": "radicl",
-      "name": "Vernessa Bullock",
-      "address": "1948 Crepe Myrtle Dr, Lancaster",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -1061.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 112
-    },
-    {
-      "vendor": "radicl",
-      "name": "Garrett Wallace",
-      "address": "7129 Johnson Point Rd NE, Olympia",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Travel",
-      "units": -9,
-      "balance": -1070.625000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 113
-    },
-    {
-      "vendor": "radicl",
-      "name": "Anatoli Doutov",
-      "address": "15 Rubins Walk, Fredericksburg",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1084.825000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 114
-    },
-    {
-      "vendor": "radicl",
-      "name": "Maria Sauceda",
-      "address": "4860 Thyme Ave NE, Salem",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1099.025000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 115
-    },
-    {
-      "vendor": "radicl",
-      "name": "Dana Stone",
-      "address": "8711 7 Hills Dr, Alton",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1113.225000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 116
-    },
-    {
-      "vendor": "radicl",
-      "name": "Vernessa Bullock",
-      "address": "1948 Crepe Myrtle Dr, Lancaster",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1127.425000000001,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 117
-    },
-    {
-      "vendor": "radicl",
-      "name": "Garrett Wallace",
-      "address": "7129 Johnson Point Rd NE, Olympia",
-      "date": "2026-08-08",
-      "type": "Survey",
-      "subtype": "Base",
-      "units": -14.2,
-      "balance": -1141.6250000000011,
-      "statement": "radicl/Sunpower 08.24.26",
-      "line": 118
+      "line": 337,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5490,7 +4400,10 @@
       "units": -9,
       "balance": -1034.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 338
+      "line": 338,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5502,7 +4415,10 @@
       "units": -9,
       "balance": -1043.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 339
+      "line": 339,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5514,7 +4430,10 @@
       "units": -9,
       "balance": -1052.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 340
+      "line": 340,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5526,7 +4445,10 @@
       "units": -9,
       "balance": -1061.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 341
+      "line": 341,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5538,7 +4460,10 @@
       "units": -9,
       "balance": -1070.625000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 342
+      "line": 342,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5550,7 +4475,10 @@
       "units": -14.2,
       "balance": -1084.825000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 343
+      "line": 343,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5562,7 +4490,10 @@
       "units": -14.2,
       "balance": -1099.025000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 344
+      "line": 344,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5574,7 +4505,10 @@
       "units": -14.2,
       "balance": -1113.225000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 345
+      "line": 345,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5586,7 +4520,10 @@
       "units": -14.2,
       "balance": -1127.425000000001,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 346
+      "line": 346,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",
@@ -5598,7 +4535,10 @@
       "units": -14.2,
       "balance": -1141.6250000000011,
       "statement": "radicl/Sunpower 07.01.26-08.08.26",
-      "line": 347
+      "line": 347,
+      "alsoOn": [
+        "radicl/Sunpower 08.24.26"
+      ]
     },
     {
       "vendor": "radicl",

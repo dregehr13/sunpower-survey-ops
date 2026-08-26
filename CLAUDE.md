@@ -353,10 +353,45 @@ labelled. Things not to undo:
   statement still parses, and columns are found by label rather than position,
   so an inserted column costs nothing. This is the failure mode to expect from
   a vendor: fix it in `VENDORS.<id>.columns`, never in the parser
-- **`billing.json` is the master history and only ever grows.** Re-importing a
-  statement replaces that statement's lines in place; two DIFFERENT statements
-  carrying the same charge are both kept, because that is exactly the thing
-  worth catching. Never dedupe across statements — flag it instead
+- **`billing.json` is the master history, and one charge is stored once.**
+  Re-importing a statement replaces that statement's lines in place. A charge
+  another statement already carried is stored ONCE — `dedupeHistory()` in
+  `lib/statement-import.cjs`, Doug's call 2026-08-26, reversing the original
+  "never dedupe, flag it instead" rule. Radicl's statements overlap by design
+  (08.24.26 re-reports all of Aug 1–8), so 118 of the second statement's 395
+  lines were charges the first had already billed, and the history counted
+  them twice: **$165,702 invoiced when the real figure is $137,821**, with
+  travel adders overstated by 49 lines that no rule even flagged. Things not
+  to undo:
+  - **Identity is strict** — vendor + normalised name + normalised address +
+    date + type + subtype + **amount**. Not `OpsBilling.accountKey()`, which is
+    surname plus street number and is deliberately fuzzy because its job is
+    matching a statement to Salesforce. Here a false positive silently deletes
+    money that was really billed, so the safe direction is to keep a line and
+    let a rule flag it. A corrected re-bill has a different amount and is
+    therefore a different charge, which is right
+  - **Count-aware, not "drop every repeat".** A statement legitimately carries
+    the same line more than once — 10 groups in the live data, up to 3 travel
+    adders for one account on one day. Per identity the history keeps as many
+    copies as the statement that reported the MOST of them. Dropping every
+    repeat would delete real money
+  - **Nothing is lost.** The kept line records the other statements it appeared
+    on in `alsoOn`, and each statement's meta gets a `dupes` count. Both are
+    recomputed over the whole history on every merge, so they are self-healing
+    rather than a running tally that can drift; re-importing a statement also
+    clears its id from every other line's `alsoOn` first, since the incoming
+    file is then the only authority on what that statement contains
+  - **A statement's `lines` still counts the statement as invoiced**, not what
+    it added to the history. The modal prints both — `395` against `277 added`
+    — because the gap is the thing worth seeing before importing another
+- **"Re-billed on another statement" means a MOVED DATE.** `cross_statement`
+  fires on the same account and charge type across two statements carrying
+  **different** dates; same-date is not flagged and is not even stored twice.
+  Doug's call 2026-08-26: overlapping periods re-report a charge as a matter of
+  course, and an alarm that fires on all 67 of those teaches you to ignore it.
+  A moved date is the shape a double bill takes, because neither statement
+  shows the other. On the live history both this rule and `duplicate_charge`
+  now read 0 — every apparent duplicate in the data was the overlap artefact
 - **`billing.json` ships and the page is public** — Doug's call 2026-08-25. It
   was first built gitignored with the tab behind a localStorage unlock; that
   gate was obscurity rather than access control, so once the data was committed
@@ -465,13 +500,13 @@ labelled. Things not to undo:
   - **Date presets anchor on the newest charge, not on the wall clock.** A
     statement arrives weeks after the work, so "this month" measured from today
     is empty for the first days of every month
-  - **The overlap notice is prose, not a chip.** The two live statements both
-    cover Aug 1–8: 67 charges worth $19,028 are on both, and every figure in
-    the rail counts each of them as invoiced. Keeping both copies is the point
-    of `billing.json` accumulating, but a page that reads high without saying
-    so is worse than one that reads low. It only appears when overlapping lines
-    are actually in scope, and its button selects the `cross_statement` rule.
-    Amber, not red: the statements are not wrong, the total is not settled
+  - **Two notices above the table, and only one of them is an alarm.** Amber
+    `.bill-warn` when `cross_statement` lines are in scope — a charge billed on
+    two statements under different dates, with a button that selects the rule.
+    Grey `.bill-note` when statements merely overlap and the import stored one
+    copy of N charges: that is a fact about why a statement's line count is
+    larger than what it added, not a problem, and amber would say something is
+    wrong. Both are scoped, so neither appears when the filters exclude them
   - **Both tables sort through `billTh`/`billSorted`.** Text columns open A to
     Z and numeric ones highest-first, blanks sink in both directions — the same
     vocabulary as Performance, Quality and the drill drawer. The charges table
