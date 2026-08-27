@@ -9328,7 +9328,6 @@ document.addEventListener('drop',e=>{
 
 // Also keep local dropZone click handler
 dropZone.onclick=()=>{ document.getElementById('fileInput').click(); };
-
 // ═══ SAVE TO SERVER ══════════════════════════════════════
 let lastParsedRows = null;
 
@@ -9339,7 +9338,20 @@ async function saveToServer(){
   const status=document.getElementById('upd-save-status');
   btn.disabled=true; btn.textContent='Saving...'; status.textContent='Pushing to GitHub — live in ~30 seconds...';
   try{
-    const res=await fetch('/api/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:lastParsedRows,password:pw})});
+    // Compress payload using native CompressionStream to bypass Vercel 4.5MB limit
+    const payload = JSON.stringify({rows:lastParsedRows, password:pw});
+    const stream = new Blob([payload]).stream().pipeThrough(new CompressionStream('gzip'));
+    const compressedBody = await new Response(stream).arrayBuffer();
+
+    const res=await fetch('/api/update',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-encoding':'gzip'
+      },
+      body:compressedBody
+    });
+
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'Unknown error');
     status.style.color='var(--green)';
