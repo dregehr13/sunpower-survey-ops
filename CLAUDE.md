@@ -738,9 +738,14 @@ and added two columns. Row count 2,530 → 4,706, nothing dropped.
   gap is Sales Rep (canceled 92.5% vs active 81.6%, against Radicl −0.2 and
   SunPower −6.2). A rep-surveyed job that cancels never has its photos reviewed,
   so the resurvey is never logged — the defect existed, nobody recorded it. Old
-  cohorts corroborate: January's gap is 1.2 points, June's is 16.5. **Raised
-  with Doug and left as-is**; the fix, if ever wanted, is excluding canceled
-  from the FPY denominator only, never from volume or cycle
+  cohorts corroborate: January's gap is 1.2 points, June's is 16.5.
+  **SETTLED 2026-08-26, don't re-open: FPY counts every completed survey,
+  canceled projects included.** Doug's reasoning — the point is to measure the
+  work this team did, and dropping completed work because the deal died later
+  at some other stage just gives us less data to measure with. The survey was
+  performed either way. Excluding canceled from the FPY denominator was
+  proposed and REJECTED; the bias is recorded here so the number is read with
+  it in mind, not corrected for
 - **Recent weeks barely move** (4–10%), old ones move 33–71%: cancellation is a
   ratchet, so the further back you look the more of that week has since died.
   The Monday recap is essentially unaffected; the Trends line is not
