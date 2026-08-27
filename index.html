@@ -676,28 +676,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .bill-pill.sev-med{background:var(--amber-bg);color:var(--amber);}
 .bill-pill.sev-info{background:var(--bg);color:var(--muted);}
 .bill-tbl td{vertical-align:top;}
-/* Billing's rail carries six MONEY figures — $137,821 next to $42,410 — which
-   are the widest values any rail in the app shows. Inline, the sub fits beside
-   some of them and not others, so three cells read "value sub" and three read
-   "value" over "sub", and a two-word sub ("70 visits") splits across the break.
-   One row each: label, value, sub. Uniform by construction, and nowrap keeps a
-   sub whole. Scoped to this page — every other rail's values are short enough
-   that the inline sub is the better, denser reading. */
-.bill-rail .srail-sub{display:block;margin-left:0;margin-top:4px;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;}
-/* And the same six figures are why this rail wraps earlier than any other.
-   .srail is a nowrap flex row down to 860px, which is fine for "64" or "12.4d"
-   but not for $137,821: the value alone measures 126px at 29px/700, so a cell
-   needs ~162px and six of them need ~972px of rail — more than a 1200px window
-   leaves after the 180px sidebar. Below that the value overran its cell and sat
-   on top of its neighbour's label. Three across, two rows, above the 860px
-   breakpoint where .srail takes over with its own two-up rule. */
-@media(min-width:861px) and (max-width:1279px){
-  .bill-rail{flex-wrap:wrap;}
-  .bill-rail .srail-cell{flex:1 0 30%;}
-  .bill-rail .srail-cell:nth-child(3n){border-right:none;}
-  .bill-rail .srail-cell:nth-child(-n+3){border-bottom:1px solid var(--border);}
-}
 /* The page's one notice, and it is an alarm: the same charge type billed on
    two statements under different dates. Neither statement shows the other, so
    nothing but this catches it. There is deliberately no notice for overlapping
@@ -2543,9 +2521,6 @@ const TIP={
   resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A recommendation is a case to check, never a verdict — the thresholds behind it are fitted to this team\'s own history, not to an industry standard. Grouped rows get theirs from the same rules a single market does.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an SPWR surveyor against, not the base rate.',
-  billTravel:'Adders applied beyond the vendor\'s free radius. Not an error. Tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
-  billCleanup:'Return visits to finish a survey another resource started, billed at the full first-visit rate. This is what an incomplete first survey costs, and the invoice is the only place it is recorded.',
-  billRework:'Return visits to a job this vendor already did, billed at the full first-visit rate like everything else. Whether that is contractually right is a contract question.',
   billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict: the tool compares the invoice with Salesforce and does not know the contract.',
   mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
 };
@@ -7597,25 +7572,34 @@ function renderResource(){
       +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled${kinfo(TIP.resCapacity)} &middot; ${_rpct(util)} used`,
     `<b style="color:var(--text);">No ceiling.</b> Capacity is whatever is invoiced &mdash; `
       +`${billSum?_rpct(billSum.travelShare)+' of the bill is travel':'import a statement to price it'}.`,
-    `<b style="color:var(--text);">${split.res[2].n.toLocaleString()}</b> surveys from the field. `
-      +`No cost line of its own &mdash; the rework it causes lands on the vendor bill.`,
+    // Was "2,893 surveys from the field", which sat nine pixels above "2,891
+    // completed" with nothing saying why two counts of the same thing differ.
+    // The share of all work is what this column's ceiling actually is.
+    `<b style="color:var(--text);">No cost line.</b> Rework the reps cause is billed by the vendor, `
+      +`so it lands under Outsourced.`,
   ];
+  // One fact each. These were three sentences of argument — "the whole team's
+  // biggest quality lever", "every capacity figure on this page scales with
+  // it" — which is the page making its own case at the reader on every load.
+  // The capacity caveat is the one that survives, because every capacity
+  // figure here is wrong if it is wrong.
   const notes=[
     util!=null&&util<0.6
       ? `<b>Modelled at ${_r1(teamCap/Math.max(bases.length,1))}/wk each; they complete ${_r1(inhouseNow/placed)}.</b> `
-        +`Either surveying is not their whole job or the model is wrong — every capacity figure on this page scales with it.`
+        +`Settle that before using any capacity figure on this page.`
       : 'Capacity is the drive-time model in <code>lib/coverage.cjs</code>, at a tight market.',
     billSum&&billSum.cleanupUsd
-      ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, billed at the full first-visit rate.`
-      : 'One vendor on file. A second needs a spec object, not a second parser.',
-    `Yield here is the whole team's biggest quality lever: ${split.res[2].defects.toLocaleString()} of the `
-      +`${split.res[2].done.toLocaleString()} rep surveys came back.`,
+      ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, at the full first-visit rate.`
+      : 'One vendor on file.',
+    `${split.res[2].defects.toLocaleString()} of them came back.`,
   ];
 
   // What each column opens. The drawer is the answer to "who are these people",
   // which is the question a column of rates provokes and could not answer while
   // the roster sat in the market table's group toggle.
-  const opens=['SunPower Surveyors','Vendors','Best and worst reps'];
+  // Named for what the column is called directly above them. It said
+  // "SunPower Surveyors" under a heading reading "SPWR surveyors".
+  const opens=['SPWR surveyors','Vendors','Best and worst reps'];
 
   const col=(r,i)=>{
     const m=(label,val,cls,sub)=>`<div class="res-m"><span class="res-m-l">${label}</span>`
@@ -7648,8 +7632,8 @@ function renderResource(){
 
   el.innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Where the work goes</div>
-      <div class="ssub">${split.recentN.toLocaleString()} surveys started in the last ${OpsCoverage.RECENT_WEEKS} weeks &middot; ${_r1(split.perWeek)} a week &middot; yield and cycle over every completion${kinfo(TIP.resSplit)}</div></div></div>
+      <div class="shead"><div><div class="stitle">Resource split</div>
+      <div class="ssub">${split.recentN.toLocaleString()} surveys started in the last ${OpsCoverage.RECENT_WEEKS} weeks &middot; ${_r1(split.perWeek)} a week &middot; yield and cycle read every completion${kinfo(TIP.resSplit)}</div></div></div>
       <div class="res-split-key">
         ${split.res.map(r=>`<span><span class="ld" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(${r.css});margin-right:6px;"></span>${esc(r.label)} <b>${r.share==null?'—':Math.round(r.share*100)+'%'}</b></span>`).join('')}
       </div>
@@ -7663,7 +7647,7 @@ function renderResource(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">${resGroup==='rec'?'Recommendations':'Markets'}</div>
-        <div class="ssub">${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} &middot; reach, volume, durability and rep defect rate decide each one${kinfo(TIP.resRec)}</div></div>
+        <div class="ssub">${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} ${kinfo(TIP.resRec)}</div></div>
         <div class="toggle-group">
           ${Object.entries(RES_GROUPS).map(([v,l])=>`<button class="tgl-btn${resGroup===v?' active':''}" aria-pressed="${resGroup===v}" onclick="setResGroup('${v}')">${l}</button>`).join('')}
         </div>
@@ -7673,7 +7657,7 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Build vs buy</div>
-      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} &middot; SPWR cost depends on throughput, so it is quoted as a break-even</div></div></div>
+      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} &middot; SPWR cost depends on throughput, so it is a break-even</div></div></div>
       <div class="res-bvb">
         <div class="res-bvb-col">
           <div class="klabel">Vendor, all-in</div>
@@ -7689,8 +7673,7 @@ function renderResource(){
           <div class="klabel">Where you are</div>
           <div class="res-bvb-v ${perSurveyNow==null||!perVendor?'':(perSurveyNow>perVendor?'bad':'good')}">${_rmoney(perSurveyNow)}</div>
           <div class="note">At the ${_r1(inhouseNow/placed)} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
-            ? 'Above the vendor &mdash; the case for insourcing is throughput, cycle time or quality, not price.'
-            : perVendor ? 'Below the vendor rate.' : ''}</div>
+            ? 'Above the vendor rate.' : perVendor ? 'Below the vendor rate.' : ''}</div>
         </div>
       </div>
       <div class="note">
@@ -7704,7 +7687,7 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Findings<span class="res-ins-dot sev-${worst}"></span></div>
-      <div class="ssub">${insights.length} derived from the markets above &middot; open one for what it is counted from</div></div></div>
+      <div class="ssub">${insights.length}, recomputed from the markets above</div></div></div>
       <div class="res-ins">${insights.map((i,ix)=>`
         <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}">
           <button class="res-ins-h" aria-expanded="${resInsOpen.has(ix)}" onclick="resToggleIns(${ix})">
@@ -7737,8 +7720,7 @@ function resInsights(markets,bases,ctx){
       headline:'The team is at '+_rpct(util)+' of modelled capacity',
       detail:`The drive-time model gives ${_r1(teamCap/Math.max(bases.length,1))} surveys a week each at a tight market; `
         +`they complete ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))}. Either surveying is not their whole job, or the model's time-on-site or field-hours setting is wrong. `
-        +`<b>Every capacity figure here scales with this</b>, so settle it before using any hiring number. `
-        +`Both settings are per surveyor in <code>roster.json</code>.`});
+        +`<b>Every capacity figure here scales with this.</b> Both settings are per surveyor in <code>roster.json</code>.`});
   }
 
   // 2. Reach is the whole build-vs-buy story and it is counter-intuitive:
@@ -7751,8 +7733,7 @@ function resInsights(markets,bases,ctx){
       : _r1(absorbable)+' outsourced surveys a week are within day-trip range',
     detail:`${near.length} market${near.length===1?'':'s'} sit within a day trip of ${bases.filter(b=>b.ll).length} bases, and the vendor has done `
       +`${nearVendor} job${nearVendor===1?'':'s'} across all of them. `
-      +`The outsourced work is somewhere else, so re-assigning it to the current team wins nothing. `
-      +`<b>This is a deployment and hiring question, not a scheduling one.</b>`});
+      +`The outsourced work is somewhere else, so re-assigning it to the current team wins nothing.`});
 
   // 3. Where a posting would actually land.
   const dep=markets.filter(m=>m.advice.k==='deploy').sort((a,b)=>b.recentPerWeek-a.recentPerWeek);
@@ -7765,8 +7746,7 @@ function resInsights(markets,bases,ctx){
       detail:`${dep.map(m=>esc(m.name)+', '+m.st).join(' · ')}. `
         +`${_r1(depOut)} a week of it is outsourced. `
         +(mob.length?`<b>${mob.length} of ${dep.length} sit on sales crews whose footprint moves</b>: their early and late footprints do not overlap. `
-          +`The last one relocated across state lines in a single week. `:'')
-        +`A one- to two-week posting is reversible; a hire is not.`});
+          +`The last one relocated across state lines in a single week.`:'')});
   }
 
   // 4. Markets that have gone quiet — the reason rates use a recent window.
@@ -7775,8 +7755,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'info',
       headline:dead.length+' market'+(dead.length===1?'':'s')+' with history have gone quiet',
       detail:`${dead.slice(0,4).map(m=>esc(m.name)+', '+m.st+' ('+m.n+')').join(' · ')}${dead.length>4?' and '+(dead.length-4)+' more':''}. `
-        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. Averaged over the whole dataset they still look staffable, `
-        +`which is why every rate here uses a recent window.`});
+        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. Averaged over the whole dataset they still look staffable.`});
   }
 
   // 5. Coaching beats headcount where the volume is rep-done and defective.
@@ -7785,8 +7764,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'med',
       headline:'In '+coach.length+' market'+(coach.length===1?'':'s')+' the problem is rep survey quality',
       detail:`${coach.slice(0,4).map(m=>esc(m.name)+', '+m.st+' — '+_rpct(m.repDefectRate)+' of '+m.repDone).join(' · ')}. `
-        +`Mostly self-surveyed, defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, at least ${OpsCoverage.COACH_MIN_N} completions. `
-        +`A surveyor fixes one job; the rate is a training problem.`});
+        +`Mostly self-surveyed, defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, at least ${OpsCoverage.COACH_MIN_N} completions.`});
   }
 
   // 6. What the invoice says about the same question.
@@ -7794,8 +7772,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'med',
       headline:_rmoney(billSum.cleanupUsd)+' of the vendor bill finishes surveys someone else started',
       detail:`${billSum.cleanupN} visits at the full first-visit rate, ${_rpct(billSum.cleanupUsd/billSum.usd)} of everything invoiced. `
-        +`It bills the same as a fresh survey, so the invoice does not name it. `
-        +`This is the rep-quality problem, priced — it lands on a vendor bill rather than in any survey metric.`});
+        +`It bills the same as a fresh survey, so the invoice does not name it.`});
   }
 
   // 7. Where intake is going, which is the only leading indicator in the data.
@@ -7808,8 +7785,8 @@ function resInsights(markets,bases,ctx){
         +(slowing.length?slowing.length+' emptying out':''),
       detail:(growing.length?`<b>Growing:</b> ${growing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
         +(slowing.length?`<b>Slowing:</b> ${slowing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
-        +`Measured from project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows, which is a sale landing rather than a survey finishing. `
-        +`It says what has arrived, not what is coming — the Outlook column beside it is for what you know that this cannot.`});
+        +`Project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows — a sale landing, not a survey finishing, `
+        +`so it says what has arrived rather than what is coming.`});
   }
   return out;
 }
@@ -7847,10 +7824,9 @@ function _renderResBody(){
     </tr></thead><tbody>${rowsHtml}</tbody></table></div>
     <div class="note">
       ${live.length} active ${resGroup==='rec'?'group':'area'}${live.length===1?'':'s'} over
-      ${live.reduce((a,g)=>a+g.markets.length,0)} markets &middot; open a row for its markets, a market for why.
-      Markets are ${mapRadius}-mile clusters (Map page radius).
-      <b>Intake trend</b> is project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows &mdash; arrived, not forecast.
-      ${showOutlook?'<b>Outlook</b> never changes the recommendation beside it.':''}
+      ${live.reduce((a,g)=>a+g.markets.length,0)} markets.
+      A market is every job within ${mapRadius} miles of another.
+      <b>Intake trend</b> is project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows.
     </div>
     <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-mkt-tbl',this,'markets')">Copy table</button></div>`;
 }
@@ -8009,7 +7985,7 @@ function _resDrawer(id,markets,bases,billSum){
              : id==='vendor' ? _resVendorTable(billSum)
              :                 _resRepTable();
   const sub = id==='spwr'   ? 'From roster.json, placed by home ZIP &middot; capacity is the drive-time model, editable in Settings'
-            : id==='vendor' ? 'Vendors we are actively working with'
+            : id==='vendor' ? 'From the vendor registry, invoiced or not'
             // Said out loud because the column above it is an 8-week rate and
             // these are not: over the recent window only 13 reps clear the
             // floor, which cannot fill a best ten and a worst ten without the
@@ -8126,7 +8102,7 @@ function _resRepTable(){
       ${rated.length} of ${all.length} reps clear the ${RS_MIN_CELL}-completion floor, covering
       ${rated.reduce((a,d)=>a+d.n,0).toLocaleString()} of ${done.length.toLocaleString()} self-surveyed completions.
       <b>Came back</b> is resurveys attributed to a defect, the same population Quality ranks on.
-      <b>No activity cutoff</b> &mdash; a rep who has left still did those surveys.
+      No activity cutoff &mdash; a rep who has left still did those surveys.
     </div>`;
 }
 
@@ -8167,16 +8143,21 @@ function _resTeamTable(markets,bases){
         </tr>`;
       }).join('')}
     </tbody></table></div>
+    <!-- Was ten lines of 10px grey: the derivation, a capacity ladder at four
+         distances, a mileage ladder at four more, the vehicle rule, the loaded
+         cost and two warnings. What stays is the arithmetic behind the
+         Capacity column and the two things a reader would otherwise misread —
+         that the last column is a place rather than a person, and that a
+         constraint is recorded but not modelled. The ladders are in Settings,
+         which the sentence already links. -->
     <div class="note">
       ${resModelLine()}
-      At an 8-mile market, the optimistic end &mdash; it falls as the drive grows:
-      ${[8,25,45,60].map(mi=>`${mi}mi ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
-      Every knob is in <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>, overridable per surveyor in <code>roster.json</code>.
-      <br><b>Own vehicle</b> is reimbursed ${_rmoney(resCost().mileageRate*100).replace('$','')}&cent; a mile, plus ${_rmoney(resCost().mileageBonus*100).replace('$','')}&cent; on every mile past ${resCost().mileageDayMi} in one day &mdash;
-      so it rises with the drive: ${[8,25,45,60].map(mi=>`${mi}mi ${_rmoney(mileageDayUsd(OpsCoverage.dailyMiles(mi))*5)}/wk`).join(' · ')}.
-      A company vehicle is the flat ${_rmoney(resCost().vehicleMonthly)}/mo instead. Loaded cost with salary: <b>${_rmoney(resTeamWeeklyCost())}/wk</b> each.
-      <br><b>Constraints are recorded, not modelled.</b>
-      <b>SPWR work there is a place, not a person</b> &mdash; Salesforce records the resource, never which surveyor, so overlapping ranges count the same work twice (<i>shared range</i>).
+      Quoted at an 8-mile market, the optimistic end; it falls as the drive grows.
+      Loaded cost <b>${_rmoney(resTeamWeeklyCost())}/wk</b> each &mdash;
+      <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>.
+      <br><b>SPWR work there is a place, not a person.</b> Salesforce records the resource, never which
+      surveyor, so overlapping ranges count the same work twice (<i>shared range</i>).
+      Constraints are recorded, not modelled.
     </div>
     <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-team-tbl',this,'the team')">Copy table</button></div>`;
 }
@@ -8483,9 +8464,29 @@ function _renderBillMain(){
     // neighbours.
     return `<span style="white-space:nowrap;">${a&&b&&a!==b ? a+'–'+b : (a||b)}</span>`; })();
 
-  // .bill-rail puts the sub on its own line — see the CSS. Six money figures
-  // are the widest values any rail in the app carries, so inline subs wrapped
-  // in some cells and not others, and "70 visits" split across the break.
+  // A FIGURE APPEARS ONCE. If it is clickable it lives in the chips; if it is
+  // not, it lives here. The rail carried six cells and three of them were a
+  // chip restated — Travel adders $42,410/31% against the chip's 243 · $42,410,
+  // Cleanup work $19,880 · 70 visits against 70 · $19,880 — while a fourth,
+  // "Rework", named a SUBTYPE ($4,260 · 15 Go Back visits) with the same word
+  // the chip beside it uses for a RULE (4 · $1,136 own-defect rebills). That is
+  // the twelve-big-numbers defect the 2026-08-26 rebuild set out to fix; the
+  // cards became chips and the collision came along.
+  //
+  // What is left is what no chip can say: the total, the all-in unit cost, and
+  // the roll-up across every non-informational rule. "All charges" drops its
+  // money for the same reason — it is the reset state, and the total is already
+  // 40px above it at 29px. Travel, cleanup and rework are one click each, with
+  // a fuller label than the rail gave them.
+  //
+  // Three cells is also why this rail needs NO CSS of its own any more. Money
+  // is the widest value any rail in the app carries: at six cells they collided
+  // under about 1200px ($137,821 alone measures 126px at 29px/700, so a cell
+  // needs ~162px and six need ~972px of rail, more than that window leaves
+  // beside the 180px sidebar), and .srail-sub had to be forced onto its own
+  // line because it fitted beside some values and not others. At ~400px a cell
+  // neither happens. Both are what a fourth cell would have to clear.
+
   const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
     +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
 
@@ -8500,16 +8501,17 @@ function _renderBillMain(){
   // being read. Where it IS worth saying is at the moment of import, and the
   // modal's statements table says it there: 395 lines, 118 already billed,
   // 277 added.
+  // The note under the chips is only ever the selected rule's `why`. Unfiltered
+  // it printed a line restating the panel title ("Every charge on every
+  // imported statement") and, on the account lens, the subtitle nine pixels
+  // above it word for word.
   const rebilled=scoped.filter(l=>(l.flags||[]).includes('cross_statement'));
   const rebilledUsd=OpsBilling.usd(rebilled.reduce((a,l)=>a+Math.abs(l.units||0),0),rebilled[0]&&rebilled[0].vendor);
 
   host.innerHTML=`
-    <div class="srail bill-rail">
+    <div class="srail">
       ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
       ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
-      ${cell('Travel adders',_bmoney(sum.travelUsd),_bpct(sum.travelShare),TIP.billTravel)}
-      ${cell('Cleanup work',_bmoney(sum.cleanupUsd),sum.cleanupN+' visits',TIP.billCleanup)}
-      ${cell('Rework',_bmoney(sum.reworkUsd),sum.reworkN+' visits',TIP.billRework)}
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
     </div>
 
@@ -8535,7 +8537,6 @@ function _renderBillMain(){
         <button class="bill-flag bill-flag-all${billF.flag==='all'?' on':''}" aria-pressed="${billF.flag==='all'}" onclick="setBillingFlag('all')">
           All charges
           <span class="bill-flag-n">${scoped.length}</span>
-          <span class="bill-flag-v">${_bmoney(sum.usd)}</span>
         </button>
         ${flags.filter(f=>f.n).map(f=>`
           <button class="bill-flag sev-${f.sev}${billF.flag===f.k?' on':''}" aria-pressed="${billF.flag===f.k}" onclick="setBillingFlag('${f.k}')">
@@ -8544,10 +8545,7 @@ function _renderBillMain(){
             <span class="bill-flag-v">${_bmoney(f.usd)}</span>
           </button>`).join('')}
       </div>
-      <div class="note" id="bill-flag-why">${meta?esc(meta.why)
-        :billLens==='accounts'?'Every account that drew a charge, and what it cost across all of its lines.'
-        :billLens==='outcome'?'What the work cost, cut by what became of the project it was done for.'
-        :'Every charge on every imported statement.'}</div>
+      ${meta?`<div class="note" id="bill-flag-why">${esc(meta.why)}</div>`:''}
       <div id="bill-table"></div>
     </div>`;
 
@@ -8713,7 +8711,7 @@ function _renderBillingAccounts(scoped,meta){
   const sub=document.getElementById('bill-table-sub');
   if(sub) sub.textContent = all.length+' account'+(all.length===1?'':'s')+' · '
     +_bmoney(all.reduce((s,a)=>s+(a.usd||0),0))
-    +' · every line the account drew, added up'+(meta?', for accounts carrying this flag':'');
+    +(meta?' · accounts carrying this flag':'');
 
   const multiVendor=new Set(all.map(a=>a.vendor)).size>1;
 

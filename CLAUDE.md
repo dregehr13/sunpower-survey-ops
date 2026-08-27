@@ -59,7 +59,13 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings, resurveys resting on a bare `reopened_by_design` flag); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
 - **Sales office is a global filter** alongside Region, applied through `gfDim` **and `applyFilter`** so it reaches every page. It only ever lived in `gfDim`, which meant Performance — the one page reading `filtered` — showed an active button, a chip and identical numbers (fixed 2026-08-14). Both the filter and the Resurveys breakdown hide/fall back on exports predating 2026-08-06, which have no office field
 - **One label scale, every page** (added 2026-08-17). A single 10px uppercase `.05em` style used to do four jobs at once, so four ranks of information read as one. The seven roles: section/KPI label 11/600/.07em uppercase `--muted` · panel title 13/700 sentence `--text` · panel subtitle 11/400 `--faint` · table header 11/700 sentence `--muted` · chart legend 11/400 `--muted` · axis tick 10/400 `--faint` · footnote 10/400 `--faint`. **10px survives only as axis ticks and footnotes**
-- **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was
+- **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was — the one
+  exception is a **two-level** table, where the group band already rests at
+  `--bg`: on the Resource market table `.res-grp` hovers one step to
+  `--border-lt` and the white `.res-kid` rows take `--bg`. Both levels are
+  expanders and **neither responded to hover at all until 2026-08-27**, because
+  `.res-grp>td` / `.res-kid>td` are declared after the global `tr:hover td` at
+  equal specificity and won
 - **A note says what a number IS, not why it was built that way** (added
   2026-08-26, Doug's call: "too much overexplaining"). The `.note` under a table
   carries definitions the reader needs — what *cleanup* counts, where the 8-week
@@ -532,7 +538,36 @@ to undo:
   *What to do, market by market* → **Markets**, switching with the
   toggle the way `Resurveys by <group>` already does. Every other title in the
   app is a noun phrase; three question-shaped ones on one page read as a
-  different product
+  different product. *Where the work goes* → **Resource split** 2026-08-27 —
+  the rule was written on this page and the hero was still breaking it
+- **The notes and findings state the number and stop** (2026-08-27, Doug's ask:
+  less help text, no over-explaining). What came out was argument, not
+  definition — "Yield here is the whole team's biggest quality lever", "the case
+  for insourcing is throughput, cycle time or quality, not price", "A surveyor
+  fixes one job; the rate is a training problem", "A one- to two-week posting is
+  reversible; a hire is not", "This is a deployment and hiring question, not a
+  scheduling one". The same rule the `.note` already followed since 2026-08-26,
+  applied to the findings' detail bodies and the hero's column notes. What
+  stays is a definition, or a caveat that changes how a number is read:
+  - **The capacity caveat stays** in the SPWR column, because every capacity
+    figure on the page is wrong if it is wrong
+  - **The team drawer's note was ten lines of 10px grey** — the derivation, a
+    capacity ladder at four distances, a mileage ladder at four more, the
+    vehicle rule, the loaded cost and two warnings. It keeps `resModelLine()`,
+    the loaded cost, and the two things a reader would otherwise misread (the
+    last column is a place not a person; a constraint is recorded not modelled).
+    The ladders are in Settings, which the sentence already links to
+  - **The market note no longer instructs or justifies.** "open a row for its
+    markets, a market for why" is UI instruction and "Outlook never changes the
+    recommendation beside it" is design history; both belong in a source
+    comment, which is where they already were
+  - **No positional references.** The Sales reps lead said its cost lands "in
+    the column to the left", which is false below 860px where the columns stack.
+    It names Outsourced instead
+- **The expander is named for the column above it** (2026-08-27). It read
+  *SunPower Surveyors* under a heading reading *SPWR surveyors* — two names for
+  one thing, 200px apart. Same rule as "Quality is the nav label only": pick the
+  displayed name and use it everywhere it is displayed
 - **Build vs buy is a hairline-divided row, not three cards.** The columns were
   bordered `--surface` boxes on a `--surface` panel, so the fill did nothing and
   the border doubled the panel's own — the same nesting `.exec-hero .srail`
@@ -637,7 +672,22 @@ to undo:
   in one column and one in another, and from there down nothing agreed — *First
   pass yield* in the middle column sat beside *Cycle time* in the outer ones.
   Without `subgrid` support the columns fall back to independent flow rather
-  than to something broken
+  than to something broken. Two things about it, both found 2026-08-27:
+  - **The base `.res-col{display:flex}` MUST stay above the `@supports` block.**
+    It sat below it at equal specificity, so flex won unconditionally and the
+    subgrid never ran for a single render: only the expanders lined up, which
+    `margin-top:auto` does on its own, while every band above them sat at a
+    different height per column (22px out between the outer columns at 920px).
+    It looked right at 1440px only because the three lead lines happened to
+    wrap to similar heights
+  - **`repeat(3,1fr)`, never `auto-fit`.** auto-fit wrapped to 2×2 under about
+    1150px, and then *Sales reps* landed in row 2 column 1 still matching
+    `:not(:first-child)` and sat 18px out of line with the column above it; the
+    open column's tab was in row 1 while its drawer was two rows below, so the
+    notch pointed at nothing. Three columns hold to 861px and stack to one
+    below it, where the hairline turns horizontal, the side padding resets and
+    the open column takes a **closed** ring — stacked, the drawer is at the foot
+    of all three, so an open bottom edge would point at the next column
 - **The open column is a TAB.** It takes the drawer's background and drops the
   hairline to its neighbour, so the tint runs unbroken from column into panel
   and which one is open is readable at a glance. The outline is an **inset
@@ -774,6 +824,32 @@ labelled. Things not to undo:
     say "error" about rules that are deliberately informational
   - They are `<button>`s, not `.drill-tgt` divs. Lift-and-shadow is reserved for
     things that open something; a filter darkens its border and does not move
+  - **A FIGURE APPEARS ONCE — clickable in the chips, otherwise in the rail**
+    (2026-08-27). The 2026-08-26 pass turned the cards into chips but left the
+    rail at six cells, so the collision it set out to fix survived the rewrite:
+    Travel adders `$42,410 / 31%` against the chip's `243 · $42,410`, Cleanup
+    work `$19,880 · 70 visits` against `70 · $19,880`, To review `$3,408 · 12
+    lines` against `12 · $3,408` — and **"Rework" naming a SUBTYPE in the rail
+    ($4,260 · 15 Go Back visits) with the same word the chip beside it uses for
+    a RULE** (4 · $1,136 own-defect rebills). The rail is three cells now —
+    **Invoiced · Per survey · To review** — which is what no chip can say: the
+    total, the all-in unit cost, and the roll-up across every non-informational
+    rule. Travel, cleanup and rework are one click each, under a fuller label
+    than the rail gave them. "Rework" appears exactly once on the page
+  - **"All charges" carries its COUNT, not its money.** It is the reset state,
+    and the total is already 40px above it at 29px
+  - **The note under the chips is the selected rule's `why`, or nothing.**
+    Unfiltered it printed a line restating the panel title ("Every charge on
+    every imported statement") and, on the account lens, the panel subtitle
+    word for word nine pixels above it
+  - **The rail has no CSS of its own any more.** Money is the widest value any
+    rail in the app carries: at six cells they collided under ~1200px
+    (`$137,821` measures 126px at 29px/700, so a cell needs ~162px and six need
+    ~972px of rail — more than that window leaves beside the 180px sidebar),
+    and `.srail-sub` had to be forced onto its own line because it fitted
+    beside some values and not others. At ~400px a cell neither happens, so
+    Billing uses the shared component exactly as every other page does. Both
+    constraints are what a fourth cell would have to clear
 - **Cost by project outcome is the third lens** (added 2026-08-26). Charges ·
   By account · **By outcome** — `byOutcome()` in `lib/billing.cjs`, grouping
   charge lines by the matched survey's `project_status`. Live: **14% of vendor
@@ -848,14 +924,6 @@ labelled. Things not to undo:
   - **Date presets anchor on the newest charge, not on the wall clock.** A
     statement arrives weeks after the work, so "this month" measured from today
     is empty for the first days of every month
-  - **Billing's rail is the one that stacks its subs.** `.bill-rail
-    .srail-sub` is `display:block` + `nowrap`, against the shared component's
-    inline sub. Six money figures are the widest values any rail in the app
-    carries, so inline the sub fit beside some and not others — three cells
-    read "value sub", three read "value" over "sub", and `70 visits` split
-    across the break. One row each for label, value and sub is uniform by
-    construction at every width. Scoped to this page on purpose: every other
-    rail's values are short enough that the inline sub is the denser reading
   - **ONE notice above the table, and it is an alarm.** Amber `.bill-warn`
     when `cross_statement` lines are in scope — the same charge type billed on
     two statements under different dates, with a button that selects the rule.
