@@ -664,9 +664,10 @@ to undo:
     is also how a knob goes back to its shipped value. The endpoint drops any
     key it does not recognise rather than refusing the save that carries the
     other eight
-  - **No per-field "edited" badge.** Doug's call: the value in the box is the
-    value in use, and a badge beside it only repeats what the box says. One
-    section-level line says whether the server has it yet
+  - **No per-field "edited" badge, and no password on Save.** Doug's call: the
+    value in the box is the value in use, and a badge beside it only repeats
+    what the box says. One section-level line says whether the server has it
+    yet. The endpoint's validation is what stands in for the password — see A1
 - **The three hero columns are a GRID with `subgrid` rows, not a flex row**
   (2026-08-26). Flex could only align the tops: the lead line wraps to two lines
   in one column and one in another, and from there down nothing agreed — *First
@@ -1126,13 +1127,16 @@ Carried here 2026-08-24 when `docs/AUDIT.md` was deleted — the audit's finding
 were applied across four batches, but these six were deliberately not, because
 each is a judgement call rather than cleanup. The measurements behind them are
 in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
-- **A1 — `/api/send-teams`, `/api/team-opener` and now `/api/update-outlook`
-  have no auth.** The outlook password was removed 2026-08-26 at Doug's ask,
-  knowingly: that endpoint takes any POST and commits, though what it can write
-  is bounded to a two-letter state code, one of four flags and 280 characters
-  into a file no metric reads. `api/update.js`, `api/update-billing.js` and
-  `api/update-resmodel.js` KEEP their password — those commit the dataset, the
-  invoice history and every capacity figure on the Resource page. Anyone who can
+- **A1 — `/api/send-teams`, `/api/team-opener`, `/api/update-outlook` and
+  `/api/update-resmodel` have no auth.** The last two lost their password
+  2026-08-26 at Doug's ask, knowingly. Both take any POST and commit, and both
+  are bounded by what they will accept: outlook to a two-letter state code, one
+  of four flags and 280 characters; resmodel to a whitelist of fourteen numeric
+  knobs, each range-checked, with anything unrecognised dropped. Neither file
+  feeds a survey metric, and Reset undoes a bad model in a click.
+  `api/update.js` and `api/update-billing.js` KEEP their password — those
+  commit the dataset and the invoice history, which is data rather than an
+  assumption. Anyone who can
   POST can push a card into the team channel. An in-code secret is public
   because compose is a static file, so the real options are Vercel Deployment
   Protection or building the Adaptive Card server-side instead of accepting an

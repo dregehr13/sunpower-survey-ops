@@ -920,7 +920,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-ins-h:hover{color:var(--blue-dk);}
 .res-ins-h .wip-expand{margin-right:0;}
 .res-ins-row.open .wip-expand{transform:rotate(90deg);}
-.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;padding:0 0 12px 32px;}
+.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;padding:0 0 12px 32px;display:none;}
+.res-ins-row.open .res-ins-d{display:block;animation:fadeSlideIn .18s ease;}
+.res-ins-h .wip-expand{transition:transform .15s;}
 .res-ins-d code{font-size:10px;background:var(--bg);padding:1px 4px;border-radius:3px;}
 /* A collapsed panel still has to say how many findings it holds and whether
    any is urgent, or collapsing it just hides a red line. */
@@ -2303,6 +2305,17 @@ function animateSections(pageId){
   staggerRows(el);
   // Animate bars
   animateBars(el);
+}
+// Billing and Resource render a "Loading…" note first and fill in when their
+// fetches land. animateSections() runs once in the rAF after renderPage(), so
+// it staggered the placeholder and the real content then appeared with no
+// entrance at all — the only two pages in the app that did not fade in. This
+// marks a page as having shown a placeholder; the render that replaces it
+// animates, once, however many fetches it was waiting on.
+const _awaitingContent=new Set();
+function _animateOnArrival(page){
+  if(!_awaitingContent.delete(page)) return;
+  requestAnimationFrame(()=>animateSections('page-'+page));
 }
 function nav(page){
   currentPage=page;
@@ -6991,7 +7004,7 @@ const _setNumRow = (f,cur,fn) => `<div class="set-row">
 // is on screen. Kept separate from it because these two live in nested objects
 // and because the capacity knobs have to reach lib/coverage.cjs, which nothing
 // else in SETTING_DEFAULTS does.
-function applyResModel(){ OpsCoverage.setModel((S&&S.resModel)||null); }
+function applyResModel(){ OpsCoverage.setModel((S&&S.resModel)||null); _resModelGen++; }
 function _resSet(bag,k,v){
   const next={...((S&&S[bag])||{})};
   if(v==null||v===''||!isFinite(v)) delete next[k]; else next[k]=Number(v);
@@ -7054,13 +7067,14 @@ function _resSaveState(){
   return `<span style="color:var(--faint);">On the server${at?' &middot; '+esc(at):''}${by?' &middot; '+esc(by):''}</span>`;
 }
 
+// No password — Doug's call 2026-08-26, the same one that took it off the
+// outlook save. See api/update-resmodel.js for what that does and does not
+// expose; the endpoint validates every key and bound on the way in.
 function saveResModel(){
   const msg=document.getElementById('rm-msg'), btn=document.getElementById('rm-save');
-  const pw=(document.getElementById('rm-pw')||{}).value||'';
-  if(!pw){ msg.innerHTML='<b style="color:var(--red);">Enter the update password.</b>'; return; }
-  btn.disabled=true; msg.textContent='Committing…';
+  btn.disabled=true; msg.textContent='Saving…';
   fetch('/api/update-resmodel',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ model:S.resModel||{}, cost:S.resCost||{}, by:'Doug', password:pw })})
+    body:JSON.stringify({ model:S.resModel||{}, cost:S.resCost||{}, by:'Doug' })})
     .then(r=>r.json().then(j=>({ok:r.ok,j})))
     .then(({ok,j})=>{
       if(!ok) throw new Error(j.error||'save failed');
@@ -7349,7 +7363,27 @@ function resMarketFacts(mem, ctx){
   return m;
 }
 
+// Clustering every placeable in-scope row is the most expensive thing this
+// page does — ~100ms of a 177ms full render — and it ran TWICE per render,
+// because _renderResBody() called it again after renderResource() already had.
+// Every interaction on the page pays that: opening a drawer, switching the cut,
+// even expanding one collapsed finding.
+//
+// Memoised on the IDENTITY of everything it reads. allRows is always replaced
+// rather than mutated in place (loadAll returns a new array; delRow filters),
+// so reference equality is a sound key for it, and the same holds for the
+// roster, the geo table and the billing history. The capacity model is the one
+// input with no object to compare — applyResModel() applies it by mutating
+// OpsCoverage's base config — so it carries a counter instead.
+let _resMemo=null, _resModelGen=0;
 function resMarkets(){
+  const k=[allRows,mapRadius,MAPGEO.zips,_roster,_billing,_resModelGen];
+  if(_resMemo && _resMemo.k.every((v,i)=>v===k[i])) return _resMemo.v;
+  const v=_resMarketsBuild();
+  _resMemo={k,v};
+  return v;
+}
+function _resMarketsBuild(){
   const pts=resPoints();
   const ctx=resMarketCtx(pts);
 
@@ -7502,7 +7536,17 @@ function setResExpand(id){ resExpand = resExpand===id?null:id; renderResource();
 function resToggleGroup(k){ if(resOpen.has(k)) resOpen.delete(k); else resOpen.add(k); _renderResBody(); }
 function resToggleMkt(k){ if(resMktOpen.has(k)) resMktOpen.delete(k); else resMktOpen.add(k); _renderResBody(); }
 function resToggleQuiet(){ resShowQuiet=!resShowQuiet; _renderResBody(); }
-function resToggleIns(i){ if(resInsOpen.has(i)) resInsOpen.delete(i); else resInsOpen.add(i); renderResource(); }
+// Opening one collapsed paragraph used to re-render the whole page. The detail
+// is always in the DOM now and the row toggles a class, so this is a class flip
+// rather than 177ms of clustering — and it can carry a transition, which a
+// destroyed-and-rebuilt node never could.
+function resToggleIns(i){
+  const row=document.getElementById('res-ins-'+i); if(!row) return;
+  const open=!resInsOpen.has(i);
+  if(open) resInsOpen.add(i); else resInsOpen.delete(i);
+  row.classList.toggle('open',open);
+  row.querySelector('.res-ins-h').setAttribute('aria-expanded',String(open));
+}
 
 // FPY bands, the mirror of the Quality page's rate bands (5 / 15 there, so
 // 95 / 85 here). Written against the DISPLAYED value so a column reading 94.0%
@@ -7528,6 +7572,7 @@ function renderResource(){
   if(pending){
     if(!_roster&&!_rosterErr) resEnsure();
     if(!MAPGEO.zips) mapEnsureGeo().then(()=>renderResource());
+    _awaitingContent.add('resource');
     el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading the team and geography…</div></div>';
     return;
   }
@@ -7689,14 +7734,15 @@ function renderResource(){
       <div class="shead"><div><div class="stitle">Findings<span class="res-ins-dot sev-${worst}"></span></div>
       <div class="ssub">${insights.length}, recomputed from the markets above</div></div></div>
       <div class="res-ins">${insights.map((i,ix)=>`
-        <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}">
+        <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}" id="res-ins-${ix}">
           <button class="res-ins-h" aria-expanded="${resInsOpen.has(ix)}" onclick="resToggleIns(${ix})">
             <span class="wip-expand">&#9656;</span><span>${esc(i.headline)}</span></button>
-          ${resInsOpen.has(ix)?`<div class="res-ins-d">${i.detail}</div>`:''}
+          <div class="res-ins-d">${i.detail}</div>
         </div>`).join('')}</div>
     </div>`;
 
   _renderResBody();
+  _animateOnArrival('resource');
 }
 
 // Insights are DERIVED, never a written-in narrative: each one recomputes from
@@ -8303,7 +8349,7 @@ function setBillF(k,v){ billF[k]=v; billLimit=BILL_PAGE; renderBilling(); }
 function setBillLens(v){ if(billLens===v) return; billLens=v; billLimit=BILL_PAGE; renderBilling(); }
 function setBillingFlag(k){ billF.flag = billF.flag===k?'all':k; billLimit=BILL_PAGE; renderBilling(); }
 function billReset(){ billF={...BILL_F0}; billCustomOpen=false; billLimit=BILL_PAGE; renderBilling(); }
-function billMore(all){ billLimit = all?Infinity:billLimit+BILL_PAGE; _renderBillMain(); }
+function billMore(all){ billLimit = all?Infinity:billLimit+BILL_PAGE; _renderBillTable(); }
 // Search re-renders the numbers but never the bar, so the caret stays put.
 function setBillQ(v){ billF.q=v; billLimit=BILL_PAGE; _renderBillMain(); }
 let billCustomOpen=false;
@@ -8368,7 +8414,8 @@ function billTh(k,label,cls){
 
 function renderBilling(){
   const el=document.getElementById('billing-content'); if(!el) return;
-  if(!_billing && !_billingErr){ billingEnsure(); el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading invoice history…</div></div>'; return; }
+  if(!_billing && !_billingErr){ billingEnsure(); _awaitingContent.add('billing');
+    el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading invoice history…</div></div>'; return; }
   if(!_billing){
     el.innerHTML=`<div class="sec">
       <div class="shead"><div><div class="stitle">No invoice history yet</div>
@@ -8384,6 +8431,7 @@ function renderBilling(){
   el.innerHTML=`<div id="bill-bar"></div><div id="bill-main"></div>`;
   _renderBillBar();
   _renderBillMain();
+  _animateOnArrival('billing');
 }
 
 function _renderBillBar(){
@@ -8549,6 +8597,15 @@ function _renderBillMain(){
       <div id="bill-table"></div>
     </div>`;
 
+  _renderBillTable();
+}
+
+// Just the table under the chips. Paging used to go through _renderBillMain(),
+// which rebuilt the rail, the notice and the whole chip row to add fifty rows
+// underneath them.
+function _renderBillTable(){
+  const scoped=billScoped();
+  const meta=billF.flag==='all'?null:OpsBilling.exceptionMeta(billF.flag);
   if(billLens==='charges') _renderBillingTable(scoped,meta);
   else if(billLens==='outcome') _renderBillingOutcome(scoped,meta);
   else _renderBillingAccounts(scoped,meta);
@@ -8567,7 +8624,7 @@ function _billFoot(shown,total,tblId,label){
   </div>`;
 }
 function billCopy(id,btn,label){
-  if(billLimit!==Infinity){ billLimit=Infinity; _renderBillMain(); }
+  if(billLimit!==Infinity){ billLimit=Infinity; _renderBillTable(); }
   copyTableEl(id,document.querySelector('#bill-table .copy-btn')||btn,label);
 }
 
@@ -8992,8 +9049,7 @@ function renderSettings(){
         </div>
         <div class="set-save">
           <div class="set-save-state">${_resSaveState()}</div>
-          <input type="password" id="rm-pw" placeholder="Update password" autocomplete="off">
-          <button class="set-save-btn" id="rm-save" onclick="saveResModel()">Save to server</button>
+          <button class="set-save-btn" id="rm-save" onclick="saveResModel()">Save</button>
           <button class="fbtn" onclick="resetResModel()">Reset</button>
         </div>
         <div id="rm-msg" class="note" style="min-height:14px;margin-top:6px;"></div>

@@ -2,7 +2,7 @@
 // committing resmodel.json to GitHub the way api/update-outlook.js commits
 // outlook.json and api/update-billing.js commits billing.json.
 //
-// POST { model, cost, by, password }  →  { ok, resmodel, commit }
+// POST { model, cost, by }  →  { ok, resmodel, commit }
 //
 // WHY THIS IS A COMMITTED FILE AND NOT localStorage. Every capacity figure on
 // the Resource page — the modelled ceiling, the utilisation percentage, the
@@ -13,8 +13,22 @@
 // lived in localStorage and made the badge disagree with Salesforce for anyone
 // who had clicked one.
 //
-// Requires the same Vercel env vars api/update.js does — GITHUB_TOKEN and
-// UPDATE_PASSWORD. No new configuration.
+// NO PASSWORD — Doug's call 2026-08-26, the same one that took it off
+// api/update-outlook.js. What this can write is bounded by the two key tables
+// below: every key is on a whitelist, every value has to be a finite number
+// inside a stated range, and anything else is dropped. So the worst a stranger
+// can do is set this team's assumed on-site minutes to something silly, in a
+// file that changes one page's capacity estimate and no survey metric — and
+// Reset in the UI undoes it in a click.
+//
+// It joins /api/send-teams, /api/team-opener and /api/update-outlook in having
+// no auth (audit finding A1). api/update.js and api/update-billing.js KEEP
+// their password: those commit the dataset and the invoice history, which is
+// real data rather than an assumption. The honest fix for the unauthenticated
+// four is Vercel Deployment Protection in front of the deployment, not a secret
+// in a static page — which is public by definition and would only look like one.
+//
+// Requires GITHUB_TOKEN, the same var api/update.js uses. No new configuration.
 
 export const config = { api: { bodyParser: { sizeLimit: '16kb' } } };
 
@@ -76,11 +90,7 @@ const gh = (path, token, opts = {}) =>
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { model, cost, by, password } = req.body || {};
-
-  const expectedPw = process.env.UPDATE_PASSWORD;
-  if (!expectedPw) return res.status(500).json({ error: 'UPDATE_PASSWORD env var not set' });
-  if (password !== expectedPw) return res.status(401).json({ error: 'Incorrect password' });
+  const { model, cost, by } = req.body || {};
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN env var not set' });
