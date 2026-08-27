@@ -1,7 +1,12 @@
 {
   "_comment": "Resource-page capacity and cost model. Written from Settings → Resource model through api/update-resmodel.js, the same way outlook.json is written from the Resource page. Only OVERRIDES are stored: an empty object means the shipped estimate in lib/coverage.cjs (capacity) and RES_COST_DEFAULTS in index.html (cost) is still in use. Keys are validated by the endpoint — anything it does not recognise is dropped rather than committed.",
-  "updated": "2026-08-26",
+  "updated": "2026-08-27",
   "by": "Doug",
-  "model": {},
-  "cost": {}
+  "model": {
+    "hopMi": 15,
+    "maxOneWayMi": 75
+  },
+  "cost": {
+    "surveyorAnnual": 50000
+  }
 }
