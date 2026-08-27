@@ -2,7 +2,7 @@
 // page, committing outlook.json to GitHub the same way api/update.js commits
 // data.js/data.json and api/update-outlook.js's sibling commits billing.json.
 //
-// POST { state, flag, note, by, password }  →  { ok, outlook, commit }
+// POST { state, flag, note, by }  →  { ok, outlook, commit }
 //
 // WHY THIS IS A COMMITTED FILE AND NOT localStorage. The Resource page exists
 // to make a staffing case to somebody else, so a note only the author's browser
@@ -12,8 +12,20 @@
 // badge disagree with Salesforce for anyone who had clicked one. A judgement
 // that changes what a shared page says has to live where the page lives.
 //
-// Requires the same Vercel env vars api/update.js does — GITHUB_TOKEN and
-// UPDATE_PASSWORD. No new configuration.
+// NO PASSWORD — Doug's call 2026-08-26. This endpoint takes any POST and
+// commits it. What it can write is bounded to the point of being dull: a
+// two-letter state code, one of four flags, and 280 characters of note, into
+// one file that no metric reads. Weighed against a password prompt on every
+// two-word judgement, on a page one person opens, he chose the prompt goes.
+//
+// It is now in the same class as /api/send-teams and /api/team-opener, which
+// have never had auth (audit finding A1). The honest fix for all three is
+// Vercel Deployment Protection in front of the deployment, not a secret in a
+// static page — which is public by definition and would only look like one.
+// The other two writers, api/update.js and api/update-billing.js, KEEP their
+// password: those commit the dataset and the invoice history.
+//
+// Requires GITHUB_TOKEN, the same var api/update.js uses. No new configuration.
 
 export const config = { api: { bodyParser: { sizeLimit: '64kb' } } };
 
@@ -42,7 +54,7 @@ const gh = (path, token, opts = {}) =>
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { state, flag, note, by, password } = req.body || {};
+  const { state, flag, note, by } = req.body || {};
 
   const st = String(state || '').trim().toUpperCase();
   if (!STATE_RE.test(st)) return res.status(400).json({ error: 'state must be a two-letter code' });
@@ -54,10 +66,6 @@ export default async function handler(req, res) {
   // an error worth throwing their words away over.
   const text = String(note == null ? '' : note).trim().slice(0, NOTE_MAX);
   const author = String(by || '').trim().slice(0, 60) || 'Doug';
-
-  const expectedPw = process.env.UPDATE_PASSWORD;
-  if (!expectedPw) return res.status(500).json({ error: 'UPDATE_PASSWORD env var not set' });
-  if (password !== expectedPw) return res.status(401).json({ error: 'Incorrect password' });
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN env var not set' });

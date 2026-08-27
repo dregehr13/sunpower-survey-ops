@@ -1,14 +1,14 @@
 {
-  "_comment": "In-house survey team. Hand-maintained — there is no Salesforce object for it. `skills` is an open attribute list: today it only records constraints, and nothing on the Resource page divides capacity by it yet (Doug, 2026-08-25: keep it as the start of a list, do not model it). `off` is days not worked, which is what drives daysAvailable. Capacity knobs left absent fall back to DEFAULT_SURVEYOR in lib/coverage.cjs.",
+  "_comment": "In-house survey team. Hand-maintained — there is no Salesforce object for it. `skills` is an open attribute list: today it only records constraints, and nothing on the Resource page divides capacity by it yet (Doug, 2026-08-25: keep it as the start of a list, do not model it). `off` is days not worked, which is what drives daysAvailable. `vehicle` is 'own' or 'company' and decides how the vehicle is COSTED: 'own' is reimbursed per mile driven (rate, day threshold and the over-threshold bonus all live in Settings → Resource model), 'company' is the flat monthly figure. Absent means 'own' — all four drive their own today, and that is the assumption for a new hire. Capacity knobs left absent fall back to DEFAULT_SURVEYOR in lib/coverage.cjs.",
   "surveyors": [
     { "id": "abisai",  "name": "Abisai Hernandez", "state": "MI", "zip": "48076", "market": "Detroit",
-      "phone": "305-970-5861", "off": ["Sun", "Sat"], "skills": [], "constraints": ["no_roof_work"] },
+      "phone": "305-970-5861", "off": ["Sun", "Sat"], "vehicle": "own", "skills": [], "constraints": ["no_roof_work"] },
     { "id": "harry",   "name": "Harry Lane",       "state": "OR", "zip": "98664", "market": "Portland",
-      "phone": "360-823-9683", "off": ["Sun", "Tue"], "skills": [], "constraints": ["no_roof_work"] },
+      "phone": "360-823-9683", "off": ["Sun", "Tue"], "vehicle": "own", "skills": [], "constraints": ["no_roof_work"] },
     { "id": "kyle",    "name": "Kyle Snow",        "state": "OR", "zip": "97381", "market": "Salem",
-      "phone": "503-385-5499", "off": ["Sun", "Sat"], "skills": [], "constraints": ["no_roof_work"] },
+      "phone": "503-385-5499", "off": ["Sun", "Sat"], "vehicle": "own", "skills": [], "constraints": ["no_roof_work"] },
     { "id": "sam",     "name": "Sam Parker",       "state": "OR", "zip": "97202", "market": "Portland",
-      "phone": "503-919-0931", "off": ["Sun", "Mon"], "skills": [], "constraints": ["no_roof_work"] }
+      "phone": "503-919-0931", "off": ["Sun", "Mon"], "vehicle": "own", "skills": [], "constraints": ["no_roof_work"] }
   ],
   "constraintLabels": {
     "no_roof_work": "No roof work"
