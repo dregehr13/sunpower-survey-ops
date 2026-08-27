@@ -1492,11 +1492,13 @@ const FIELDS = [
   {key:'reviewed_by',          sfCol:'Reviewed By',                                                label:'Reviewed By',      type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_date',   sfCol:'Last Reviewed',                                              label:'Last Reviewed',    type:'text',     filterable:false, editable:false},
   {key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                      label:'Review Subject',   type:'text',     filterable:false, editable:false},
-  // Active WIP only — Doug, 2026-08-26. Never cleared by SF, so half of all
-  // COMPLETED rows still carry one: this is "why is this held right now", not
-  // "why was it ever held". Read it on open rows to build the queue pareto;
-  // never aggregate it over completions and never render it on a finished row.
-  // filterable:false so a global filter cannot silently mix the two readings.
+  // Carried, unused. A WIP surface was considered and REJECTED 2026-08-26 —
+  // see parse-sf.js for the measurements. Short version: no timestamp and never
+  // cleared, so it cannot say what a row is waiting on NOW (three live rows
+  // carried All Photos Missing while already booked); "Site Survey Requested"
+  // is true of nearly every open row so it discriminates nothing; and it has no
+  // utility-bill value, so it is blind to Missing UB. wipQueueStatus() reads
+  // the review note instead, whose median age on the open queue is 0 days.
   {key:'holding_reason',       sfCol:'Holding Reason',                                          label:'Holding Reason',   type:'text',     filterable:false, editable:false},
   {key:'resource',      sfCol:'Site Survey Resource', label:'Resource',      type:'category', filterable:true,  editable:true},
   {key:'survey_type',   sfCol:'Site Survey Type',    label:'Survey Type',   type:'category', filterable:false, editable:true},

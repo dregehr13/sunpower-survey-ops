@@ -51,18 +51,26 @@ const FIELDS = [
   { key:'reviewed_by',          sfCol:'Reviewed By',                                             type:'text' },
   { key:'last_reviewed_date',   sfCol:'Last Reviewed',                                           type:'text' },
   { key:'last_reviewed_subject',sfCol:'Last Reviewed Subject',                                   type:'text' },
-  // FOR THE ACTIVE WIP PARETO, AND NOTHING ELSE — Doug, 2026-08-26. It is a
-  // multi-select picklist, semicolon-joined, and it is NEVER CLEARED: 50% of
-  // COMPLETED rows still carry one. So it is a life-of-task accumulator, not a
-  // live state, and the only population it describes truthfully is the open
-  // queue — "why is this held right now". Never aggregate it over completions
-  // and never put it on a finished row; both read as history dressed as status.
+  // CARRIED, UNUSED — a WIP surface was considered and REJECTED, 2026-08-26.
+  // Don't build one without new evidence; the measurements are below.
   //
-  // Two of its five values (Site Survey Requested, Resurvey Requested) restate
-  // `requested` and isOpenResurvey and agree with them only 68% of the time
-  // over history — the derived versions are better, don't switch to these. The
-  // photo-missing values are the new information and nothing else in the export
-  // carries them: 16 of the 60 live WIP rows.
+  // It is a multi-select picklist, semicolon-joined, with no timestamp, and it
+  // is NEVER CLEARED: 50% of COMPLETED rows still carry one. So it is a
+  // life-of-task accumulator, not a live state, and it cannot answer "what is
+  // this waiting on now" — three rows in the live queue carried All Photos
+  // Missing while already booked (1632CATH scheduled 8/28, 1944BROT 8/31).
+  //
+  // It also cannot discriminate: "Site Survey Requested" sat on 17 Scheduled,
+  // 11 Radicl scheduling, 6 Missing UB, plus Awaiting rep, Unclassified and
+  // Likely cancel — true of nearly every open row. And it is blind to the
+  // sharpest queue category: all 6 Missing UB rows read "Site Survey
+  // Requested", because the picklist has no utility-bill value at all.
+  //
+  // wipQueueStatus() classifies off `last_reviewed_subject` / `last_comment`
+  // instead, and that is right: across the 58 reviewed open rows the note's
+  // median age is 0 days, 57 of 58 are within two days and the oldest is five.
+  // The note is also usually MORE specific ("MISSING PHOTOS - SCHEDULE WITH
+  // FIELD 8/27" against a bare "All Photos Missing"). Doug's call.
   { key:'holding_reason',       sfCol:'Holding Reason',                                         type:'text' },
   { key:'last_comment',         sfCol:'Last Reviewed Comments',                                  type:'text' },
   { key:'list',                 sfCol:'List',                                                    type:'text' },

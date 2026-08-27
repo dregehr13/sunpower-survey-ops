@@ -753,9 +753,21 @@ and added two columns. Row count 2,530 → 4,706, nothing dropped.
   held for X". Two of its values (Site Survey Requested, Resurvey Requested)
   restate `requested` and `isOpenResurvey` and agree with them only 68% of the
   time over history — **the derived versions are better, don't switch**. The
-  photo-missing values are the new information and nothing else in the export
-  carries them: 19.8% of completions, worth **+2.2d cycle and −6.4 FPY points**,
-  consistent across all three resources. Not yet on any surface
+  photo-missing values are the only new information in it. **Carried, unused —
+  a WIP surface was considered and REJECTED 2026-08-26, don't re-open it
+  without new evidence.** It has no timestamp and is never cleared, so it
+  cannot say what a row is waiting on *now*: three live rows carried All Photos
+  Missing while already booked (1632CATH scheduled 8/28). It cannot
+  discriminate either — "Site Survey Requested" sat on 17 Scheduled, 11 Radicl
+  scheduling and 6 Missing UB, i.e. nearly every open row — and it is blind to
+  the sharpest category, since the picklist has no utility-bill value at all.
+  `wipQueueStatus()` classifies off `last_reviewed_subject`/`last_comment` and
+  that is correct: the note's median age across the 58 reviewed open rows is
+  **0 days**, 57 of 58 within two days, oldest five, and it is usually the more
+  specific of the two ("MISSING PHOTOS - SCHEDULE WITH FIELD 8/27" against a
+  bare "All Photos Missing"). The historical read stands as analysis only —
+  19.8% of completions were ever held for missing photos, worth +2.2d cycle and
+  −6.4 FPY points, consistent across all three resources
 - **The parser's "Open date MOVED" warning fired on 913 rows and was a false
   alarm.** Both exports carry byte-identical Open dates; the committed data.json
   was exactly +1 day on all 913, 876 of them evening timestamps, i.e. built by
