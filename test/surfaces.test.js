@@ -169,3 +169,46 @@ test('every TIP entry is referenced by a card', () => {
   const unused = keys.filter(k => !new RegExp(`TIP\\.${k}\\b`).test(body));
   assert.deepEqual(unused, [], `unused TIP entries (stale or a card lost its tooltip): ${unused.join(', ')}`);
 });
+
+// ── Per-page filter state ──────────────────────────────────────────────────
+// Every page aliased one shared filter object until 2026-08-26, so a region
+// picked to read Performance silently narrowed Quality, Trends and Map. The
+// call sites were already per-page; one line did the aliasing. These guard the
+// two ways it could quietly come back.
+test('no page aliases another page\'s filter object', () => {
+  const src = stripComments(read('index.html'));
+  // The aliasing line itself: every key assigned the SAME expression.
+  assert.ok(!/PAGES\.forEach\(\s*p\s*=>\s*pageF\[p\]\s*=\s*[A-Z]/.test(src),
+    'pageF keys must each get their own defaultF(), not a shared object');
+  assert.ok(/PAGES\.forEach\(\s*p\s*=>\s*pageF\[p\]\s*=\s*defaultF\(\)\s*\)/.test(src),
+    'each page must be seeded with its own defaultF()');
+  // And the shared object must be gone rather than left readable.
+  const gf = linesMatching(read('index.html'), /(^|[^.\w])GF\b/);
+  assert.deepEqual(gf.map(x => `index.html:${x.n}  ${x.line.slice(0, 80)}`), [],
+    'GF is gone — read the current page\'s filter with getF(), or a named page\'s with pageF[page]');
+});
+
+test('a page switch re-scopes as well as re-filters', () => {
+  // Statuses are per page, so `rows` itself changes with the page. nav() used
+  // to call applyFilter() alone, which left the new page filtering against the
+  // previous page's scope.
+  const src = stripComments(read('index.html'));
+  const nav = src.slice(src.indexOf('function nav(page){'));
+  const body = nav.slice(0, nav.indexOf('\n}'));
+  const scope = body.indexOf('scopeRows()'), apply = body.indexOf('applyFilter()');
+  assert.ok(scope !== -1, 'nav() must call scopeRows()');
+  assert.ok(apply !== -1, 'nav() must call applyFilter()');
+  assert.ok(scope < apply, 'scopeRows() must run BEFORE applyFilter() in nav()');
+});
+
+test('the WIP hint reads WIP\'s own filter, not the current page\'s', () => {
+  // renderFBars() draws every page's bar, WIP's included, while some other page
+  // is being viewed. Reading `rows` there described whoever was current — the
+  // hint read "896 of 896 open" off the Trends scope.
+  const src = stripComments(read('index.html'));
+  const fn = src.slice(src.indexOf('function wipScoped(){'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  assert.ok(/pageF\.wip/.test(body), 'wipScoped() must anchor on pageF.wip');
+  assert.ok(!/\bgfDim\(/.test(body),
+    'wipScoped() must use fDim(f,r) with WIP\'s own filter, not the current page\'s gfDim()');
+});

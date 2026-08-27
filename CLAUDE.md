@@ -113,7 +113,46 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   over everything earlier in the file. Edit a component's colour near the top and
   the change can be silently dead — check for a later definition first. The skin
   does not touch `.drill-panel`, `.modal`, `.mback` or `.rgdrop-panel`
-- **One filter bar, every page** (`buildFBar`). WIP used to render a private bar against its own `wipF`, so a region chosen on Performance did not carry over and Office could not reach it at all. Region / Office / Status / Resource are shared; **Sales Rep and Install Type are WIP-only extras** in `wipF`, since nothing else cuts by either. WIP shows **no date range** — it is a live queue, and the hint says so. Don't reintroduce a second bar
+- **One filter BUILDER, per-page filter STATE** (`buildFBar`). Two rules that
+  are easy to confuse, both load-bearing:
+  - **One builder.** WIP used to render a private bar against its own `wipF`,
+    so it had no Office control at all and its Region was not the same field
+    anyone else was setting. Every bar is drawn by `buildFBar(page)`. Don't
+    reintroduce a second builder. **Sales Rep and Install Type stay WIP-only
+    extras** in `wipF`, since nothing else cuts by either, and WIP shows **no
+    date range** — it is a live queue, and the hint says so
+  - **Per-page state** (2026-08-26, Doug's call, replacing the 2026-08-17 "one
+    bar, one state"). Every page aliased a single `GF`, so a region picked to
+    read Performance silently narrowed Quality, Trends and Map, and a date
+    range set to answer one question followed you to a page where it meant
+    something else. Each page owns a `pageF[page]` object now. Things not to
+    undo:
+    - **`GF` is gone, not left as an alias.** The call sites were already
+      per-page (`pageF[page]`, `getF()`, `buildFBar(page)`); one line did the
+      aliasing. A surfaces test asserts no bare `GF` identifier survives and
+      that each key gets its own `defaultF()`
+    - **`currentPage` is declared in the FILTER block**, not down in the NAV
+      section. `getF()` resolves through it and `scopeRows()` runs during boot,
+      so a `let` further down the file leaves it in the temporal dead zone
+    - **`nav()` calls `scopeRows()` before `applyFilter()`.** Statuses are per
+      page, so a page switch changes `rows` itself, not just what is drawn from
+      it. Tested
+    - **`scopeFor(f)` / `filterFor(f,src)` are the pure forms**; `scopeRows()`
+      and `applyFilter()` are the current-page wrappers. The per-page hints need
+      the pure ones — each hint counts its own page, where it used to write the
+      current page's numbers into all eight
+    - **`fDim(f,r)` takes an explicit filter; `gfDim(r)` is the current-page
+      wrapper.** `wipScoped()` must use `fDim(pageF.wip, r)`, because
+      `renderFBars()` builds WIP's hint while another page is being viewed —
+      reading `rows`/`gfDim()` there had the hint printing the Trends scope
+      ("896 of 896 open"). Tested
+    - **`autoDateRange` still wins over saved dates** and now seeds every page's
+      range. That is the pre-existing rule, deliberately preserved: region and
+      resource persist across a reload, the date range resets to the full span
+    - The URL hash carries the CURRENT page and its own filter, which is what a
+      shared link should mean. Unchanged, and correct by construction now
+    - **Which controls each page shows is a separate question and is still
+      open.** This change was state only — every page kept the controls it had
 - **There is no global Install Type filter.** `type` had filter state, a `gfDim`/`applyFilter` clause and a `?type=` URL param but no control anywhere, so a shared link could filter every page invisibly. Removed 2026-08-14; `FIELDS.type` is `filterable:false`. The WIP page's Type control is separate state
 - **The stat rail is one shared component** (`.srail` / `.srail-cell` / `.srail-val` / `.srail-sub`), used by WIP, Performance and Trends. It replaced five and six KPI cards per page: the figures carry in about a sixth of the vertical space and, sharing one surface, stop implying they are equally important things. Cell padding must stay uniform, since `flex-basis:0` sizes the content box. WIP adds `.rail-f` cells that filter the queue below; the other pages use `.rail-d`, which opens a drill and is marked with the same `↗` the KPI cards used. The inline `.srail-sub` sits beside the value, so it has to stay short or the cell wraps and stops matching the others
 - **Performance is a stat rail, one chart and one table** (rebuilt 2026-08-18). It was five KPI cards, three resource cards, a volume chart, a cycle chart, a region table and a rep table: six surfaces over one shape, since region, office, rep and resource all answer group / count / avg / median / on-target. Things not to undo:

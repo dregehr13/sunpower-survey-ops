@@ -1472,7 +1472,7 @@ const FIELDS = [
   {key:'region',               sfCol:'Sales Region',                                               label:'Sales Region',     type:'category', filterable:true,  editable:true},
   {key:'sales_office',         sfCol:'Sales Office Name',                                          label:'Sales Office',     type:'category', filterable:false, editable:false},
   // filterable:false on purpose. The global bar has never rendered an Install
-  // Type control, but the filter kept living in GF, in gfDim/applyFilter and in
+  // Type control, but the filter kept living in the filter state, in gfDim/applyFilter and in
   // the URL as ?type= — so a shared link could filter every page with nothing
   // on screen to show it or clear it. The WIP page keeps its own Type control,
   // which is separate state (wipF.type) and unaffected.
@@ -1577,7 +1577,7 @@ function setSetting(key, value){
 let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
 // Full working set: every project started on/after the cutoff — ALL statuses,
 // not just active. Analytics pages read the active subset (`rows`) by default;
-// the global Status filter (GF.statuses) can be widened via the filter bar
+// the page's Status filter can be widened via the filter bar
 // to include At-Risk / Canceled / Complete projects when needed.
 // (parse-sf.js already applies the fixups below at parse time; kept for older data files)
 // ═══ THE ANCHOR ══════════════════════════════════════════
@@ -1617,28 +1617,41 @@ const isActiveStatus = r => r.project_status==='In Progress' || r.project_status
 const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
-// Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
 const PAGES = ['week','wip','performance','trends','resurvey','map','resource','billing','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
-// One GLOBAL filter shared by every page — pageF keys all reference it so
-// existing per-page call sites keep working
-const GF = defaultF();
+// ONE FILTER OBJECT PER PAGE. Every page used to alias a single shared GF, so
+// a region picked on Performance silently narrowed Quality, Trends and Map, and
+// a date range set to answer one question followed you to a page where it meant
+// something else. Doug's call 2026-08-26: a page should filter in its own way
+// and keep its own state. The call sites were already per-page (`pageF[page]`,
+// `getF()`, `buildFBar(page)`) — the aliasing line was the only thing making it
+// global, and GF is gone rather than left as an alias nothing may read.
+//
+// currentPage is declared HERE, not down in the NAV section, because getF()
+// resolves through it and scopeRows() runs during boot — a `let` further down
+// the file leaves it in the temporal dead zone at that point.
+let currentPage = 'week';
 const pageF = {};
-PAGES.forEach(p => pageF[p] = GF);
+PAGES.forEach(p => pageF[p] = defaultF());
 
-// Rebuild the scoped view (`rows`) from the full set based on GF.statuses.
+// Rebuild the scoped view (`rows`) from the full set based on the page's statuses.
 // A completed survey counts under the 'Complete' bucket even if the project
 // is At-Risk/Cancelled — the survey happened; it just never shows as open WIP.
 // An empty status list means "nothing selected", not "no filter". It used to
 // fall through to allRows, so unchecking every box WIDENED the scope from 2,448
 // to 2,538 — pulling in At-Risk and Canceled — while the button read
 // "Status · 0" and highlighted as active. Only a missing or malformed
-// GF.statuses falls back to the full set.
-function scopeRows(){
-  const s=GF&&GF.statuses;
-  if(!Array.isArray(s)){ rows=allRows.slice(); return; }
-  rows = allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
+// malformed status list falls back to the full set.
+function scopeFor(f){
+  const s=f&&f.statuses;
+  if(!Array.isArray(s)) return allRows.slice();
+  return allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
 }
+// `rows` and `filtered` are the CURRENT page's view. Both are recomputed on
+// every nav() — with per-page statuses a page switch changes the scope, not
+// just the rendering, which is why nav() now calls scopeRows() as well as
+// applyFilter().
+function scopeRows(){ rows = scopeFor(getF()); }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
 scopeRows();
@@ -1646,8 +1659,8 @@ let filtered = [];
 let dataTimestamp = null;
 
 // ═══ AGING WIP FILTER STATE (separate from global filter — WIP is never date-ranged) ═══
-// WIP-only extras. Region / office / resource / status live in GF with every
-// other page — see buildFBar().
+// WIP-only extras. Region / office / resource / status live in the page's own
+// filter object like every other page's — see buildFBar().
 let wipF = {type:'all', sales_rep:'all'};
 let wipSortKey = 'daysOpen', wipSortAsc = false;
 let wipAgeSel = new Set(); // selected PA_BAND indices (multi-select)
@@ -1712,24 +1725,31 @@ function loadFilterState(){
     // Migrate legacy page key 'outliers' → 'wip'
     if(saved.pageF?.outliers && !saved.pageF.wip) saved.pageF.wip = saved.pageF.outliers;
     if(saved.currentPage === 'outliers') saved.currentPage = 'wip';
-    // Filters are global now — collapse old per-page state to the last-viewed page's filters
+    // Each page restores its OWN saved filter. State written while filters were
+    // global is one object under every page key, so it reloads as the same
+    // selections everywhere — the old behaviour on the first load after this
+    // change, then they diverge as soon as anything is touched. `globalF` is
+    // the older shape still and seeds any page the save does not cover.
     const base = saved.globalF || {};
-    const pf = saved.pageF?.[saved.currentPage] || saved.pageF?.performance || {};
-    Object.assign(GF, defaultF(), base, pf);
-    // Upgrade saved state that exactly matched the old 2-item default to the current default
     const _od=['In Progress','Change Order'];
-    if(GF.statuses?.length===_od.length&&_od.every(s=>GF.statuses.includes(s))) GF.statuses=[...DEFAULT_STATUSES];
-    migrateRegion(GF);
+    PAGES.forEach(pg=>{
+      const pf = saved.pageF?.[pg] || {};
+      const f = Object.assign(pageF[pg], defaultF(), base, pf);
+      // Upgrade saved state that exactly matched the old 2-item default to the current default
+      if(f.statuses?.length===_od.length&&_od.every(x=>f.statuses.includes(x))) f.statuses=[...DEFAULT_STATUSES];
+      migrateRegion(f);
+    });
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
 }
 
 function getF(){ return pageF[currentPage]; }
 
-function applyFilter(){
-  const f = getF();
-  if(!f) return;
-  filtered = rows.filter(r=>{
+// The row predicate, as a function of a filter object rather than of whichever
+// page happens to be open. applyFilter() needs it for the current page and the
+// per-page hints need it for the other eight.
+function filterFor(f,src){
+  return (src||[]).filter(r=>{
     if(!isComplete(r)) return false;
     if(f.dateFrom && r.complete < f.dateFrom) return false;
     if(f.dateTo   && r.complete > f.dateTo)   return false;
@@ -1742,33 +1762,63 @@ function applyFilter(){
     if(f.removeOutliers && r.ct_total!=null && r.ct_total > S.outlierDays) return false;
     return true;
   });
+}
+
+function applyFilter(){
+  const f = getF();
+  if(!f) return;
+  filtered = filterFor(f, rows);
   document.getElementById('navBadge').textContent = rows.length+' projects';
+  // Each hint counts ITS OWN page now. It used to write the current page's
+  // numbers into all eight, which was true while every page shared one filter
+  // and became a lie the moment they stopped.
   // WIP counts open surveys, not date-filtered completions — buildFBar owns
   // that hint. Overwriting it here would put "2335 of 2448 shown" on the queue.
-  PAGES.forEach(p=>{ if(p==='wip') return; const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
+  PAGES.forEach(p=>{
+    if(p==='wip') return;
+    const el=document.getElementById('fb-hint-'+p); if(!el) return;
+    const pf=pageF[p]; if(!pf) return;
+    const scoped = p===currentPage ? rows : scopeFor(pf);
+    const shown  = p===currentPage ? filtered : filterFor(pf,scoped);
+    el.textContent = shown.length+' of '+scoped.length+' shown';
+  });
 }
 
 // Global filter pieces for pages that don't go through `filtered` (Resurveys)
-function gfDim(r){
-  if(Array.isArray(GF.region)&&GF.region.length&&!GF.region.includes(r.region)) return false;
-  if(Array.isArray(GF.office)&&GF.office.length&&!GF.office.includes(r.sales_office)) return false;
-  if(GF.resource&&GF.resource!=='all'&&r.resource!==GF.resource) return false;
+function fDim(f,r){
+  if(!f) return true;
+  if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
+  if(Array.isArray(f.office)&&f.office.length&&!f.office.includes(r.sales_office)) return false;
+  if(f.resource&&f.resource!=='all'&&r.resource!==f.resource) return false;
   return true;
 }
-function gfDateIn(d){ if(GF.dateFrom&&d<GF.dateFrom) return false; if(GF.dateTo&&d>GF.dateTo) return false; return true; }
+// The current page's dimension test — what almost every caller wants, since
+// they run while their own page is the one being rendered.
+function gfDim(r){ return fDim(getF(),r); }
+function gfDateIn(d){ const f=getF(); if(!f) return true; if(f.dateFrom&&d<f.dateFrom) return false; if(f.dateTo&&d>f.dateTo) return false; return true; }
 
-// ═══ FILTER BAR — one global bar, preset-first dates, active-filter chips ═══
+// ═══ FILTER BAR — one builder, per-page state, preset-first dates, chips ═══
 let customDatesOpen=false;
 function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
-// One bar for every page. WIP used to render its own (buildWIPFBar) against a
-// private wipF: its Region was not GF.region, so a region picked on Performance
-// did not carry over, and it had no Office control at all, which meant the
-// global Office filter could not reach the page. Region / Office / Status /
-// Resource are shared now; Sales Rep and Install Type stay WIP-only extras
-// because only the queue has a use for them. WIP shows no date range — it is a
-// live snapshot, and an inert date picker is worse than none.
+// ONE BUILDER, NOT ONE FILTER. Every page's bar is drawn by this function, so
+// the controls stay consistent and a fix lands everywhere at once — but each
+// bar reads and writes its own page's filter object (2026-08-26). Carrying a
+// selection between pages was the thing that had to stop: a region chosen to
+// read Performance is not a claim about what Quality or Map should show.
+//
+// The 2026-08-17 rule this replaces was "one bar, one state". Half of it
+// stands: WIP must not go back to its own private buildWIPFBar against a
+// private wipF, which is how it ended up with no Office control at all and a
+// Region that was not the same field anyone else was setting. The controls are
+// shared. The selections are not.
+//
+// Sales Rep and Install Type stay WIP-only extras because only the queue has a
+// use for either. WIP shows no date range — it is a live snapshot, and an inert
+// date picker is worse than none.
 function buildFBar(page){
-  const f = GF;
+  // The bar being drawn, not the page being viewed — renderFBars() draws all of
+  // them and each must show its own selections.
+  const f = pageF[page] || getF();
   const isWip = page==='wip';
   const offices=[...new Set(rows.map(r=>r.sales_office).filter(Boolean))].sort();
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
@@ -1850,12 +1900,12 @@ function buildFBar(page){
     ${page==='resurvey'?'':`<div class="fsep"></div>
     ${(()=>{
       const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
-      const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
+      const sel=Array.isArray(f.statuses)?f.statuses:[...DEFAULT_STATUSES];
       const isDefault=sel.length===DEFAULT_STATUSES.length&&DEFAULT_STATUSES.every(s=>sel.includes(s));
       return `<div class="status-drop rgdrop">
         <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleStatusDrop(event)">Status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
         <div class="rgdrop-panel${statusDropOpen?' open':''}" id="status-panel">
-          ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
+          ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${page}','${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
         </div>
       </div>`;
     })()}`}
@@ -1865,7 +1915,7 @@ function buildFBar(page){
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
       <span class="fhint" id="fb-hint-${page}">${isWip
-        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open'
+        ? wipFiltered().length+' of '+scopeFor(pageF.wip||f).filter(r=>isWIP(r)).length+' open'
         : filtered.length+' of '+rows.length+' shown'}</span>
     </div>
   </div>`;
@@ -1910,11 +1960,12 @@ function toggleStatusDrop(ev){
   if(statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; }
   renderFBars();
 }
-function onStatusF(status,checked,ev){
+function onStatusF(page,status,checked,ev){
   ev&&ev.stopPropagation();
-  const arr=Array.isArray(GF.statuses)?[...GF.statuses]:[];
+  const f=pageF[page]||getF(); if(!f) return;
+  const arr=Array.isArray(f.statuses)?[...f.statuses]:[];
   if(checked){if(!arr.includes(status))arr.push(status);}else arr.splice(arr.indexOf(status),1);
-  GF.statuses=arr;
+  f.statuses=arr;
   scopeRows();
   saveFilterState();
   applyFilter();
@@ -1983,8 +2034,9 @@ function clearF(page){
   def.removeOutliers=S.defaultRemoveOutliers;
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length){def.dateFrom=dates[0];def.dateTo=dates[dates.length-1];}
-  Object.assign(GF, def); // global filter — mutate in place, pageF keys alias it
-  clearWipF();            // and the WIP-only extras, so Reset means Reset there too
+  Object.assign(pageF[page], def);   // this page only — Reset is per page now
+  // The WIP-only extras belong to the WIP bar, so Reset elsewhere leaves them.
+  if(page==='wip') clearWipF();
   customDatesOpen=false;
   scopeRows();
   saveFilterState();
@@ -1997,8 +2049,15 @@ function clearF(page){
 // a region while the denominator stayed national produced a ratio of two
 // different populations.
 function wipScoped(){
-  return rows.filter(r=>{
-    if(!gfDim(r)) return false;   // region / office / resource, shared with every page
+  // Always the WIP page's own filter, never the current page's. This function
+  // is called from renderFBars() to build WIP's hint while a different page is
+  // being viewed, and `rows`/gfDim() describe whoever is current — which had
+  // the hint reading the Trends scope ("896 of 896 open") once statuses went
+  // per page. On WIP itself the two are the same thing.
+  const f = pageF.wip || getF();
+  const src = currentPage==='wip' ? rows : scopeFor(f);
+  return src.filter(r=>{
+    if(!fDim(f,r)) return false;   // region / office / resource — WIP's own
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
     if(wipF.sales_rep&&wipF.sales_rep!=='all'&&r.sales_rep!==wipF.sales_rep) return false;
     return true;
@@ -2127,7 +2186,6 @@ function wipRowKey(rowEl,ev){
 }
 
 // ═══ NAV ══════════════════════════════════════════════════
-let currentPage = 'week';
 
 // ── ANIMATION ENGINE ──────────────────────────────────────────────────────────
 const SPRING='cubic-bezier(.22,.68,0,1.2)';
@@ -2228,6 +2286,9 @@ function nav(page){
   if(sb) sb.classList.toggle('active', page==='settings');
   window.scrollTo({top:0,behavior:'smooth'});
   saveFilterState();
+  // Statuses are per page, so `rows` itself changes with the page — re-scope
+  // before filtering or the new page renders against the old page's scope.
+  scopeRows();
   applyFilter();
   renderPage(page);
   renderWipCountBadge();  // the badge is in the nav, so it follows every page
@@ -2515,20 +2576,20 @@ function rsStaleDays(pool){
 // read `filtered` (the date range applies) and some read the live rows (it does
 // not) — a distinction that was invisible from inside the drawer.
 function drillScopeNote(kind){
-  const bits=[];
-  if(GF.region&&GF.region.length) bits.push(GF.region.length===1?GF.region[0]:GF.region.length+' regions');
-  if(GF.office&&GF.office.length) bits.push(GF.office.length===1?GF.office[0]:GF.office.length+' offices');
+  const bits=[]; const f=getF()||defaultF();
+  if(f.region&&f.region.length) bits.push(f.region.length===1?f.region[0]:f.region.length+' regions');
+  if(f.office&&f.office.length) bits.push(f.office.length===1?f.office[0]:f.office.length+' offices');
   if(kind==='live') return (bits.length?bits.join(' · ')+' · ':'')+'live — ignores the date range';
-  if(GF.dateFrom&&GF.dateTo){
+  if(f.dateFrom&&f.dateTo){
     // "All" auto-populates the picker with the dataset's own span, which is not
     // a narrowing — same test the filter bar's All button uses.
     const ds=rows.filter(isComplete).map(r=>r.complete).sort();
-    const isAll=GF.dateFrom===(ds[0]||'')&&GF.dateTo===(ds[ds.length-1]||'');
+    const isAll=f.dateFrom===(ds[0]||'')&&f.dateTo===(ds[ds.length-1]||'');
     // fmtDateShort drops the year, so a 12-month range printed as "Aug 8 – Aug
     // 14" and read as one week. Cross-year ranges carry their years.
-    if(!isAll) bits.push(GF.dateFrom.slice(0,4)===GF.dateTo.slice(0,4)
-      ? fmtDateShort(GF.dateFrom)+' – '+fmtDateShort(GF.dateTo)
-      : fmtDate(GF.dateFrom)+' – '+fmtDate(GF.dateTo));
+    if(!isAll) bits.push(f.dateFrom.slice(0,4)===f.dateTo.slice(0,4)
+      ? fmtDateShort(f.dateFrom)+' – '+fmtDateShort(f.dateTo)
+      : fmtDate(f.dateFrom)+' – '+fmtDate(f.dateTo));
     else bits.push('all dates');
   }
   return bits.length?bits.join(' · '):'no filters applied';
@@ -3946,7 +4007,8 @@ function renderTrends(){
   }
   const trendDone=trendSrc.filter(r=>isComplete(r)&&gfDateIn(r.complete));
   // Restrict the weekly series to weeks overlapping the global date range
-  const wkInRange=w=>(!GF.dateFrom||w.weekEnd>=GF.dateFrom)&&(!GF.dateTo||w.week<=GF.dateTo);
+  const _tf=getF()||defaultF();
+  const wkInRange=w=>(!_tf.dateFrom||w.weekEnd>=_tf.dateFrom)&&(!_tf.dateTo||w.week<=_tf.dateTo);
   const weekly=weeklyStats(trendSrc).filter(wkInRange);
   const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF).filter(wkInRange);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
@@ -3987,21 +4049,22 @@ function renderTrends(){
   const chartWC=Math.max(containerW, weeklyC.length*WEEK_W);
 
   // Intake & flow (Daily mode) — a browsing view like the Weekly toggle mode,
-  // so it follows the date-range picker (GF.dateFrom/dateTo) when set. Fixed
+  // so it follows this page's date-range picker when set. Fixed
   // 8-week window only as the "All" default; capped so it never runs past the
   // data itself.
   const flowEnd=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
   const isoAddD=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return localISO(new Date(y,m-1,d+n));};
   const dayCount=(a,b)=>{ const [ay,am,ad]=a.split('-').map(Number),[by,bm,bd]=b.split('-').map(Number); return Math.round((new Date(by,bm-1,bd)-new Date(ay,am-1,ad))/86400000); };
-  // "All" auto-populates GF.dateFrom/dateTo to the full dataset span (see
+  // "All" auto-populates the page's date range to the full dataset span (see
   // isAll in the filter-bar renderer) — that's not a real narrower pick, so it
   // must fall back to the 8-week default rather than rendering one bar per day
   // across the whole dataset.
   const _allCDates=rows.filter(isComplete).map(r=>r.complete).sort();
   const _fullFrom=_allCDates[0]||'', _fullTo=_allCDates[_allCDates.length-1]||'';
-  const hasDateRange=!!(GF.dateFrom&&GF.dateTo)&&!(GF.dateFrom===_fullFrom&&GF.dateTo===_fullTo);
-  const flowTo=hasDateRange?(GF.dateTo<flowEnd?GF.dateTo:flowEnd):flowEnd;
-  const flowFrom=hasDateRange?GF.dateFrom:isoAddD(flowEnd,-55);
+  const _ff=getF()||defaultF();
+  const hasDateRange=!!(_ff.dateFrom&&_ff.dateTo)&&!(_ff.dateFrom===_fullFrom&&_ff.dateTo===_fullTo);
+  const flowTo=hasDateRange?(_ff.dateTo<flowEnd?_ff.dateTo:flowEnd):flowEnd;
+  const flowFrom=hasDateRange?_ff.dateFrom:isoAddD(flowEnd,-55);
   const flowDays=[]; for(let i=0,n=Math.max(dayCount(flowFrom,flowTo)+1,1);i<n;i++) flowDays.push(isoAddD(flowFrom,i));
   const flowRangeLabel=hasDateRange?(fmtDateShort(flowFrom)+' – '+fmtDateShort(flowTo)):'last 8 weeks';
   const chartWD=Math.max(containerW, flowDays.length*15);
@@ -5217,7 +5280,7 @@ function renderResurvey(){
   // later that year. Nobody is ever filtered out by this: it is a label, since
   // sales activity is a proxy for employment and no threshold makes it a good
   // one. The number is shown and the reader draws their own line.
-  const rangeEnd=GF.dateTo||today;
+  const rangeEnd=(getF()||{}).dateTo||today;
   const RS_IDLE_TAG=30;
   const repLastSale={};
   if(grpKey==='sales_rep') scoped.forEach(r=>{
@@ -5649,14 +5712,15 @@ function mapAlbers(lon,lat){
 
 // Rows placed by address, with whatever market/date filter is active.
 function mapRows(){
+  const _mf=getF()||defaultF();
   const src=rows.filter(gfDim);
   const out=[]; let unplaced=0;
   for(const r of src){
     if(!r.start) continue;
     // The date range used to be applied by the scrubber; with that gone the
     // filter bar is the only thing selecting a period, so it has to bite here.
-    if(GF.dateFrom&&r.start<GF.dateFrom) continue;
-    if(GF.dateTo&&r.start>GF.dateTo) continue;
+    if(_mf.dateFrom&&r.start<_mf.dateFrom) continue;
+    if(_mf.dateTo&&r.start>_mf.dateTo) continue;
     const m=(r.address||'').match(MAP_ZIP_RE);
     if(!m){ unplaced++; continue; }
     const st=m[1].toUpperCase(), zip=m[2];
@@ -5696,10 +5760,11 @@ function renderMap(){
   // dropdown still offering "Pennsylvania (739)" under a 4-week filter is
   // telling you about data the map is no longer showing.
   const stCount={};
+  const _mf2=getF()||defaultF();
   if(ready) rows.filter(gfDim).forEach(r=>{
     if(!r.start) return;
-    if(GF.dateFrom&&r.start<GF.dateFrom) return;
-    if(GF.dateTo&&r.start>GF.dateTo) return;
+    if(_mf2.dateFrom&&r.start<_mf2.dateFrom) return;
+    if(_mf2.dateTo&&r.start>_mf2.dateTo) return;
     const m=(r.address||'').match(MAP_ZIP_RE);
     if(m&&MAPGEO.zips[m[2]]){ const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; }
   });
@@ -6511,14 +6576,13 @@ function resBases(){
 // ── This page's population ─────────────────────────────────────────────────
 // The Resource page has NO filter bar (2026-08-26, Doug's call: region, office,
 // status and a completion date range are survey-reporting vocabulary and none
-// of them frame a staffing question). GF is one shared object across every
-// page, so continuing to read it here would leave a region picked on
-// Performance silently narrowing this page with nothing on screen saying so —
-// exactly the invisible `?type=` filter that was removed in August.
-//
-// So the page anchors on its own fixed scope: every row in the default status
-// set, whatever any other page's controls hold. Same rule scopeRows() applies,
-// against DEFAULT_STATUSES rather than GF.statuses.
+// of them frame a staffing question). It therefore reads no page filter either.
+// Filters became per-page later the same day, which removes the original
+// hazard — another page's region can no longer reach in here — but not the
+// reason: a staffing question is asked of the whole current book, so this page
+// anchors on its own fixed scope, every row in the default status set. Same
+// rule scopeRows() applies, against DEFAULT_STATUSES rather than a page's own
+// status list.
 function resScope(){
   return allRows.filter(r=>DEFAULT_STATUSES.includes(r.project_status)||isComplete(r));
 }
@@ -8641,7 +8705,7 @@ window.addEventListener('load',()=>{
   const _reanchor = S.anchor!==SETTING_DEFAULTS.anchor;
   if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
   else if(_reanchor){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
-  scopeRows(); // re-scope based on restored GF.statuses
+  scopeRows(); // re-scope based on the current page's restored statuses
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';
   if(!S.sfRid)  S.sfRid=localStorage.getItem('sf_rid')||'';
@@ -8661,7 +8725,8 @@ window.addEventListener('load',()=>{
   // Set date range — autoDateRange always wins over saved dates, but not over URL dates
   const dates=rows.filter(r=>isComplete(r)).map(r=>r.complete).sort();
   if(S.autoDateRange&&dates.length&&!(urlState&&urlState.hadDates)){
-    GF.dateFrom=dates[0]; GF.dateTo=dates[dates.length-1];
+    // Seeds every page's own filter — it is the default range, not a selection.
+    PAGES.forEach(pg=>{ pageF[pg].dateFrom=dates[0]; pageF[pg].dateTo=dates[dates.length-1]; });
   }
   // Show data freshness in nav
   const navTs = document.getElementById('nav-ts');
