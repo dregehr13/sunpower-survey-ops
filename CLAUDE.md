@@ -151,8 +151,33 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       resource persist across a reload, the date range resets to the full span
     - The URL hash carries the CURRENT page and its own filter, which is what a
       shared link should mean. Unchanged, and correct by construction now
-    - **Which controls each page shows is a separate question and is still
-      open.** This change was state only — every page kept the controls it had
+    - **An OPEN row only counts while its project is live**, re-applied in
+      `scopeFor()` after the status selection (2026-08-27). The Status control
+      could otherwise undo `inScope()` with one tick: selecting Canceled took
+      the WIP queue from **64 to 896** — 832 tasks on dead projects, median age
+      122 days — with the rail's *Open now* reading 896 and nothing saying they
+      were dead; Map's WIP count went 63 → 894 the same way. Doing it in
+      `scopeFor()` rather than in `wipFiltered()` is deliberate: eight sites
+      derive an "open" figure from `rows` (the hint, the Sales Rep and Type
+      dropdowns, the rail, the table, Map's WIP mode, the SS ratio pool), and
+      each one remembering the rule is how they drift apart. Tested
+    - **A COMPLETED survey still counts whatever became of its project** — the
+      rule is `isComplete(r) || isActiveStatus(r)`, not a status test alone.
+      Selecting only Canceled still returns 1,350 rows, all of them completed
+      surveys on dead deals. That is the same week's other call (FPY counts
+      every completed survey), and the two must not be collapsed
+    - **Which controls each page shows was audited and left alone** (2026-08-27).
+      Every control that a page renders was measured against whether it changes
+      what that page draws, and **all of them bite** — there are no dead
+      controls to prune. Current, Resource and Billing render no bar at all
+      (`renderFBars` returns early on `week`); Quality already drops Status
+      (every row is complete) and WIP already drops the date range (live
+      queue). Those two omissions are the model and were already correct
+    - **`removeOutliers` has no control in any bar** — it is Settings-only and
+      changes **Performance alone**, since Trends, Quality and Map read `rows`
+      + `gfDim` rather than `filtered`. A Settings toggle that reads as global
+      but moves one page. Not fixed; worth either surfacing on Performance's
+      bar or renaming
 - **There is no global Install Type filter.** `type` had filter state, a `gfDim`/`applyFilter` clause and a `?type=` URL param but no control anywhere, so a shared link could filter every page invisibly. Removed 2026-08-14; `FIELDS.type` is `filterable:false`. The WIP page's Type control is separate state
 - **The stat rail is one shared component** (`.srail` / `.srail-cell` / `.srail-val` / `.srail-sub`), used by WIP, Performance and Trends. It replaced five and six KPI cards per page: the figures carry in about a sixth of the vertical space and, sharing one surface, stop implying they are equally important things. Cell padding must stay uniform, since `flex-basis:0` sizes the content box. WIP adds `.rail-f` cells that filter the queue below; the other pages use `.rail-d`, which opens a drill and is marked with the same `↗` the KPI cards used. The inline `.srail-sub` sits beside the value, so it has to stay short or the cell wraps and stops matching the others
 - **Performance is a stat rail, one chart and one table** (rebuilt 2026-08-18). It was five KPI cards, three resource cards, a volume chart, a cycle chart, a region table and a rep table: six surfaces over one shape, since region, office, rep and resource all answer group / count / avg / median / on-target. Things not to undo:

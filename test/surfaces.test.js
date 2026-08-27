@@ -212,3 +212,32 @@ test('the WIP hint reads WIP\'s own filter, not the current page\'s', () => {
   assert.ok(!/\bgfDim\(/.test(body),
     'wipScoped() must use fDim(f,r) with WIP\'s own filter, not the current page\'s gfDim()');
 });
+
+test('an open row on a dead project can never re-enter the queue', () => {
+  // The Status control could undo inScope() with one tick: selecting Canceled
+  // took the WIP queue from 64 to 896 — 832 tasks on dead projects, median age
+  // 122 days — and Map's WIP count from 63 to 894. Doug's call 2026-08-27:
+  // don't count incomplete canceled. The guard is that scopeFor() re-applies
+  // the rule after the status selection, so every "open" figure derived from
+  // `rows` inherits it rather than eight call sites each remembering.
+  const src = stripComments(read('index.html'));
+  const fn = src.slice(src.indexOf('function scopeFor(f){'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  assert.ok(/isComplete\(r\)\s*\|\|\s*isActiveStatus\(r\)/.test(body),
+    'scopeFor() must keep an open row only while its project is active');
+  // The status selection must still be applied FIRST, or the control is inert.
+  assert.ok(body.indexOf('statuses') < body.indexOf('isActiveStatus'),
+    'the status selection is applied first, then the open-row rule narrows it');
+});
+
+test('a completed survey still counts whatever became of its project', async () => {
+  // The other half of the same call, and the reason the rule is written as
+  // "isComplete(r) || isActiveStatus(r)" rather than a status test alone:
+  // FPY and volume count every completed survey, canceled projects included.
+  const { createRequire } = await import('node:module');
+  const m = createRequire(import.meta.url)('../lib/metrics.cjs');
+  const done = { start: '2026-03-01', complete: '2026-03-04', list: 'Complete', project_status: 'Canceled' };
+  const open = { start: '2026-03-01', complete: '', list: 'Open', project_status: 'Canceled' };
+  assert.equal(m.inScope(done), true, 'a completed survey on a canceled project is in scope');
+  assert.equal(m.inScope(open), false, 'an open task on a canceled project is not');
+});

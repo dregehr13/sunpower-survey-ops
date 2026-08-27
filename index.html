@@ -1644,8 +1644,24 @@ PAGES.forEach(p => pageF[p] = defaultF());
 // malformed status list falls back to the full set.
 function scopeFor(f){
   const s=f&&f.statuses;
-  if(!Array.isArray(s)) return allRows.slice();
-  return allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
+  const base = Array.isArray(s)
+    ? allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)))
+    : allRows.slice();
+  // AN OPEN ROW ONLY COUNTS WHILE ITS PROJECT IS LIVE — the second half of
+  // inScope() in lib/metrics.cjs, applied here so every "open" figure derived
+  // from `rows` inherits it instead of eight call sites each remembering.
+  //
+  // The Status control could otherwise undo the rule with one tick: selecting
+  // Canceled took the WIP queue from 64 to 896 — 832 tasks on dead projects,
+  // median age 122 days — and the rail's "Open now" read 896 with nothing on
+  // the page saying they were dead. Map's WIP count went 63 -> 894 the same
+  // way. Doug's call 2026-08-27: don't count incomplete canceled.
+  //
+  // A COMPLETED survey still counts whatever became of the project, which is
+  // the separate call from the same week (FPY counts every completed survey).
+  // So ticking Canceled still widens the completed history — it just cannot
+  // resurrect dead tasks into the queue.
+  return base.filter(r=>OpsMetrics.isComplete(r)||isActiveStatus(r));
 }
 // `rows` and `filtered` are the CURRENT page's view. Both are recomputed on
 // every nav() — with per-page statuses a page switch changes the scope, not
