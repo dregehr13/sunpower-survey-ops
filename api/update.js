@@ -1,11 +1,30 @@
 // api/update.js — Save updated SF data to GitHub, triggering a Vercel redeploy
-// POST { rows: [...], password: "..." }
+// POST { rows: [...], password: "..." }, optionally gzipped (x-encoding: gzip)
+//
+// THE BODY ARRIVES GZIPPED, and it has to. Vercel caps a function's request
+// body at 4.5MB — a platform limit ahead of the function, so `sizeLimit` here
+// never applied and raising it changes nothing. The report change took the 
+// payload over 4.5MB, causing FUNCTION_PAYLOAD_TOO_LARGE. gzip drops the 
+// payload size significantly on the wire.
+//
+// The body parser is off so the raw stream is readable; a plain JSON body
+// still works (curl, older browser with no CompressionStream), held to 4.5MB.
 //
 // Requires Vercel env vars:
 //   GITHUB_TOKEN    — Personal access token with `contents:write` on the repo
 //   UPDATE_PASSWORD — Shared password coworkers use to save data
 
-export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
+import { gunzipSync } from 'zlib';
+
+export const config = { api: { bodyParser: false } };
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  let buf = Buffer.concat(chunks);
+  if ((req.headers['x-encoding'] || '') === 'gzip') buf = gunzipSync(buf);
+  return JSON.parse(buf.toString('utf8'));
+}
 
 const OWNER = 'dregehr13';
 const REPO  = 'sunpower-survey-ops';
@@ -19,7 +38,11 @@ const gh = (path, token, opts = {}) =>
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { rows, password } = req.body || {};
+  let body;
+  try { body = await readBody(req); }
+  catch (e) { return res.status(400).json({ error: 'Could not read request body: ' + e.message }); }
+
+  const { rows, password } = body || {};
   if (!rows || !Array.isArray(rows) || !rows.length) return res.status(400).json({ error: 'Missing rows' });
 
   const expectedPw = process.env.UPDATE_PASSWORD;
