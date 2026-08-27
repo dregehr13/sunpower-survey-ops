@@ -996,6 +996,19 @@ triggers on every untrusted session and Chrome 134+ blocks CDP on the default
 profile. Manual export + push.sh is the reliable workflow until the SF API
 ticket is resolved.
 
+**The in-app modal's save is GZIPPED, and it has to be** (2026-08-27). Vercel
+caps a function's request body at **4.5MB**, ahead of the function — the
+`sizeLimit` in `api/update.js` never applied and raising it does nothing. The
+2026-08-26 report change took the payload from 3.2MB to 5.9MB, so every save
+through the modal returned `FUNCTION_PAYLOAD_TOO_LARGE`; push.sh was unaffected
+because it commits the files itself. The client compresses with
+`CompressionStream` and sets `x-encoding: gzip`; the endpoint runs with
+`bodyParser:false` and gunzips the raw stream. ~7x on this data, 885KB on the
+wire. A plain JSON body still parses (curl, a browser with no
+`CompressionStream`) — it is just held to the 4.5MB cap. `api/update-billing.js`
+carries the same cap on a base64 xlsx and would break at a ~3.3MB statement;
+they run a few hundred KB today.
+
 ## Salesforce fields (all live as of July 2026)
 `resource`, `survey_type`, `resurvey_reason`, and `resurvey_attributed` are all
 active in the FIELDS registry in index.html. FPY, attribution, and resource

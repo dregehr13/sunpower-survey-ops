@@ -708,7 +708,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-mix{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;min-width:80px;max-width:130px;}
 .res-seg{display:block;height:100%;}
 .res-tbl td{vertical-align:top;}
-.res-why{white-space:normal;color:var(--muted);font-size:11px;line-height:1.6;}
 
 /* ── The resource split ───────────────────────────────────────────────────
    The page's first object, and the one Doug asked to see "visually distinct":
@@ -799,7 +798,6 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
   transition:background .15s,border-color .15s,color .15s;}
 .res-col-more:hover{border-color:var(--muted);color:var(--text);}
 .res-col-more .wip-expand{transition:transform .15s;color:var(--faint);}
-.res-col-more::after{content:'';margin-left:auto;font-size:10px;font-weight:400;color:var(--faint);}
 .res-col.open .res-col-more{background:var(--surface);border-color:var(--muted);color:var(--text);}
 .res-col.open .res-col-more .wip-expand{color:var(--text);}
 /* The drawer is ONE full-width panel under the three columns, not three drawers
@@ -864,7 +862,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-grp:hover>td{background:var(--border-lt);}
 .res-kid:hover>td{background:var(--bg);}
 /* The "why" and the towns behind a market, opened from the market row. Keeps
-   a 240px wall of prose out of every row of the default view. */
+   a 240px wall of prose out of every row of the default view. (.res-why went
+   with the column it styled — the prose lives in .res-detail-in now.) */
 .res-detail>td{padding:0;background:var(--bg);}
 .res-detail-in{padding:11px 16px 13px 30px;font-size:11px;color:var(--muted);line-height:1.7;}
 
@@ -2529,12 +2528,12 @@ const TIP={
   mapAbsorb:'Surveys a week going to the vendor inside markets a surveyor can already reach as a day trip — the work the team is paying for twice. Per week rather than a total, because that is the unit capacity is quoted in. The dollar figure beside it is what those markets have actually been invoiced, from the imported statements.',
   mapSite:'Prices a surveyor based at any point you click: which markets come into day-trip range, how much of that work is outsourced today, what the model says one person could do at that drive, and what it would cost against the vendor\'s per-survey price. It prices a location, it does not choose one — an optimiser would answer with a point in a field.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
-  resSplit:'How the survey work divides across the three resources, each measured on what matters for it: capacity for the team we employ, price for the vendor we buy, volume and yield for the reps. Volume is the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on. The columns are equal width on purpose — their job is comparing yield against yield, and the bar above already says who does how much.',
-  resCapacity:'A modelled ceiling, not an observation. One surveyor\'s day is field hours minus daily overhead minus the drive to the market, divided by time on site plus admin plus a hop between jobs — at an 8-mile market that is about 3 a day, so ~15 a week each, and the team total is the roster summed at that distance. Every knob in it is an estimate calibrated to what Doug has seen, and every one is editable in Settings → Resource model (a surveyor\'s own knobs in roster.json still win). Read the gap against it as a question, not as headroom: if the team completes a fraction of this, either surveying is not their whole job or the model is wrong.',
-  resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A recommendation is a case to check, never a verdict — the thresholds behind it are fitted to this team\'s own history, not to an industry standard. Grouped rows get theirs from the same rules a single market does.',
+  resSplit:'How the survey work divides across the three resources. Volume and share read the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on.',
+  resCapacity:'A modelled ceiling, not an observation: one surveyor\'s day is field hours minus overhead minus the drive, divided by time on site plus admin plus a hop between jobs. ~15 a week each at an 8-mile market, summed across the roster. Every knob is an estimate, editable in Settings → Resource model. Read the gap against it as a question, not as headroom.',
+  resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A case to check, never a verdict — the thresholds are fitted to this team\'s own history. A group takes the recommendation of the markets inside it.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
-  billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an SPWR surveyor against, not the base rate.',
-  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict: the tool compares the invoice with Salesforce and does not know the contract.',
+  billPerSurvey:'Total invoiced divided by billed survey visits, so travel adders and demobilisation are inside it. Compare an SPWR surveyor against this, not against the base rate.',
+  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict — the tool knows what the invoice and Salesforce say, not what the contract says.',
   mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
@@ -8388,7 +8387,7 @@ const BILL_SORTS = {
     flagn: a=>a.flagN||0,
   },
 };
-const BILL_TEXT_COLS = ['name','state','charge','sf','vendor','statement','status'];
+const BILL_TEXT_COLS = ['name','state','charge','sf','vendor','status'];
 function billSortBy(k){
   const s=billSort[billLens];
   if(s.k===k) s.asc=!s.asc;
@@ -8642,14 +8641,22 @@ function _renderBillingTable(scoped,meta){
       +(billF.q?' · matching "'+billF.q+'"':'');
   }
 
-  // The Statement column prints the same filename on every row while only one
-  // statement is in view — the rule the vendor toggle already follows.
+  // Which statement billed a line sits UNDER ITS DATE, not in a column of its
+  // own. As a column it was the widest thing on the right-hand side carrying
+  // the least: the table opens newest-first, so every visible row printed the
+  // same filename in 10px faint. Secondary detail under its primary cell is
+  // what .cmeta is for everywhere else in this table (an address under a name,
+  // "after Base Aug 11" under a charge), and a charge's date and the statement
+  // that reported it are the same fact. Cutting BY statement is the bar's
+  // filter, which is why nothing is lost by dropping the sort with the column.
+  // Still hidden whenever only one statement is in view — the rule the vendor
+  // toggle already follows.
   const multiSt=(_billing.statements||[]).length>1 && billF.statement==='all';
 
   host.innerHTML = rows.length ? `
     <div class="xscroll"><table id="bill-charges-tbl" class="tbl bill-tbl"><thead><tr>
       ${billTh('date','Date')}${billTh('name','Account')}${billTh('state','State')}${billTh('charge','Charge')}${billTh('cost','Cost','r')}
-      ${billTh('sf','Salesforce')}${billTh('flags','Also flagged')}${multiSt?billTh('statement','Statement'):''}
+      ${billTh('sf','Salesforce')}${billTh('flags','Also flagged')}
     </tr></thead><tbody>
       ${rows.map(l=>{
         const m=l.match;
@@ -8663,14 +8670,14 @@ function _renderBillingTable(scoped,meta){
         }).join(' ');
         const prior=(l.priorLines||[]).map(p=>`${p.subtype} ${fmtDateShort(p.date)}`).join(', ');
         return `<tr>
-          <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}</td>
+          <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}${
+            multiSt?`<div class="cmeta">${esc((l.statement||'').split('/').pop())}</div>`:''}</td>
           <td><div>${esc(l.name||'—')}</div><div class="cmeta">${esc(l.address||'')}</div></td>
           <td style="color:var(--muted);">${esc(_billState(l)||'—')}</td>
           <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="cmeta">after ${esc(prior)}</div>`:''}</td>
           <td class="r" style="white-space:nowrap;">${_bmoney(OpsBilling.usd(Math.abs(l.units||0),l.vendor))}</td>
           <td>${sf}</td>
           <td>${others||'<span class="pna">—</span>'}</td>
-          ${multiSt?`<td style="color:var(--faint);font-size:10px;">${esc((l.statement||'').split('/').pop())}</td>`:''}
         </tr>`;
       }).join('')}
     </tbody></table></div>
@@ -9338,20 +9345,22 @@ async function saveToServer(){
   const status=document.getElementById('upd-save-status');
   btn.disabled=true; btn.textContent='Saving...'; status.textContent='Pushing to GitHub — live in ~30 seconds...';
   try{
-    // Compress payload using native CompressionStream to bypass Vercel 4.5MB limit
+    // Compress payload using native CompressionStream to bypass Vercel 4.5MB limit.
+    // A browser without it sends the body plain and is held to that cap — which
+    // the 413 below names, rather than throwing on a missing constructor.
     const payload = JSON.stringify({rows:lastParsedRows, password:pw});
-    const stream = new Blob([payload]).stream().pipeThrough(new CompressionStream('gzip'));
-    const compressedBody = await new Response(stream).arrayBuffer();
+    let body = payload;
+    const headers = {'Content-Type':'application/json'};
+    if(window.CompressionStream){
+      const stream = new Blob([payload]).stream().pipeThrough(new CompressionStream('gzip'));
+      body = await new Response(stream).arrayBuffer();
+      headers['x-encoding'] = 'gzip';
+    }
 
-    const res=await fetch('/api/update',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-encoding':'gzip'
-      },
-      body:compressedBody
-    });
+    const res=await fetch('/api/update',{ method:'POST', headers, body });
 
+    // A 413 comes back as HTML from the platform, so it has to be read before res.json()
+    if(res.status===413) throw new Error('Too large for the server to accept from this browser — run push.sh instead.');
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'Unknown error');
     status.style.color='var(--green)';
