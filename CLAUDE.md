@@ -517,6 +517,27 @@ to undo:
   and the WIP "needs attention" badge already showed what happens when a
   judgement lives in one browser. State is the key because it is the unit a
   sales crew moves in and the only one stable across a change of map radius
+- **Nothing on this page re-renders the page** (2026-08-27, Doug's ask: make it
+  smoother). `renderResource()` measured **177ms**, and `resToggleIns()` —
+  opening one collapsed paragraph — paid all of it, as did every drawer open and
+  every switch of the cut. Two causes, both fixed:
+  - **`resMarkets()` is memoised**, and it ran TWICE per render because
+    `_renderResBody()` recomputed what `renderResource()` had already built.
+    Clustering every placeable in-scope row is ~100ms of the 177. The key is the
+    **identity** of everything it reads — `allRows`, `mapRadius`, `MAPGEO.zips`,
+    `_roster`, `_billing` — which is sound because none of those are mutated in
+    place: `loadAll()` returns a new array, `delRow()` filters, an import
+    reassigns `_billing`. The capacity model is the exception, since
+    `applyResModel()` applies it by mutating OpsCoverage's base config, so it
+    **bumps `_resModelGen`** — if another path ever changes the model, it has to
+    bump that counter or the page will show stale capacity
+  - **A findings row toggles a class.** The detail is always in the DOM and
+    `.res-ins-d` is hidden by CSS, so opening one is a class flip rather than a
+    rebuild — which is also what lets the caret and the body carry a transition,
+    something a destroyed-and-recreated node never could
+  - Measured after: full render **177ms → 20ms**, switch cut 30ms, open drawer
+    31ms, open a finding **177ms → 0.2ms**. Memo invalidation verified against
+    radius (214 markets → 359 at 15mi → 214), the model and a row replacement
 - **Findings are collapsed and moved below the table.** The derivation stays —
   every line recomputes from the markets the table shows — but headlines carry
   it and the detail opens on demand. **The capacity caveat is repeated in the
@@ -902,6 +923,12 @@ labelled. Things not to undo:
     is what made the page 44 screens. `BILL_PAGE` (50) show, the rest is a
     click. `billCopy()` expands to everything *before* copying, so "Copy table"
     never quietly copies only the visible page
+  - **Paging redraws the TABLE, not the panel** (2026-08-27). `billMore()` and
+    the expand inside `billCopy()` went through `_renderBillMain()`, which
+    rebuilt the rail, the notice and the whole chip row in order to add fifty
+    rows beneath them. They call `_renderBillTable()` now; the rail and the
+    chips are the same DOM nodes across a page-in. Copy still expands first —
+    verified 50 → 592 rows before the clipboard write
   - **Import is a modal off the bar's top-right**, not the last panel on the
     page — it is the one thing you come here to do, and it sat below 1,033
     rows. *Statements imported* went into the modal with it: what is already
@@ -941,6 +968,20 @@ labelled. Things not to undo:
     Z and numeric ones highest-first, blanks sink in both directions — the same
     vocabulary as Performance, Quality and the drill drawer. The charges table
     had no sort at all before, only a hardcoded newest-first
+
+### Entrance animation on the two async pages
+`animateSections()` runs once in the `requestAnimationFrame` after
+`renderPage()`. Billing and Resource render a **"Loading…" placeholder** first
+and fill in when their fetches land, so that rAF staggered the placeholder and
+the real content then appeared with no entrance at all — the only two pages in
+the app that did not fade in. Resource is the worse of the two: it waits on
+`roster.json` *and* `geo/zips.json`, so panel one animated alone and the other
+three popped in a beat later. Fixed 2026-08-27 with `_awaitingContent`: the
+placeholder branch marks the page, and the render that replaces it calls
+`_animateOnArrival()`, which fires **once** however many fetches it was waiting
+on. Don't replace this with an unconditional `animateSections()` in the loader —
+Resource has three loaders that can each resolve separately, and the sections
+would re-stagger on every one.
 
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
