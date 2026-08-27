@@ -344,8 +344,12 @@ tr:hover td{background:var(--bg);}
 .set-model>div+div{border-left:1px solid var(--border-lt);padding-left:26px;}
 .set-unit{display:flex;align-items:baseline;gap:6px;}
 .set-unit>span{font-size:10px;color:var(--faint);width:26px;}
-.set-edited{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-dk);
-  background:var(--blue-bg);border-radius:3px;padding:1px 5px;margin-left:5px;vertical-align:1px;}
+.set-save{display:flex;align-items:center;gap:9px;margin-top:14px;border-top:1px solid var(--border-lt);padding-top:12px;}
+.set-save-state{flex:1;font-size:11px;line-height:1.5;}
+.set-save input{width:150px;font-size:12px;padding:5px 9px;border:1px solid var(--border);border-radius:6px;
+  background:var(--bg);color:var(--text);outline:none;}
+.set-save input:focus{border-color:#8f8f98;}
+@media(max-width:860px){.set-save{flex-wrap:wrap;}.set-save-state{flex:1 1 100%;}}
 .set-derive{margin-top:14px;border-top:1px solid var(--border-lt);padding-top:12px;
   font-size:11px;color:var(--muted);line-height:1.8;}
 .set-derive b{color:var(--text);}
@@ -568,6 +572,22 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-state{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:12px;}
 .map-state[hidden]{display:none;}
 .map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted);}
+.map-legend .map-ring{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:-2px;
+  border:1px dashed var(--res-spwr);background:color-mix(in srgb,var(--res-spwr) 10%,transparent);}
+/* The layer and the siting tool are checkbox-shaped controls, not segments of
+   the metric toggle: they compose with it rather than replacing it. Filter
+   chips in this app darken their border one step and never move — same here. */
+.map-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0;}
+.map-layers{display:flex;gap:8px;}
+.map-layer{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;font-weight:600;
+  color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  height:30px;padding:0 10px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;}
+.map-layer:hover{color:var(--text);border-color:var(--muted);}
+.map-layer.on{color:var(--text);border-color:var(--text);}
+.map-layer input{accent-color:var(--res-spwr);width:13px;height:13px;cursor:pointer;}
+.map-layer.btn-like{gap:0;}
+.map-layer.btn-like.on{background:var(--text);color:#fff;border-color:var(--text);}
+.map-layer.btn-like.on .ki{color:rgba(255,255,255,.7);}
 .map-ramp{width:120px;height:7px;border-radius:99px;}
 .map-swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px;}
 .map-scrub{display:flex;gap:11px;align-items:center;margin-top:12px;}
@@ -656,21 +676,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .bill-pill.sev-med{background:var(--amber-bg);color:var(--amber);}
 .bill-pill.sev-info{background:var(--bg);color:var(--muted);}
 .bill-tbl td{vertical-align:top;}
-/* The overlap notice. Two statements are allowed to cover the same days and
-   both are kept — that is what makes a double-billed charge visible — but it
-   means the rail above counts those charges twice, and a page that reads high
-   without saying so is worse than one that reads low. Amber, not red: the
-   statements are not wrong, the total just is not settled yet. */
-/* The quiet twin of .bill-warn: overlapping statements are how this vendor
-   issues them, and the import stores one copy, so this states a fact rather
-   than raising an alarm. Amber would say something is wrong. */
-.bill-note{margin:0 0 14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);
-  background:var(--surface);font-size:12px;line-height:1.6;color:var(--muted);}
-.bill-note strong{font-weight:600;color:var(--text);}
+/* The page's one notice, and it is an alarm: the same charge type billed on
+   two statements under different dates. Neither statement shows the other, so
+   nothing but this catches it. There is deliberately no notice for overlapping
+   statement periods — they overlap by design and the import stores one copy, so
+   a banner there would report a solved problem on every load. Amber, not red:
+   a genuine second visit looks identical, so each line is a prompt to check. */
 .bill-warn{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;
   border:1px solid #f0dcae;border-radius:var(--radius-lg);background:var(--amber-bg);
   font-size:12px;line-height:1.6;color:var(--amber);}
-.bill-warn strong{font-weight:700;}
 .bill-warn>div{flex:1 1 300px;min-width:0;}
 .bill-warn-btn{font:inherit;font-size:11px;font-weight:600;padding:5px 11px;margin-left:auto;
   border:1px solid #dcc38a;border-radius:6px;background:rgba(255,255,255,.6);color:var(--amber);
@@ -711,18 +725,54 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-split-bar>span{display:block;height:100%;}
 .res-split-key{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--muted);margin-bottom:2px;}
 .res-split-key b{color:var(--text);font-weight:700;}
-.res-cols{display:flex;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:14px;}
-.res-col{flex:1 1 230px;min-width:230px;padding:0 18px 4px 0;border-right:1px solid var(--border);}
+/* A GRID, not a flex row, so every band — name, share, rate, lead, the three
+   measures, the note, the expander — sits at the same height in all three
+   columns. Flex could only align the tops: the lead line wraps to two lines in
+   one column and one in another, and from there down nothing agreed, so "First
+   pass yield" in the middle column sat beside "Cycle time" in the outer ones.
+   Subgrid does it exactly; without it the columns fall back to the old
+   independent flow rather than to something broken. */
+/* THREE COLUMNS, never auto-fit. auto-fit wrapped to 2x2 under about 1150px,
+   which broke three things at once: Sales reps landed in row 2 column 1 but
+   still matched :not(:first-child) and sat 18px out of line with the column
+   above it; the open column's tab was in row 1 while the drawer it is supposed
+   to be joined to was two rows below, so the notch pointed at nothing; and the
+   two rows ran together with no rule between them. Three columns hold to 861px
+   and stack to one below it. */
+.res-cols{display:grid;grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--border);margin-top:14px;}
+.res-col{padding:0 18px 8px 0;border-right:1px solid var(--border);}
 .res-col:last-child{border-right:none;padding-right:0;}
 .res-col:not(:first-child){padding-left:18px;}
 /* No colour cap on the column. One was tried and removed the same day: a 3px
    bar directly beneath a full-width segmented bar reads as a doubled bar, and
    the share numeral below is already drawn in the resource's own hue, which
    identifies the column on its own. */
-/* Flex column so the three expanders sit on ONE line across the row: the notes
-   above them run to different lengths, and three carets at three heights read
-   as three unrelated controls. */
-.res-col{padding-top:12px;display:flex;flex-direction:column;}
+/* Flex is the no-subgrid fallback; it aligns the expanders even when the bands
+   above them cannot be aligned. IT MUST STAY ABOVE THE @supports BLOCK — it
+   sat below it at equal specificity, so display:flex won unconditionally and
+   the subgrid never applied: the expanders lined up (margin-top:auto does that
+   on its own) while every band above them sat at a different height per column,
+   which is the exact thing subgrid was added to fix. */
+.res-col{padding-top:12px;display:flex;flex-direction:column;
+  transition:background .15s,border-color .15s;}
+/* Nine bands: name, share, rate, lead, the three measures, the note, the
+   expander. The span must match that count. */
+@supports(grid-template-rows:subgrid){
+  .res-col{grid-row:span 9;display:grid;grid-template-rows:subgrid;}
+}
+/* THE OPEN COLUMN IS A TAB. It takes the drawer's own background and drops the
+   hairline between itself and its neighbour, so the tint runs unbroken from the
+   column into the panel below it and which of the three is open is readable at
+   a glance rather than from a caret 300px down. */
+/* Outlined down the sides and open at the foot, so the column and the drawer
+   below it are one shape with a notch showing which column opened it. The
+   outline is an INSET shadow, not a border: a real border would resize the grid
+   cell and shove the other two columns sideways every time one opened. The 2%
+   tint alone was not readable — --bg against --surface is #faf9f6 on #fff. */
+.res-col.open{background:var(--bg);border-right-color:transparent;border-radius:8px 8px 0 0;
+  box-shadow:inset 1px 0 0 var(--border), inset -1px 0 0 var(--border);}
+.res-col:has(+ .res-col.open){border-right-color:transparent;}
 .res-col-name{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:baseline;gap:7px;}
 .res-col-share{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--text);margin:5px 0 0;}
 .res-col-rate{font-size:11px;color:var(--muted);margin-bottom:11px;}
@@ -743,16 +793,21 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* Each column opens the people behind its numbers. A caret and a name rather
    than a clickable column: "hover means this opens something" is a promise, and
    a promise is easier to read on a control that says what it opens. */
-.res-col-more{display:flex;align-items:center;gap:5px;margin-top:auto;padding:9px 0 0;
-  font:inherit;font-size:11px;font-weight:600;color:var(--muted);background:none;border:none;
-  border-top:1px solid var(--border-lt);width:100%;text-align:left;cursor:pointer;transition:color .15s;}
-.res-col-more:hover{color:var(--text);}
-.res-col-more .wip-expand{transition:transform .15s;}
-.res-col.open .res-col-more{color:var(--text);}
+.res-col-more{display:flex;align-items:center;gap:6px;margin-top:auto;
+  font:inherit;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;text-align:left;
+  background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 10px;width:100%;
+  transition:background .15s,border-color .15s,color .15s;}
+.res-col-more:hover{border-color:var(--muted);color:var(--text);}
+.res-col-more .wip-expand{transition:transform .15s;color:var(--faint);}
+.res-col-more::after{content:'';margin-left:auto;font-size:10px;font-weight:400;color:var(--faint);}
+.res-col.open .res-col-more{background:var(--surface);border-color:var(--muted);color:var(--text);}
+.res-col.open .res-col-more .wip-expand{color:var(--text);}
 /* The drawer is ONE full-width panel under the three columns, not three drawers
    under three 230px columns — a roster does not fit in a third of a row, and a
-   table that reflows to a different width per column reads as three products. */
-.res-drawer{border-top:1px solid var(--border);margin-top:2px;padding-top:14px;}
+   table that reflows to a different width per column reads as three products.
+   It carries the same tint as the open column so the two read as one shape. */
+.res-drawer{background:var(--bg);border-radius:0 0 8px 8px;padding:14px 16px 16px;
+  box-shadow:inset 1px 0 0 var(--border), inset -1px 0 0 var(--border), inset 0 -1px 0 var(--border);}
 .res-drawer-h{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .res-drawer-t{font-size:13px;font-weight:700;color:var(--text);}
 .res-drawer-s{font-size:11px;color:var(--faint);flex:1;}
@@ -760,7 +815,22 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-half{flex:1 1 320px;min-width:300px;}
 .res-half+.res-half{border-left:1px solid var(--border-lt);padding-left:22px;}
 .res-half-t{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
-@media(max-width:860px){.res-half+.res-half{border-left:none;padding-left:0;}}
+@media(max-width:860px){
+  .res-half+.res-half{border-left:none;padding-left:0;}
+  /* Stacked, the three columns are one on top of another, so the vertical
+     hairline becomes a horizontal one and the side padding goes. The open
+     column can no longer be a tab pointing at the drawer — it is not adjacent
+     to it any more — so it takes a full outline instead of a three-sided one. */
+  .res-cols{grid-template-columns:1fr;}
+  .res-col{border-right:none;border-bottom:1px solid var(--border);}
+  .res-col:last-child{border-bottom:none;}
+  .res-col:not(:first-child){padding-left:0;}
+  /* A closed ring, not the three-sided tab. Stacked, the drawer is at the
+     foot of all three columns rather than directly under this one, so an open
+     bottom edge would point at the next column instead of at the drawer. */
+  .res-col.open{border-radius:8px;box-shadow:inset 0 0 0 1px var(--border);
+    padding-left:14px;padding-right:14px;}
+}
 
 /* ── Intake trend ─────────────────────────────────────────────────────────
    Three windows as three bars plus a word. The bars are there so a thin sample
@@ -786,6 +856,13 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-kid>td:first-child{padding-left:30px;}
 .res-kid>td{background:var(--surface);}
 .res-quiet>td{color:var(--faint);}
+/* Both levels are expanders, and neither responded to hover: these two rules
+   are declared after the global tr:hover td at equal specificity, so they won
+   and the hover was dead. The group band already rests at --bg, which is the
+   app's one hover value, so it is the single place a second tint is needed —
+   it goes one step to --border-lt while the white market rows take --bg. */
+.res-grp:hover>td{background:var(--border-lt);}
+.res-kid:hover>td{background:var(--bg);}
 /* The "why" and the towns behind a market, opened from the market row. Keeps
    a 240px wall of prose out of every row of the default view. */
 .res-detail>td{padding:0;background:var(--bg);}
@@ -843,7 +920,9 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-ins-h:hover{color:var(--blue-dk);}
 .res-ins-h .wip-expand{margin-right:0;}
 .res-ins-row.open .wip-expand{transform:rotate(90deg);}
-.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;padding:0 0 12px 32px;}
+.res-ins-d{font-size:11px;color:var(--muted);line-height:1.65;padding:0 0 12px 32px;display:none;}
+.res-ins-row.open .res-ins-d{display:block;animation:fadeSlideIn .18s ease;}
+.res-ins-h .wip-expand{transition:transform .15s;}
 .res-ins-d code{font-size:10px;background:var(--bg);padding:1px 4px;border-radius:3px;}
 /* A collapsed panel still has to say how many findings it holds and whether
    any is urgent, or collapsing it just hides a red line. */
@@ -915,6 +994,13 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   .shead>.toggle-group{margin-left:auto;}
   /* 5-card grids wrap 2+2+1 — let the 5th card span the row instead of orphaning */
   .kg5>.kcard:nth-child(5){grid-column:1/-1;}
+  /* Six metric segments do not fit a phone. The group scrolls rather than
+     wrapping: a segmented control that wraps loses its end radii and reads as
+     two controls, which is the one thing a segmented control must not do.
+     Same answer the nav gives at this breakpoint. */
+  #page-map .toggle-group{overflow-x:auto;scrollbar-width:none;min-width:0;max-width:100%;}
+  #page-map .toggle-group::-webkit-scrollbar{display:none;}
+  #page-map .tgl-btn,#page-map .map-layer{flex:0 0 auto;}
 }
 
 /* WIP QUEUE — scroll within the card, header stays visible */
@@ -1801,16 +1887,22 @@ function applyFilter(){
 }
 
 // Global filter pieces for pages that don't go through `filtered` (Resurveys)
-function fDim(f,r){
+// `skip` drops one clause for a surface where it would be self-referential.
+// The Map page's coverage modes pass {resource:true}: filtering to Radicl and
+// then asking "who is doing the work here" can only ever answer "Radicl", and
+// the recommendation would be computed from a book with two of its three
+// resources deleted. Dropping it here rather than writing a second dimension
+// test keeps one definition of what the bar means.
+function fDim(f,r,skip){
   if(!f) return true;
   if(Array.isArray(f.region)&&f.region.length&&!f.region.includes(r.region)) return false;
   if(Array.isArray(f.office)&&f.office.length&&!f.office.includes(r.sales_office)) return false;
-  if(f.resource&&f.resource!=='all'&&r.resource!==f.resource) return false;
+  if(!(skip&&skip.resource)&&f.resource&&f.resource!=='all'&&r.resource!==f.resource) return false;
   return true;
 }
 // The current page's dimension test — what almost every caller wants, since
 // they run while their own page is the one being rendered.
-function gfDim(r){ return fDim(getF(),r); }
+function gfDim(r,skip){ return fDim(getF(),r,skip); }
 function gfDateIn(d){ const f=getF(); if(!f) return true; if(f.dateFrom&&d<f.dateFrom) return false; if(f.dateTo&&d>f.dateTo) return false; return true; }
 
 // ═══ FILTER BAR — one builder, per-page state, preset-first dates, chips ═══
@@ -2288,6 +2380,17 @@ function animateSections(pageId){
   // Animate bars
   animateBars(el);
 }
+// Billing and Resource render a "Loading…" note first and fill in when their
+// fetches land. animateSections() runs once in the rAF after renderPage(), so
+// it staggered the placeholder and the real content then appeared with no
+// entrance at all — the only two pages in the app that did not fade in. This
+// marks a page as having shown a placeholder; the render that replaces it
+// animates, once, however many fetches it was waiting on.
+const _awaitingContent=new Set();
+function _animateOnArrival(page){
+  if(!_awaitingContent.delete(page)) return;
+  requestAnimationFrame(()=>animateSections('page-'+page));
+}
 function nav(page){
   currentPage=page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active','entering'));
@@ -2498,15 +2601,16 @@ const TIP={
   mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
   mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a market for its average days open.',
   mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
+  mapReach:'Each surveyor\'s home ZIP and the ground they can work as a day trip from it — the same test the Resource page applies, drawn rather than tabulated. The radius is maxOneWayMi from the capacity model in Settings, measured straight-line, and overlapping rings are filled once so the tint says covered or not covered rather than covered twice.',
+  mapCoverage:'Coverage and Plan read every open and completed survey on the books and ignore the date range. That is not a preference: the recommendation measures its per-week rates over the last eight weeks to the export date, so under an older date range the recent window is empty and every market in the country reads "Gone quiet". The bar\'s region and office choices still apply; the Resource filter does not, because it partitions the very thing these modes measure.',
+  mapAbsorb:'Surveys a week going to the vendor inside markets a surveyor can already reach as a day trip — the work the team is paying for twice. Per week rather than a total, because that is the unit capacity is quoted in. The dollar figure beside it is what those markets have actually been invoiced, from the imported statements.',
+  mapSite:'Prices a surveyor based at any point you click: which markets come into day-trip range, how much of that work is outsourced today, what the model says one person could do at that drive, and what it would cost against the vendor\'s per-survey price. It prices a location, it does not choose one — an optimiser would answer with a point in a field.',
   mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
   resSplit:'How the survey work divides across the three resources, each measured on what matters for it: capacity for the team we employ, price for the vendor we buy, volume and yield for the reps. Volume is the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on. The columns are equal width on purpose — their job is comparing yield against yield, and the bar above already says who does how much.',
   resCapacity:'A modelled ceiling, not an observation. One surveyor\'s day is field hours minus daily overhead minus the drive to the market, divided by time on site plus admin plus a hop between jobs — at an 8-mile market that is about 3 a day, so ~15 a week each, and the team total is the roster summed at that distance. Every knob in it is an estimate calibrated to what Doug has seen, and every one is editable in Settings → Resource model (a surveyor\'s own knobs in roster.json still win). Read the gap against it as a question, not as headroom: if the team completes a fraction of this, either surveying is not their whole job or the model is wrong.',
   resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A recommendation is a case to check, never a verdict — the thresholds behind it are fitted to this team\'s own history, not to an industry standard. Grouped rows get theirs from the same rules a single market does.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits — the all-in cost, so travel adders and demobilisation are inside it. It is the number to compare an SPWR surveyor against, not the base rate.',
-  billTravel:'Adders applied beyond the vendor\'s free radius. Not an error. Tracked because it is the one line a surveyor based in the market removes outright rather than reduces.',
-  billCleanup:'Return visits to finish a survey another resource started, billed at the full first-visit rate. This is what an incomplete first survey costs, and the invoice is the only place it is recorded.',
-  billRework:'Return visits to a job this vendor already did, billed at the full first-visit rate like everything else. Whether that is contractually right is a contract question.',
   billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict: the tool compares the invoice with Salesforce and does not know the contract.',
   mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
 };
@@ -5667,8 +5771,21 @@ function mapCities(){
 const mapCityFor=zip=>mapCities()[zip]||zip;
 
 let mapMarket='US', mapMetric='vol', mapRadius=OpsCoverage.DEFAULT_RADIUS_MI;
+// The team's own geography is a LAYER, not a metric. It changes the reading of
+// every mode — resurveys clustered outside anyone's reach, a WIP pile twelve
+// miles from Sam — and as a sixth mode it could only ever be seen alone, which
+// is the one view where it says least. It ANDs against nothing and can never
+// empty the map, so it is not the third-filter-row problem the WIP page has.
+let mapTeam=false;
+// Siting: click anywhere to price a base there. Off by default because while
+// it is on, a click means "put a base here" rather than "open this market".
+let mapSiteMode=false, mapSite=null;
+// The two coverage modes and their vocabulary.
+const MAP_RES_MODES=['cov','rec'];
+const mapIsRes=()=>MAP_RES_MODES.includes(mapMetric);
 let mapHoverKey=null, _mapPlaces=new Map(), _mapProj=null, _mapPath=null, _mapW=0, _mapH=0, _mapDpr=1;
 let _mapStatePaths=[], _mapMarketCounts={}, _mapHoverState=null;
+let _mapInv=null, _mapMiPx=0;
 const MAP_ABBR=Object.fromEntries(Object.entries(MAP_STATE_NAMES).map(([a,n])=>[n,a]));
 const MAPGEO={zips:null,states:null,cities:null,counties:{}};
 let _mapLoading=false, _mapErr=null;
@@ -5679,6 +5796,18 @@ function setMapMarket(v){ mapMarket=v; mapHoverKey=null; renderMap(); }
 // rather than a constant. Assigns, never toggles: clicking the radius you are
 // already on must no-op, same rule the WIP lens follows.
 function setMapRadius(v){ const r=+v; if(r===mapRadius) return; mapRadius=r; mapHoverKey=null; renderMap(); }
+// The layer and the siting tool are checkboxes, so they TOGGLE — unlike the
+// metric and radius controls, which are segmented and must no-op on the
+// segment you are already in.
+function setMapTeam(v){ mapTeam=!!v; renderMap(); }
+function setMapSiteMode(v){
+  mapSiteMode=!!v;
+  // Turning the tool on turns the layer on with it: a candidate ring priced
+  // against invisible existing rings is a number with nothing to compare to.
+  if(mapSiteMode) mapTeam=true; else mapSite=null;
+  renderMap();
+}
+function clearMapSite(){ mapSite=null; renderMap(); }
 // The toggles are painted once by renderMap, but switching metric or window
 // only redraws the canvas — without this the highlight stays on whatever was
 // selected at the last full render.
@@ -5687,9 +5816,25 @@ function _mapSyncToggles(){
     const on=b.dataset.mm===mapMetric;
     b.classList.toggle('active',on); b.setAttribute('aria-pressed',String(on));
   });
+  _mapScrollActive();
+}
+// On a phone the six segments scroll, and the active one can sit off the right
+// edge — a segmented control whose selection you cannot see is worse than no
+// control. Only scrolls when the group actually overflows.
+function _mapScrollActive(){
+  const b=document.querySelector('#page-map [data-mm].active');
+  if(!b||!b.parentElement) return;
+  const g=b.parentElement;
+  if(g.scrollWidth>g.clientWidth) b.scrollIntoView({block:'nearest',inline:'nearest'});
 }
 function setMapMetric(v){
+  // Crossing into or out of a coverage mode changes the POPULATION, not just
+  // the paint — cov/rec read the live book and ignore the date range, so the
+  // timeline, its note and the rail all have to be rebuilt rather than
+  // redrawn. Within a class it stays a canvas swap.
+  const was=mapIsRes();
   mapMetric=v; _mapSyncToggles();
+  if(was!==mapIsRes()){ renderMap(); return; }
   // A hard redraw reads as a glitch when the marker style changes shape
   // (heat blobs vs. graduated circles) as well as color. Dip the canvas out
   // and back in around the redraw instead of swapping it in place.
@@ -5725,27 +5870,69 @@ function mapAlbers(lon,lat){
   // Without this Portland renders below Los Angeles.
   return [rho*Math.sin(th), -(r0-rho*Math.cos(th))];
 }
+// The same projection run backwards, which is what turns a click into a place.
+// Only the siting tool needs it: every other thing on this map starts from a
+// row that already knows where it is.
+function mapAlbersInv(x,y){
+  const {n,C,r,r0,l0}=_ALB;
+  const yy=y+r0;                       // undo the screen-down negation above
+  const rho=Math.sqrt(x*x+yy*yy), th=Math.atan2(x,yy);
+  return [Math.asin((C-rho*rho*n*n)/(2*n))/r, (l0+th/n)/r];
+}
 
-// Rows placed by address, with whatever market/date filter is active.
+// Rows placed by address, in two populations.
+//
+// `out` is the date-filtered one every mode has always read. `live` is the same
+// rows with the date range NOT applied, which is what the coverage modes need.
+// That is not a preference — it is a correctness requirement. marketAdvice()
+// measures its per-week rates over the trailing RECENT_WEEKS anchored on the
+// export date, so under a Q1 date filter the recent window holds zero rows and
+// every market in the country reads "Gone quiet". A staffing question is about
+// the current book, the same carve-out Open WIP already makes.
+//
+// The bar's region/office/status choices still bite on both. Those are visible
+// controls on this page, and a panel quietly ignoring an active region filter
+// is the stale-scrubber bug this page was built to avoid.
 function mapRows(){
+  const src=rows.filter(r=>gfDim(r,mapIsRes()?{resource:true}:null));
+  const out=[], live=[], liveAll=[]; let unplaced=0;
+  // Per-state counts for the market picker and the state labels, tallied
+  // before the state filter so the dropdown can still offer every market. Two
+  // tallies for the two populations: a picker offering "Pennsylvania (739)"
+  // beside a map drawing 1,370 dots is telling you about data it is not
+  // showing, which is the same defect in the other direction.
+  const stAll={}, stLive={};
   const _mf=getF()||defaultF();
-  const src=rows.filter(gfDim);
-  const out=[]; let unplaced=0;
   for(const r of src){
     if(!r.start) continue;
-    // The date range used to be applied by the scrubber; with that gone the
-    // filter bar is the only thing selecting a period, so it has to bite here.
-    if(_mf.dateFrom&&r.start<_mf.dateFrom) continue;
-    if(_mf.dateTo&&r.start>_mf.dateTo) continue;
     const m=(r.address||'').match(MAP_ZIP_RE);
     if(!m){ unplaced++; continue; }
     const st=m[1].toUpperCase(), zip=m[2];
     const ll=MAPGEO.zips&&MAPGEO.zips[zip];
     if(!ll){ unplaced++; continue; }
+    stLive[st]=(stLive[st]||0)+1;
+    const inRange=!((_mf.dateFrom&&r.start<_mf.dateFrom)||(_mf.dateTo&&r.start>_mf.dateTo));
+    if(inRange) stAll[st]=(stAll[st]||0)+1;
+    // resMarketFacts() needs the office and the start date under these names —
+    // it is the Resource page's own point shape, so both pages feed it the
+    // same thing rather than each learning the other's field names.
+    const p={r,st,zip,ll,office:r.sales_office||'',date:r.start};
+    // Collected BEFORE the state filter. Office mobility is a property of a
+    // sales org, not of the viewport: measured over one state's half of an
+    // office that moved from Pennsylvania to Virginia, the early and late
+    // footprints overlap and it reads as settled — which flipped Glen Allen
+    // from "Deploy 1–2 weeks" nationally to "Leave with vendor" on zooming
+    // into Virginia. A market's recommendation must not depend on how far in
+    // you are looking.
+    liveAll.push(p);
     if(mapMarket!=='US'&&st!==mapMarket) continue;
-    out.push({r,st,zip,ll});
+    live.push(p);
+    // The date range used to be applied by the scrubber; with that gone the
+    // filter bar is the only thing selecting a period, so it has to bite here.
+    if(!inRange) continue;
+    out.push(p);
   }
-  return {out,unplaced};
+  return {out,live,liveAll,unplaced,stCount:mapIsRes()?stLive:stAll};
 }
 
 // Rows are already inside the filter bar's range by the time they get here.
@@ -5768,27 +5955,36 @@ function renderMap(){
            .then(()=>{ _mapLoading=false; renderMap(); });
   }
 
+  // The roster is what the team layer and the coverage modes are drawn from.
+  // Fetched here rather than in mapEnsureGeo() because resEnsure() already owns
+  // it, caches it and re-renders whichever page is waiting — a second loader
+  // would be a second copy of the roster.
+  if((mapTeam||mapSiteMode||mapIsRes())&&!_roster) resEnsure();
+  // Vendor spend and the siting break-even both come off the invoice history.
+  // Without this the map would say "no vendor price imported" on a page that
+  // simply had not fetched it — the empty-Vendor-cost-column bug again.
+  if((mapSiteMode||mapIsRes())&&!_billing) billingEnsure();
+
   const ready=MAPGEO.zips&&MAPGEO.states&&MAPGEO.cities&&(mapMarket==='US'||MAPGEO.counties[mapMarket]);
-  const {out:all,unplaced}=ready?mapRows():{out:[],unplaced:0};
+  const {out:all,live,liveAll,unplaced,stCount}=ready?mapRows():{out:[],live:[],liveAll:[],unplaced:0,stCount:{}};
+  // Markets are rebuilt from scratch on every render, which is every filter,
+  // radius and market change. mapDraw() runs on hover and must not.
+  _mapCov=null;
 
   // Markets present in the data, so the picker never offers an empty state.
-  // Counts follow every global filter, dates included, and re-sort after — a
-  // dropdown still offering "Pennsylvania (739)" under a 4-week filter is
-  // telling you about data the map is no longer showing.
-  const stCount={};
-  const _mf2=getF()||defaultF();
-  if(ready) rows.filter(gfDim).forEach(r=>{
-    if(!r.start) return;
-    if(_mf2.dateFrom&&r.start<_mf2.dateFrom) return;
-    if(_mf2.dateTo&&r.start>_mf2.dateTo) return;
-    const m=(r.address||'').match(MAP_ZIP_RE);
-    if(m&&MAPGEO.zips[m[2]]){ const s=m[1].toUpperCase(); stCount[s]=(stCount[s]||0)+1; }
-  });
+  // Counts follow every global filter and re-sort after — a dropdown still
+  // offering "Pennsylvania (739)" under a 4-week filter is telling you about
+  // data the map is no longer showing. In the coverage modes, which ignore the
+  // date range, the counts ignore it too: the picker and the state labels have
+  // to describe the population being drawn, whichever one that is.
   const markets=Object.entries(stCount).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
   _mapMarketCounts=stCount;
 
   const b=all.length?mapDayBounds(all):null;
 
+  // The ring the layer draws is exactly the rule reachable() applies, read off
+  // the live model rather than written into the label — Settings can move it.
+  const teamCfg=OpsCoverage.surveyorConfig();
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
   const rTgl=r=>`<button class="tgl-btn${mapRadius===r?' active':''}" aria-pressed="${mapRadius===r}" title="Group jobs within ${r} miles of each other into one market" onclick="setMapRadius(${r})">${r}mi</button>`;
 
@@ -5800,17 +5996,23 @@ function renderMap(){
           <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}${kinfo(TIP.mapLocation)}</div>
           <div class="ssub" id="map-sub">&nbsp;</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <div class="map-ctl">
           ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All markets</button>`:''}
           <select class="map-sel" aria-label="Market" onchange="setMapMarket(this.value)">
             <option value="US"${mapMarket==='US'?' selected':''}>All markets</option>
             ${markets.map(([s,n])=>`<option value="${s}"${mapMarket===s?' selected':''}>${esc(MAP_STATE_NAMES[s]||s)} (${n})</option>`).join('')}
           </select>
-          <div class="toggle-group">
-            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}
+          <div class="toggle-group" role="group" aria-label="What the map shows">
+            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
           </div>
           <div class="toggle-group" role="group" aria-label="Market radius">
             ${OpsCoverage.RADIUS_CHOICES.map(r=>rTgl(r)).join('')}
+          </div>
+          <div class="map-layers">
+          <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
+            <input type="checkbox" ${mapTeam?'checked':''} onchange="setMapTeam(this.checked)">Team reach${kinfo(TIP.mapReach)}</label>
+          <button class="map-layer btn-like${mapSiteMode?' on':''}" aria-pressed="${mapSiteMode}"
+                  onclick="setMapSiteMode(${!mapSiteMode})">Site a base${kinfo(TIP.mapSite)}</button>
           </div>
         </div>
       </div>
@@ -5820,14 +6022,18 @@ function renderMap(){
         <div class="map-state" id="map-msg" hidden></div>
       </div>
       <div class="map-legend" id="map-legend"></div>
-      <div class="map-scrub">
+      ${mapIsRes()?'':`<div class="map-scrub">
         <div class="map-track">
           <canvas id="map-hist" aria-hidden="true"></canvas>
           <div class="map-ticks" id="map-ticks"></div>
         </div>
-      </div>
-      <div class="note">Weekly volume across the range${kinfo(TIP.mapTimeline)} · the period is set by the date range in the filter bar${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
+      </div>`}
+      <div class="note">${mapIsRes()
+        ? `Every open and completed survey on the books, whatever the date range holds${kinfo(TIP.mapCoverage)} · per-week rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
+          + ((getF()||{}).resource&&getF().resource!=='all'?` · <strong>the Resource filter does not apply here</strong> — it is what this mode measures`:'')
+        : `Weekly volume across the range${kinfo(TIP.mapTimeline)} · the period is set by the date range in the filter bar`}${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
     </div>
+    <div id="map-site"></div>
     <div class="sec" id="map-top-sec">
       <div class="shead"><div><div class="stitle">Top locations</div><div class="ssub" id="map-top-sub">&nbsp;</div></div></div>
       <div class="rswk-rows" id="map-top"></div>
@@ -5839,17 +6045,20 @@ function renderMap(){
   if(!ready){ msg.hidden=false; msg.textContent='Loading geography…'; return; }
   if(!all.length){ msg.hidden=false; msg.textContent='No jobs match the current filters.'; }
 
-  _mapAll=all; _mapBounds=b;
-  mapResize(); mapDrawHist(); mapDrawTicks();
+  _mapAll=all; _mapLive=live; _mapLiveAll=liveAll; _mapBounds=b;
+  mapResize(); if(!mapIsRes()){ mapDrawHist(); mapDrawTicks(); }
+  renderMapSite(); _mapScrollActive();
 }
 
-let _mapAll=[], _mapBounds=null;
+let _mapAll=[], _mapLive=[], _mapLiveAll=[], _mapBounds=null;
 
-// Time is the filter bar's job — the map shows whatever it selected. The one
-// scope the map adds is Open WIP, which is a different question from a date
-// range: not "what did we sell then" but "what is on the books right now".
+// Time is the filter bar's job — the map shows whatever it selected. Two modes
+// carve out of that, and both for the same reason: they are not asking what
+// sold in a period. Open WIP asks what is on the books right now; Coverage and
+// Recommendation ask what the team should be doing about the current book.
 function mapVisible(){
-  return mapMetric==='wip'?_mapAll.filter(p=>isWIP(p.r)):_mapAll;
+  if(mapMetric==='wip') return _mapAll.filter(p=>isWIP(p.r));
+  return mapIsRes()?_mapLive:_mapAll;
 }
 
 // Ages anchor on the export date, not the wall clock, so a stale upload does
@@ -5892,7 +6101,10 @@ function mapGroup(pts){
     // The index keeps the key unique without changing what is displayed.
     let key=city+'|'+st;
     if(m.has(key)) key=city+'|'+st+'#'+ci;
-    const e={key,city,st,ci,towns:ranked,states:[...states.keys()],
+    // `mem` is kept so the coverage modes can hand the very same cluster to
+    // resMarketFacts() — the map names a market and the Resource page prices
+    // it, and neither should be re-clustering the other's work.
+    const e={key,city,st,ci,towns:ranked,states:[...states.keys()],mem:c.members,
       zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],_la:0,_ln:0};
     c.members.forEach(p=>{
       e.n++; e.rows.push(p.r); e.zips.add(p.zip);
@@ -5914,6 +6126,73 @@ function mapGroup(pts){
   });
   return m;
 }
+
+// ── The coverage modes ─────────────────────────────────────────────────────
+// Coverage and Plan draw the SAME markets every other mode draws, decorated
+// with the Resource page's own facts. Nothing here recomputes a rate, a reach
+// class or a recommendation: resMarketFacts() owns all three, and a second
+// definition on a second page is the drift this codebase keeps paying for.
+//
+// Cached because mapDraw() runs on hover. Invalidated in renderMap(), which is
+// what every filter, radius and market change already goes through.
+let _mapCov=null;
+function mapCovGroup(pts){
+  if(_mapCov) return _mapCov;
+  // Clustered NATIONALLY and then narrowed to the state, rather than clustered
+  // from what is in view. A market is a fact about the ground, and clustering a
+  // state's rows on their own moves the boundaries: Fredericksburg read "Leave
+  // with vendor" nationally and "Deploy 1–2 weeks" zoomed into Virginia,
+  // because near the Maryland line the greedy seed claims a different
+  // neighbourhood once the out-of-state points are gone. A recommendation must
+  // not depend on how far in you are looking, and this is also what makes the
+  // map agree with the Resource page market for market.
+  //
+  // Markets are kept by their MAJORITY state, so a cross-border market keeps
+  // its out-of-state members — Portland's takes in Vancouver WA, which is the
+  // right population for a staffing question and the wrong one for a heat map.
+  // The other four modes still cluster what is in view; they answer "what did
+  // we sell here", where the state IS the question.
+  const src=_mapLiveAll.length?_mapLiveAll:pts;
+  const all=mapGroup(src);
+  const ctx=resMarketCtx(src);
+  const zips=new Map();
+  all.forEach((z,k)=>{ if(mapMarket==='US'||z.st===mapMarket) zips.set(k,z); });
+  zips.forEach(z=>Object.assign(z, resMarketFacts(z.mem, ctx)));
+  _mapCov=zips;
+  return zips;
+}
+
+// Which resource does most of the work here. One colour per market rather than
+// a three-slice pie: the circles run about 3 to 17px, and at the small end a
+// pie is three unreadable arcs claiming more precision than a dot. The split
+// itself is in the tooltip and the list below, where there is room to read it.
+function mapResLead(z){
+  const c=[z.inhouse||0, z.vendor||0, z.rep||0];
+  const i=c.indexOf(Math.max(...c));
+  return Math.max(...c)>0?{...RES_TRIO[i], n:c[i], share:z.n?c[i]/z.n:0}:null;
+}
+
+// What the coverage rail reads. Reach is per MARKET but the share is of JOBS:
+// "9 of 14 markets" counts a dormant village the same as Portland, and the
+// question is how much of the work the team can get to, not how many dots.
+function mapCovTotals(zips){
+  const ms=[...zips.values()];
+  const inReach=ms.filter(z=>z.reach===OpsCoverage.REACH.DAY);
+  const n=ms.reduce((a,z)=>a+z.n,0);
+  return {
+    inReach: inReach.length,
+    reachShare: n?inReach.reduce((a,z)=>a+z.n,0)/n:null,
+    absorbPerWeek: inReach.reduce((a,z)=>a+(z.outsourcedPerWeek||0),0),
+    absorbUsd: inReach.reduce((a,z)=>a+(z.vendorUsd||0),0),
+  };
+}
+
+// Recommendation colours are the Resource page's tag palette, so a green tag
+// there and a green dot here mean the same thing. `vendor` and `dormant` are
+// both grey in that palette, which cannot survive on a map — dormant draws
+// hollow instead, the convention the cycle and resurvey modes already use for
+// "there is nothing here to colour".
+const MAP_REC_C={absorb:'--green',deploy:'--blue-dk',hire:'--amber',coach:'--red',vendor:'--faint'};
 
 // Label set for the current view: recognisable cities first, ordered by
 // population, then our own towns by job count. A city we also sell in is one
@@ -6021,6 +6300,13 @@ function mapResize(){
   const pad=12, s=Math.min((w-pad*2)/(x1-x0),(h-pad*2)/(y1-y0));
   const ox=(w-(x1-x0)*s)/2-x0*s, oy=(h-(y1-y0)*s)/2-y0*s;
   _mapProj=(lon,lat)=>{ const [x,y]=mapAlbers(lon,lat); return [ox+x*s, oy+y*s]; };
+  _mapInv=(px,py)=>mapAlbersInv((px-ox)/s,(py-oy)/s);
+  // Miles to pixels, measured rather than derived: Albers is equal-area, not
+  // conformal, so a day-trip circle is very slightly an ellipse. At 60 miles
+  // the difference is under a pixel, and a measured scale keeps the ring the
+  // same size whatever the zoom.
+  _mapMiPx=(()=>{ const a=_mapProj(-96,38), b=_mapProj(-96,38+1/69);
+    return Math.abs(b[1]-a[1])||0; })();
   _mapDpr=Math.min(window.devicePixelRatio||1,2); _mapW=w; _mapH=h;
   cv.width=w*_mapDpr; cv.height=h*_mapDpr; cv.style.height=h+'px';
   _mapPath=new Path2D();
@@ -6066,7 +6352,7 @@ function mapDraw(){
   ctx.strokeStyle=rule; ctx.lineWidth=mapMarket==='US'?0.8:0.5; ctx.stroke(_mapPath);
 
   const vis=mapVisible();
-  const zips=mapGroup(vis);
+  const zips=mapIsRes()?mapCovGroup(vis):mapGroup(vis);
   _mapPlaces=zips;
 
   if(mapMetric==='vol'||mapMetric==='wip'){
@@ -6100,13 +6386,13 @@ function mapDraw(){
     sorted.forEach(z=>{
       const [x,y]=_mapProj(z.ll[1],z.ll[0]);
       const rad=Math.max(3.2,Math.min(17,3.2+Math.sqrt(z.n/maxN)*13));
-      const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
+      const v=mapMarkerColor(z,cs);
       if(v==null){
         ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2);
         ctx.strokeStyle=cs.getPropertyValue('--faint').trim(); ctx.lineWidth=1; ctx.stroke();
       } else {
         // A flat fill reads as a data point; a soft glow reads as a place.
-        const col=mapBandColor(v,cs);
+        const col=v;
         ctx.save();
         ctx.shadowColor=col; ctx.shadowBlur=rad*0.9;
         ctx.globalAlpha=.82; ctx.fillStyle=col;
@@ -6117,6 +6403,8 @@ function mapDraw(){
       }
     });
   }
+
+  mapDrawTeam(ctx,cs);
 
   ctx.textAlign='center'; ctx.textBaseline='bottom';
   const placed=[];
@@ -6189,6 +6477,85 @@ function mapBandColor(v,cs){
   return v>=20?c('--red'):v>=10?c('--amber'):c('--green');
 }
 
+// What colour a market draws in the four circle modes, or null for hollow.
+// Hollow means one thing across all of them: there is nothing here worth
+// colouring — too few completions to rate, no resource on the board, or a
+// market with no work in the recent window at all.
+function mapMarkerColor(z,cs){
+  const c=k=>cs.getPropertyValue(k).trim();
+  if(mapMetric==='cov'){ const lead=mapResLead(z); return lead?c(lead.css):null; }
+  if(mapMetric==='rec'){ const k=MAP_REC_C[z.advice&&z.advice.k]; return k?c(k):null; }
+  const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
+  return v==null?null:mapBandColor(v,cs);
+}
+
+// ── The team layer ─────────────────────────────────────────────────────────
+// Every base's day-trip range, drawn over whatever mode is selected.
+//
+// The rings are filled as ONE path, not one fill each. Two surveyors eight
+// miles apart in Portland overlap almost entirely, and stacked translucent
+// fills paint that overlap darker — which reads as "more covered" when it is
+// the same ground twice. A single non-zero-wound path is the union, so the
+// tint says covered / not covered and nothing else.
+function mapDrawTeam(ctx,cs){
+  if(!mapTeam&&!mapSiteMode) return;
+  if(!_mapProj||!_mapMiPx) return;
+  const spwr=cs.getPropertyValue('--res-spwr').trim();
+  const ink=cs.getPropertyValue('--text').trim();
+  const surf=cs.getPropertyValue('--surface').trim();
+  const bases=mapTeam?resBases().filter(b=>b.ll):[];
+  const ring=b=>(b.cfg?b.cfg.maxOneWayMi:OpsCoverage.surveyorConfig().maxOneWayMi)*_mapMiPx;
+
+  if(bases.length){
+    const union=new Path2D();
+    // moveTo before each arc, or Path2D joins the two circles with a chord and
+    // the union fills the wedge of empty ground between Portland and Detroit.
+    bases.forEach(b=>{ const [x,y]=_mapProj(b.ll[1],b.ll[0]);
+      union.moveTo(x+ring(b),y); union.arc(x,y,ring(b),0,Math.PI*2); });
+    ctx.save();
+    ctx.clip(_mapPath,'evenodd');
+    ctx.globalAlpha=.10; ctx.fillStyle=spwr; ctx.fill(union,'nonzero');
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha=.55; ctx.strokeStyle=spwr; ctx.lineWidth=1.1;
+    ctx.setLineDash([4,3]); ctx.stroke(union);
+    ctx.restore();
+  }
+
+  // The candidate ring is solid where the team's are dashed: one of these is a
+  // place somebody lives and the other is a proposal.
+  if(mapSite&&_mapProj){
+    const [x,y]=_mapProj(mapSite[1],mapSite[0]);
+    const r=OpsCoverage.surveyorConfig().maxOneWayMi*_mapMiPx;
+    ctx.save(); ctx.clip(_mapPath,'evenodd');
+    ctx.globalAlpha=.09; ctx.fillStyle=ink;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha=.75; ctx.strokeStyle=ink; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+    mapPin(ctx,x,y,ink,surf,'Candidate');
+  }
+
+  bases.forEach(b=>{ const [x,y]=_mapProj(b.ll[1],b.ll[0]); mapPin(ctx,x,y,spwr,surf,b.name.split(' ')[0]); });
+}
+
+// A base marker: a haloed dot, and its first name where there is room. Halo
+// first so it stays legible over dark heat.
+function mapPin(ctx,x,y,col,surf,label){
+  ctx.beginPath(); ctx.arc(x,y,5.4,0,Math.PI*2); ctx.fillStyle=surf; ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y,3.6,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fillStyle=surf; ctx.fill();
+  if(label&&mapMarket!=='US'){
+    ctx.save();
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.font='700 10px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+    ctx.lineWidth=3; ctx.strokeStyle=surf; ctx.strokeText(label,x,y+7);
+    ctx.fillStyle=col; ctx.fillText(label,x,y+7);
+    ctx.restore();
+  }
+}
+
 function mapPaintMeta(vis,zips){
   const k=document.getElementById('map-kpis'); if(!k) return;
   const comps=vis.filter(p=>isComplete(p.r));
@@ -6199,14 +6566,23 @@ function mapPaintMeta(vis,zips){
   const byMkt={}; vis.forEach(p=>{byMkt[p.st]=(byMkt[p.st]||0)+1;});
   const topM=Object.entries(byMkt).sort((a,b)=>b[1]-a[1])[0];
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
+  const cov=mapIsRes()?mapCovTotals(zips):null;
   k.innerHTML=`<div class="srail">`
     +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} market${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' states':''}</span></div></div>`
     +`<div class="srail-cell"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="srail-val" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}<span class="srail-sub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</span></div></div>`
-    +(mapMetric==='wip'
+    +(mapIsRes()
+      ? `<div class="srail-cell"><div class="klabel">Inside reach${kinfo(TIP.mapReach)}</div><div class="srail-val">${_rpct(cov.reachShare)}<span class="srail-sub">of the work, ${cov.inReach} market${cov.inReach!==1?'s':''}</span></div></div>`
+      : mapMetric==='wip'
       ? (()=>{ const ages=vis.map(p=>ssDaysOpen(p.r,_mapToday())).filter(x=>x!=null&&x>=0); const a=avg(ages);
           return `<div class="srail-cell"><div class="klabel">Avg days open${kinfo(TIP.ssDaysOpen)}</div><div class="srail-val ${a!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(a,S.targetAvg)]+'-c':''}">${a!=null?a.toFixed(1)+'d':'—'}<span class="srail-sub">in the Site Survey queue</span></div></div>`; })()
       : `<div class="srail-cell"><div class="klabel">Avg cycle${kinfo(TIP.mapCycle)}</div><div class="srail-val ${avgCt!=null?'k'+({good:'g',mid:'a',bad:'r'})[bandFor(avgCt,S.targetAvg)]+'-c':''}">${avgCt!=null?avgCt.toFixed(1)+'d':'—'}<span class="srail-sub">${cts.length} completed</span></div></div>`)
-    +(mapMetric==='wip'
+    +(mapIsRes()
+      // The one number both coverage modes are read for: vendor work sitting
+      // inside a day-trip range the team already has. Per week, because that
+      // is the unit capacity is quoted in — a total would need a window
+      // stated beside it to mean anything.
+      ? `<div class="srail-cell"><div class="klabel">Reachable, outsourced${kinfo(TIP.mapAbsorb)}</div><div class="srail-val ${cov.absorbPerWeek>=OpsCoverage.DEPLOY_WEEKLY?'ka-c':''}">${_r1(cov.absorbPerWeek)}<span class="srail-sub">a week${cov.absorbUsd?' · '+_rmoney(cov.absorbUsd)+' billed':''}</span></div></div>`
+      : mapMetric==='wip'
       // A resurvey rate over open surveys is 0 of 0 by construction — nothing
       // in this view has completed. Show what can actually be acted on.
       ? (()=>{ const over=vis.filter(p=>(ssDaysOpen(p.r,_mapToday())??0)>S.targetAvg).length;
@@ -6216,8 +6592,16 @@ function mapPaintMeta(vis,zips){
     +`</div>`;
 
   const sub=document.getElementById('map-sub');
-  if(sub&&_mapBounds){
-    sub.innerHTML=fmtDate(_mapBounds.lo)+' – '+fmtDate(_mapBounds.hi)
+  // The coverage modes have no date bounds to print — they read the whole book
+  // — so the guard cannot be "do we have bounds".
+  if(sub&&(_mapBounds||mapIsRes())){
+    sub.innerHTML=mapIsRes()
+      ? (mapMetric==='cov'
+          ? 'Who is doing the work · the whole book, not the date range'
+          : 'What to do about each market · the whole book, not the date range')
+        +(mapTeam?'':' · turn on Team reach to see what the team can get to')
+      : !_mapBounds ? '&nbsp;'
+      : fmtDate(_mapBounds.lo)+' – '+fmtDate(_mapBounds.hi)
       +' · '+({vol:'job density',wip:'open surveys',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
   }
 
@@ -6225,15 +6609,23 @@ function mapPaintMeta(vis,zips){
   // the only form of this data a screen reader can get at.
   const tl=document.getElementById('map-top');
   if(tl){
-    const list=[...zips.values()].sort((a,b)=>b.n-a.n).slice(0,12);
+    // Volume ranks the other modes. The coverage modes rank by the decision
+    // instead — most urgent recommendation first, then the outsourced work it
+    // is about — because a list of the twelve biggest markets is already the
+    // Volume mode and says nothing new here.
+    const list=[...zips.values()].sort(mapIsRes()
+      ? (a,b)=>a.advice.rank-b.advice.rank||b.outsourcedPerWeek-a.outsourcedPerWeek||b.n-a.n
+      : (a,b)=>b.n-a.n).slice(0,12);
     const maxN=Math.max(...list.map(z=>z.n),1);
     document.getElementById('map-top-sub').textContent=
-      zips.size?zips.size+' market'+(zips.size!==1?'s':'')+' in view, strongest first':'nothing in view';
+      zips.size?zips.size+' market'+(zips.size!==1?'s':'')+' in view, '
+        +(mapIsRes()?'most urgent first':'strongest first'):'nothing in view';
     tl.innerHTML=list.length?list.map(z=>{
-      const val=mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
+      const val=mapCovVal(z)
+              ??(mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
               :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
               :mapMetric==='wip'?(z.avgOpen!=null?z.avgOpen.toFixed(1)+'d avg open':'open')
-              :(z.comps+' completed');
+              :(z.comps+' completed'));
       const towns=z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town';
       const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):towns),val].join(' · ');
       const k=esc(z.key).replace(/'/g,"\\'");
@@ -6249,11 +6641,34 @@ function mapPaintMeta(vis,zips){
 
   const lg=document.getElementById('map-legend'); if(!lg) return;
   const sw=(c,t)=>`<span><span class="map-swatch" style="background:var(${c});"></span>${t}</span>`;
-  lg.innerHTML=(mapMetric==='vol'||mapMetric==='wip')
+  const teamKey=(mapTeam||mapSiteMode)
+    ? `<span><span class="map-ring"></span>${OpsCoverage.surveyorConfig().maxOneWayMi}mi day trip from a base</span>`:'';
+  lg.innerHTML=mapMetric==='cov'
+    ? RES_TRIO.map(t=>sw(t.css,t.full)).join('')
+      +`<span style="color:var(--faint);">Hollow = no work in view · circle size follows job count · colour is the resource doing most of the work here, the split is in the list below</span>`+teamKey
+    : mapMetric==='rec'
+    ? Object.entries(MAP_REC_C).map(([k,c])=>sw(c,Object.values(OpsCoverage.RECOMMENDATIONS).find(r=>r.k===k).label)).join('')
+      +`<span style="color:var(--faint);">Hollow = gone quiet · a recommendation is a case to consider, not a decision</span>`+teamKey
+    : ((mapMetric==='vol'||mapMetric==='wip')
     ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapVolume)}</span><span style="color:var(--faint);">${mapMetric==='wip'?'Open surveys only, as of the latest export. Hover a market for its average days open.':'Blob size follows job count; overlaps add.'}</span>`
     : mapMetric==='cycle'
       ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`
-      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`;
+      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`)+teamKey;
+}
+
+// The one line a coverage market is summarised by, shared by the list below the
+// map and the hover tooltip so the two can never say different things. Returns
+// null in the other four modes, which each have their own.
+function mapCovVal(z){
+  if(mapMetric==='cov'){
+    const lead=mapResLead(z);
+    return lead?`${lead.full} do ${_rpct(lead.share)} · ${z.inhouse} SPWR / ${z.vendor} outsourced / ${z.rep} rep`:'no work in view';
+  }
+  if(mapMetric==='rec'){
+    return z.advice.label+(z.outsourcedPerWeek>0?' · '+_r1(z.outsourcedPerWeek)+'/wk outsourced':'')
+      +(z.baseMiles!=null?' · '+Math.round(z.baseMiles)+'mi from '+z.baseName:'');
+  }
+  return null;
 }
 
 function mapDrawHist(){
@@ -6299,7 +6714,13 @@ function mapPlaceSub(z){
   const named=z.towns.slice(1,4).map(t=>t[0]).join(', ');
   return z.n+' job'+(z.n!==1?'s':'')+' in the current view · '+(MAP_STATE_NAMES[z.st]||z.st)
     +' · within '+mapRadius+'mi'
-    +(others>0?' · with '+named+(others>3?' +'+(others-3)+' more':''):'');
+    +(others>0?' · with '+named+(others>3?' +'+(others-3)+' more':''):'')
+    // Which population the drawer is showing was invisible from inside it, and
+    // the coverage modes are the one place on this page where neither the date
+    // range nor the Resource filter applies. Say both rather than letting a
+    // reader with Radicl selected wonder why the drawer is full of rep rows.
+    +(mapIsRes()?' · '+drillScopeNote('live')
+      +((getF()||{}).resource&&getF().resource!=='all'?' and the Resource filter':''):'');
 }
 // The drill follows the mode you were reading. Clicking a town in Resurvey
 // mode used to open the plain Start/Complete table with no reason and no
@@ -6315,6 +6736,101 @@ function mapDrillPlace(key){
   openDrill(z.city, mapPlaceSub(z), z.rows, mapDrillOpts());
 }
 
+
+// ── Siting a base ──────────────────────────────────────────────────────────
+// The one question none of the other pages can answer: what would a surveyor
+// based HERE be worth? The roster is hand-maintained, so before this the only
+// way to test a location was to edit roster.json and reload.
+//
+// It prices a location, it does not choose one. An optimiser would hand back a
+// point in a field with no house and no reason for anyone to live there,
+// dressed as a recommendation — the manager knows which towns are hireable,
+// and this only has to price the ones they name. Same rule the market
+// recommendations follow: make the case, leave the decision.
+//
+// The candidate for a new hire drives their own vehicle and works five days.
+// That is what all four on the roster do and what roster.json assumes for an
+// absent `vehicle`, so it is the honest default rather than a flattering one.
+const MAP_SITE_SV={off:['Sun','Sat'],vehicle:'own'};
+
+// Nearest recognisable place to a clicked point, so the panel can say
+// "near Albany, OR" rather than printing a latitude at somebody.
+function mapNearCity(ll){
+  let best=null,bd=Infinity;
+  (MAPGEO.cities||[]).forEach(c=>{
+    const d=OpsCoverage.milesBetween(ll,c.ll);
+    if(d!=null&&d<bd){ bd=d; best=c; }
+  });
+  return best?{...best,miles:bd}:null;
+}
+
+function renderMapSite(){
+  const el=document.getElementById('map-site'); if(!el) return;
+  if(!mapSiteMode){ el.innerHTML=''; return; }
+
+  const head=(body,sub)=>`<div class="sec">
+    <div class="shead"><div>
+      <div class="stitle">Site a base</div>
+      <div class="ssub">${sub}</div>
+    </div>${mapSite?`<button class="map-back" onclick="clearMapSite()">Clear</button>`:''}</div>
+    ${body}</div>`;
+
+  if(!_roster) return void(el.innerHTML=head('<div class="note">Loading the roster…</div>','&nbsp;'));
+  if(!mapSite) return void(el.innerHTML=head(
+    `<div class="note">Every figure here is the shipped capacity model — ${resModelLine(RES_MODEL_MI)}. Change it in Settings &rarr; Resource model.</div>`,
+    'Click anywhere on the map to price a surveyor based there'));
+
+  const markets=[...mapCovGroup(_mapLive).values()];
+  const cfg=OpsCoverage.surveyorCfg(MAP_SITE_SV);
+  const cap=OpsCoverage.siteCapture(mapSite, markets, cfg);
+  const near=OpsCoverage.nearestBase(mapSite, resBases().filter(b=>b.ll), b=>b.cfg);
+  const city=mapNearCity(mapSite);
+
+  const cost=resWeeklyCost(MAP_SITE_SV, cap.meanMi);
+  const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
+  const perVendor=billSum?billSum.perSurvey:null;
+  const breakEven=perVendor?cost/perVendor:null;
+
+  // Gained, not merely in range. A candidate that only re-covers Portland has
+  // captured nothing, and a headline counting those would price a hire for
+  // work the team already reaches.
+  const gained=cap.gained.slice().sort((a,b)=>b.m.outsourcedPerWeek-a.m.outsourcedPerWeek).slice(0,8);
+  const gainedWeek=cap.gained.reduce((a,e)=>a+(e.m.outsourcedPerWeek||0),0);
+
+  const cell=(label,val,sub,cls)=>`<div class="srail-cell"><div class="klabel">${label}</div>`
+    +`<div class="srail-val ${cls||''}">${val}<span class="srail-sub">${sub}</span></div></div>`;
+
+  // Worded as a prompt, never a verdict — the same rule every Billing exception
+  // and every market recommendation follows. The tool knows what the model
+  // says; it does not know whether anyone will take the job.
+  const verdict = breakEven==null
+    ? `Import a vendor statement on the Billing page to price this against what the work costs today.`
+    : gainedWeek>=breakEven
+      ? `<b>${_r1(gainedWeek)} outsourced surveys a week newly in range, against a break-even of ${_r1(breakEven)}.</b> Worth putting to the hiring case — check the volume is durable first, on the market's intake trend.`
+      : `<b>${_r1(gainedWeek)} outsourced surveys a week newly in range, against a break-even of ${_r1(breakEven)}.</b> The new work alone does not carry the post; it would have to come with work the team already reaches, or with volume that has not arrived yet.`;
+
+  el.innerHTML=head(`
+    <div class="srail">
+      ${cell('In range',cap.inRange.length,`market${cap.inRange.length!==1?'s':''} · ${cap.gained.length} not already reached`)}
+      ${cell('Work in range',_r1(cap.perWeek),`a week · ${_r1(cap.outsourcedPerWeek)} outsourced`)}
+      ${cell('Modelled capacity',cap.capacity!=null?_r1(cap.capacity):'—',`a week at ${cap.meanMi!=null?Math.round(cap.meanMi):'—'}mi typical`)}
+      ${cell('Weekly cost',_rmoney(cost),breakEven!=null?`break-even ${_r1(breakEven)}/wk at ${_rmoney(perVendor)} a survey`:'no vendor price imported')}
+    </div>
+    <div class="note" style="margin-top:12px;">${verdict}</div>
+    ${gained.length?`<table class="tbl tbl-static" style="font-size:11px;margin-top:12px;">
+      <thead><tr><th>Newly in range</th><th class="r">Miles</th><th class="r">Outsourced/wk</th><th>Reached today</th></tr></thead>
+      <tbody>${gained.map(e=>`<tr>
+        <td>${esc(e.m.city||e.m.name||'—')}${e.m.st?` <span style="color:var(--faint);">${esc(e.m.st)}</span>`:''}</td>
+        <td class="r">${Math.round(e.miles)}</td>
+        <td class="r">${_r1(e.m.outsourcedPerWeek)}</td>
+        <td style="color:var(--muted);">${e.m.baseMiles!=null?Math.round(e.m.baseMiles)+'mi from '+esc(e.m.baseName):'no base'}</td>
+      </tr>`).join('')}</tbody></table>`:''}
+    <div class="note">Measured against the markets in view${mapMarket!=='US'?' — '+esc(MAP_STATE_NAMES[mapMarket]||mapMarket)+' only, so a candidate near a state line under-counts':''} · capacity is the live model, ${resModelLine(RES_MODEL_MI)} · a new hire is costed on their own vehicle at five days</div>`,
+    `${city?(city.miles<=15?`Near ${esc(city.n)}, ${esc(city.s)}`
+        :`${Math.round(city.miles)}mi from ${esc(city.n)}, ${esc(city.s)}`):'A base here'}`
+    +(near?` · ${Math.round(near.miles)}mi from ${esc(near.base.name)}`:'')
+  );
+}
 
 function mapNearest(mx,my){
   let best=null,bd=mapMetric==='vol'?24:20;
@@ -6349,7 +6865,7 @@ document.addEventListener('mousemove',e=>{
     if(st){
       cv.classList.add('hot');
       tip.innerHTML=`<b>${esc(st.name)}</b><br>${_mapMarketCounts[st.abbr]} job${_mapMarketCounts[st.abbr]!==1?'s':''}`
-        +`<div class="mv" style="opacity:.6;">Click to open this market</div>`;
+        +`<div class="mv" style="opacity:.6;">${mapSiteMode?'Click to price a base here':'Click to open this market'}</div>`;
       tip.classList.add('on');
       tip.style.left=Math.min(Math.max(4,mx+13),r.width-tip.offsetWidth-4)+'px';
       tip.style.top=Math.min(Math.max(4,my+13),r.height-tip.offsetHeight-4)+'px';
@@ -6357,17 +6873,18 @@ document.addEventListener('mousemove',e=>{
     return;
   }
   if(z.key!==mapHoverKey){ mapHoverKey=z.key; cv.classList.add('hot'); mapDraw(); }
-  const val=mapMetric==='cycle'
+  const val=mapCovVal(z) ?? (mapMetric==='cycle'
       ? (z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
       : mapMetric==='rs'
         ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
         : mapMetric==='wip'
           ? (z.avgOpen!=null?z.avgOpen.toFixed(1)+'d average in the queue':'')
-          : '';
+          : '');
   tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town'}${mapMarket==='US'?' &middot; '+z.states.join('/'):''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
     +(val?`<div class="mv">${val}</div>`:'')
-    +`<div class="mv" style="opacity:.6;">${mapMarket==='US'?'Click to open '+esc(MAP_STATE_NAMES[z.st]||z.st):'Click for the project list'}</div>`;
+    +`<div class="mv" style="opacity:.6;">${mapSiteMode?'Click to price a base here'
+        :mapMarket==='US'?'Click to open '+esc(MAP_STATE_NAMES[z.st]||z.st):'Click for the project list'}</div>`;
   tip.classList.add('on');
   tip.style.left=Math.min(Math.max(4,mx+13),r.width-tip.offsetWidth-4)+'px';
   tip.style.top=Math.min(Math.max(4,my+13),r.height-tip.offsetHeight-4)+'px';
@@ -6378,6 +6895,10 @@ document.addEventListener('click',e=>{
   if(!cv||currentPage!=='map'||!_mapProj||!e.target.closest('#map-cv')) return;
   const r=cv.getBoundingClientRect();
   const mx=e.clientX-r.left,my=e.clientY-r.top;
+  // While the siting tool is on, a click places the candidate and nothing else.
+  // Two meanings for one click is how a map stops being trustworthy: the tool
+  // is off by default and says on the button that it is on.
+  if(mapSiteMode){ if(_mapInv){ mapSite=_mapInv(mx,my); mapDraw(); renderMapSite(); } return; }
   // Nationally a click means "go there", not "open this one ZIP" — at that
   // zoom a single ZIP is meaningless, and in a dense market like Pennsylvania
   // every pixel is within reach of some cluster, so a cluster-first rule made
@@ -6441,15 +6962,69 @@ let _outlookEditing = null;
 // sat in this object for a day and fed nothing: a setting that changes no
 // number on any page is worse than a missing one, because it reads as though
 // somebody already accounted for travel.
-const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900 };
+const RES_COST_DEFAULTS = { surveyorAnnual: 78000, vehicleMonthly: 900,
+  mileageRate: 0.40, mileageDayMi: 100, mileageBonus: 0.20 };
 function resCost(){
   const s = (S && S.resCost) || {};
   const out = { ...RES_COST_DEFAULTS };
   Object.entries(s).forEach(([k,v])=>{ if(v!=null&&v!==''&&isFinite(v)) out[k]=Number(v); });
   return out;
 }
-// Fully loaded weekly cost of one SPWR surveyor, before travel.
-const resWeeklyCost = () => (resCost().surveyorAnnual / 52) + (resCost().vehicleMonthly * 12 / 52);
+
+// ── The vehicle ────────────────────────────────────────────────────────────
+// Two ways a surveyor's vehicle costs money, and they are not the same shape:
+// a company vehicle is a flat monthly lease, while a surveyor driving their own
+// is reimbursed per mile — so their vehicle cost RISES with the distance to the
+// market, which is the one cost on this page that reacts to the coverage model.
+// All four today drive their own, and that is the default for anyone absent
+// from the list: a company vehicle is the exception, kept as an option.
+const RES_VEHICLES = { own:'Own', company:'Company' };
+const vehicleOf = sv => (sv && sv.vehicle === 'company') ? 'company' : 'own';
+
+// One day's reimbursement. The bonus is a DAY rule — every mile past
+// mileageDayMi in a single day earns it — so it has to be applied per day and
+// multiplied out. Applied to a weekly total instead, a surveyor doing 60 miles
+// five days running would collect a bonus they never earned.
+function mileageDayUsd(miles,k){
+  const c=k||resCost();
+  if(miles==null) return null;
+  return miles*c.mileageRate + Math.max(miles-c.mileageDayMi,0)*c.mileageBonus;
+}
+
+// Weekly vehicle cost for one surveyor working a market `mi` away.
+function resVehicleWeekly(sv,mi){
+  const k=resCost();
+  if(vehicleOf(sv)==='company') return k.vehicleMonthly*12/52;
+  const cfg=OpsCoverage.surveyorCfg(sv);
+  return mileageDayUsd(OpsCoverage.dailyMiles(mi==null?RES_MODEL_MI:mi,cfg),k)*cfg.daysAvailable;
+}
+// Fully loaded weekly cost of one SPWR surveyor. No argument = the default
+// surveyor on the default assumptions, which is what a figure about a surveyor
+// we have not hired yet has to mean.
+const resSalaryWeekly = () => resCost().surveyorAnnual/52;
+function resWeeklyCost(sv,mi){ return resSalaryWeekly() + resVehicleWeekly(sv,mi); }
+
+// What break-even and cost per survey are quoted against: the mean across the
+// people who would actually do the work, since two surveyors on different
+// vehicle arrangements cost different amounts. Falls back to the default
+// surveyor before the roster loads.
+// How the vehicle half of that cost is described in a sentence: one phrase if
+// the roster is unanimous, a split if it is not.
+function _resVehicleNote(){
+  const svs=(_roster&&_roster.surveyors)||[];
+  const own=svs.filter(sv=>vehicleOf(sv)==='own').length, co=svs.length-own;
+  const k=resCost();
+  const mile=`${_rmoney(k.mileageRate*100).replace('$','')}&cent;/mi driven`;
+  if(!svs.length||(own&&!co)) return mile;
+  if(co&&!own) return `${_rmoney(k.vehicleMonthly)}/mo vehicle`;
+  return `${own} on ${mile}, ${co} on ${_rmoney(k.vehicleMonthly)}/mo`;
+}
+
+function resTeamWeeklyCost(){
+  const svs=(_roster&&_roster.surveyors)||[];
+  if(!svs.length) return resWeeklyCost();
+  return svs.reduce((a,sv)=>a+resWeeklyCost(sv),0)/svs.length;
+}
 
 // ── The capacity model, in the open ────────────────────────────────────────
 // Every capacity figure on this page — the gauge, the utilisation percentage,
@@ -6490,14 +7065,26 @@ const RES_MODEL_FIELDS = [
 ];
 const RES_COST_FIELDS = [
   {k:'surveyorAnnual',  label:'Surveyor, fully loaded', unit:'$/yr', step:1000, min:0, max:400000, desc:'Salary plus burden. Divided by 52'},
-  {k:'vehicleMonthly',  label:'Vehicle',                unit:'$/mo', step:50,   min:0, max:10000,  desc:'Lease, fuel, insurance. Divided by 52 after ×12'},
+  {k:'mileageRate',     label:'Mileage rate',           unit:'$/mi', step:0.05, min:0, max:5,      desc:'Paid on every road mile driven in a surveyor’s own vehicle'},
+  {k:'mileageDayMi',    label:'Long-day threshold',     unit:'mi',   step:10,   min:0, max:500,    desc:'Miles in ONE day past which the bonus rate applies'},
+  {k:'mileageBonus',    label:'Long-day bonus',         unit:'$/mi', step:0.05, min:0, max:5,      desc:'Added to the base rate, on those extra miles only'},
+  {k:'vehicleMonthly',  label:'Company vehicle',        unit:'$/mo', step:50,   min:0, max:10000,  desc:'Flat, and only for a surveyor whose roster entry says company — nobody today'},
 ];
+
+// One row shape for both columns, so a capacity knob and a cost knob line up.
+// No per-field "edited" badge: Doug's call 2026-08-26 — the value in the box is
+// the value in use, and a badge beside it only says what the box already says.
+const _setNumRow = (f,cur,fn) => `<div class="set-row">
+  <div><div class="set-label">${esc(f.label)}</div><div class="set-desc">${f.desc}</div></div>
+  <div class="set-control set-unit"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}"
+    value="${cur}" onchange="${fn}('${f.k}',parseFloat(this.value))"><span>${f.unit}</span></div>
+</div>`;
 
 // Both setters mirror setSetting(): write, persist, apply, re-render whatever
 // is on screen. Kept separate from it because these two live in nested objects
 // and because the capacity knobs have to reach lib/coverage.cjs, which nothing
 // else in SETTING_DEFAULTS does.
-function applyResModel(){ OpsCoverage.setModel((S&&S.resModel)||null); }
+function applyResModel(){ OpsCoverage.setModel((S&&S.resModel)||null); _resModelGen++; }
 function _resSet(bag,k,v){
   const next={...((S&&S[bag])||{})};
   if(v==null||v===''||!isFinite(v)) delete next[k]; else next[k]=Number(v);
@@ -6507,12 +7094,97 @@ function _resSet(bag,k,v){
 }
 function setResModel(k,v){ _resSet('resModel',k,v); }
 function setResCost(k,v){ _resSet('resCost',k,v); }
+// Back to the shipped estimate. Local only — the server keeps whatever it has
+// until Save is pressed, so a mis-click is one reload away from undone.
 function resetResModel(){
   S.resModel={}; S.resCost={}; saveSettings(); applyResModel();
   if(currentPage==='settings') renderSettings(); else if(currentPage==='resource') renderResource();
-  toast('Resource model reset to the shipped estimate.');
+  toast('Back to the shipped estimate. Save to put it on the server.');
 }
-const resModelEdited = () => Object.keys((S&&S.resModel)||{}).length+Object.keys((S&&S.resCost)||{}).length;
+// ── Where the model lives ──────────────────────────────────────────────────
+// In the repo, as resmodel.json, fetched like roster.json and outlook.json —
+// NOT only in localStorage. Doug's call 2026-08-26: a capacity model kept in
+// one browser is a model that disappears on a new laptop and that nobody he
+// shows the page to is looking at. The same argument that put outlook.json in
+// the repo, and the same endpoint shape.
+//
+// localStorage stays as the WORKING copy, so an edit takes effect instantly and
+// survives a reload before it is pushed. `S.resSaved` stamps what the server
+// held when this browser last adopted it, which is the only way to tell an
+// unpushed local edit from a change somebody else saved: without it, adopting
+// the server copy on every load would silently throw away whatever was typed
+// here a minute ago, and never adopting would hide everyone else's saves.
+let _resmodel = null, _resmodelLoad = null, _resmodelErr = null;
+const _resStamp = (m,c) => JSON.stringify({model:m||{},cost:c||{}});
+const _resLocal = () => _resStamp(S&&S.resModel, S&&S.resCost);
+
+function resModelEnsure(){
+  if(_resmodel||_resmodelLoad) return _resmodelLoad;
+  _resmodelLoad = fetch('resmodel.json',{cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('no resmodel.json ('+r.status+')'); return r.json(); })
+    .then(j=>{ _resmodel=j; _resmodelErr=null; adoptResModel(j); })
+    .catch(e=>{ _resmodelErr=e.message; _resmodel={model:{},cost:{}}; })
+    .then(()=>{ _resmodelLoad=null;
+      if(currentPage==='settings') renderSettings(); else if(currentPage==='resource') renderResource(); });
+  return _resmodelLoad;
+}
+
+function adoptResModel(j){
+  const srv=_resStamp(j&&j.model, j&&j.cost);
+  // Take the server's copy unless this browser is holding an edit it has not
+  // pushed. First sight of the file always wins — there is nothing to lose yet.
+  if(!S.resSaved || _resLocal()===S.resSaved){
+    const p=JSON.parse(srv); S.resModel={...p.model}; S.resCost={...p.cost};
+  }
+  S.resSaved=srv; saveSettings(); applyResModel();
+}
+const resModelDirty = () => !!S.resSaved && _resLocal()!==S.resSaved;
+
+function _resSaveState(){
+  if(_resmodelErr) return `<span style="color:var(--amber);">Not loaded from the server &mdash; ${esc(_resmodelErr)}. Changes stay in this browser.</span>`;
+  if(resModelDirty()) return '<b style="color:var(--blue-dk);">Changed here, not yet on the server.</b>';
+  const at=_resmodel&&_resmodel.updated, by=_resmodel&&_resmodel.by;
+  return `<span style="color:var(--faint);">On the server${at?' &middot; '+esc(at):''}${by?' &middot; '+esc(by):''}</span>`;
+}
+
+// No password — Doug's call 2026-08-26, the same one that took it off the
+// outlook save. See api/update-resmodel.js for what that does and does not
+// expose; the endpoint validates every key and bound on the way in.
+function saveResModel(){
+  const msg=document.getElementById('rm-msg'), btn=document.getElementById('rm-save');
+  btn.disabled=true; msg.textContent='Saving…';
+  fetch('/api/update-resmodel',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ model:S.resModel||{}, cost:S.resCost||{}, by:'Doug' })})
+    .then(r=>r.json().then(j=>({ok:r.ok,j})))
+    .then(({ok,j})=>{
+      if(!ok) throw new Error(j.error||'save failed');
+      _resmodel=j.resmodel; _resmodelErr=null;
+      S.resSaved=_resStamp(j.resmodel.model,j.resmodel.cost); saveSettings();
+      renderSettings();
+      toast('Resource model saved'+(j.commit?' · '+j.commit:''));
+    })
+    .catch(e=>{ btn.disabled=false; msg.innerHTML=`<b style="color:var(--red);">${esc(e.message)}</b>`; });
+}
+
+// How many of the roster drive their own vehicle, phrased for a sentence.
+function _resOwnCount(){
+  const svs=(_roster&&_roster.surveyors)||[];
+  const own=svs.filter(sv=>vehicleOf(sv)==='own').length;
+  return svs.length&&own===svs.length?'all '+own:own+' of '+svs.length;
+}
+
+// The vehicle half of the cost, spelled out the way the capacity half is.
+function _resVehicleLine(){
+  const k=resCost(), c=OpsCoverage.surveyorConfig();
+  const mi=OpsCoverage.dailyMiles(RES_MODEL_MI,c);
+  const cents=n=>_rmoney(n*100).replace('$','')+'&cent;';
+  const extra=Math.max(mi-k.mileageDayMi,0);
+  return `<b>${Math.round(mi)} road miles</b> in an ${RES_MODEL_MI}-mile day (${RES_MODEL_MI}mi each way &plus; `
+    +`${(Math.round((mi/(c.roadFactor||1)-RES_MODEL_MI*2)*10)/10)}mi of hops, &times; ${c.roadFactor} road) `
+    +`&times; ${cents(k.mileageRate)}/mi${extra?` &plus; ${Math.round(extra)}mi over ${k.mileageDayMi} at ${cents(k.mileageBonus)}`:''} `
+    +`= <b>${_rmoney(mileageDayUsd(mi,k))} a day</b>, ${_rmoney(mileageDayUsd(mi,k)*c.daysAvailable)} a week. `
+    +`A company vehicle would be ${_rmoney(k.vehicleMonthly*12/52)} a week flat.`;
+}
 
 // The roster's own capacity total, spelled out per surveyor. Needs the roster
 // but NOT the geography, so Settings can print it without loading geo/ — the
@@ -6544,9 +7216,13 @@ function resEnsure(){
     .then(r=>{ if(!r.ok) throw new Error('no roster.json ('+r.status+')'); return r.json(); })
     .then(j=>{ _roster=j; _rosterErr=null; })
     .catch(e=>{ _rosterErr=e.message; })
-    // Settings prints the roster's capacity total too, so the loader has to
-    // re-render whichever page is waiting on it — not always Resource.
-    .then(()=>{ _rosterLoad=null; if(currentPage==='settings') renderSettings(); else renderResource(); });
+    // Settings prints the roster's capacity total too, and the Map page's team
+    // layer is drawn from it — so the loader has to re-render whichever page is
+    // waiting on it, not always Resource.
+    .then(()=>{ _rosterLoad=null;
+      if(currentPage==='settings') renderSettings();
+      else if(currentPage==='map') renderMap();
+      else renderResource(); });
   return _rosterLoad;
 }
 
@@ -6573,7 +7249,7 @@ const _r1 = n => n==null?'—':(Math.round(n*10)/10).toFixed(1);
 // four existing charts cannot drift apart.
 const RES_TRIO = [
   { k:'SunPower Surveyor', id:'spwr',   label:'SPWR',       full:'SPWR surveyors',      css:'--res-spwr' },
-  { k:'Radicl Services',   id:'vendor', label:'Outsourced', full:'Outsourced (Radicl)', css:'--res-vendor' },
+  { k:'Radicl Services',   id:'vendor', label:'Outsourced', full:'Outsourced',          css:'--res-vendor' },
   { k:'Sales Rep',         id:'rep',    label:'Sales reps', full:'Sales reps',          css:'--res-rep' },
 ];
 
@@ -6673,8 +7349,14 @@ function resSplit(){
 // Callers must sum over a market's DISTINCT zips. Summing over its members
 // added each ZIP's whole total once per job in that ZIP, which read Bend, OR
 // as 379 billed visits against a true 19 and moved its per-survey rate by $13.
+// Cached on the billing history's identity. reconcile() walks every invoice
+// line against every row, and the Map page's coverage modes rebuild markets on
+// a radius change — without this the walk ran on every redraw.
+let _resVendorZip=null, _resVendorZipSrc=null;
 function resVendorCostByZip(){
+  if(_resVendorZip&&_resVendorZipSrc===_billing) return _resVendorZip;
   const out={};
+  _resVendorZipSrc=_billing; _resVendorZip=out;
   if(!_billing) return out;
   const recon=OpsBilling.reconcile(_billing.lines, allRows);
   recon.forEach(l=>{
@@ -6688,64 +7370,111 @@ function resVendorCostByZip(){
   return out;
 }
 
+// The context every market's facts are measured against. Built once per call
+// rather than per market: officeMobility() walks the whole point set and
+// reconcile() walks the whole billing history, and doing either 182 times was
+// the difference between a redraw and a stall.
+function resMarketCtx(pts){
+  return {
+    weeks: resWeeks(pts),
+    today: _mapToday(),
+    recentFrom: resRecentFrom(),
+    recentWeeks: OpsCoverage.RECENT_WEEKS,
+    bases: resBases().filter(b=>b.ll),
+    mobility: OpsCoverage.officeMobility(pts, d=>weekOf(d)),
+    vendorZip: resVendorCostByZip(),
+  };
+}
+
+// Everything the app knows about one market, from its member points. Split out
+// of resMarkets() 2026-08-26 so the Map page's Coverage and Recommendation
+// modes read the SAME facts rather than growing a second copy — the drift bug
+// this codebase keeps re-learning. The Resource page passes its own scope; the
+// map passes whatever the filter bar left it. Neither owns the definition.
+//
+// Identity (key, name, towns) is deliberately NOT in here: the two pages name
+// a market differently on purpose — the map takes the majority state so a
+// cross-border market like Portland reads right at a state zoom, the Resource
+// page takes the seed's. What must not differ is the arithmetic.
+function resMarketFacts(mem, ctx){
+  const ll=OpsCoverage.centroid(mem);
+  const near=OpsCoverage.nearestBase(ll, ctx.bases, b=>b.cfg);
+  const byRes=k=>mem.filter(p=>p.r.resource===k);
+  const rep=byRes('Sales Rep'), vend=byRes('Radicl Services'), inhouse=byRes('SunPower Surveyor');
+
+  // Every per-week rate is measured over the recent window, never the whole
+  // dataset — see marketAdvice(). Historical totals stay available beside
+  // them so a market that has gone quiet still says how big it once was.
+  const recent=mem.filter(p=>p.date&&p.date>=ctx.recentFrom);
+  const recentVend=recent.filter(p=>p.r.resource==='Radicl Services');
+  const recentMine=recent.filter(p=>p.r.resource==='SunPower Surveyor');
+
+  const repDone=rep.filter(p=>everCompleted(p.r));
+  const repDefects=repDone.filter(p=>isResurveyDefect(p.r)).length;
+
+  // Distinct ZIPs, not members — see resVendorCostByZip().
+  const zips=[...new Set(mem.map(p=>p.zip))];
+  const vendorUsd=zips.reduce((a,z)=>a+((ctx.vendorZip[z]||{}).usd||0),0);
+  const vendorVisits=zips.reduce((a,z)=>a+((ctx.vendorZip[z]||{}).visits||0),0);
+
+  const m={
+    ll, zips,
+    dates:mem.map(p=>p.date).filter(Boolean),
+    n:mem.length, perWeek:mem.length/ctx.weeks,
+    recentN:recent.length, recentPerWeek:recent.length/ctx.recentWeeks,
+    rep:rep.length, vendor:vend.length, inhouse:inhouse.length,
+    outsourcedPerWeek:recentVend.length/ctx.recentWeeks,
+    inhousePerWeek:recentMine.length/ctx.recentWeeks,
+    repDone:repDone.length,
+    repShare:mem.length?rep.length/mem.length:0,
+    repDefectRate:repDone.length?repDefects/repDone.length:null,
+    mobileShare:OpsCoverage.mobileShare(mem,ctx.mobility),
+    baseName:near?near.base.name.split(' ')[0]:'—',
+    baseFull:near?near.base.name:null,
+    baseMiles:near?near.miles:null,
+    reach:near?near.reach:OpsCoverage.REACH.FAR,
+    base:near?near.base:null,
+    vendorUsd:vendorVisits?vendorUsd:null, vendorVisits,
+    vendorPerSurvey:vendorVisits?vendorUsd/vendorVisits:null,
+  };
+  m.trend = OpsCoverage.intakeTrend(m.dates, ctx.today);
+  m.advice = OpsCoverage.marketAdvice(m);
+  return m;
+}
+
+// Clustering every placeable in-scope row is the most expensive thing this
+// page does — ~100ms of a 177ms full render — and it ran TWICE per render,
+// because _renderResBody() called it again after renderResource() already had.
+// Every interaction on the page pays that: opening a drawer, switching the cut,
+// even expanding one collapsed finding.
+//
+// Memoised on the IDENTITY of everything it reads. allRows is always replaced
+// rather than mutated in place (loadAll returns a new array; delRow filters),
+// so reference equality is a sound key for it, and the same holds for the
+// roster, the geo table and the billing history. The capacity model is the one
+// input with no object to compare — applyResModel() applies it by mutating
+// OpsCoverage's base config — so it carries a counter instead.
+let _resMemo=null, _resModelGen=0;
 function resMarkets(){
+  const k=[allRows,mapRadius,MAPGEO.zips,_roster,_billing,_resModelGen];
+  if(_resMemo && _resMemo.k.every((v,i)=>v===k[i])) return _resMemo.v;
+  const v=_resMarketsBuild();
+  _resMemo={k,v};
+  return v;
+}
+function _resMarketsBuild(){
   const pts=resPoints();
-  const weeks=resWeeks(pts);
-  const today=_mapToday();
-  const recentFrom=resRecentFrom();
-  const recentWeeks=OpsCoverage.RECENT_WEEKS;
-  const bases=resBases().filter(b=>b.ll);
-  const mobility=OpsCoverage.officeMobility(pts, d=>weekOf(d));
-  const vendorZip=resVendorCostByZip();
+  const ctx=resMarketCtx(pts);
 
   return OpsCoverage.clusterByRadius(pts, mapRadius).map(c=>{
     const mem=c.members;
-    const ll=OpsCoverage.centroid(mem);
     const towns=new Map(); mem.forEach(p=>towns.set(mapCityFor(p.zip),(towns.get(mapCityFor(p.zip))||0)+1));
     const ranked=[...towns.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
-
-    const near=OpsCoverage.nearestBase(ll,bases,b=>b.cfg);
-    const byRes=k=>mem.filter(p=>p.r.resource===k);
-    const rep=byRes('Sales Rep'), vend=byRes('Radicl Services'), inhouse=byRes('SunPower Surveyor');
-
-    // Every per-week rate is measured over the recent window, never the whole
-    // dataset — see marketAdvice(). Historical totals stay available beside
-    // them so a market that has gone quiet still says how big it once was.
-    const recent=mem.filter(p=>p.date&&p.date>=recentFrom);
-    const recentVend=recent.filter(p=>p.r.resource==='Radicl Services');
-    const recentMine=recent.filter(p=>p.r.resource==='SunPower Surveyor');
-
-    const repDone=rep.filter(p=>everCompleted(p.r));
-    const repDefects=repDone.filter(p=>isResurveyDefect(p.r)).length;
-
-    // Distinct ZIPs, not members — see resVendorCostByZip().
-    const zips=[...new Set(mem.map(p=>p.zip))];
-    const vendorUsd=zips.reduce((a,z)=>a+((vendorZip[z]||{}).usd||0),0);
-    const vendorVisits=zips.reduce((a,z)=>a+((vendorZip[z]||{}).visits||0),0);
-
-    const m={
+    return {
       key:c.seed.st+'|'+ranked[0][0]+'|'+c.seedIndex,
-      name:ranked[0][0], st:c.seed.st, towns:ranked, ll, rows:mem.map(p=>p.r),
-      dates:mem.map(p=>p.date).filter(Boolean),
-      n:mem.length, perWeek:mem.length/weeks,
-      recentN:recent.length, recentPerWeek:recent.length/recentWeeks,
-      rep:rep.length, vendor:vend.length, inhouse:inhouse.length,
-      outsourcedPerWeek:recentVend.length/recentWeeks,
-      inhousePerWeek:recentMine.length/recentWeeks,
-      repDone:repDone.length,
-      repShare:mem.length?rep.length/mem.length:0,
-      repDefectRate:repDone.length?repDefects/repDone.length:null,
-      mobileShare:OpsCoverage.mobileShare(mem,mobility),
-      baseName:near?near.base.name.split(' ')[0]:'—',
-      baseMiles:near?near.miles:null,
-      reach:near?near.reach:OpsCoverage.REACH.FAR,
-      base:near?near.base:null,
-      vendorUsd:vendorVisits?vendorUsd:null, vendorVisits,
-      vendorPerSurvey:vendorVisits?vendorUsd/vendorVisits:null,
+      name:ranked[0][0], st:c.seed.st, towns:ranked, rows:mem.map(p=>p.r),
+      ...resMarketFacts(mem, ctx),
     };
-    m.trend = OpsCoverage.intakeTrend(m.dates, today);
-    m.advice = OpsCoverage.marketAdvice(m);
-    return m;
   }).sort((a,b)=>a.advice.rank-b.advice.rank || b.outsourcedPerWeek-a.outsourcedPerWeek || b.n-a.n);
 }
 
@@ -6886,7 +7615,17 @@ function setResExpand(id){ resExpand = resExpand===id?null:id; renderResource();
 function resToggleGroup(k){ if(resOpen.has(k)) resOpen.delete(k); else resOpen.add(k); _renderResBody(); }
 function resToggleMkt(k){ if(resMktOpen.has(k)) resMktOpen.delete(k); else resMktOpen.add(k); _renderResBody(); }
 function resToggleQuiet(){ resShowQuiet=!resShowQuiet; _renderResBody(); }
-function resToggleIns(i){ if(resInsOpen.has(i)) resInsOpen.delete(i); else resInsOpen.add(i); renderResource(); }
+// Opening one collapsed paragraph used to re-render the whole page. The detail
+// is always in the DOM now and the row toggles a class, so this is a class flip
+// rather than 177ms of clustering — and it can carry a transition, which a
+// destroyed-and-rebuilt node never could.
+function resToggleIns(i){
+  const row=document.getElementById('res-ins-'+i); if(!row) return;
+  const open=!resInsOpen.has(i);
+  if(open) resInsOpen.add(i); else resInsOpen.delete(i);
+  row.classList.toggle('open',open);
+  row.querySelector('.res-ins-h').setAttribute('aria-expanded',String(open));
+}
 
 // FPY bands, the mirror of the Quality page's rate bands (5 / 15 there, so
 // 95 / 85 here). Written against the DISPLAYED value so a column reading 94.0%
@@ -6912,6 +7651,7 @@ function renderResource(){
   if(pending){
     if(!_roster&&!_rosterErr) resEnsure();
     if(!MAPGEO.zips) mapEnsureGeo().then(()=>renderResource());
+    _awaitingContent.add('resource');
     el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading the team and geography…</div></div>';
     return;
   }
@@ -6942,8 +7682,9 @@ function renderResource(){
   // meaningless without a throughput. Quoting it at modelled capacity read
   // $115 against the vendor's $390 — a seven-fold flattery, on the same page
   // whose first line says only a seventh of that capacity is being realised.
-  const breakEven=perVendor?resWeeklyCost()/perVendor:null;
-  const perSurveyNow=inhouseNow>0?resWeeklyCost()/(inhouseNow/placed):null;
+  const teamCost=resTeamWeeklyCost();
+  const breakEven=perVendor?teamCost/perVendor:null;
+  const perSurveyNow=inhouseNow>0?teamCost/(inhouseNow/placed):null;
 
   // The three columns. `lead` is the one row that differs per resource — what
   // its ceiling is — and everything under it is the same three measures in the
@@ -6955,29 +7696,34 @@ function renderResource(){
       +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled${kinfo(TIP.resCapacity)} &middot; ${_rpct(util)} used`,
     `<b style="color:var(--text);">No ceiling.</b> Capacity is whatever is invoiced &mdash; `
       +`${billSum?_rpct(billSum.travelShare)+' of the bill is travel':'import a statement to price it'}.`,
-    `<b style="color:var(--text);">${split.res[2].n.toLocaleString()}</b> surveys from the field. `
-      +`No cost line of its own &mdash; the rework it causes lands on the vendor bill.`,
+    // Was "2,893 surveys from the field", which sat nine pixels above "2,891
+    // completed" with nothing saying why two counts of the same thing differ.
+    // The share of all work is what this column's ceiling actually is.
+    `<b style="color:var(--text);">No cost line.</b> Rework the reps cause is billed by the vendor, `
+      +`so it lands under Outsourced.`,
   ];
+  // One fact each. These were three sentences of argument — "the whole team's
+  // biggest quality lever", "every capacity figure on this page scales with
+  // it" — which is the page making its own case at the reader on every load.
+  // The capacity caveat is the one that survives, because every capacity
+  // figure here is wrong if it is wrong.
   const notes=[
     util!=null&&util<0.6
       ? `<b>Modelled at ${_r1(teamCap/Math.max(bases.length,1))}/wk each; they complete ${_r1(inhouseNow/placed)}.</b> `
-        +`Either surveying is not their whole job or the model is wrong — every capacity figure on this page scales with it.`
+        +`Settle that before using any capacity figure on this page.`
       : 'Capacity is the drive-time model in <code>lib/coverage.cjs</code>, at a tight market.',
     billSum&&billSum.cleanupUsd
-      ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, billed at the full first-visit rate.`
-      : 'One vendor on file. A second needs a spec object, not a second parser.',
-    `Yield here is the whole team's biggest quality lever: ${split.res[2].defects.toLocaleString()} of the `
-      +`${split.res[2].done.toLocaleString()} rep surveys came back.`,
+      ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, at the full first-visit rate.`
+      : 'One vendor on file.',
+    `${split.res[2].defects.toLocaleString()} of them came back.`,
   ];
 
   // What each column opens. The drawer is the answer to "who are these people",
   // which is the question a column of rates provokes and could not answer while
   // the roster sat in the market table's group toggle.
-  const opens=[
-    { n:bases.length, label:b=>b+' SPWR surveyor'+(b===1?'':'s') },
-    { n:Object.keys(OpsBilling.VENDORS).length, label:b=>b===1?'The vendor':b+' vendors' },
-    { n:0, label:()=>'Best and worst reps' },
-  ];
+  // Named for what the column is called directly above them. It said
+  // "SunPower Surveyors" under a heading reading "SPWR surveyors".
+  const opens=['SPWR surveyors','Vendors','Best and worst reps'];
 
   const col=(r,i)=>{
     const m=(label,val,cls,sub)=>`<div class="res-m"><span class="res-m-l">${label}</span>`
@@ -6999,7 +7745,7 @@ function renderResource(){
           i===0?'at today’s throughput':i===1?'all-in, flat':'not billed')}
       <div class="res-col-note">${notes[i]}</div>
       <button class="res-col-more" aria-expanded="${open}" aria-controls="res-drawer" onclick="setResExpand('${r.id}')">
-        <span class="wip-expand"${open?' style="transform:rotate(90deg);"':''}>&#9656;</span>${esc(opens[i].label(opens[i].n))}</button>
+        <span class="wip-expand"${open?' style="transform:rotate(90deg);"':''}>&#9656;</span>${esc(opens[i])}</button>
     </div>`;
   };
 
@@ -7010,8 +7756,8 @@ function renderResource(){
 
   el.innerHTML=`
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Where the work goes</div>
-      <div class="ssub">${split.recentN.toLocaleString()} surveys started in the last ${OpsCoverage.RECENT_WEEKS} weeks &middot; ${_r1(split.perWeek)} a week &middot; yield and cycle over every completion${kinfo(TIP.resSplit)}</div></div></div>
+      <div class="shead"><div><div class="stitle">Resource split</div>
+      <div class="ssub">${split.recentN.toLocaleString()} surveys started in the last ${OpsCoverage.RECENT_WEEKS} weeks &middot; ${_r1(split.perWeek)} a week &middot; yield and cycle read every completion${kinfo(TIP.resSplit)}</div></div></div>
       <div class="res-split-key">
         ${split.res.map(r=>`<span><span class="ld" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(${r.css});margin-right:6px;"></span>${esc(r.label)} <b>${r.share==null?'—':Math.round(r.share*100)+'%'}</b></span>`).join('')}
       </div>
@@ -7025,7 +7771,7 @@ function renderResource(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">${resGroup==='rec'?'Recommendations':'Markets'}</div>
-        <div class="ssub">${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} &middot; reach, volume, durability and rep defect rate decide each one${kinfo(TIP.resRec)}</div></div>
+        <div class="ssub">${resGroup==='rec'?'Grouped by what to do about them':'Grouped by state, opening into '+mapRadius+'-mile markets'} ${kinfo(TIP.resRec)}</div></div>
         <div class="toggle-group">
           ${Object.entries(RES_GROUPS).map(([v,l])=>`<button class="tgl-btn${resGroup===v?' active':''}" aria-pressed="${resGroup===v}" onclick="setResGroup('${v}')">${l}</button>`).join('')}
         </div>
@@ -7035,47 +7781,47 @@ function renderResource(){
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Build vs buy</div>
-      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} &middot; SPWR cost depends on throughput, so it is quoted as a break-even</div></div></div>
+      <div class="ssub">${_billing?'Vendor cost from the imported statements':'No statement imported yet — import one on the Billing page'} &middot; SPWR cost depends on throughput, so it is a break-even</div></div></div>
       <div class="res-bvb">
         <div class="res-bvb-col">
           <div class="klabel">Vendor, all-in</div>
           <div class="res-bvb-v">${_rmoney(perVendor)}</div>
-          <div class="note">${billSum?'Per survey across '+billSum.surveys+' billed visits, travel adders and demobilisation included. The base rate alone is 37% lower.':'Per survey. Import a statement to measure this.'}</div>
+          <div class="note">${billSum?'Across '+billSum.surveys+' billed visits, travel and demob included. The base rate alone is 37% lower.':'Import a statement to measure this.'}</div>
         </div>
         <div class="res-bvb-col">
           <div class="klabel">SPWR break-even</div>
           <div class="res-bvb-v ${breakEven!=null&&perSurveyNow!=null&&perVendor&&perSurveyNow<=perVendor?'good':''}">${breakEven!=null?_r1(breakEven):'—'}</div>
-          <div class="note">Surveys a week per surveyor to match the vendor, at ${_rmoney(resWeeklyCost())}/week loaded. The one figure here that does not rest on the capacity model.</div>
+          <div class="note">Surveys a week per surveyor to match the vendor, at ${_rmoney(teamCost)}/wk loaded.</div>
         </div>
         <div class="res-bvb-col">
           <div class="klabel">Where you are</div>
           <div class="res-bvb-v ${perSurveyNow==null||!perVendor?'':(perSurveyNow>perVendor?'bad':'good')}">${_rmoney(perSurveyNow)}</div>
-          <div class="note">Per SPWR survey at the ${_r1(inhouseNow/placed)} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
-            ? 'Above the vendor: at this throughput insourcing costs more. The case for it is throughput, cycle time or quality, not price.'
-            : perVendor ? 'Below the vendor rate.' : ''}</div>
+          <div class="note">At the ${_r1(inhouseNow/placed)} a week each they do now. ${perSurveyNow!=null&&perVendor&&perSurveyNow>perVendor
+            ? 'Above the vendor rate.' : perVendor ? 'Below the vendor rate.' : ''}</div>
         </div>
       </div>
       <div class="note">
-        Loaded weekly cost ÷ surveys completed, so it falls with throughput:
-        ${[2,4,6,10,15].map(n=>{const c=resWeeklyCost()/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
-        The vendor rate is flat at ${_rmoney(perVendor)} whatever the volume.
-        SPWR figures are an <b>estimate</b> (${_rmoney(resCost().surveyorAnnual)}/yr + ${_rmoney(resCost().vehicleMonthly)}/mo vehicle = ${_rmoney(resWeeklyCost())}/week loaded)
-        &mdash; edit them, and every knob in the capacity model, in <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>.
+        Loaded weekly cost ÷ surveys completed:
+        ${[2,4,6,10,15].map(n=>{const c=teamCost/n; return `<b>${n}/wk</b> ${_rmoney(c)}`;}).join(' · ')}.
+        The vendor is flat at ${_rmoney(perVendor)}.
+        SPWR is an <b>estimate</b>: ${_rmoney(resCost().surveyorAnnual)}/yr + ${_resVehicleNote()} = ${_rmoney(teamCost)}/wk
+        &mdash; <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>.
       </div>
     </div>
 
     <div class="sec">
       <div class="shead"><div><div class="stitle">Findings<span class="res-ins-dot sev-${worst}"></span></div>
-      <div class="ssub">${insights.length} derived from the markets above &middot; open one for what it is counted from</div></div></div>
+      <div class="ssub">${insights.length}, recomputed from the markets above</div></div></div>
       <div class="res-ins">${insights.map((i,ix)=>`
-        <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}">
+        <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}" id="res-ins-${ix}">
           <button class="res-ins-h" aria-expanded="${resInsOpen.has(ix)}" onclick="resToggleIns(${ix})">
             <span class="wip-expand">&#9656;</span><span>${esc(i.headline)}</span></button>
-          ${resInsOpen.has(ix)?`<div class="res-ins-d">${i.detail}</div>`:''}
+          <div class="res-ins-d">${i.detail}</div>
         </div>`).join('')}</div>
     </div>`;
 
   _renderResBody();
+  _animateOnArrival('resource');
 }
 
 // Insights are DERIVED, never a written-in narrative: each one recomputes from
@@ -7099,8 +7845,7 @@ function resInsights(markets,bases,ctx){
       headline:'The team is at '+_rpct(util)+' of modelled capacity',
       detail:`The drive-time model gives ${_r1(teamCap/Math.max(bases.length,1))} surveys a week each at a tight market; `
         +`they complete ${_r1(inhouseNow/Math.max(bases.filter(b=>b.ll).length,1))}. Either surveying is not their whole job, or the model's time-on-site or field-hours setting is wrong. `
-        +`<b>Every capacity figure here scales with this</b>, so settle it before using any hiring number. `
-        +`Both settings are per surveyor in <code>roster.json</code>.`});
+        +`<b>Every capacity figure here scales with this.</b> Both settings are per surveyor in <code>roster.json</code>.`});
   }
 
   // 2. Reach is the whole build-vs-buy story and it is counter-intuitive:
@@ -7113,8 +7858,7 @@ function resInsights(markets,bases,ctx){
       : _r1(absorbable)+' outsourced surveys a week are within day-trip range',
     detail:`${near.length} market${near.length===1?'':'s'} sit within a day trip of ${bases.filter(b=>b.ll).length} bases, and the vendor has done `
       +`${nearVendor} job${nearVendor===1?'':'s'} across all of them. `
-      +`The outsourced work is somewhere else, so re-assigning it to the current team wins nothing. `
-      +`<b>This is a deployment and hiring question, not a scheduling one.</b>`});
+      +`The outsourced work is somewhere else, so re-assigning it to the current team wins nothing.`});
 
   // 3. Where a posting would actually land.
   const dep=markets.filter(m=>m.advice.k==='deploy').sort((a,b)=>b.recentPerWeek-a.recentPerWeek);
@@ -7127,8 +7871,7 @@ function resInsights(markets,bases,ctx){
       detail:`${dep.map(m=>esc(m.name)+', '+m.st).join(' · ')}. `
         +`${_r1(depOut)} a week of it is outsourced. `
         +(mob.length?`<b>${mob.length} of ${dep.length} sit on sales crews whose footprint moves</b>: their early and late footprints do not overlap. `
-          +`The last one relocated across state lines in a single week. `:'')
-        +`A one- to two-week posting is reversible; a hire is not.`});
+          +`The last one relocated across state lines in a single week.`:'')});
   }
 
   // 4. Markets that have gone quiet — the reason rates use a recent window.
@@ -7137,8 +7880,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'info',
       headline:dead.length+' market'+(dead.length===1?'':'s')+' with history have gone quiet',
       detail:`${dead.slice(0,4).map(m=>esc(m.name)+', '+m.st+' ('+m.n+')').join(' · ')}${dead.length>4?' and '+(dead.length-4)+' more':''}. `
-        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. Averaged over the whole dataset they still look staffable, `
-        +`which is why every rate here uses a recent window.`});
+        +`Nothing in the last ${OpsCoverage.RECENT_WEEKS} weeks. Averaged over the whole dataset they still look staffable.`});
   }
 
   // 5. Coaching beats headcount where the volume is rep-done and defective.
@@ -7147,8 +7889,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'med',
       headline:'In '+coach.length+' market'+(coach.length===1?'':'s')+' the problem is rep survey quality',
       detail:`${coach.slice(0,4).map(m=>esc(m.name)+', '+m.st+' — '+_rpct(m.repDefectRate)+' of '+m.repDone).join(' · ')}. `
-        +`Mostly self-surveyed, defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, at least ${OpsCoverage.COACH_MIN_N} completions. `
-        +`A surveyor fixes one job; the rate is a training problem.`});
+        +`Mostly self-surveyed, defect rate above ${_rpct(OpsCoverage.COACH_DEFECT)}, at least ${OpsCoverage.COACH_MIN_N} completions.`});
   }
 
   // 6. What the invoice says about the same question.
@@ -7156,8 +7897,7 @@ function resInsights(markets,bases,ctx){
     out.push({sev:'med',
       headline:_rmoney(billSum.cleanupUsd)+' of the vendor bill finishes surveys someone else started',
       detail:`${billSum.cleanupN} visits at the full first-visit rate, ${_rpct(billSum.cleanupUsd/billSum.usd)} of everything invoiced. `
-        +`It bills the same as a fresh survey, so the invoice does not name it. `
-        +`This is the rep-quality problem, priced — it lands on a vendor bill rather than in any survey metric.`});
+        +`It bills the same as a fresh survey, so the invoice does not name it.`});
   }
 
   // 7. Where intake is going, which is the only leading indicator in the data.
@@ -7170,8 +7910,8 @@ function resInsights(markets,bases,ctx){
         +(slowing.length?slowing.length+' emptying out':''),
       detail:(growing.length?`<b>Growing:</b> ${growing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
         +(slowing.length?`<b>Slowing:</b> ${slowing.slice(0,4).map(m=>esc(m.name)+', '+m.st).join(' · ')}. `:'')
-        +`Measured from project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows, which is a sale landing rather than a survey finishing. `
-        +`It says what has arrived, not what is coming — the Outlook column beside it is for what you know that this cannot.`});
+        +`Project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows — a sale landing, not a survey finishing, `
+        +`so it says what has arrived rather than what is coming.`});
   }
   return out;
 }
@@ -7209,10 +7949,9 @@ function _renderResBody(){
     </tr></thead><tbody>${rowsHtml}</tbody></table></div>
     <div class="note">
       ${live.length} active ${resGroup==='rec'?'group':'area'}${live.length===1?'':'s'} over
-      ${live.reduce((a,g)=>a+g.markets.length,0)} markets &middot; open a row for the markets inside it, and a market for why.
-      Markets are ${mapRadius}-mile clusters, set by the Map page's radius control.
-      <b>Intake trend</b> counts project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows &mdash; what has arrived, not what is forecast.
-      ${showOutlook?'<b>Outlook</b> is a hand-written judgement and never changes the recommendation beside it.':''}
+      ${live.reduce((a,g)=>a+g.markets.length,0)} markets.
+      A market is every job within ${mapRadius} miles of another.
+      <b>Intake trend</b> is project starts across three ${OpsCoverage.TREND_WINDOW_DAYS}-day windows.
     </div>
     <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-mkt-tbl',this,'markets')">Copy table</button></div>`;
 }
@@ -7322,12 +8061,10 @@ function openOutlook(st){
         `<option value="${k}"${o.flag===k?' selected':''}>${k==='unknown'?'Not sure':l}</option>`).join('')}</select></div>
     <div class="res-fld"><label for="ol-note">What you know that the data does not</label>
       <textarea id="ol-note" rows="3" maxlength="280" placeholder="e.g. Austin crew lands Sept 15, expect 20/wk">${esc(o.note||'')}</textarea></div>
-    <div class="res-fld"><label for="ol-pw">Update password</label>
-      <input id="ol-pw" type="password" autocomplete="off"></div>
     <div id="ol-msg" class="note" style="min-height:16px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
       <button class="mbtn" onclick="closeOutlook()">Cancel</button>
-      <button class="mbtn" id="ol-save" onclick="saveOutlook()">Save &amp; commit</button>
+      <button class="mbtn" id="ol-save" onclick="saveOutlook()">Save</button>
     </div>`;
   document.getElementById('outlookModal').classList.remove('hidden');
   setTimeout(()=>{ const f=document.getElementById('ol-note'); if(f) f.focus(); },30);
@@ -7339,12 +8076,14 @@ function closeOutlook(){
 function saveOutlook(){
   const st=_outlookEditing; if(!st) return;
   const msg=document.getElementById('ol-msg'), btn=document.getElementById('ol-save');
+  // No password on this one — Doug's call 2026-08-26. It is a note about a
+  // sales territory, written by the only person who opens this page, and a
+  // prompt on every save made a two-word judgement cost four steps. The
+  // endpoint is unauthenticated to match; see api/update-outlook.js.
   const body={ state:st,
     flag:document.getElementById('ol-flag').value,
-    note:document.getElementById('ol-note').value,
-    password:document.getElementById('ol-pw').value, by:'Doug' };
-  if(!body.password){ msg.innerHTML='<b style="color:var(--red);">Enter the update password.</b>'; return; }
-  btn.disabled=true; msg.textContent='Committing…';
+    note:document.getElementById('ol-note').value, by:'Doug' };
+  btn.disabled=true; msg.textContent='Saving…';
   fetch('/api/update-outlook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(r=>r.json().then(j=>({ok:r.ok,j})))
     .then(({ok,j})=>{
@@ -7371,8 +8110,12 @@ function _resDrawer(id,markets,bases,billSum){
              : id==='vendor' ? _resVendorTable(billSum)
              :                 _resRepTable();
   const sub = id==='spwr'   ? 'From roster.json, placed by home ZIP &middot; capacity is the drive-time model, editable in Settings'
-            : id==='vendor' ? 'Vendor specs from lib/billing.cjs, cost from the imported statements'
-            :                 `Self-surveyed completions only, ${RS_MIN_CELL}+ per rep &middot; ranked on the defect rate behind the FPY column`;
+            : id==='vendor' ? 'From the vendor registry, invoiced or not'
+            // Said out loud because the column above it is an 8-week rate and
+            // these are not: over the recent window only 13 reps clear the
+            // floor, which cannot fill a best ten and a worst ten without the
+            // same names appearing in both.
+            :                 `Every completion, not the ${OpsCoverage.RECENT_WEEKS}-week window &middot; self-surveyed only, ${RS_MIN_CELL}+ per rep &middot; ranked on the defect rate behind the FPY column`;
   return `<div class="res-drawer" id="res-drawer">
     <div class="res-drawer-h">
       <span class="ld" style="background:var(${t.css});"></span>
@@ -7423,11 +8166,9 @@ function _resVendorTable(billSum){
       </tr>`).join('')}
     </tbody></table></div>
     <div class="note">
-      Jobs/wk is the last ${OpsCoverage.RECENT_WEEKS} weeks of Salesforce work; cost, travel and cleanup are the imported statements,
-      which cover their own periods and not that window &mdash; the two columns are deliberately not the same population.
+      Jobs/wk is the last ${OpsCoverage.RECENT_WEEKS} weeks in Salesforce; cost, travel and cleanup are the statements, which cover their own periods.
       <b>Cleanup</b> is a return visit finishing a survey somebody else started, billed at the full first-visit rate.
-      ${billSum?'':'No statement imported yet — import one on the Billing page to price any of this.'}
-      Adding a vendor is a spec object in <code>lib/billing.cjs</code>, never a second parser.
+      ${billSum?'':'No statement imported yet — import one on the Billing page to price this.'}
     </div>
     <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-vendor-tbl',this,'vendors')">Copy table</button></div>`;
 }
@@ -7485,16 +8226,15 @@ function _resRepTable(){
     <div class="note">
       ${rated.length} of ${all.length} reps clear the ${RS_MIN_CELL}-completion floor, covering
       ${rated.reduce((a,d)=>a+d.n,0).toLocaleString()} of ${done.length.toLocaleString()} self-surveyed completions.
-      <b>Came back</b> is resurveys attributed to a defect &mdash; the same population the Quality page ranks on, so the two agree by construction.
-      Reps below the floor are not ranked and not hidden from Quality; a rate on five surveys names somebody off noise.
-      <b>No activity cutoff</b>: a rep who has left still did the surveys they did. The Quality page carries the idle-days label for that.
+      <b>Came back</b> is resurveys attributed to a defect, the same population Quality ranks on.
+      No activity cutoff &mdash; a rep who has left still did those surveys.
     </div>`;
 }
 
 function _resTeamTable(markets,bases){
   return `
     <div class="xscroll"><table id="res-team-tbl" class="tbl tbl-static"><thead><tr>
-      <th>Surveyor</th><th>Base</th><th>Days</th><th class="r">Capacity/wk</th>
+      <th>Surveyor</th><th>Base</th><th>Days</th><th>Vehicle</th><th class="r">Capacity/wk</th>
       <th class="r">Markets in range</th><th class="r">SPWR work there</th><th>Constraints</th><th>Contact</th>
     </tr></thead><tbody>
       ${bases.map(b=>{
@@ -7509,10 +8249,17 @@ function _resTeamTable(markets,bases){
         const shared=inRange.some(m=>bases.filter(o=>o.ll&&o.id!==b.id
           &&OpsCoverage.reachable(OpsCoverage.milesBetween(o.ll,m.ll),o.cfg)).length>0);
         const off=(b.off||[]).join(', ');
+        // Vehicle cost is quoted at the same 8-mile market the capacity above
+        // it assumes, so the two columns describe one day rather than two.
+        const veh=vehicleOf(b), miles=OpsCoverage.dailyMiles(RES_MODEL_MI,b.cfg);
         return `<tr>
           <td>${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
           <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
           <td style="color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
+          <td style="color:var(--muted);">${RES_VEHICLES[veh]}
+            <div class="cmeta">${veh==='own'
+              ? Math.round(miles)+'mi/day &middot; '+_rmoney(resVehicleWeekly(b))+'/wk'
+              : _rmoney(resVehicleWeekly(b))+'/wk'}</div></td>
           <td class="r">${_r1(cap)}</td>
           <td class="r">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
           <td class="r">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
@@ -7521,15 +8268,21 @@ function _resTeamTable(markets,bases){
         </tr>`;
       }).join('')}
     </tbody></table></div>
+    <!-- Was ten lines of 10px grey: the derivation, a capacity ladder at four
+         distances, a mileage ladder at four more, the vehicle rule, the loaded
+         cost and two warnings. What stays is the arithmetic behind the
+         Capacity column and the two things a reader would otherwise misread —
+         that the last column is a place rather than a person, and that a
+         constraint is recorded but not modelled. The ladders are in Settings,
+         which the sentence already links. -->
     <div class="note">
-      Capacity is the drive-time model at an 8-mile market, the optimistic end. It falls as the drive grows:
-      ${[8,25,45,60].map(mi=>`${mi}mi → ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' · ')}.
       ${resModelLine()}
-      Every knob in it &mdash; hours, time on site, admin, speed, road factor, day radius &mdash; is editable in
-      <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>, and a surveyor can override any of them in <code>roster.json</code>.
-      <b>Constraints are recorded, not modelled</b> — nothing here divides capacity by them.
-      <br><b>SPWR work there is not a personal workload.</b> Salesforce records the resource, never which surveyor,
-      so the work can only be attributed to a place. Overlapping ranges count the same work against both surveyors, marked <i>shared range</i>.
+      Quoted at an 8-mile market, the optimistic end; it falls as the drive grows.
+      Loaded cost <b>${_rmoney(resTeamWeeklyCost())}/wk</b> each &mdash;
+      <button class="res-out-btn" onclick="nav('settings')">Settings &rarr; Resource model</button>.
+      <br><b>SPWR work there is a place, not a person.</b> Salesforce records the resource, never which
+      surveyor, so overlapping ranges count the same work twice (<i>shared range</i>).
+      Constraints are recorded, not modelled.
     </div>
     <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('res-team-tbl',this,'the team')">Copy table</button></div>`;
 }
@@ -7601,6 +8354,7 @@ function billingEnsure(){
     .then(()=>{ _billingLoad=null;
       if(currentPage==='resource') renderResource();
       else if(currentPage==='settings') renderSettings();
+      else if(currentPage==='map') renderMap();
       else renderBilling(); });
   return _billingLoad;
 }
@@ -7674,7 +8428,7 @@ function setBillF(k,v){ billF[k]=v; billLimit=BILL_PAGE; renderBilling(); }
 function setBillLens(v){ if(billLens===v) return; billLens=v; billLimit=BILL_PAGE; renderBilling(); }
 function setBillingFlag(k){ billF.flag = billF.flag===k?'all':k; billLimit=BILL_PAGE; renderBilling(); }
 function billReset(){ billF={...BILL_F0}; billCustomOpen=false; billLimit=BILL_PAGE; renderBilling(); }
-function billMore(all){ billLimit = all?Infinity:billLimit+BILL_PAGE; _renderBillMain(); }
+function billMore(all){ billLimit = all?Infinity:billLimit+BILL_PAGE; _renderBillTable(); }
 // Search re-renders the numbers but never the bar, so the caret stays put.
 function setBillQ(v){ billF.q=v; billLimit=BILL_PAGE; _renderBillMain(); }
 let billCustomOpen=false;
@@ -7737,28 +8491,10 @@ function billTh(k,label,cls){
     style="cursor:pointer;">${label}<span class="sarr ${arrow}"></span></th>`;
 }
 
-// Statements whose periods overlap. lib/statement-import.cjs has its own
-// overlapWarnings() for the same idea, but that module requires xlsx and is
-// never loaded into the page; it also only compares consecutive statements and
-// returns log strings. This one returns the PAIR, because the notice names both
-// files.
-//
-// Two statements are allowed to overlap and
-// both are kept — that is the whole point of billing.json accumulating — but
-// it means the same charge can be invoiced twice, and every total on this page
-// counts both. Saying so once, in prose, is the difference between a page you
-// can trust and a page that quietly reads high.
-function billOverlaps(){
-  const st=(_billing&&_billing.statements||[]).filter(s=>s.from&&s.to);
-  const out=[];
-  for(let i=0;i<st.length;i++) for(let j=i+1;j<st.length;j++)
-    if(st[i].from<=st[j].to && st[j].from<=st[i].to) out.push([st[i],st[j]]);
-  return out;
-}
-
 function renderBilling(){
   const el=document.getElementById('billing-content'); if(!el) return;
-  if(!_billing && !_billingErr){ billingEnsure(); el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading invoice history…</div></div>'; return; }
+  if(!_billing && !_billingErr){ billingEnsure(); _awaitingContent.add('billing');
+    el.innerHTML='<div class="sec"><div class="note" style="padding:14px 0;">Loading invoice history…</div></div>'; return; }
   if(!_billing){
     el.innerHTML=`<div class="sec">
       <div class="shead"><div><div class="stitle">No invoice history yet</div>
@@ -7774,6 +8510,7 @@ function renderBilling(){
   el.innerHTML=`<div id="bill-bar"></div><div id="bill-main"></div>`;
   _renderBillBar();
   _renderBillMain();
+  _animateOnArrival('billing');
 }
 
 function _renderBillBar(){
@@ -7854,47 +8591,63 @@ function _renderBillMain(){
     // neighbours.
     return `<span style="white-space:nowrap;">${a&&b&&a!==b ? a+'–'+b : (a||b)}</span>`; })();
 
-  // <wbr> between the value and its inline sub. There is no whitespace between
-  // them, so without a break opportunity "$165,702Jul–Aug" is one unbreakable
-  // run and the period overflows into the next cell below about 1280px instead
-  // of dropping to a second line. The other rails' subs all contain a space of
-  // their own, which is why this only bites here.
-  const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
-    +`<div class="srail-val">${val}${sub?`<wbr><span class="srail-sub">${sub}</span>`:''}</div></div>`;
+  // A FIGURE APPEARS ONCE. If it is clickable it lives in the chips; if it is
+  // not, it lives here. The rail carried six cells and three of them were a
+  // chip restated — Travel adders $42,410/31% against the chip's 243 · $42,410,
+  // Cleanup work $19,880 · 70 visits against 70 · $19,880 — while a fourth,
+  // "Rework", named a SUBTYPE ($4,260 · 15 Go Back visits) with the same word
+  // the chip beside it uses for a RULE (4 · $1,136 own-defect rebills). That is
+  // the twelve-big-numbers defect the 2026-08-26 rebuild set out to fix; the
+  // cards became chips and the collision came along.
+  //
+  // What is left is what no chip can say: the total, the all-in unit cost, and
+  // the roll-up across every non-informational rule. "All charges" drops its
+  // money for the same reason — it is the reset state, and the total is already
+  // 40px above it at 29px. Travel, cleanup and rework are one click each, with
+  // a fuller label than the rail gave them.
+  //
+  // Three cells is also why this rail needs NO CSS of its own any more. Money
+  // is the widest value any rail in the app carries: at six cells they collided
+  // under about 1200px ($137,821 alone measures 126px at 29px/700, so a cell
+  // needs ~162px and six need ~972px of rail, more than that window leaves
+  // beside the 180px sidebar), and .srail-sub had to be forced onto its own
+  // line because it fitted beside some values and not others. At ~400px a cell
+  // neither happens. Both are what a fourth cell would have to clear.
 
-  // Two different things, and only one of them is a problem:
-  //   · lines the import kept ONE copy of, because two overlapping statements
-  //     both reported them. Worth stating — it is why a statement's own line
-  //     count is larger than what it added — but the totals are correct
-  //   · cross_statement flags: same charge type, two statements, different
-  //     dates. Nothing deduped those, and that is the shape a double bill takes
-  const overlaps=billOverlaps();
+  const cell=(label,val,sub,tip)=>`<div class="srail-cell"><div class="klabel">${label}${tip?kinfo(tip):''}</div>`
+    +`<div class="srail-val">${val}${sub?`<span class="srail-sub">${sub}</span>`:''}</div></div>`;
+
+  // The ONE notice this page carries: the same charge type billed on two
+  // statements under different dates. Nothing dedupes those, and neither
+  // statement shows the other, so it is the shape a double bill takes.
+  //
+  // There is deliberately no notice for overlapping statement periods. They
+  // overlap by design — every Radicl statement re-reports the tail of the last
+  // one — and the import stores one copy, so there is nothing here to act on.
+  // A permanent banner saying a solved problem was solved is how a notice stops
+  // being read. Where it IS worth saying is at the moment of import, and the
+  // modal's statements table says it there: 395 lines, 118 already billed,
+  // 277 added.
+  // The note under the chips is only ever the selected rule's `why`. Unfiltered
+  // it printed a line restating the panel title ("Every charge on every
+  // imported statement") and, on the account lens, the subtitle nine pixels
+  // above it word for word.
   const rebilled=scoped.filter(l=>(l.flags||[]).includes('cross_statement'));
   const rebilledUsd=OpsBilling.usd(rebilled.reduce((a,l)=>a+Math.abs(l.units||0),0),rebilled[0]&&rebilled[0].vendor);
-  const alsoOn=scoped.filter(l=>(l.alsoOn||[]).length);
 
   host.innerHTML=`
     <div class="srail">
       ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
       ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
-      ${cell('Travel adders',_bmoney(sum.travelUsd),_bpct(sum.travelShare),TIP.billTravel)}
-      ${cell('Cleanup work',_bmoney(sum.cleanupUsd),sum.cleanupN+' visits',TIP.billCleanup)}
-      ${cell('Rework',_bmoney(sum.reworkUsd),sum.reworkN+' visits',TIP.billRework)}
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
     </div>
 
     ${rebilled.length?`<div class="bill-warn"><div>
       ${rebilled.length} charge${rebilled.length===1?'':'s'} worth ${_bmoney(rebilledUsd)}
-      ${rebilled.length===1?'was':'were'} billed on two different statements under a different date each time.
-      A genuine second visit looks like this too, so each one is a prompt to check rather than a verdict — but neither statement
-      shows the other, which is how a double bill gets paid.
+      ${rebilled.length===1?'was':'were'} billed on two statements under a different date each time.
+      Neither statement shows the other. A genuine second visit looks the same, so check each one.
       </div>
       <button class="bill-warn-btn" onclick="setBillingFlag('cross_statement')">Show them</button>
-    </div>`:overlaps.length&&alsoOn.length?`<div class="bill-note">
-      <strong>${esc(overlaps[0][0].file||overlaps[0][0].id)}</strong> and <strong>${esc(overlaps[0][1].file||overlaps[0][1].id)}</strong>
-      cover overlapping periods${overlaps.length>1?` (and ${overlaps.length-1} other pair${overlaps.length>2?'s':''} do too)`:''},
-      so ${alsoOn.length} charge${alsoOn.length===1?'':'s'} here ${alsoOn.length===1?'was':'were'} reported on both.
-      The import stores one copy of each, so every figure above counts them once.
     </div>`:''}
 
     <div class="sec">
@@ -7911,7 +8664,6 @@ function _renderBillMain(){
         <button class="bill-flag bill-flag-all${billF.flag==='all'?' on':''}" aria-pressed="${billF.flag==='all'}" onclick="setBillingFlag('all')">
           All charges
           <span class="bill-flag-n">${scoped.length}</span>
-          <span class="bill-flag-v">${_bmoney(sum.usd)}</span>
         </button>
         ${flags.filter(f=>f.n).map(f=>`
           <button class="bill-flag sev-${f.sev}${billF.flag===f.k?' on':''}" aria-pressed="${billF.flag===f.k}" onclick="setBillingFlag('${f.k}')">
@@ -7920,13 +8672,19 @@ function _renderBillMain(){
             <span class="bill-flag-v">${_bmoney(f.usd)}</span>
           </button>`).join('')}
       </div>
-      <div class="note" id="bill-flag-why">${meta?esc(meta.why)
-        :billLens==='accounts'?'Every account that drew a charge, and what it cost across all of its lines.'
-        :billLens==='outcome'?'What the work cost, cut by what became of the project it was done for.'
-        :'Every charge on every imported statement.'}</div>
+      ${meta?`<div class="note" id="bill-flag-why">${esc(meta.why)}</div>`:''}
       <div id="bill-table"></div>
     </div>`;
 
+  _renderBillTable();
+}
+
+// Just the table under the chips. Paging used to go through _renderBillMain(),
+// which rebuilt the rail, the notice and the whole chip row to add fifty rows
+// underneath them.
+function _renderBillTable(){
+  const scoped=billScoped();
+  const meta=billF.flag==='all'?null:OpsBilling.exceptionMeta(billF.flag);
   if(billLens==='charges') _renderBillingTable(scoped,meta);
   else if(billLens==='outcome') _renderBillingOutcome(scoped,meta);
   else _renderBillingAccounts(scoped,meta);
@@ -7945,7 +8703,7 @@ function _billFoot(shown,total,tblId,label){
   </div>`;
 }
 function billCopy(id,btn,label){
-  if(billLimit!==Infinity){ billLimit=Infinity; _renderBillMain(); }
+  if(billLimit!==Infinity){ billLimit=Infinity; _renderBillTable(); }
   copyTableEl(id,document.querySelector('#bill-table .copy-btn')||btn,label);
 }
 
@@ -8089,7 +8847,7 @@ function _renderBillingAccounts(scoped,meta){
   const sub=document.getElementById('bill-table-sub');
   if(sub) sub.textContent = all.length+' account'+(all.length===1?'':'s')+' · '
     +_bmoney(all.reduce((s,a)=>s+(a.usd||0),0))
-    +' · every line the account drew, added up'+(meta?', for accounts carrying this flag':'');
+    +(meta?' · accounts carrying this flag':'');
 
   const multiVendor=new Set(all.map(a=>a.vendor)).size>1;
 
@@ -8168,7 +8926,7 @@ function openBillImport(){
             <td style="color:var(--faint);white-space:nowrap;">${esc(s.imported||'')}</td></tr>`;
         }).join('')}
       </tbody></table>
-      <div class="note">Re-importing a statement replaces its own lines · a charge an earlier statement already carried is stored once, so overlapping periods do not inflate the totals.</div>
+      <div class="note">Re-importing replaces that statement's own lines · a charge an earlier statement already carried is stored once.</div>
     </div>`:''}`;
   _billImpFile=null;
   back.classList.remove('hidden');
@@ -8333,7 +9091,7 @@ function renderSettings(){
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
-        <div class="set-title">Resource Model${resModelEdited()?' <span class="pill pn" style="margin-left:6px;">'+resModelEdited()+' edited</span>':''}</div>
+        <div class="set-title">Resource Model</div>
         <div style="font-size:10px;color:var(--faint);line-height:1.7;margin-bottom:10px;">
           Every capacity and SPWR cost figure on the Resource page comes from these two sets of numbers, and nothing else does &mdash;
           no survey metric, no cycle time, no yield. They are an <b>estimate calibrated to what Doug has seen</b>, not a measurement,
@@ -8342,36 +9100,18 @@ function renderSettings(){
         <div class="set-model">
           <div>
             <div class="klabel" style="margin-bottom:6px;">A surveyor's day</div>
-            ${RES_MODEL_FIELDS.map(f=>{
-              const cur=OpsCoverage.getModel()[f.k];
-              const edited=((S.resModel||{})[f.k]!=null);
-              return `<div class="set-row">
-                <div><div class="set-label">${esc(f.label)}${edited?' <span class="set-edited">edited</span>':''}</div>
-                  <div class="set-desc">${f.desc}</div></div>
-                <div class="set-control set-unit"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}"
-                  value="${cur}" onchange="setResModel('${f.k}',parseFloat(this.value))"><span>${f.unit}</span></div>
-              </div>`;
-            }).join('')}
+            ${RES_MODEL_FIELDS.map(f=>_setNumRow(f,OpsCoverage.getModel()[f.k],'setResModel')).join('')}
           </div>
           <div>
             <div class="klabel" style="margin-bottom:6px;">What a surveyor costs</div>
-            ${RES_COST_FIELDS.map(f=>{
-              const cur=resCost()[f.k];
-              const edited=((S.resCost||{})[f.k]!=null);
-              return `<div class="set-row">
-                <div><div class="set-label">${esc(f.label)}${edited?' <span class="set-edited">edited</span>':''}</div>
-                  <div class="set-desc">${f.desc}</div></div>
-                <div class="set-control set-unit"><input type="number" step="${f.step}" min="${f.min}" max="${f.max}"
-                  value="${cur}" onchange="setResCost('${f.k}',parseFloat(this.value))"><span>${f.unit}</span></div>
-              </div>`;
-            }).join('')}
+            ${RES_COST_FIELDS.map(f=>_setNumRow(f,resCost()[f.k],'setResCost')).join('')}
             <div class="set-row"><div><div class="set-label">Loaded weekly cost</div>
-              <div class="set-desc">Annual ÷ 52 + vehicle × 12 ÷ 52. This is the numerator of every SPWR cost per survey on the page</div></div>
-              <div class="set-control"><b style="font-size:14px;">${_rmoney(resWeeklyCost())}</b><span style="color:var(--faint);font-size:10px;">/wk</span></div></div>
+              <div class="set-desc">Salary ÷ 52 plus the vehicle — mileage for the ${_resOwnCount()} on their own, the flat monthly for a company one. The numerator of every SPWR cost per survey</div></div>
+              <div class="set-control"><b style="font-size:14px;">${_rmoney(resTeamWeeklyCost())}</b><span style="color:var(--faint);font-size:10px;">/wk</span></div></div>
             <div class="set-row"><div><div class="set-label">Break-even</div>
-              <div class="set-desc">Surveys a week per surveyor to match the vendor's all-in rate. The one figure here that does not rest on the capacity model</div></div>
+              <div class="set-desc">Surveys a week per surveyor to match the vendor's all-in rate</div></div>
               <div class="set-control">${(()=>{const v=_resVendorPerSurvey();
-                return v?`<b style="font-size:14px;">${_r1(resWeeklyCost()/v)}</b><span style="color:var(--faint);font-size:10px;">/wk at ${_rmoney(v)}</span>`
+                return v?`<b style="font-size:14px;">${_r1(resTeamWeeklyCost()/v)}</b><span style="color:var(--faint);font-size:10px;">/wk at ${_rmoney(v)}</span>`
                         :'<span class="pna">no statement imported</span>';})()}</div></div>
           </div>
         </div>
@@ -8381,13 +9121,17 @@ function renderSettings(){
           <div style="margin-top:6px;">${_resTeamCapLine()}</div>
           <div style="margin-top:6px;color:var(--faint);">
             It falls as the drive grows: ${[8,25,45,60].map(mi=>`<b>${mi}mi</b> ${_r1(OpsCoverage.weeklyCapacity(mi))}/wk`).join(' &middot; ')}.
-            The Resource page quotes the 8-mile figure, which is the optimistic end &mdash; and prints the gap against what the team actually completes rather than treating the difference as headroom.
+            The Resource page quotes the 8-mile figure, the optimistic end.
           </div>
+          <div class="klabel" style="margin:11px 0 5px;">And what the vehicle costs</div>
+          ${_resVehicleLine()}
         </div>
-        <div class="set-row" style="padding-top:10px;">
-          <div style="font-size:10px;color:var(--faint);line-height:1.6;">Saved to this browser like every other setting. Blank a box to put that knob back to its shipped value.</div>
-          <button class="fbtn" onclick="resetResModel()">Reset the model</button>
+        <div class="set-save">
+          <div class="set-save-state">${_resSaveState()}</div>
+          <button class="set-save-btn" id="rm-save" onclick="saveResModel()">Save</button>
+          <button class="fbtn" onclick="resetResModel()">Reset</button>
         </div>
+        <div id="rm-msg" class="note" style="min-height:14px;margin-top:6px;"></div>
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
@@ -8713,8 +9457,10 @@ document.addEventListener('click',function(e){
 window.addEventListener('load',()=>{
   loadSettings();
   // The capacity model lives in lib/coverage.cjs, not in S — push the saved
-  // overrides into it before anything asks what a surveyor can do in a week.
+  // overrides into it before anything asks what a surveyor can do in a week,
+  // then fetch the committed copy, which may be newer than this browser's.
   applyResModel();
+  resModelEnsure();
   // allRows was already built once at script-eval time, before localStorage was
   // read — so it used SETTING_DEFAULTS for BOTH the cutoff and the anchor.
   // Rebuild if the saved settings disagree with either.

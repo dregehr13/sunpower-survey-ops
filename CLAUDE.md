@@ -59,7 +59,24 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings, resurveys resting on a bare `reopened_by_design` flag); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
 - **Sales office is a global filter** alongside Region, applied through `gfDim` **and `applyFilter`** so it reaches every page. It only ever lived in `gfDim`, which meant Performance — the one page reading `filtered` — showed an active button, a chip and identical numbers (fixed 2026-08-14). Both the filter and the Resurveys breakdown hide/fall back on exports predating 2026-08-06, which have no office field
 - **One label scale, every page** (added 2026-08-17). A single 10px uppercase `.05em` style used to do four jobs at once, so four ranks of information read as one. The seven roles: section/KPI label 11/600/.07em uppercase `--muted` · panel title 13/700 sentence `--text` · panel subtitle 11/400 `--faint` · table header 11/700 sentence `--muted` · chart legend 11/400 `--muted` · axis tick 10/400 `--faint` · footnote 10/400 `--faint`. **10px survives only as axis ticks and footnotes**
-- **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was
+- **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was — the one
+  exception is a **two-level** table, where the group band already rests at
+  `--bg`: on the Resource market table `.res-grp` hovers one step to
+  `--border-lt` and the white `.res-kid` rows take `--bg`. Both levels are
+  expanders and **neither responded to hover at all until 2026-08-27**, because
+  `.res-grp>td` / `.res-kid>td` are declared after the global `tr:hover td` at
+  equal specificity and won
+- **A note says what a number IS, not why it was built that way** (added
+  2026-08-26, Doug's call: "too much overexplaining"). The `.note` under a table
+  carries definitions the reader needs — what *cleanup* counts, where the 8-week
+  window starts, what a floor leaves out — and nothing else. Design history, the
+  argument for a threshold, the reason two columns are different populations and
+  any instruction to whoever edits the code next belong in a source comment.
+  **Doug is the only reader of this app**; he does not need the case re-made
+  every time he opens a page, and a paragraph of justification under a table is
+  how a note stops being read at all. Applied to Billing's exception blurbs and
+  every Resource note (~35% shorter); the reasoning it displaced is in
+  `lib/billing.cjs` and `lib/coverage.cjs` where it was already written
 - **Glass means "this is a layer over the page"** (added 2026-08-24). The app is
   otherwise matte — hairline borders, 4–5% shadows, no gradients — so glass is the
   only material effect in it and has to carry a meaning or it is decoration. The
@@ -337,12 +354,125 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - **Reasons sit left.** The reason list says what to fix and is the actionable half; it pairs with the inbox, whose height varies, so the variable panel sits last on the page
   - **Status is not in this page's filter bar** — every row here is already complete
   - **The open queue is not on this page.** Removed 2026-08-17 — it lives on the WIP rail as Open resurveys, whose cell filters the WIP queue to exactly those rows. Before removing it, `resurvey_reason` + `resurvey_details` were added to the **WIP expanded row** (`.wip-rs-why`): 41 of the 42 open resurveys carry a reason, and this page's queue table was the only place it could be read. What did not survive the move is the weekly grouping with its oldest-age and `rsStaleDays()` marker — WIP has no staleness cue specific to resurveys
-- **Map page** (added 2026-08-06). All markets by town, four modes (Volume / Open WIP / Cycle / Resurvey), click a state nationally to open that market:
+- **Map page** (added 2026-08-06). All markets by town, six modes (Volume / Open WIP / Cycle / Resurvey / Coverage / Plan), click a state nationally to open that market:
   - Location comes from the **ZIP in `address`, never `region`** — region is a sales territory, not a place, and reading the address also places the ~71 rows whose region is blank
   - Grouped by **town**, not ZIP: a ZIP is a postal artefact that split Glen Allen into two dots and buried Richmond's eight ZIPs entirely
   - It has **no time control of its own** either — same rule as Resurveys, and for the same reason (a stale scrubber once showed 167 jobs against a filter selecting 2458)
   - Geography lives in `geo/` (ZIP centroids, CONUS state outlines, top-1k cities, per-state counties), generated by `scripts/build-geo.cjs` and committed. Fetched on demand, never baked into the HTML — the page derives from data.js, which push.sh rewrites daily. Sources cache in `geo/.src` (gitignored). Rerun the script when a market opens in a state with no counties file
   - The old standalone `/va-map` is retired and redirects to `/#map`
+
+### Resource coverage on the Map (added 2026-08-26)
+Doug's ask: plot resource coverage as a toggle. It came out as three things, and
+the split between them is the design — a layer, two modes, and a tool. Things
+not to undo:
+- **Team reach is a LAYER, not a seventh mode.** It draws every surveyor's base
+  and the ground they can work as a day trip, over *whatever* mode is selected,
+  because that is where it says the most: resurveys clustered outside anyone's
+  reach, a WIP pile twelve miles from Sam. As a mode it could only ever be seen
+  alone. It ANDs against nothing and can never empty the map, so it is not the
+  "two filter rows, never three" problem the WIP page has
+  - **The rings are filled as ONE non-zero-wound path.** Harry and Sam are eight
+    miles apart in Portland and their rings overlap almost entirely; stacked
+    translucent fills paint that overlap darker, which reads as *more covered*
+    when it is the same ground twice. `moveTo` before each arc or Path2D joins
+    the circles with a chord and fills the empty ground between Portland and
+    Detroit
+  - **Miles→pixels is measured off the projection** (`_mapMiPx`), not derived.
+    Albers is equal-area, not conformal, so a day-trip circle is very slightly
+    an ellipse — under a pixel at 60mi, and a measured scale holds at both zooms
+  - The radius is `maxOneWayMi` read from the **live** model, so Settings →
+    Resource model moves the ring and the legend text together
+- **Coverage and Plan read `resMarketFacts()`, the Resource page's own
+  definition.** It was extracted out of `resMarkets()` in the same pass so both
+  pages compute one set of facts from one function; nothing on the Map
+  recomputes a rate, a reach class or a recommendation. Identity (key, name,
+  towns) is deliberately *not* in it — the map takes a market's majority state
+  so a cross-border market like Portland reads right at a state zoom, the
+  Resource page takes the seed's. What must not differ is the arithmetic
+- **Both coverage modes read the live book and IGNORE THE DATE RANGE**, and that
+  is correctness, not taste: `marketAdvice()` measures its per-week rates over
+  the trailing `RECENT_WEEKS` anchored on the export date, so under a Q1 filter
+  the recent window holds zero rows and **every market in the country reads
+  "Gone quiet"**. Same carve-out Open WIP already makes, for the same reason
+- **They also drop the Resource filter**, through `gfDim(r,{resource:true})` —
+  one clause skipped rather than a second dimension test written. Filtering to
+  Radicl and then asking "who is doing the work here" can only answer "Radicl",
+  and the recommendation would be computed from a book with two of its three
+  resources deleted. Region, office and status still bite, because those are
+  visible controls on this page and a panel quietly ignoring an active region
+  filter is the stale-scrubber bug. Note this is what makes the map's market
+  count differ from the Resource page's — that page has no filter bar and
+  scopes on `DEFAULT_STATUSES` instead. **Both exclusions are named on the page** when the
+  control is actually set, and in the drill drawer's scope note — a visible
+  control that silently does nothing is the same defect as an invisible one
+  that silently does something
+- **The coverage modes cluster NATIONALLY and then narrow to the state**, and
+  measure office mobility over the national book. The other four still cluster
+  what is in view, because they answer "what did we sell here" and the state is
+  the question. Two ways the viewport was silently changing a recommendation,
+  both found and fixed on the day:
+  - Mobility measured over one state's half of an office that moved from
+    Pennsylvania to Virginia shows overlapping early and late footprints and
+    reads as *settled* — it flipped Glen Allen from *Deploy 1–2 weeks*
+    nationally to *Leave with vendor* zoomed into Virginia
+  - Clustering a state's rows on their own moves the cluster boundaries: near
+    the Maryland line the greedy seed claims a different neighbourhood once the
+    out-of-state points are gone, which did the same to Fredericksburg
+  - Markets are kept by their **majority state**, so a cross-border market keeps
+    its out-of-state members. Portland's takes in Vancouver WA, which is the
+    right population for a staffing question and the wrong one for a heat map
+  - Verified: **214 markets on both pages, 214 of 214 recommendations identical,
+    and zero drift across 11 state zooms.** That equality is the regression
+    test — if the two pages ever disagree again, one of them has grown its own
+    copy of something
+- **The state counts follow the mode's own population.** The picker and the
+  bold/faint state labels read the same rows the dots do, so a dropdown offering
+  "Pennsylvania (739)" never sits above a map drawing 1,370
+- **Coverage colours by the resource doing the most work, one colour per
+  market.** A three-slice pie was considered and rejected: circles run 3.2–17px
+  and at the small end a pie is three unreadable arcs claiming precision the
+  mark cannot carry. The full split is in the tooltip and the list below, where
+  there is room. Plan colours by `marketAdvice().k` on the `.res-rec-*` palette,
+  except that **dormant draws hollow** — that palette gives *Leave with vendor*
+  and *Gone quiet* the same grey, which is fine on a tag carrying its own label
+  and unreadable as two marks on a map
+- **The list below the map ranks by the decision in these modes**, not by
+  volume: a list of the twelve biggest markets is already what Volume mode says
+- **Markets are rebuilt once per render and cached** (`_mapCov`, invalidated in
+  `renderMap()`). The national set is 228 markets and 86ms to build against
+  3.6ms for a cached redraw, and `mapDraw()` runs on every hover
+- **Siting prices a location and never chooses one.** `siteCapture()` in
+  `lib/coverage.cjs`; click anywhere and it reports what comes into day-trip
+  range, how much of that is outsourced today, modelled capacity at the drive,
+  and the break-even against the vendor's own per-survey price. Things not to
+  undo:
+  - **No optimiser.** Asked for the *best* location it would return a point in a
+    field with no house and no reason for anyone to live there, dressed as a
+    recommendation. The manager knows which towns are hireable; this prices the
+    ones they name. Same rule the recommendations follow
+  - **Gained is not the same as in range.** A market an existing base already
+    reaches counts as in range but not as captured — otherwise a candidate that
+    only re-covers Portland prices a hire for work the team already has
+  - **The typical drive is weighted by recent volume.** A plain mean lets nine
+    dormant villages at the edge of the radius outvote the one market carrying
+    every job, and capacity is then quoted for a drive nobody makes
+  - **The verdict is a prompt, never a decision** — the same wording rule every
+    Billing exception and every market recommendation follows
+  - While the tool is on, a click means "put a base here" and nothing else; the
+    tooltip says so, and turning it on turns the layer on with it, because a
+    candidate ring priced against invisible existing rings has nothing to be
+    compared to
+  - It needs the inverse projection, `mapAlbersInv()`, which nothing else uses
+- **`resVendorCostByZip()` is memoised on the billing history's identity.**
+  It runs `reconcile()` over every invoice line against every row, and the
+  coverage modes rebuild markets on a radius change
+- Six segments do not fit a phone, so at ≤860px the map's toggle groups
+  **scroll rather than wrap** — a segmented control that wraps loses its end
+  radii and reads as two controls — and the active segment is scrolled into
+  view. That needed `min-width:0` on both the group and the control row: a flex
+  item's default `min-width:auto` left the group at its content width and it
+  pushed the card instead of scrolling inside it. It also fixed a pre-existing
+  horizontal body overflow on the Map at 375px
 
 ## Resource page (added 2026-08-25, restructured 2026-08-26)
 Who should do the work, where, and what it costs. The other pages measure the
@@ -472,7 +602,36 @@ to undo:
   *What to do, market by market* → **Markets**, switching with the
   toggle the way `Resurveys by <group>` already does. Every other title in the
   app is a noun phrase; three question-shaped ones on one page read as a
-  different product
+  different product. *Where the work goes* → **Resource split** 2026-08-27 —
+  the rule was written on this page and the hero was still breaking it
+- **The notes and findings state the number and stop** (2026-08-27, Doug's ask:
+  less help text, no over-explaining). What came out was argument, not
+  definition — "Yield here is the whole team's biggest quality lever", "the case
+  for insourcing is throughput, cycle time or quality, not price", "A surveyor
+  fixes one job; the rate is a training problem", "A one- to two-week posting is
+  reversible; a hire is not", "This is a deployment and hiring question, not a
+  scheduling one". The same rule the `.note` already followed since 2026-08-26,
+  applied to the findings' detail bodies and the hero's column notes. What
+  stays is a definition, or a caveat that changes how a number is read:
+  - **The capacity caveat stays** in the SPWR column, because every capacity
+    figure on the page is wrong if it is wrong
+  - **The team drawer's note was ten lines of 10px grey** — the derivation, a
+    capacity ladder at four distances, a mileage ladder at four more, the
+    vehicle rule, the loaded cost and two warnings. It keeps `resModelLine()`,
+    the loaded cost, and the two things a reader would otherwise misread (the
+    last column is a place not a person; a constraint is recorded not modelled).
+    The ladders are in Settings, which the sentence already links to
+  - **The market note no longer instructs or justifies.** "open a row for its
+    markets, a market for why" is UI instruction and "Outlook never changes the
+    recommendation beside it" is design history; both belong in a source
+    comment, which is where they already were
+  - **No positional references.** The Sales reps lead said its cost lands "in
+    the column to the left", which is false below 860px where the columns stack.
+    It names Outsourced instead
+- **The expander is named for the column above it** (2026-08-27). It read
+  *SunPower Surveyors* under a heading reading *SPWR surveyors* — two names for
+  one thing, 200px apart. Same rule as "Quality is the nav label only": pick the
+  displayed name and use it everywhere it is displayed
 - **Build vs buy is a hairline-divided row, not three cards.** The columns were
   bordered `--surface` boxes on a `--surface` panel, so the fill did nothing and
   the border doubled the panel's own — the same nesting `.exec-hero .srail`
@@ -531,6 +690,79 @@ to undo:
   `sales_rep` charges a rep for a Radicl surveyor's defect), floored at
   `RS_MIN_CELL`, ranked on the defect rate behind the FPY column. `RS_MIN_CELL`
   is module scope now so there is one floor, not one per surface
+- **The Outsourced column does not name the vendor** (2026-08-26). It was
+  *Outsourced (Radicl)*; a second vendor is coming, and the drawer lists them.
+  The expander labels are plain nouns — *SunPower Surveyors*, *Vendors* — with
+  no count in them
+- **A surveyor's vehicle is an attribute, and it changes how they are costed**
+  (2026-08-26). `vehicle` in `roster.json` is `own` or `company`; absent means
+  `own`, which is what all four are and the assumption for a new hire. A company
+  vehicle is the flat `vehicleMonthly`. Own is **reimbursed per road mile** —
+  40¢/mi, plus 20¢ on every mile past 100 **in one day**. Things not to undo:
+  - **The bonus is a DAY rule, applied per day and multiplied out.** Applied to
+    a weekly total, a surveyor doing 60 miles five days running would collect a
+    bonus they never earned
+  - **`dailyMiles()` is in `lib/coverage.cjs`; what a mile is worth is not.**
+    The miles are geometry (round trip + a hop between each pair of jobs, on the
+    exact daily job count, × `roadFactor`); the rate is payroll and sits with
+    the other cost knobs. Same split that keeps `metrics.cjs` about surveys
+  - **This is the one cost on the page that reacts to the coverage model** —
+    it rises with the drive: $82/wk at an 8-mile market, $380 at 60. That is
+    also why it is quoted at the same 8-mile market the capacity above it uses
+  - Team figures (break-even, cost per survey) read `resTeamWeeklyCost()`, the
+    **mean across the roster**, since two surveyors on different arrangements
+    cost different amounts. It falls back to the default surveyor before the
+    roster loads
+- **The model is committed, not just in localStorage** (2026-08-26, Doug's ask
+  that edits "survive and push to the server"). `resmodel.json` + 
+  `api/update-resmodel.js`, the shape `outlook.json` already uses. Things not to
+  undo:
+  - **localStorage is the WORKING copy and `S.resSaved` is the arbiter.** It
+    stamps what the server held when this browser last adopted it, which is the
+    only way to tell an unpushed local edit from somebody else's save: adopting
+    the server on every load throws away what was typed here a minute ago, and
+    never adopting hides every other machine's changes. Four paths are tested by
+    hand — clean browser adopts, dirty browser keeps, reset returns to shipped,
+    save clears the dirty flag
+  - **Only overrides are stored**, and an absent key IS "not overridden" — which
+    is also how a knob goes back to its shipped value. The endpoint drops any
+    key it does not recognise rather than refusing the save that carries the
+    other eight
+  - **No per-field "edited" badge, and no password on Save.** Doug's call: the
+    value in the box is the value in use, and a badge beside it only repeats
+    what the box says. One section-level line says whether the server has it
+    yet. The endpoint's validation is what stands in for the password — see A1
+- **The three hero columns are a GRID with `subgrid` rows, not a flex row**
+  (2026-08-26). Flex could only align the tops: the lead line wraps to two lines
+  in one column and one in another, and from there down nothing agreed — *First
+  pass yield* in the middle column sat beside *Cycle time* in the outer ones.
+  Without `subgrid` support the columns fall back to independent flow rather
+  than to something broken. Two things about it, both found 2026-08-27:
+  - **The base `.res-col{display:flex}` MUST stay above the `@supports` block.**
+    It sat below it at equal specificity, so flex won unconditionally and the
+    subgrid never ran for a single render: only the expanders lined up, which
+    `margin-top:auto` does on its own, while every band above them sat at a
+    different height per column (22px out between the outer columns at 920px).
+    It looked right at 1440px only because the three lead lines happened to
+    wrap to similar heights
+  - **`repeat(3,1fr)`, never `auto-fit`.** auto-fit wrapped to 2×2 under about
+    1150px, and then *Sales reps* landed in row 2 column 1 still matching
+    `:not(:first-child)` and sat 18px out of line with the column above it; the
+    open column's tab was in row 1 while its drawer was two rows below, so the
+    notch pointed at nothing. Three columns hold to 861px and stack to one
+    below it, where the hairline turns horizontal, the side padding resets and
+    the open column takes a **closed** ring — stacked, the drawer is at the foot
+    of all three, so an open bottom edge would point at the next column
+- **The open column is a TAB.** It takes the drawer's background and drops the
+  hairline to its neighbour, so the tint runs unbroken from column into panel
+  and which one is open is readable at a glance. The outline is an **inset
+  shadow, never a border** — a real border resizes the grid cell and shoves the
+  other two columns sideways on every open. The 2% tint alone was not enough:
+  `--bg` on `--surface` is `#faf9f6` on `#fff`
+- **The expanders are bordered buttons**, not underlined text on a hairline.
+  They are the one control in the panel, they sit on one line across all three
+  columns, and a caret alone at the foot of a column of numbers did not read as
+  a control
 - **The column expanders sit on one line.** `.res-col` is a flex column and the
   button takes `margin-top:auto`: the notes above them run to different lengths,
   and three carets at three heights read as three unrelated controls
@@ -657,6 +889,32 @@ labelled. Things not to undo:
     say "error" about rules that are deliberately informational
   - They are `<button>`s, not `.drill-tgt` divs. Lift-and-shadow is reserved for
     things that open something; a filter darkens its border and does not move
+  - **A FIGURE APPEARS ONCE — clickable in the chips, otherwise in the rail**
+    (2026-08-27). The 2026-08-26 pass turned the cards into chips but left the
+    rail at six cells, so the collision it set out to fix survived the rewrite:
+    Travel adders `$42,410 / 31%` against the chip's `243 · $42,410`, Cleanup
+    work `$19,880 · 70 visits` against `70 · $19,880`, To review `$3,408 · 12
+    lines` against `12 · $3,408` — and **"Rework" naming a SUBTYPE in the rail
+    ($4,260 · 15 Go Back visits) with the same word the chip beside it uses for
+    a RULE** (4 · $1,136 own-defect rebills). The rail is three cells now —
+    **Invoiced · Per survey · To review** — which is what no chip can say: the
+    total, the all-in unit cost, and the roll-up across every non-informational
+    rule. Travel, cleanup and rework are one click each, under a fuller label
+    than the rail gave them. "Rework" appears exactly once on the page
+  - **"All charges" carries its COUNT, not its money.** It is the reset state,
+    and the total is already 40px above it at 29px
+  - **The note under the chips is the selected rule's `why`, or nothing.**
+    Unfiltered it printed a line restating the panel title ("Every charge on
+    every imported statement") and, on the account lens, the panel subtitle
+    word for word nine pixels above it
+  - **The rail has no CSS of its own any more.** Money is the widest value any
+    rail in the app carries: at six cells they collided under ~1200px
+    (`$137,821` measures 126px at 29px/700, so a cell needs ~162px and six need
+    ~972px of rail — more than that window leaves beside the 180px sidebar),
+    and `.srail-sub` had to be forced onto its own line because it fitted
+    beside some values and not others. At ~400px a cell neither happens, so
+    Billing uses the shared component exactly as every other page does. Both
+    constraints are what a fourth cell would have to clear
 - **Cost by project outcome is the third lens** (added 2026-08-26). Charges ·
   By account · **By outcome** — `byOutcome()` in `lib/billing.cjs`, grouping
   charge lines by the matched survey's `project_status`. Live: **14% of vendor
@@ -731,13 +989,18 @@ labelled. Things not to undo:
   - **Date presets anchor on the newest charge, not on the wall clock.** A
     statement arrives weeks after the work, so "this month" measured from today
     is empty for the first days of every month
-  - **Two notices above the table, and only one of them is an alarm.** Amber
-    `.bill-warn` when `cross_statement` lines are in scope — a charge billed on
+  - **ONE notice above the table, and it is an alarm.** Amber `.bill-warn`
+    when `cross_statement` lines are in scope — the same charge type billed on
     two statements under different dates, with a button that selects the rule.
-    Grey `.bill-note` when statements merely overlap and the import stored one
-    copy of N charges: that is a fact about why a statement's line count is
-    larger than what it added, not a problem, and amber would say something is
-    wrong. Both are scoped, so neither appears when the filters exclude them
+    A grey twin saying "these statements overlap, N charges were reported on
+    both, counted once" was built and **removed the same day** (Doug: "we
+    should be deduping and this shouldn't be an issue"). He is right: the
+    periods overlap by design, every statement re-reports the tail of the last
+    one, and the import already stores one copy — so the note reported a solved
+    problem on every load, forever, which is how a notice stops being read.
+    Where that fact IS worth stating is at the moment of import, and the
+    modal's statements table states it there: `395` lines, `118 already
+    billed`, `277 added`
   - **Both tables sort through `billTh`/`billSorted`.** Text columns open A to
     Z and numeric ones highest-first, blanks sink in both directions — the same
     vocabulary as Performance, Quality and the drill drawer. The charges table
@@ -928,7 +1191,16 @@ Carried here 2026-08-24 when `docs/AUDIT.md` was deleted — the audit's finding
 were applied across four batches, but these six were deliberately not, because
 each is a judgement call rather than cleanup. The measurements behind them are
 in that file's history (`git log --diff-filter=D -- docs/AUDIT.md`).
-- **A1 — `/api/send-teams` and `/api/team-opener` have no auth.** Anyone who can
+- **A1 — `/api/send-teams`, `/api/team-opener`, `/api/update-outlook` and
+  `/api/update-resmodel` have no auth.** The last two lost their password
+  2026-08-26 at Doug's ask, knowingly. Both take any POST and commit, and both
+  are bounded by what they will accept: outlook to a two-letter state code, one
+  of four flags and 280 characters; resmodel to a whitelist of fourteen numeric
+  knobs, each range-checked, with anything unrecognised dropped. Neither file
+  feeds a survey metric, and Reset undoes a bad model in a click.
+  `api/update.js` and `api/update-billing.js` KEEP their password — those
+  commit the dataset and the invoice history, which is data rather than an
+  assumption. Anyone who can
   POST can push a card into the team channel. An in-code secret is public
   because compose is a static file, so the real options are Vercel Deployment
   Protection or building the Adaptive Card server-side instead of accepting an

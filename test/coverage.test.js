@@ -161,6 +161,20 @@ test('setModel moves the base every capacity figure reads', () => {
   assert.equal(C.weeklyCapacity(8), base, 'setModel(null) must restore the shipped model');
 });
 
+test('dailyMiles counts the round trip plus a hop between jobs', () => {
+  // The reimbursement the four surveyors are paid is per mile driven, so this
+  // has to be road miles and it has to agree with the day the capacity model
+  // says they work — same exact job count, same road factor.
+  const c = C.surveyorConfig();
+  const jobs = C.jobsPerDayExact(8, c);
+  assert.ok(Math.abs(C.dailyMiles(8) - (8 * 2 + (jobs - 1) * c.hopMi) * c.roadFactor) < 1e-9);
+  assert.ok(C.dailyMiles(45) > C.dailyMiles(8), 'a longer commute is more miles');
+  assert.equal(C.dailyMiles(null), null);
+  // Straight-line in, road miles out.
+  assert.ok(C.dailyMiles(8) > 8 * 2);
+  assert.ok(C.dailyMiles(8, { roadFactor: 2.6 }) > C.dailyMiles(8, { roadFactor: 1.3 }));
+});
+
 test('reachable respects a per-surveyor limit', () => {
   assert.equal(C.reachable(40), true);
   assert.equal(C.reachable(90), false);
@@ -395,6 +409,64 @@ const ago = n => {
 // `counts` is [oldest window, middle, newest]; each job lands mid-window so no
 // case rests on which side of an edge a boundary date falls.
 const intake = counts => counts.flatMap((n, i) => Array.from({ length: n }, () => ago(14 + (2 - i) * 28)));
+
+// ── siteCapture ────────────────────────────────────────────────────────────
+const site = (name, ll, recent, outsourced, reach) =>
+  ({ name, ll, recentPerWeek: recent, outsourcedPerWeek: outsourced, reach });
+
+test('siteCapture: only markets inside day-trip range count', () => {
+  const near = site('near', [45.50, -122.60], 4, 3, C.REACH.DEPLOY);
+  const far = site('far', [42.00, -122.60], 9, 9, C.REACH.FAR);   // ~240mi south
+  const cap = C.siteCapture(PDX, [near, far]);
+  assert.deepEqual(cap.inRange.map(e => e.m.name), ['near']);
+  assert.equal(cap.perWeek, 4);
+  assert.equal(cap.outsourcedPerWeek, 3);
+});
+
+test('siteCapture: a market somebody can already reach is in range but not gained', () => {
+  // The whole point of the tool. A candidate base that only re-covers Portland
+  // has captured nothing, and a "12 markets in range" headline that counted
+  // those would price a hire for work the team already reaches.
+  const covered = site('covered', [45.52, -122.62], 5, 0, C.REACH.DAY);
+  const uncovered = site('uncovered', [45.10, -122.90], 2, 2, C.REACH.DEPLOY);
+  const cap = C.siteCapture(PDX, [covered, uncovered]);
+  assert.equal(cap.inRange.length, 2);
+  assert.deepEqual(cap.gained.map(e => e.m.name), ['uncovered']);
+});
+
+test('siteCapture: the typical drive is weighted by where the work is', () => {
+  // A plain mean over markets lets dormant villages at the edge of the radius
+  // outvote the one market carrying every job, and capacity is then quoted for
+  // a drive nobody makes.
+  const busy = site('busy', [45.49, -122.61], 20, 0, C.REACH.DEPLOY);      // ~1mi
+  const quiet = site('quiet', [45.10, -123.30], 0.1, 0, C.REACH.DEPLOY);   // ~45mi
+  const cap = C.siteCapture(PDX, [busy, quiet]);
+  const plain = cap.inRange.reduce((s, e) => s + e.miles, 0) / cap.inRange.length;
+  assert.ok(cap.meanMi < plain / 3, `weighted ${cap.meanMi.toFixed(1)} vs plain ${plain.toFixed(1)}`);
+  // And capacity is therefore quoted near the close-in ceiling.
+  assert.ok(cap.capacity > C.weeklyCapacity(plain), 'weighting must not be discarded');
+});
+
+test('siteCapture: no reachable market answers null rather than zero miles', () => {
+  const cap = C.siteCapture(PDX, [site('far', [42.00, -122.60], 9, 9, C.REACH.FAR)]);
+  assert.equal(cap.inRange.length, 0);
+  assert.equal(cap.meanMi, null);
+  assert.equal(cap.capacity, null);
+  assert.equal(cap.dailyMi, null);
+});
+
+test('siteCapture: respects a tightened maxOneWayMi', () => {
+  const m = site('m', [45.10, -122.90], 3, 3, C.REACH.DEPLOY);   // ~30mi out
+  assert.equal(C.siteCapture(PDX, [m]).inRange.length, 1);
+  assert.equal(C.siteCapture(PDX, [m], { maxOneWayMi: 10 }).inRange.length, 0);
+});
+
+test('siteCapture: markets with no location, and a candidate with none, are skipped', () => {
+  const ok = site('ok', [45.50, -122.60], 1, 1, C.REACH.DEPLOY);
+  assert.equal(C.siteCapture(PDX, [ok, { name: 'nowhere', ll: null }]).inRange.length, 1);
+  assert.equal(C.siteCapture(null, [ok]).inRange.length, 0);
+  assert.equal(C.siteCapture(PDX, null).inRange.length, 0);
+});
 
 test('intakeTrend: three windows, oldest first', () => {
   const t = C.intakeTrend(intake([5, 10, 20]), AS_OF);
