@@ -65,4 +65,8 @@ imported statements. No console errors on either page.
 1. **Correctness / broken layout** — B1, R1, R3, R13 ✅ done
 2. **Organization + copy** — B2, B3, R4, R5, R6, R7, R9, R10 ✅ done
 3. **Motion** — B4, B5, R2, R8 ✅ done
-4. **Code health** — B6, B7, B8, R11, R12
+4. **Code health** — B6, B7, R11, R12 ✅ done · B8 closed no-change
+
+B8 (chip wrap) was left alone deliberately: `EXCEPTIONS` orders the chips
+high-severity first, which is the reading order. Sorting by count to tidy the
+wrap would put *Travel adder* at the front and bury *No Salesforce record*.

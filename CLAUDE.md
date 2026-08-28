@@ -923,6 +923,20 @@ labelled. Things not to undo:
     is what made the page 44 screens. `BILL_PAGE` (50) show, the rest is a
     click. `billCopy()` expands to everything *before* copying, so "Copy table"
     never quietly copies only the visible page
+  - **Which statement billed a line sits UNDER ITS DATE** (2026-08-27), not in
+    a column of its own. As a column it was the widest thing on the right
+    carrying the least: the table opens newest-first, so every visible row
+    printed the same filename in 10px faint. A charge's date and the statement
+    that reported it are one fact, and secondary detail under its primary cell
+    is what `.cmeta` does everywhere else in this table. Cutting *by* statement
+    is the bar's filter, so nothing was lost when the sort went with the column
+    — and dropping it gave Salesforce and Also flagged enough width to stop
+    wrapping their pills to two lines. Still hidden entirely while one
+    statement is in view, the rule the vendor toggle follows
+  - **The chips are in severity order, not by size.** `EXCEPTIONS` runs the
+    high-severity rules first and the informational ones after, which is the
+    reading order; sorting by count would put Travel adder first and bury
+    "No Salesforce record". The ragged wrap is the cost of keeping that
   - **Paging redraws the TABLE, not the panel** (2026-08-27). `billMore()` and
     the expand inside `billCopy()` went through `_renderBillMain()`, which
     rebuilt the rail, the notice and the whole chip row in order to add fifty
@@ -1107,6 +1121,19 @@ and added two columns. Row count 2,530 → 4,706, nothing dropped.
 
 ## Email generator password
 Set via `const PASSWORD` in compose/index.html. Currently `sunpower`.
+
+## Hover tips (`TIP` in index.html)
+A tip is a **definition plus the one caveat that changes how the number is
+read** — never the case for building the metric that way. Several had grown to
+four and five sentences carrying design history (`resSplit` ended "The columns
+are equal width on purpose…", `billTravel` "Tracked because it is the one line
+a surveyor based in the market removes outright"), which is a source comment
+wearing a tooltip's clothes; trimmed 2026-08-27, and the reasoning is already
+written where it belongs. `billTravel` / `billCleanup` / `billRework` were
+deleted outright when the rail lost those cells — each rule's own `why` in
+`lib/billing.cjs` already says the same thing, and it prints under the chips
+when the rule is selected. `test/surfaces.test.js` asserts every remaining
+entry is referenced by a card, so a tip with no surface fails the build.
 
 ## The drill drawer (rebuilt 2026-08-17)
 One drawer serves ~30 entry points across all six pages. Things not to undo:
