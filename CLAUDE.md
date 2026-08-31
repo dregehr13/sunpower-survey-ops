@@ -454,6 +454,24 @@ becomes relevant instead of standing there inert. Things not to undo:
   `setSetting`; letting them drift is how a market reads thin on Quality and
   rated on the map. Volume and Open WIP are exempt — they are counts, and dot
   size already draws a one-job market as a one-job market
+- **Open WIP is DATE INDEPENDENT** (2026-08-31, Doug's call). A survey that is
+  open is open whichever period you are looking at, so filtering the queue by
+  project start was answering a different question. `mapIgnoresDates()` is the
+  one name for the modes that do not read the range — Coverage, Plan and Open
+  WIP — and it drives four things at once: `mapVisible()` takes Open WIP from
+  `_mapLive` (state-filtered, collected before the range test), the picker's
+  state counts follow the same population, the timeline and its note are
+  hidden, and `fbShow()` drops the date control. The comment above
+  `mapVisible()` had claimed this carve-out since the coverage modes landed;
+  only the code disagreed. Verified: 88 open on the full range, on one week of
+  August and on January, while Volume still moves 3,831 → 328
+- **`setMapMetric` re-renders on `_mapCtlKey()`, not on `mapIsRes()`.** The
+  inline bar is built from `fbShow('map')`, which reads BOTH flags, so a switch
+  changing either has to rebuild rather than swap the canvas. Testing only
+  `mapIsRes()` left Volume→Open WIP offering a date range the mode no longer
+  read; testing only `mapIgnoresDates()` left Open WIP→Coverage still offering
+  Resource, since both ignore dates. All eight adjacent transitions verified,
+  round trips included
 - **Nothing on the map is redundant** — audited 2026-08-31, every mode measured.
   Volume is what a map is for; Cycle and Resurvey carry a geographic cut no
   other page has (region is a sales territory, not a place — 0.9d to 5.8d and

@@ -1911,6 +1911,9 @@ function fbShow(page){
     // Coverage and Plan read the whole book and measure the resource split, so
     // neither the date range nor the Resource filter can reach them.
     return {...on,dates:false,resource:false};
+  // Open WIP reads the live queue. Resource still bites — "who is sitting on
+  // the open work" is a fair question — but the date range does not.
+  if(page==='map'&&mapIgnoresDates()) return {...on,dates:false};
   return on;
 }
 
@@ -5830,13 +5833,22 @@ function _mapScrollActive(){
   if(g.scrollWidth>g.clientWidth) b.scrollIntoView({block:'nearest',inline:'nearest'});
 }
 function setMapMetric(v){
-  // Crossing into or out of a coverage mode changes the POPULATION, not just
-  // the paint — cov/rec read the live book and ignore the date range, so the
-  // timeline, its note and the rail all have to be rebuilt rather than
+  // Crossing the date-independence boundary changes the POPULATION and the
+  // CONTROLS, not just the paint: those modes read the live book, so the
+  // timeline, its note, the rail, the subtitle and the filter bar — which
+  // drops the date range for them — all have to be rebuilt rather than
   // redrawn. Within a class it stays a canvas swap.
-  const was=mapIsRes();
+  //
+  // The test is the pair, not either one alone. The inline bar is built from
+  // fbShow('map'), which reads BOTH — mapIgnoresDates() for the date range and
+  // mapIsRes() for Resource — so a switch that changes either has to rebuild
+  // it. Testing only mapIsRes() left Volume→Open WIP offering a date range the
+  // mode no longer read; testing only mapIgnoresDates() left Open WIP→Coverage
+  // still offering Resource, since both ignore dates. Cheap to get right: the
+  // key is the two flags the bar depends on.
+  const was=_mapCtlKey();
   mapMetric=v; _mapSyncToggles();
-  if(was!==mapIsRes()){ renderMap(); return; }
+  if(was!==_mapCtlKey()){ renderMap(); return; }
   // A hard redraw reads as a glitch when the marker style changes shape
   // (heat blobs vs. graduated circles) as well as color. Dip the canvas out
   // and back in around the redraw instead of swapping it in place.
@@ -5933,7 +5945,7 @@ function mapRows(){
     if(!inRange) continue;
     out.push(p);
   }
-  return {out,live,liveAll,unplaced,stCount:mapIsRes()?stLive:stAll};
+  return {out,live,liveAll,unplaced,stCount:mapIgnoresDates()?stLive:stAll};
 }
 
 // Rows are already inside the filter bar's range by the time they get here.
@@ -6022,14 +6034,16 @@ function renderMap(){
         <div class="map-state" id="map-msg" hidden></div>
       </div>
       <div class="map-legend" id="map-legend"></div>
-      ${mapIsRes()?'':`<div class="map-scrub">
+      ${mapIgnoresDates()?'':`<div class="map-scrub">
         <div class="map-track">
           <canvas id="map-hist" aria-hidden="true"></canvas>
           <div class="map-ticks" id="map-ticks"></div>
         </div>
       </div>`}
-      <div class="note">${mapIsRes()
-        ? `Every open and completed survey on the books, whatever the date range holds${kinfo(TIP.mapCoverage)} · per-week rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
+      <div class="note">${mapIgnoresDates()
+        ? mapMetric==='wip'
+        ? `Every survey open right now, whatever the date range holds — an open survey is open whichever period you are looking at${unplaced?'':''}`
+        : `Every open and completed survey on the books, whatever the date range holds${kinfo(TIP.mapCoverage)} · per-week rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
           + (GF.resource&&GF.resource!=='all'?` · <strong>the Resource filter does not apply here</strong> — it is what this mode measures`:'')
         : `Weekly volume across the range${kinfo(TIP.mapTimeline)} · the period is set by the date range in the filter bar`}${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
     </div>
@@ -6046,7 +6060,7 @@ function renderMap(){
   if(!all.length){ msg.hidden=false; msg.textContent='No jobs match the current filters.'; }
 
   _mapAll=all; _mapLive=live; _mapLiveAll=liveAll; _mapBounds=b;
-  mapResize(); if(!mapIsRes()){ mapDrawHist(); mapDrawTicks(); }
+  mapResize(); if(!mapIgnoresDates()){ mapDrawHist(); mapDrawTicks(); }
   renderMapSite(); _mapScrollActive();
 }
 
@@ -6056,8 +6070,23 @@ let _mapAll=[], _mapLive=[], _mapLiveAll=[], _mapBounds=null;
 // carve out of that, and both for the same reason: they are not asking what
 // sold in a period. Open WIP asks what is on the books right now; Coverage and
 // Recommendation ask what the team should be doing about the current book.
+// The modes that do not read the date range. Coverage and Plan ask what the
+// team should do about the CURRENT book; Open WIP asks what is on the books
+// right now — and a survey that is open is open whatever its project's start
+// date was, so filtering the queue by project start was answering a different
+// question. The comment above has said so since the coverage modes landed;
+// mapVisible() was still taking Open WIP from the date-filtered array. Doug
+// confirmed the intent 2026-08-31.
+const mapIgnoresDates=()=>mapIsRes()||mapMetric==='wip';
+// What the inline filter bar and the timeline are built from. Any change
+// here needs a full renderMap(), not a canvas swap.
+const _mapCtlKey=()=>mapIsRes()+'|'+mapIgnoresDates();
+
 function mapVisible(){
-  if(mapMetric==='wip') return _mapAll.filter(p=>isWIP(p.r));
+  // _mapLive is state-filtered but NOT date-filtered — collected before the
+  // range test in mapRows(). A zoom into a state still applies; the range does
+  // not.
+  if(mapMetric==='wip') return _mapLive.filter(p=>isWIP(p.r));
   return mapIsRes()?_mapLive:_mapAll;
 }
 
@@ -6594,8 +6623,10 @@ function mapPaintMeta(vis,zips){
   const sub=document.getElementById('map-sub');
   // The coverage modes have no date bounds to print — they read the whole book
   // — so the guard cannot be "do we have bounds".
-  if(sub&&(_mapBounds||mapIsRes())){
-    sub.innerHTML=mapIsRes()
+  if(sub&&(_mapBounds||mapIgnoresDates())){
+    sub.innerHTML=mapMetric==='wip'
+      ? 'Open surveys right now · the whole queue, not the date range'
+      : mapIsRes()
       ? (mapMetric==='cov'
           ? 'Who is doing the work · the whole book, not the date range'
           : 'What to do about each market · the whole book, not the date range')
