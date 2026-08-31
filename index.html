@@ -4785,7 +4785,8 @@ function renderAgingWIP(){
     // Unscheduled — classify by last review subject
     if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return QS.likelyCancel;
     // Reviewers write both "MISSING UB" and "MISSING UTILITY BILL"; matching
-    // only the abbreviation left four of these reading Unscheduled.
+    // only the abbreviation left four of these reading Unscheduled. The same
+    // ask written as prose is tested lower down, below Awaiting rep.
     if(any(/MISSING (UB|UTILITY BILL)/)) return QS.missingUb;
     // "RADICL RESCHEDULING WITH CUSTOMER" is the same waiting state as
     // "RADICL SCHEDULING", and "INITIAL SITE SURVEY - RADICL" is the subject
@@ -4804,6 +4805,20 @@ function renderAgingWIP(){
     if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')
        ||subj.includes('RESCHEDULE NEEDED')
        ||any(/FOLLOW.?UP WITH (THE )?REP/)||any(/\bFUP WITH (THE )?REP/)) return QS.awaitingRep;
+    // The bill asked for in prose, under a subject that says nothing about it:
+    // "REP EMAIL - FOLLOW UP 9/2" over a note reading "we need a full and
+    // current utility bill before a site survey can be scheduled". It used to
+    // sit inside the generic FOLLOW UP catch that Pending photo upload
+    // replaced, and fell to Unclassified when that went.
+    // Tested BELOW Awaiting rep on purpose. On a rep-chase note the bill is one
+    // ask among several — "we also needed the UB and Welcome call completed" —
+    // and the row is waiting on the rep, not on the bill; matching it ahead of
+    // Awaiting rep pulled two such rows out of it. The gap is tempered against
+    // UPLOAD so the resolved phrasing ("NO LONGER NEEDED ... I uploaded the UB")
+    // drops out while "will need correct UB photos uploaded", which is a real
+    // ask, stays. Adds exactly two rows across the whole history, both from
+    // Unclassified.
+    if(any(/(MISSING|NEEDS?|WAITING ON|REQUIRES?)((?!UPLOAD)[\s\S]){0,40}?(UTILITY BILL|\bUB\b)/)) return QS.missingUb;
     // A COMPLETE note on a row that is not complete describes work that has
     // already finished — the initial survey — and says nothing about what the
     // row is waiting on now. Six open resurveys requested 8/26 carried

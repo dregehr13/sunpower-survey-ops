@@ -209,6 +209,25 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       source, never inferred here**
     - Unclassified reads **1**, the Design row. One row is a prompt to watch,
       not a licence to add a status for it
+  - **Missing UB matches the ask in prose too, and it is tested BELOW Awaiting
+    rep** (2026-08-31). The literal `MISSING (UB|UTILITY BILL)` stays where it
+    is, above Radicl; a second pattern —
+    `(MISSING|NEEDS?|WAITING ON|REQUIRES?) … (UTILITY BILL|UB)` — runs after
+    Awaiting rep for the same ask written out: *"we need a full and current
+    utility bill before a site survey can be scheduled"* under a subject reading
+    only `REP EMAIL - FOLLOW UP 9/2`. That row used to hide inside the generic
+    `FOLLOW UP` catch and fell to Unclassified when Pending photo upload
+    replaced it. Two things not to undo:
+    - **The low priority is the point.** On a rep-chase note the bill is one ask
+      among several — *"we also needed the UB and Welcome call completed"* — and
+      the row is waiting on the rep, not on the bill. Matching ahead of Awaiting
+      rep pulled two such rows out of it
+    - **The gap is tempered against `UPLOAD`**, so *"NO LONGER NEEDED … I
+      uploaded the UB"* drops out while *"will need correct UB photos
+      uploaded"* — a real ask — stays. Without it the resolved case classifies
+      as a live one
+    Across the whole history it moves exactly two rows, both out of
+    Unclassified; live it is Missing UB 3 → 4 and Unclassified 2 → 1
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing
