@@ -1497,7 +1497,7 @@ body{padding-left:180px;}
       <h2>Outlook</h2>
       <button onclick="closeOutlook()" aria-label="Close" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">&times;</button>
     </div>
-    <p class="msub">Sits beside the recommendation and never changes it &mdash; commits to the repo, live for everyone in about 30 seconds.</p>
+    <p class="msub">Your own read on an area. Committed to the repo &mdash; live in ~30s. Never changes the recommendation.</p>
     <div id="outlook-body"></div>
   </div>
 </div>
@@ -2556,7 +2556,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') hideKtip(); });
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
   complete:'A survey counts as complete only when it has a Site Survey Complete date AND List status "Complete". A Holding or Reopened row keeps its date but is still open.',
-  firstComplete:'First-time completion: counts a survey the week its Site Survey Complete date lands, regardless of current List status. Unlike the plain "complete" count, this never shrinks later if the survey is reopened for a resurvey. It answers "how many closed out that week," not "how many are sitting in Complete right now."',
+  firstComplete:'Counts a survey in the week its Site Survey Complete date lands, regardless of current List status — so unlike the plain "complete" count it never shrinks later if the survey reopens for a resurvey.',
   cycle:'Project Start Date → Site Survey Complete, in calendar days. This is the Spec 12744 metric and is never adjusted.',
   onTarget:()=>`Share of completed surveys that finished within ${S.targetAvg} calendar days, the Spec 12744 average target.`,
   schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
@@ -2565,16 +2565,16 @@ const TIP={
   wip:'Surveys that have started but are not yet complete.',
   avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
   ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
-  projAge:'Calendar days since the Project Start Date, no matter who has owned it. Use this for total elapsed age, and Days Open in SS for how long it has been the team\'s responsibility.',
-  drillDays:'Two measurements in one column, because a row is one or the other: a completed survey shows its cycle time (Project Start → Site Survey Complete), and an open one has no cycle time yet, so it shows project age, marked "open". Neither is Days Open in SS — that subtracts the rep grace day and is the WIP page\'s triage number.',
+  projAge:'Calendar days since the Project Start Date, no matter who has owned it.',
+  drillDays:'A completed row shows its cycle time (Project Start → Site Survey Complete); an open row has no cycle yet, so it shows project age, marked "open". Neither is Days Open in SS.',
 
   // ── SS ratio: two variants, on purpose ──
-  ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 means roughly a week of work is queued. This reads high on a Monday morning; that is the genuine queue before the day clears it.',
-  ssRatioWeek:'Weeks of backlog: average WIP across the week ÷ average weekly completions over that week and the two before. Averaged across the week deliberately, since intake keeps arriving Friday and Saturday while the team is off, so a Sunday snapshot would catch the weekly peak every time.',
+  ssRatioLive:'Weeks of backlog: open surveys right now ÷ average weekly completions over the last 3 complete weeks. 1.0 ≈ a week of work queued. Reads high Monday mornings, before the day\'s clearing.',
+  ssRatioWeek:'Weeks of backlog: average WIP across the week ÷ average weekly completions over that week and the two before. Averaged across the week so a Sunday snapshot can\'t catch the weekend intake peak.',
 
   // ── Flow ──
   clearance:'Surveys completed ÷ surveys started, for the last full week. Above 100% the backlog is shrinking, below 100% it is growing, regardless of how much volume comes in.',
-  weeklyFloor:'The lowest daily WIP count seen during the week (Mon–Sun). If this floor climbs week over week, backlog is genuinely growing — it isn\'t draining back down even on the week\'s best day.',
+  weeklyFloor:'The lowest daily WIP count during the week (Mon–Sun). A rising floor means backlog isn\'t draining, even on the week\'s best day.',
 
   // ── Trends ──
   trend3wk:'Direction of the 3-week rolling average cycle time versus the 3 weeks before it. Stable means the change is inside a 0.1 day dead band.',
@@ -2585,18 +2585,18 @@ const TIP={
   resourceMix:'Share of completions in view by who performed the survey: sales rep, Radicl, or a SunPower surveyor.',
 
   // ── Resurveys ──
-  fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded: nothing was re-surveyed, so the survey did not fail. They are left out of this page entirely, not just out of the percentage.',
-  fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land. Twenty-one days is about the 79th percentile of that lag.',
-  rsCat:'What the request actually asked for, read out of the Resurvey Request Details text — the reason picklist is too coarse to act on, with "Survey Incomplete" carrying 76% of it. A request asks for 2.2 of these on average, so the shares add to more than 100%. Derived from free text, not a Salesforce field: the drill drawer carries the raw reason and the original sentence beside every row.',
-  rsPenalty:'How much longer a job takes when it comes back: every calendar day after its own survey had already closed, measured Site Survey Complete → Resurvey Complete. It is the two figures below it added together — the wait before anyone flags it, plus the trip back out. Measured against the job\'s own survey rather than the clean-job average, so it stays comparable when you filter: clean cycle times range 1.1–7.8d by region and 2.8–8.5d by resource, and the old definition subtracted whichever one the filter happened to select.',
-  rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for it to be redone. Not the survey team\'s clock, which is why it is worth showing separately — it is the largest of the three figures here, and it is a Design and review question rather than a field one. Half the flag waits land inside 6 days; the top 10% run past 47.',
+  fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded from this page entirely: nothing was re-surveyed, so the survey did not fail.',
+  fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land.',
+  rsCat:'What the request asked for, read from the Resurvey Request Details text (the reason picklist is too coarse). A request asks for 2.2 of these on average, so shares add past 100%. The drill drawer carries the raw reason beside each row.',
+  rsPenalty:'How much longer a job takes when it comes back: every calendar day after its own survey had already closed, measured Site Survey Complete → Resurvey Complete. It is the two figures below it added together — the wait before anyone flags it, plus the trip back out.',
+  rsFlag:'Site Survey Complete → Resurvey Requested: how long the finished survey sat before anyone asked for a redo. A Design/review wait, not the survey team\'s. Half land inside 6 days; the top 10% run past 47.',
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
   rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
-  wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now. A resurvey and a first survey are different work with different clocks, so this is the cut to use when you want the queue the team is actually starting from scratch.',
+  wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
-  mapVolume:'Job density. Blob size follows job count and overlaps add, so colour shows concentration.',
+  mapVolume:'Job density by town.',
   mapCycle:'Average project start to survey complete, per market. Hollow means too few completions to rate.',
   mapResurvey:'Share of a market\'s completions that came back. Hollow means too few completions to rate.',
   mapWip:'Surveys started and not yet complete, as of the last export. Ignores the date range.',
@@ -2605,11 +2605,11 @@ const TIP={
   mapSite:'Click anywhere to price a surveyor based there: work in range, what it costs, break-even against the vendor.',
   mapTopMarket:'The state with the most jobs in view. Click a state on the map to open it.',
   resSplit:'How the survey work divides across the three resources. Volume and share read the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on.',
-  resCapacity:'A modelled ceiling, not an observation: one surveyor\'s day is field hours minus overhead minus the drive, divided by time on site plus admin plus a hop between jobs. ~15 a week each at an 8-mile market, summed across the roster. Every knob is an estimate, editable in Settings → Resource model. Read the gap against it as a question, not as headroom.',
-  resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A case to check, never a verdict — the thresholds are fitted to this team\'s own history. A group takes the recommendation of the markets inside it.',
+  resCapacity:'A modelled ceiling, not an observation: one surveyor\'s day is field hours minus overhead minus the drive, divided by time on site plus admin plus a hop between jobs. ~15 a week each at an 8-mile market, summed across the roster. Every knob is an estimate, editable in Settings → Resource model.',
+  resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A case to check, not a verdict. A group takes the recommendation of the markets inside it.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
-  billPerSurvey:'Total invoiced divided by billed survey visits, so travel adders and demobilisation are inside it. Compare an SPWR surveyor against this, not against the base rate.',
-  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict — the tool knows what the invoice and Salesforce say, not what the contract says.',
+  billPerSurvey:'Total invoiced ÷ billed survey visits, so travel adders and demobilisation are inside it.',
+  billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, not a verdict.',
   mapTopLocation:'The market with the most jobs in view, named for its biggest town. A market is everything within the selected radius.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
@@ -3830,7 +3830,7 @@ function renderRsReq(){
           </div>`;
         }).join('')}
       </div>
-      <div class="note">By the date the resurvey was requested, not the date the original survey closed — most of these belong to surveys that finished weeks ago. This panel holds a fixed two weeks and <b>ignores the date range</b>; region, office and resource filters do apply.${dismissedN?` ${dismissedN} ${dismissedN===1?'is':'are'} tagged Unnecessary Request and shown greyed: they are excluded from the yield figures above, since nothing was re-surveyed.`:''}</div>`
+      <div class="note">By request date · fixed two weeks · <b>ignores the date range</b>, obeys region/office/resource.${dismissedN?` ${dismissedN} greyed ${dismissedN===1?'row is':'rows are'} Unnecessary Request — excluded from yield.`:''}</div>`
       :`<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No resurveys requested ${fmtDate(w.from)} — ${fmtDate(w.to)}.</div>`}
     </div>`;
 }
@@ -4053,7 +4053,7 @@ function renderPerformance(){
         ${pMore||perfExpanded?`<button class="drill-seg-btn" onclick="togglePerfExpand()">${perfExpanded?`Show top ${P_LIMIT} only`:`Show all ${pSorted.length.toLocaleString()} ${pPlural}`}</button>`:'<span></span>'}
         <button class="copy-btn" onclick="copyTableEl('pf-gtable',this,'the table')">Copy table</button>
       </div>
-      <div class="note">Cycle is the average, banded green at or under ${S.targetMedian}d, amber to ${S.targetAvg+2}d, red beyond, with the ${S.targetAvg}d target marked in the track. ${pShowRes?'The last three columns are the same cycle time split by who ran the survey, with the survey count beside each. ':''}Every ${pLabel.toLowerCase()} is listed however few projects it has, so read the average next to its Projects count.</div>`
+      <div class="note">Cycle is the average, banded green at or under ${S.targetMedian}d, amber to ${S.targetAvg+2}d, red beyond, with the ${S.targetAvg}d target marked in the track. ${pShowRes?'The last three columns are the same cycle time split by who ran the survey, with the survey count beside each. ':''}Every ${pLabel.toLowerCase()} is listed regardless of volume — check the Projects count beside each average.</div>`
       :`<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No ${pPlural} match &ldquo;${esc(perfQuery.trim())}&rdquo;.</div>`}
     </div>`;
 
@@ -4217,7 +4217,7 @@ function renderTrends(){
     </div>
     <div class="sec">
       <div class="shead">
-        <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?`Surveys in (by start date) vs out (by complete date), ${flowRangeLabel} · Sat/Sun muted — the admin team works Mon–Fri, so weekend buildup is expected`:'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · Line = open WIP</div></div>
+        <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?`Surveys in (by start date) vs out (by complete date), ${flowRangeLabel} · weekend muted`:'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · line = open WIP</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${trFlowView==='weekly'?`<div class="toggle-group">
             <button class="tgl-btn${trFlowCompletionBasis==='current'?' active':''}" onclick="setTrFlowCompletionBasis('current')">Current</button>
@@ -4271,7 +4271,11 @@ function renderTrends(){
       </div>
     </div>
     <div class="sec">
-      <div class="shead"><div><div class="stitle">Weekly rhythm</div><div class="ssub">Average surveys in vs out by day of week, always the trailing 8 weeks — not affected by the date filter above, since a short custom range would leave each weekday only one or two samples · the Saturday gap is structural: reps sell weekends, the admin team does not work them</div></div></div>
+      <!-- Always the trailing 8 weeks, ignoring the date filter: a short custom
+           range would leave each weekday only one or two samples. The Saturday
+           gap is structural — reps sell weekends, the admin team doesn't work
+           them. -->
+      <div class="shead"><div><div class="stitle">Weekly rhythm</div><div class="ssub">Avg surveys in vs out by weekday · trailing 8 weeks · ignores the date filter</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
         <span class="li"><span class="ld" style="background:#34d399;"></span>Out</span>
@@ -5634,7 +5638,7 @@ function renderResurvey(){
       <button class="copy-btn" onclick="copyTableEl('rs-detail-tbl',this,'the table')">Copy table</button>
     </div>
     <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling, the mirror of the 95% yield target. Came back is the share of completions that needed a resurvey, so it is 100 minus first pass yield.</div>
-    ${grpKey==='sales_rep'?`<div class="note">Only the surveys a rep ran themselves: ${grpPool.length} of ${completions.length} completions. Reps with no sale in ${RS_IDLE_TAG} days or more are tagged idle. Nobody is filtered out on it, because a quiet rep may be between deals rather than gone.</div>`:''}
+    ${grpKey==='sales_rep'?`<div class="note">Only the surveys a rep ran themselves: ${grpPool.length} of ${completions.length} completions. Reps with no sale in ${RS_IDLE_TAG}+ days are tagged idle; none are filtered out.</div>`:''}
   </div>`;})():''}
 
   <div class="q-two">
@@ -5650,7 +5654,7 @@ function renderResurvey(){
         <div class="rswk-meta">${Math.round(v/defects.length*100)}% of resurveys${rsCatHint(k)?' · '+rsCatHint(k):''}</div>
       </div>`).join('')}
     </div>
-    <div class="note">${reasonRows[0]?`<strong>${esc(rsCatLabel(reasonRows[0][0]))}</strong> is in ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the single biggest thing to fix. `:''}Shares add past 100% because one request usually asks for several things${noDetails?`, and <strong>${noDetails}</strong> carr${noDetails===1?'ies':'y'} no request details, so ${noDetails===1?'it is':'they are'} in none of the bars above`:''}. ${dismissed?`A further <strong>${dismissed}</strong> request${dismissed===1?' was':'s were'} dismissed as unnecessary and ${dismissed===1?'is':'are'} excluded from this page entirely, since nothing was re-surveyed.`:''}</div>
+    <div class="note">${reasonRows[0]?`<strong>${esc(rsCatLabel(reasonRows[0][0]))}</strong> is in ${Math.round(reasonRows[0][1]/defects.length*100)}% of every resurvey — the biggest thing to fix. `:''}Shares add past 100% — one request usually asks for several things${noDetails?`; <strong>${noDetails}</strong> ${noDetails===1?'has':'have'} no details and ${noDetails===1?'is':'are'} in no bar`:''}.${dismissed?` <strong>${dismissed}</strong> more ${dismissed===1?'was':'were'} dismissed as unnecessary and excluded from this page.`:''}</div>
   </div>`:''}
   <div id="rsreq-wrap"></div>
   </div>
@@ -6087,8 +6091,8 @@ function renderMap(){
       </div>`}
       <div class="note">${mapIgnoresDates()
         ? mapMetric==='wip'
-        ? `Every survey open right now, whatever the date range holds — an open survey is open whichever period you are looking at${unplaced?'':''}`
-        : `The whole book, whatever the date range holds · rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
+        ? `Every survey open right now · ignores the date range`
+        : `Rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
           + (GF.resource&&GF.resource!=='all'?` · <strong>the Resource filter does not apply here</strong> — it is what this mode measures`:'')
         : `Weekly volume across the range`}${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
     </div>
@@ -6645,7 +6649,7 @@ function mapPaintMeta(vis,zips){
   const topZ=[...zips.values()].sort((a,b)=>b.n-a.n)[0];
   const cov=mapIsRes()?mapCovTotals(zips):null;
   k.innerHTML=`<div class="srail">`
-    +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapLocation)}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} market${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' states':''}</span></div></div>`
+    +`<div class="srail-cell"><div class="klabel">${mapMetric==='wip'?'Open surveys':'Jobs in view'}${mapMetric==='wip'?kinfo(TIP.mapWip):''}</div><div class="srail-val">${vis.length}<span class="srail-sub">${zips.size} market${zips.size!==1?'s':''}${mapMarket==='US'?' · '+Object.keys(byMkt).length+' states':''}</span></div></div>`
     +`<div class="srail-cell"><div class="klabel">${mapMarket==='US'?'Top market':'Top location'}${kinfo(mapMarket==='US'?TIP.mapTopMarket:TIP.mapTopLocation)}</div><div class="srail-val" style="font-size:20px;">${mapMarket==='US'?(topM?esc(MAP_STATE_NAMES[topM[0]]||topM[0]):'—'):(topZ?esc(topZ.city):'—')}<span class="srail-sub">${mapMarket==='US'?(topM?topM[1]+' jobs':'—'):(topZ?topZ.n+' jobs':'—')}</span></div></div>`
     +(mapIsRes()
       ? `<div class="srail-cell"><div class="klabel">Inside reach${kinfo(TIP.mapReach)}</div><div class="srail-val">${_rpct(cov.reachShare)}<span class="srail-sub">of the work, ${cov.inReach} market${cov.inReach!==1?'s':''}</span></div></div>`
@@ -6676,9 +6680,8 @@ function mapPaintMeta(vis,zips){
       ? 'Open surveys right now · the whole queue, not the date range'
       : mapIsRes()
       ? (mapMetric==='cov'
-          ? 'Who is doing the work · the whole book, not the date range'
-          : 'What to do about each market · the whole book, not the date range')
-        +(mapTeam?'':' · turn on Team reach to see what the team can get to')
+          ? 'Who does the work · whole book, ignores the date range'
+          : 'What to do about each market · whole book, ignores the date range')
       : !_mapBounds ? '&nbsp;'
       : fmtDate(_mapBounds.lo)+' – '+fmtDate(_mapBounds.hi)
       +' · '+({vol:'job density',wip:'open surveys',cycle:'average cycle time',rs:'resurvey rate'})[mapMetric];
@@ -6724,7 +6727,7 @@ function mapPaintMeta(vis,zips){
     ? `<span><span class="map-ring"></span>${OpsCoverage.surveyorConfig().maxOneWayMi}mi day trip from a base</span>`:'';
   lg.innerHTML=mapMetric==='cov'
     ? RES_TRIO.map(t=>sw(t.css,t.full)).join('')
-      +`<span style="color:var(--faint);">Hollow = no work in view · circle size follows job count · colour is the resource doing most of the work here, the split is in the list below</span>`+teamKey
+      +`<span style="color:var(--faint);">Hollow = no work in view · circle size follows job count · colour = the resource doing most of the work here</span>`+teamKey
     : mapMetric==='rec'
     ? Object.entries(MAP_REC_C).map(([k,c])=>sw(c,Object.values(OpsCoverage.RECOMMENDATIONS).find(r=>r.k===k).label)).join('')
       +`<span style="color:var(--faint);">Hollow = gone quiet · a recommendation is a case to consider, not a decision</span>`+teamKey
@@ -7136,11 +7139,11 @@ const RES_MODEL_FIELDS = [
   {k:'dailyOverheadMinutes',label:'Daily overhead',       unit:'min', step:5,   min:0, max:480, desc:'Staging, dispatch and close-out — once a day, not per job'},
   {k:'onSiteMinutes',       label:'Time on site',         unit:'min', step:5,   min:5, max:480, desc:'Measure, photograph, verify'},
   {k:'adminMinutesPerJob',  label:'Admin per job',        unit:'min', step:5,   min:0, max:240, desc:'Write-up, upload, QA'},
-  {k:'avgSpeedMph',         label:'Average speed',        unit:'mph', step:1,   min:5, max:80,  desc:'Door to door in a metro, not a highway cruise'},
-  {k:'roadFactor',          label:'Road factor',          unit:'×',   step:0.05,min:1, max:3,   desc:'Straight-line miles → road miles. Every distance in the app is straight-line; this is the one place it is converted'},
+  {k:'avgSpeedMph',         label:'Average speed',        unit:'mph', step:1,   min:5, max:80,  desc:'Door-to-door in a metro'},
+  {k:'roadFactor',          label:'Road factor',          unit:'×',   step:0.05,min:1, max:3,   desc:'Straight-line miles → road miles'},
   {k:'hopMi',               label:'Hop between jobs',     unit:'mi',  step:1,   min:0, max:60,  desc:'Typical distance between two jobs inside one market'},
   {k:'maxOneWayMi',         label:'Day-trip radius',      unit:'mi',  step:5,   min:10, max:250,desc:'Past this a market stops being a day trip and becomes a posting'},
-  {k:'daysAvailable',       label:'Days worked a week',   unit:'d',   step:1,   min:1, max:7,   desc:'The default. A surveyor’s own days come from their `off` list in roster.json and always win'},
+  {k:'daysAvailable',       label:'Days worked a week',   unit:'d',   step:1,   min:1, max:7,   desc:'Default — a surveyor’s roster entry overrides it'},
 ];
 const RES_COST_FIELDS = [
   {k:'surveyorAnnual',  label:'Surveyor, fully loaded', unit:'$/yr', step:1000, min:0, max:400000, desc:'Salary plus burden. Divided by 52'},
@@ -7779,8 +7782,7 @@ function renderResource(){
     // Was "2,893 surveys from the field", which sat nine pixels above "2,891
     // completed" with nothing saying why two counts of the same thing differ.
     // The share of all work is what this column's ceiling actually is.
-    `<b style="color:var(--text);">No cost line.</b> Rework the reps cause is billed by the vendor, `
-      +`so it lands under Outsourced.`,
+    `<b style="color:var(--text);">No cost line</b> &mdash; rep-caused rework is billed by the vendor, under Outsourced.`,
   ];
   // One fact each. These were three sentences of argument — "the whole team's
   // biggest quality lever", "every capacity figure on this page scales with
@@ -7789,8 +7791,8 @@ function renderResource(){
   // figure here is wrong if it is wrong.
   const notes=[
     util!=null&&util<0.6
-      ? `<b>Modelled at ${_r1(teamCap/Math.max(bases.length,1))}/wk each; they complete ${_r1(inhouseNow/placed)}.</b> `
-        +`Settle that before using any capacity figure on this page.`
+      ? `<b>Modelled ${_r1(teamCap/Math.max(bases.length,1))}/wk each; actual ${_r1(inhouseNow/placed)}.</b> `
+        +`Every capacity figure below rests on this.`
       : 'Capacity is the drive-time model in <code>lib/coverage.cjs</code>, at a tight market.',
     billSum&&billSum.cleanupUsd
       ? `${_rmoney(billSum.cleanupUsd)} of this finishes surveys somebody else started, at the full first-visit rate.`
@@ -9130,7 +9132,7 @@ function renderSettings(){
       <div class="set-sec">
         <div class="set-title">Rates</div>
         <div class="set-row">
-          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before a first-pass-yield or resurvey rate is shown instead of its sample count · applies to the Quality table, the Resource markets and the map's Cycle and Resurvey colouring · at 10 the map rates 54 of 214 markets, at 3 it rates 114 and 29 of them paint a perfect 0% off fewer than ten jobs</div></div>
+          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before its first-pass-yield or resurvey rate is shown instead of a sample count · Quality table, Resource markets, map Cycle/Resurvey colouring</div></div>
           <div class="set-control"><input type="number" min="1" max="100" value="${S.minCell}" onchange="setSetting('minCell',parseInt(this.value)||1)"></div>
         </div>
       </div>
@@ -9189,9 +9191,8 @@ function renderSettings(){
       <div class="set-sec" style="grid-column:1/-1;">
         <div class="set-title">Resource Model</div>
         <div style="font-size:10px;color:var(--faint);line-height:1.7;margin-bottom:10px;">
-          Every capacity and SPWR cost figure on the Resource page comes from these two sets of numbers, and nothing else does &mdash;
-          no survey metric, no cycle time, no yield. They are an <b>estimate calibrated to what Doug has seen</b>, not a measurement,
-          which is why they are editable here rather than fixed in the code. A surveyor's own knobs in <code>roster.json</code> still win over them.
+          Feeds only the Resource page's capacity and SPWR cost figures &mdash; no survey metric, no cycle time, no yield.
+          An <b>estimate</b>, not a measurement &mdash; edit freely. A surveyor's own knobs in <code>roster.json</code> still win.
         </div>
         <div class="set-model">
           <div>

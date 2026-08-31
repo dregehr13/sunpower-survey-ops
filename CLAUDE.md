@@ -1335,6 +1335,20 @@ deleted outright when the rail lost those cells — each rule's own `why` in
 when the rule is selected. `test/surfaces.test.js` asserts every remaining
 entry is referenced by a card, so a tip with no surface fails the build.
 
+**Trimmed again 2026-08-31** (Doug's `/audit` for over-explaining, app-wide):
+~13 tips lost a sentence of rationale or derivation that had grown back —
+`drillDays`, `firstComplete`, `ssRatioLive`/`ssRatioWeek`, `weeklyFloor`, `fpy`,
+`fpyTrend`, `rsCat`, `rsPenalty`, `rsFlag`, `wipInitial`, `projAge`,
+`resCapacity`, `resRec`, `billPerSurvey`, `billReview`, `mapVolume`. Same pass
+fixed a **dead `kinfo(TIP.mapLocation)`** on the Map "Jobs in view" rail cell —
+`mapLocation` was deleted 2026-08-31 but the reference stayed, rendering an `i`
+icon that did nothing. Also trimmed the same day: the Trends **Weekly rhythm**
+subtitle (the sample-size and Saturday-gap reasoning → source comment above it)
+and **Intake & flow** subtitle, the Quality **Resurveys requested** note, the
+Map **Coverage** subtitle/legend/note (three places said "not the date range"),
+the Performance table note, the Resource hero column notes, and several Settings
+descriptions. No displayed number moved; `docs/METRICS.md` unaffected.
+
 ## The drill drawer (rebuilt 2026-08-17)
 One drawer serves ~30 entry points across all six pages. Things not to undo:
 - **Columns come from `drillCols()`, one spec list per mode** — header, sort,
