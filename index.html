@@ -105,6 +105,9 @@ html,body{overflow-x:clip;}
 select,input[type=date],input[type=text]{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;height:28px;}
 select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;}
 .fsep{width:1px;height:18px;background:var(--border);flex-shrink:0;}
+/* Each control carries the separator that precedes it, so a bar whose first
+   control is hidden opens on a hairline dividing nothing from the edge. */
+.fbar>.fsep:first-child{display:none;}
 .fbtn{font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;height:28px;white-space:nowrap;}
 .fbtn:hover{background:var(--bg);}
 .fbtn-active{background:var(--text)!important;color:#fff!important;border-color:var(--text)!important;}
@@ -1853,9 +1856,7 @@ function applyFilter(){
     return true;
   });
   document.getElementById('navBadge').textContent = rows.length+' projects';
-  // WIP counts open surveys, not date-filtered completions — buildFBar owns
-  // that hint. Overwriting it here would put "2335 of 2448 shown" on the queue.
-  PAGES.forEach(p=>{ if(p==='wip') return; const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=filtered.length+' of '+rows.length+' shown'; });
+  PAGES.forEach(p=>{ const el=document.getElementById('fb-hint-'+p); if(el) el.textContent=fbHint(p); });
 }
 
 // Global filter pieces for pages that don't go through `filtered` (Resurveys)
@@ -1899,13 +1900,23 @@ function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
 // set in Volume is still there when you come back from Coverage — you did not
 // ask to drop it, and silently dropping it would be its own surprise.
 function fbShow(page){
-  const on={dates:true,region:true,office:true,status:true,resource:true,extras:false};
+  const on={dates:true,region:true,office:true,status:true,resource:true,outliers:false,extras:false};
+  // The outlier clause is written in applyFilter(), so it reaches exactly the
+  // surfaces that read `filtered` — Performance, and nothing else. Every other
+  // page reads `rows` through gfDim(), which carries no ct_total test, so the
+  // amber chip announced "265 outliers >10d hidden" over populations where all
+  // 265 were still being counted.
+  if(page==='performance') on.outliers=true;
   // The Map places rows by the ZIP in the address, so it already cuts by place
   // twice — the State picker and Office. Region is a sales territory, not a
   // geography, so a third slice here only confuses the two. Doug, 2026-08-31.
   if(page==='map') on.region=false;
   if(page==='wip')      return {...on,dates:false,extras:true};   // a live queue has no date range
   if(page==='resurvey') return {...on,status:false};              // every row here is already complete
+  // The source editor reads `rows` and applies no gfDim() clause of its own, so
+  // scopeRows() — the Status list — is the only global control that can narrow
+  // it. Its own toolbar owns search, state and paging.
+  if(page==='data')     return {...on,dates:false,region:false,office:false,resource:false};
   if(page==='map'&&mapIsRes())
     // Coverage and Plan read the whole book and measure the resource split, so
     // neither the date range nor the Resource filter can reach them.
@@ -1916,10 +1927,21 @@ function fbShow(page){
   return on;
 }
 
+// What the bar's count means differs by page, because the population does. One
+// definition, read by the builder and by applyFilter() — they used to disagree:
+// applyFilter() wrote the completions count onto every bar except WIP's, so the
+// Map printed "3748 of 3836 shown" nine pixels above a rail reading 3,824, and
+// the source editor printed it above a table of 3,836 rows.
+function fbHint(page){
+  if(page==='wip')  return wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open';
+  if(page==='data') return rows.length+' rows in scope';
+  if(page==='map')  return '';   // the rail below states the count the map actually draws
+  return filtered.length+' of '+rows.length+' shown';
+}
+
 function buildFBar(page){
   const f = GF;
   const show = fbShow(page);
-  const isWip = page==='wip';
   const offices=[...new Set(rows.map(r=>r.sales_office).filter(Boolean))].sort();
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
   const catDropdowns = catFields.map(fd=>{
@@ -1961,10 +1983,10 @@ function buildFBar(page){
   // (hidden inside the dropdown) and the outlier setting (lives in Settings)
   const chips=[];
   if(show.region) regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
-  offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
-  // The outlier filter tests ct_total, which an open survey does not have — so
-  // it is neither offered nor advertised on the live queue.
-  if(f.removeOutliers&&show.dates){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
+  if(show.office) offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
+  // The outlier filter tests ct_total in applyFilter(), so it is neither
+  // offered nor advertised anywhere that does not read `filtered`.
+  if(f.removeOutliers&&show.outliers){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
 
   return `<div class="fbar">
     ${!show.dates?''
@@ -1989,7 +2011,7 @@ function buildFBar(page){
         ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
       </div>
     </div>`}
-    ${hasOffices?`<div class="fsep"></div>
+    ${show.office&&hasOffices?`<div class="fsep"></div>
     <div class="rgdrop offdrop">
       <button class="rgdrop-btn${offArr.length?' active':''}" aria-label="Filter by sales office" aria-expanded="${offPanelOpen}" onclick="toggleOfficeDrop('${page}',event)">${esc(offLabel)}<span class="rg-caret">&#9660;</span></button>
       <div class="rgdrop-panel offdrop-panel${offPanelOpen?' open':''}">
@@ -2014,9 +2036,7 @@ function buildFBar(page){
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
-      <span class="fhint" id="fb-hint-${page}">${isWip
-        ? wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open'
-        : filtered.length+' of '+rows.length+' shown'}</span>
+      <span class="fhint" id="fb-hint-${page}">${fbHint(page)}</span>
     </div>
   </div>`;
 }
@@ -2099,10 +2119,6 @@ function onOfficeClear(page,ev){
 function renderFBars(){
   PAGES.forEach(p=>{
     if(p==='week') return; // Current is fixed-week and has no bar
-    // The Map builds its own bar INLINE, inside the panel, because which
-    // controls apply changes with the mode — see renderMap(). Same builder,
-    // different home.
-    if(p==='map') return;
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -4727,20 +4743,24 @@ function renderAgingWIP(){
   // `sort` is the table's status sort order, and QS_ORDER is schedule order:
   // booked, overdue, then everything still waiting.
   const QS={
-    scheduled:   {key:'scheduled',   label:'Scheduled',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#4f7fae', sort:0},
-    pastdue:     {key:'pastdue',     label:'Past due',          bg:'#f9e7e4', fg:'#b3402e',     bar:'#b3402e', sort:1},
-    radicl:      {key:'radicl',      label:'Radicl scheduling', bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
-    missingUb:   {key:'missingUb',   label:'Missing UB',        bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
-    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',      bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
-    followUp:    {key:'followUp',    label:'Follow-up set',     bg:'#e9f0f0', fg:'#3d6566',     bar:'#5f8a8b', sort:6},
-    likelyCancel:{key:'likelyCancel',label:'Likely cancel',     bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:7},
-    new:         {key:'new',         label:'New',               bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:8},
-    unscheduled: {key:'unscheduled', label:'Unclassified',      bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:9},
+    scheduled:   {key:'scheduled',   label:'Scheduled',            bg:'#eef2f6', fg:'#4f7fae',     bar:'#4f7fae', sort:0},
+    pastdue:     {key:'pastdue',     label:'Past due',             bg:'#f9e7e4', fg:'#b3402e',     bar:'#b3402e', sort:1},
+    pendingPhoto:{key:'pendingPhoto',label:'Pending photo upload', bg:'#e9f0f0', fg:'#3d6566',     bar:'#5f8a8b', sort:2},
+    radicl:      {key:'radicl',      label:'Radicl scheduling',    bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
+    missingUb:   {key:'missingUb',   label:'Missing UB',           bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
+    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
+    likelyCancel:{key:'likelyCancel',label:'Likely cancel',        bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:6},
+    new:         {key:'new',         label:'New',                  bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:7},
+    unscheduled: {key:'unscheduled', label:'Unclassified',         bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:8},
   };
-  const QS_ORDER=['scheduled','pastdue','radicl','missingUb','awaitingRep','followUp','likelyCancel','new','unscheduled'];
-  // Everything after Past due is a survey with no booking — the old Schedule
-  // row's "Unscheduled" segment, reachable in one click from the legend.
-  const QS_UNSCHED=QS_ORDER.slice(2);
+  const QS_ORDER=['scheduled','pastdue','pendingPhoto','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+  // Everything from Radicl scheduling down is a survey with no booking — the
+  // old Schedule row's "Unscheduled" segment, reachable in one click from the
+  // legend. Anchored on the key rather than a slice count: Pending photo
+  // upload sits above it because that survey was performed and needs a file,
+  // not a booking, and counting it as unscheduled would put 14 rows into the
+  // rail cell and the bracket that nobody needs to schedule.
+  const QS_UNSCHED=QS_ORDER.slice(QS_ORDER.indexOf('radicl'));
 
   // Queue status: what is this survey waiting on?
   // Returns one of QS below, rendered as a pill in the WIP table status column
@@ -4749,12 +4769,20 @@ function renderAgingWIP(){
   // missing is blocked on the bill, not on Radicl.
   const wipQueueStatus=r=>{
     const sched=wipSchedDate(r);
-    if(sched&&sched>=today) return QS.scheduled;
-    if(sched&&sched<today) return QS.pastdue;
-    // Unscheduled — classify by last review subject
     const subj=(r.last_reviewed_subject||'').toUpperCase();
     const comm=(r.last_comment||'').toUpperCase();
     const any=re=>re.test(subj)||re.test(comm);
+    // Tested ahead of the schedule date on purpose. The rep performed the
+    // survey and the SF automation failed to attach the photos, so the job is
+    // waiting on an internal upload, not on a visit — and its booking date,
+    // where it has one, is the past visit that already happened. Four of the
+    // 14 live rows carried such a date and read Past due beside ten identical
+    // twins reading a follow-up. Distinct from Awaiting rep's NO PHOTOS /
+    // MISSING PHOTOS, which is the rep not having taken any.
+    if(any(/PENDING PHOTO UPLOAD/)) return QS.pendingPhoto;
+    if(sched&&sched>=today) return QS.scheduled;
+    if(sched&&sched<today) return QS.pastdue;
+    // Unscheduled — classify by last review subject
     if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return QS.likelyCancel;
     // Reviewers write both "MISSING UB" and "MISSING UTILITY BILL"; matching
     // only the abbreviation left four of these reading Unscheduled.
@@ -4769,16 +4797,20 @@ function renderAgingWIP(){
     // state as RADICL SCHEDULING; without this they fell through unclassified.
     if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))
        ||any(/(SENT|SUBMITTED|ASSIGNED|OVER)[\s\S]{0,40}?TO RADICL/)) return QS.radicl;
-    // "FOLLOW UP WITH REP 8/17" is the rep-chasing state spelled out — it has
-    // to be tested before the generic follow-up below, or every rep chase
-    // would read as a plain diary entry.
+    // "FOLLOW UP WITH REP 8/17" is the rep-chasing state spelled out.
+    // "RESCHEDULE NEEDED" is the rep cancelling a booked visit; SS offers a new
+    // date and waits on them. Tested after Radicl, so the same subject ending
+    // in RADICL SCHEDULING WITH CUSTOMER stays with Radicl.
     if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')
+       ||subj.includes('RESCHEDULE NEEDED')
        ||any(/FOLLOW.?UP WITH (THE )?REP/)||any(/\bFUP WITH (THE )?REP/)) return QS.awaitingRep;
-    // The team parks a job against a date when it is waiting on something
-    // outside SS with no other handle on it — a reroof finishing, a date owed
-    // by someone internal. Written as "FOLLOW UP 8/19" or "FUP 8/12". Not the
-    // same as chasing the rep, and not schedulable yet, so it is its own state.
-    if(any(/FOLLOW.?UP\b/)||any(/\bFUP\b/)) return QS.followUp;
+    // A COMPLETE note on a row that is not complete describes work that has
+    // already finished — the initial survey — and says nothing about what the
+    // row is waiting on now. Six open resurveys requested 8/26 carried
+    // "COMPLETE / I uploaded the radicl pdf" as their last note and fell to
+    // Unclassified on it, which classified the wrong event. Drop the note and
+    // the row is what it is: requested, with nothing done on it yet.
+    if(subj==='COMPLETE') return QS.new;
     if(!r.last_reviewed_date) return QS.new;
     // Deliberately kept though it reads 0 today: a review subject nobody has
     // seen before must land somewhere visible rather than be forced into a
@@ -5139,9 +5171,10 @@ function renderAgingWIP(){
 
       const qsItems=QS_ORDER.filter(k=>qsCounts[k]).map(k=>({...QS[k],color:QS[k].bar,n:qsCounts[k]}));
       const qsBar=bar(qsItems,wipQsSel,it=>`toggleWipQs('${it.key}')`);
-      // The legend splits after Past due: everything beyond it is a survey with
-      // no booking, and the group header selects all five at once — the coarse
-      // cut the old Schedule row provided, without a second row to AND against.
+      // The legend splits at Radicl scheduling: everything beyond it is a survey
+      // with no booking, and the group header selects them all at once — the
+      // coarse cut the old Schedule row provided, with no second row to AND
+      // against.
       const legFor=it=>{
         const on=wipQsSel.has(it.key);
         return `<button class="wip-leg${wipQsSel.size&&!on?' dim':''}" aria-pressed="${on}" onclick="toggleWipQs('${it.key}')">${swatch(it.color,on)}${it.label} <b>${it.n}</b></button>`;
@@ -6024,7 +6057,7 @@ function renderMap(){
         </div>
       </div>
       <div class="ssub map-sub" id="map-sub">&nbsp;</div>
-      ${buildFBar('map')}
+      <div id="fb-map"></div>
       <div class="map-wrap mw-anim">
         <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
@@ -6057,6 +6090,9 @@ function renderMap(){
   if(!all.length){ msg.hidden=false; msg.textContent='No jobs match the current filters.'; }
 
   _mapAll=all; _mapLive=live; _mapLiveAll=liveAll; _mapBounds=b;
+  // The slot above is empty until this runs — renderMap() just replaced the
+  // innerHTML that holds it. Same call every other page's bar goes through.
+  renderFBars();
   mapResize(); if(!mapIgnoresDates()){ mapDrawHist(); mapDrawTicks(); }
   renderMapSite(); _mapScrollActive();
 }

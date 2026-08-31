@@ -173,7 +173,42 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - "Over 15 days" is **project age ≥15**, not >15, so it agrees with the 15–30d band directly beneath it. The threshold is read off `PA_MINS[WIP_OVER_BANDS[0]]` rather than written twice, so the number the cell shows and the bands its click selects are the same rows **by construction**. Moving it means moving `WIP_OVER_BANDS` to another band boundary — a cell reading "over 20 days" would have no band to select and would filter to something other than what it counted
   - The Unscheduled cell tests and selects only the unscheduled statuses that **have rows**, the same list the bracket uses and the list `wipQsSel` gets pruned to. Testing all of `QS_UNSCHED` meant the cell could never light up, because Likely cancel is empty most days
   - **Two filter rows, never three.** Schedule and Status are one hierarchy, not two dimensions: `wipQueueStatus()` reads the same `wipSchedDate` field `schedStatus()` does, returns Scheduled and Past due for the same two cases, then subdivides the third. Live data: Scheduled 55 / Past due 1 / Unscheduled 57 against chips of 37+2+7+5+6 = 57 — exact by construction. ANDing a Schedule row against a Status row returns zero rows for most pairs. The status bar carries the whole vocabulary in schedule order instead
-  - **Queue status aims at an empty catch-all.** Six rows were falling through to a bare "Unscheduled" on 2026-08-17. Two were Radicl handoffs written as prose under uninformative subjects ("submitted their information to radicl" under CUSTOMER CALL), two were rep chases written as "FOLLOW UP WITH REP 8/17", and two were genuinely a different state — a job parked against a date while waiting on something outside SS (a reroof finishing 8/19; a date owed by the director). That last pair got a new status, **Follow-up set**; mis-filing them under Awaiting rep would have been a lie. The catch-all stays in the vocabulary, renamed **Unclassified**, and reads 0: empty statuses render no chip, so it costs nothing, and a non-empty one is the prompt to add a rule. Test order matters — the rep-specific follow-up must be tested before the generic one
+  - **Queue status aims at an empty catch-all.** Six rows were falling through to a bare "Unscheduled" on 2026-08-17. Two were Radicl handoffs written as prose under uninformative subjects ("submitted their information to radicl" under CUSTOMER CALL), two were rep chases written as "FOLLOW UP WITH REP 8/17", and two were genuinely a different state — a job parked against a date while waiting on something outside SS (a reroof finishing 8/19; a date owed by the director). That last pair got a new status, **Follow-up set**; mis-filing them under Awaiting rep would have been a lie. The catch-all stays in the vocabulary, renamed **Unclassified**: empty statuses render no chip, so it costs nothing, and a non-empty one is the prompt to add a rule
+  - **Follow-up set became Pending photo upload** (2026-08-31). The generic
+    `FOLLOW UP` / `FUP` rule was a diary entry, not a waiting state, and by
+    2026-08-31 it held 12 rows of which **zero** were the parked-against-a-date
+    case it was built for (both of those had closed). Ten were one note —
+    *"the rep completed the survey but the automation failed to add the photos
+    to salesforce … Sam can upload them"* — one was a rep cancelling a booked
+    visit, one an open resurvey waiting on Design. Things not to undo:
+    - **Pending photo upload is tested BEFORE the schedule date.** 14 open rows
+      carry the note and 4 of them still hold the booking for the visit that
+      already happened, so they read Past due beside ten identical twins. The
+      survey was performed; the date is history. Past due 9 → 5
+    - **It sits ABOVE `QS_UNSCHED`**, which is why that list is now anchored on
+      `QS_ORDER.indexOf('radicl')` rather than a slice count. These rows need a
+      file uploaded, not a booking, and counting them as unscheduled put 14 rows
+      into the rail cell and the bracket that nobody needs to schedule.
+      Bracket 59 → 49
+    - **Distinct from Awaiting rep's `NO PHOTOS` / `MISSING PHOTOS`**, which is
+      the rep not having taken any. All 14 also carry `holding_reason` *All
+      Photos Missing*, which is exactly the false signal that field was rejected
+      for: the photos exist
+    - It usually clears in ~2 days (35 of the 49 rows that ever carried the note
+      have completed, median cycle 2d), so the state's value is the outlier —
+      one row has been open **68 days**, invisible before under a bucket named
+      after a date
+    - **`RESCHEDULE NEEDED` goes to Awaiting rep**, tested after Radicl so
+      `RESCHEDULE NEEDED - RADICL SCHEDULING WITH CUSTOMER` stays with Radicl
+    - **A `COMPLETE` subject on a row that is not complete is dropped, and the
+      row reads New.** Eight rows sat in Unclassified on "COMPLETE / I uploaded
+      the radicl pdf"; six are open resurveys requested 8/26 whose last note
+      describes the *initial* survey, so reading it classified the wrong event.
+      The other two are the bare `reopened_by_design` shape (a complete date, no
+      request, no reason) that parse-sf.js already warns on — **fixed at the
+      source, never inferred here**
+    - Unclassified reads **1**, the Design row. One row is a prompt to watch,
+      not a licence to add a status for it
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing
@@ -454,10 +489,16 @@ becomes relevant instead of standing there inert. Things not to undo:
     date test, and pass `{resource:true}` to `gfDim`
   - **Hiding never clears.** The value stays in the filter object, so a range
     set in Volume is still there on the way back from Coverage
-  - **The Map builds its bar INLINE**, inside the panel under the head, so
-    `renderFBars()` skips it the way it already skips Current. Still
-    `buildFBar` — one builder, a different home. A second Map-specific bar is
-    how WIP's private `buildWIPFBar` drifted into having no Office control
+  - **The Map's bar is a SLOT the panel emits, filled by `renderFBars()` like
+    every other page's** — `renderMap()` renders `<div id="fb-map"></div>`, not
+    `${buildFBar('map')}`. Embedding the bar in the innerHTML was tried and
+    broke every dropdown on it: Office, Status and Custom dates all open by
+    flipping a flag and calling `renderFBars()`, which was skipping map, so the
+    panels never opened and the date presets never repainted. `renderFBars()`
+    must not skip map, and `renderMap()` calls it after replacing its innerHTML
+    because the slot is empty until it does. Still `buildFBar` — one builder, a
+    different home. A second Map-specific bar is how WIP's private
+    `buildWIPFBar` drifted into having no Office control
   - The mode toggle carries a hairline between the four that read the filter
     and the two that read the live book. A divider, not a heading: the bar
     below already shows the difference by dropping controls

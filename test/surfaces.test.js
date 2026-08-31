@@ -169,3 +169,47 @@ test('every TIP entry is referenced by a card', () => {
   const unused = keys.filter(k => !new RegExp(`TIP\\.${k}\\b`).test(body));
   assert.deepEqual(unused, [], `unused TIP entries (stale or a card lost its tooltip): ${unused.join(', ')}`);
 });
+
+// ── The filter bar: one table, one builder, one count ────────────────────────
+// Which controls reach a view is decided in fbShow() and nowhere else, and
+// every flag it returns has to be read. `office` was returned and never read
+// for as long as fbShow existed: buildFBar gated the Office control on
+// `hasOffices` alone, so a page that dropped Office still rendered it.
+const fbSlice = (src, from, to) => {
+  const a = src.indexOf(from);
+  const b = src.indexOf(to, a);
+  assert.ok(a > -1 && b > a, `could not slice ${from} … ${to}`);
+  return src.slice(a, b);
+};
+
+test('every fbShow flag is read by buildFBar', () => {
+  const src = read('index.html');
+  const base = fbSlice(src, 'function fbShow(page){', '\n}').match(/const on=\{([^}]*)\}/);
+  assert.ok(base, 'fbShow no longer opens with a flag object');
+  const keys = base[1].split(',').map(p => p.split(':')[0].trim()).filter(Boolean);
+  const builder = fbSlice(src, 'function buildFBar(page){', '\nfunction wipExtraControls');
+  const unread = keys.filter(k => !new RegExp(`show\\.${k}\\b`).test(builder));
+  assert.deepEqual(unread, [], `fbShow returns flags buildFBar never reads: ${unread.join(', ')}`);
+});
+
+test('buildFBar takes no decision of its own about the page', () => {
+  // The whole point of fbShow() is that "does this control do anything here"
+  // lives in one table. A page test inside the builder is how WIP's old private
+  // buildWIPFBar drifted into having no Office control at all.
+  const builder = fbSlice(read('index.html'), 'function buildFBar(page){', '\nfunction wipExtraControls');
+  const bad = builder.split('\n')
+    .map((line, i) => ({ n: i + 1, line: line.trim() }))
+    .filter(({ line }) => /page\s*===\s*['"]/.test(line) && !line.startsWith('//'));
+  assert.deepEqual(bad, [], `move the page test into fbShow():\n${bad.map(b => b.line.slice(0, 90)).join('\n')}`);
+});
+
+test('the filter bar count has one definition', () => {
+  // applyFilter() used to write the completions count onto every bar but WIP's,
+  // so the Map printed it beside a rail counting something else and the source
+  // editor printed it above a table of every row in scope.
+  const src = stripComments(read('index.html'));
+  const bad = src.split('\n')
+    .map((line, i) => ({ n: i + 1, line: line.trim() }))
+    .filter(({ line, n }) => /fb-hint-|\.fhint\b/.test(line) && /textContent\s*=/.test(line) && !/fbHint\(/.test(line));
+  assert.deepEqual(bad.map(b => `index.html:${b.n}  ${b.line.slice(0, 90)}`), [], 'write the bar hint through fbHint(page)');
+});
