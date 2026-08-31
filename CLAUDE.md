@@ -539,6 +539,58 @@ becomes relevant instead of standing there inert. Things not to undo:
   so 182 of 214 dots are empty) and earns its place zoomed into a state more
   than nationally
 
+### The same audit, every other page (2026-08-31)
+`fbShow(page)` now covers the whole app, not just the Map. Every page × control
+was **measured** rather than read off the source — the real render path
+(`scopeRows(); applyFilter(); renderPage(p)`), diffing the content host's HTML
+plus a hash of every canvas' pixels, with the filter bar excluded from the
+snapshot so a bar redraw could not pass for data moving. Sub-states too:
+Performance ×4 cuts, Quality ×4 cuts ×2 chart modes, WIP ×3 lenses, Trends ×2
+granularities ×2 completion bases, Map ×6 modes. Things not to undo:
+- **Performance, Trends and WIP are clean and were left alone.** Every control
+  they render bites, in every sub-state. The honest finding on three of the six
+  pages was that there was nothing to hide
+- **The Data page keeps Status and nothing else.** `renderEditor()` reads
+  `rows`, never `filtered`, and carries no `gfDim()` clause, so `scopeRows()`
+  is the only global control that can reach it — the date range, Region, Office
+  and Resource were four controls doing nothing. Its own toolbar owns search,
+  state and paging
+- **The outlier chip has its own flag.** The clause is written in
+  `applyFilter()`, so it reaches exactly the surfaces that read `filtered`,
+  which is **Performance alone**. It was gated on `show.dates` — right on WIP by
+  accident and wrong everywhere else, so the amber chip announced
+  *265 outliers >10d hidden* on Trends, Quality, Data and the Map while all 265
+  were still being counted
+- **Every flag `fbShow` returns has to be read by `buildFBar`.** `office` was
+  returned and never read for as long as `fbShow` existed — the Office control
+  was gated on `hasOffices` alone, so no page could drop it. A test asserts this
+  now, and two more assert `buildFBar` takes no page decision of its own and
+  that the bar's count has one definition
+- **`fbHint(page)` is that one definition**, read by the builder and by
+  `applyFilter()`. They disagreed: the Map printed *3748 of 3836 shown* nine
+  pixels above a rail reading **3,824**, and the source editor printed it above
+  a table of **3,836** rows. The Map defers to its rail; Data says
+  *N rows in scope*
+- **`.fbar>.fsep:first-child` is hidden.** Each control carries the separator
+  that precedes it, so a bar whose first control is dropped opened on a hairline
+  dividing nothing from the edge — already visible on the Map in Coverage mode
+
+Two controls are **hidden and still bite**, both raised and neither changed —
+they are metric questions, not layout ones:
+- **Region on the Map.** No control, and `show.region` suppresses its chips too,
+  yet `gfDim()` still applies it: **3,831 jobs / 214 markets / 23 states → 479 /
+  5 / 1**. This is the `?type=` defect in the other direction, an invisible
+  control that silently does something
+- **Status on Quality.** Dropped because every row there is already complete —
+  true only while `Complete` is ticked, since `scopeRows()` keeps a completed
+  survey through `s.includes('Complete') && isComplete(r)`. Untick it elsewhere
+  and FPY moves **87.0% → 83.1%** on a denominator of 3,748 → 1,883, with
+  nothing on the page saying so. Adding statuses does nothing; only removing
+  `Complete` bites. Current has the same shape with no bar at all
+- `fbShow` still answers for the three pages that render no bar (Current,
+  Resource, Billing) and nothing calls it there. Harmless, but it is not the
+  whole truth about those pages
+
 ## Resource page (added 2026-08-25, restructured 2026-08-26)
 Who should do the work, where, and what it costs. The other pages measure the
 work; this one measures the people against it. Reads live rows, not `filtered`
