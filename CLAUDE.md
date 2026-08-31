@@ -410,6 +410,58 @@ not to undo:
   pushed the card instead of scrolling inside it. It also fixed a pre-existing
   horizontal body overflow on the Map at 375px
 
+### The map's controls (2026-08-31)
+Doug's asks: the buttons move when you switch mode, why are the radius buttons
+there, and — the general one — make the filter bar appear and disappear as it
+becomes relevant instead of standing there inert. Things not to undo:
+- **The subtitle is a full-width row UNDER the controls, never a flex child
+  beside them.** As the middle child of a `space-between` head its length set
+  the left column's width, and it changes with the mode — 40 characters in
+  Volume against 110 in Coverage — so picking a mode squeezed `.map-ctl`, which
+  wraps, and **every button jumped 132px**. Measured after: Volume at 555,194
+  and the canvas top at 265, identical in all six modes
+- **The market radius is a definition, not a view**, so it is a labelled select
+  beside the market picker rather than a second segmented control beside the
+  six mode buttons — as a twin toggle the row read as ten interchangeable
+  buttons. It is load-bearing and must not be deleted: it changes the dots in
+  **every** mode (360 markets at 15mi, 214 at 25, 151 at 35), sets the market
+  count in the rail, and the Resource page's table reads the same number
+- **`fbShow(page)` is the one table of which controls reach a view**, replacing
+  three scattered conditionals. A control that changes nothing is **not
+  rendered** — the view says what it obeys by showing only what it obeys,
+  rather than showing everything and explaining the exceptions in prose:
+  - WIP drops the date range (live queue), Quality drops Status (every row is
+    complete), and **Coverage/Plan drop the date range AND Resource**, which
+    they genuinely cannot read — they take `_mapLive`, collected before the
+    date test, and pass `{resource:true}` to `gfDim`
+  - **Hiding never clears.** The value stays in the filter object, so a range
+    set in Volume is still there on the way back from Coverage
+  - **The Map builds its bar INLINE**, inside the panel under the head, so
+    `renderFBars()` skips it the way it already skips Current. Still
+    `buildFBar` — one builder, a different home. A second Map-specific bar is
+    how WIP's private `buildWIPFBar` drifted into having no Office control
+  - The mode toggle carries a hairline between the four that read the filter
+    and the two that read the live book. A divider, not a heading: the bar
+    below already shows the difference by dropping controls
+- **`MAP_MIN_N` is `RS_MIN_CELL`, and the floor is a setting**
+  (Settings → Rates → *Minimum sample for a rate*, `S.minCell`). It was a
+  separate `3`, which is too low for a rate: of the 114 markets it coloured, 60
+  sat on fewer than ten completions and **29 of the 36 painting a perfect 0%
+  resurvey rate did it on three to nine jobs** — a green dot off a sample that
+  could not have shown a defect. At 10 it rates 54 markets, every one with a
+  denominator worth the colour, and the rest draw as the hollow ring that
+  already meant "too thin to rate". Both names are `let` and move together in
+  `setSetting`; letting them drift is how a market reads thin on Quality and
+  rated on the map. Volume and Open WIP are exempt — they are counts, and dot
+  size already draws a one-job market as a one-job market
+- **Nothing on the map is redundant** — audited 2026-08-31, every mode measured.
+  Volume is what a map is for; Cycle and Resurvey carry a geographic cut no
+  other page has (region is a sales territory, not a place — 0.9d to 5.8d and
+  3% to 19% across the markets that clear the floor); Coverage and Plan are
+  about drive distance. Open WIP is the thinnest (82 open rows over 32 markets,
+  so 182 of 214 dots are empty) and earns its place zoomed into a state more
+  than nationally
+
 ## Resource page (added 2026-08-25, restructured 2026-08-26)
 Who should do the work, where, and what it costs. The other pages measure the
 work; this one measures the people against it. Reads live rows, not `filtered`

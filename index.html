@@ -609,6 +609,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    what a market IS, which is scope, while the toggle says what to draw. As a
    twin segmented control it rhymed with the modes and the row read as ten
    interchangeable buttons. */
+/* The four modes that read the filter bar, then the two that read the live
+   book. A hairline instead of a heading: the contextual bar below already
+   shows the difference by dropping the controls those two ignore, so the
+   divider only has to say "these are a different kind of question". */
+.tgl-div{width:1px;align-self:stretch;background:var(--border);margin:0 3px;flex:0 0 auto;}
+/* The map's own filter bar, inline in the panel rather than a strip at the
+   top of the page. It sheds controls the current mode ignores, so it changes
+   width — it must not be able to move the head above it. */
+.map-content-bar .fbar{margin:0 0 10px;}
 .map-radius{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
   letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
 .map-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--border);
@@ -1394,7 +1403,7 @@ body{padding-left:180px;}
 <div id="page-trends"      class="page">     <div id="fb-trends"></div>      <div id="tr-content"></div></div>
 <div id="page-wip"    class="page">     <div id="fb-wip"></div>    <div id="ol-content"></div></div>
 <div id="page-resurvey"    class="page">     <div id="fb-resurvey"></div>    <div id="rs-content"></div></div>
-<div id="page-map"         class="page">     <div id="fb-map"></div>         <div id="map-content"></div></div>
+<div id="page-map"         class="page">                                     <div id="map-content"></div></div>
 <div id="page-resource"    class="page">     <div id="res-content"></div></div>
 <div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
@@ -1637,6 +1646,7 @@ const SETTING_DEFAULTS = {
   sfInst:               '',        // Salesforce instance URL
   sfRid:                '',        // Salesforce report ID
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
+  minCell:              10,        // completions a group needs before a RATE is shown
   anchor:               'opened',  // 'opened' | 'start' — see applyAnchor()
   // Resource page model overrides, empty until Doug edits one. Nested objects
   // rather than nine flat keys: they are one model, they reset together, and
@@ -1668,6 +1678,10 @@ function setSetting(key, value){
   // at once. Anything short of this leaves half the page on the old anchor.
   if(key==='anchor'){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); scopeRows(); changedIds.clear(); applyFilter(); renderFBars(); renderPage(currentPage); }
   if(key==='outlierDays') { applyFilter(); renderFBars(); if(currentPage!=='settings') renderPage(currentPage); }
+  // One floor, three surfaces. Both names move together — MAP_MIN_N is the
+  // map's alias for it, and letting them drift is how a market reads thin on
+  // Quality and rated on the map.
+  if(key==='minCell') { RS_MIN_CELL=value; MAP_MIN_N=value; if(currentPage!=='settings') renderPage(currentPage); }
   if(key==='defaultRemoveOutliers') { PAGES.forEach(p=>pageF[p].removeOutliers=value); applyFilter(); renderFBars(); }
   if(key==='sfInst') { localStorage.setItem('sf_inst',value); }
   if(key==='sfRid')  { localStorage.setItem('sf_rid',value); }
@@ -1874,8 +1888,35 @@ function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
 // Resource are shared now; Sales Rep and Install Type stay WIP-only extras
 // because only the queue has a use for them. WIP shows no date range — it is a
 // live snapshot, and an inert date picker is worse than none.
+// WHICH CONTROLS ACTUALLY REACH THIS VIEW.
+//
+// One table, because "does this control do anything here" was previously three
+// scattered conditionals (isWip for the dates, page==='resurvey' for Status)
+// and, on the Map, nothing at all — the coverage modes read the live book and
+// skip the Resource clause, so two controls sat there doing nothing with only
+// a sentence in the subtitle admitting it.
+//
+// A control that changes nothing is NOT RENDERED. That is the whole idea: the
+// view says what it obeys by showing only what it obeys, instead of showing
+// everything and explaining the exceptions in prose. Doug's call 2026-08-31.
+//
+// Hiding never clears. The value stays in the filter object, so a date range
+// set in Volume is still there when you come back from Coverage — you did not
+// ask to drop it, and silently dropping it would be its own surprise.
+function fbShow(page){
+  const on={dates:true,region:true,office:true,status:true,resource:true,extras:false};
+  if(page==='wip')      return {...on,dates:false,extras:true};   // a live queue has no date range
+  if(page==='resurvey') return {...on,status:false};              // every row here is already complete
+  if(page==='map'&&mapIsRes())
+    // Coverage and Plan read the whole book and measure the resource split, so
+    // neither the date range nor the Resource filter can reach them.
+    return {...on,dates:false,resource:false};
+  return on;
+}
+
 function buildFBar(page){
   const f = GF;
+  const show = fbShow(page);
   const isWip = page==='wip';
   const offices=[...new Set(rows.map(r=>r.sales_office).filter(Boolean))].sort();
   const catFields = FIELDS.filter(fd=>fd.filterable && fd.type==='category' && !fd.computed && fd.key!=='region' && fd.key!=='type');
@@ -1921,10 +1962,10 @@ function buildFBar(page){
   offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
   // The outlier filter tests ct_total, which an open survey does not have — so
   // it is neither offered nor advertised on the live queue.
-  if(f.removeOutliers&&!isWip){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
+  if(f.removeOutliers&&show.dates){ const n=rows.filter(r=>r.ct_total!=null&&r.ct_total>S.outlierDays).length; chips.push(`<span class="fchip fchip-amber">${n} outlier${n!==1?'s':''} &gt;${S.outlierDays}d hidden<button class="fchip-x" aria-label="Show outliers" onclick="toggleOutliers('${page}')">×</button></span>`); }
 
   return `<div class="fbar">
-    ${isWip?''
+    ${!show.dates?''
     :`<div class="fbtn-group" role="group" aria-label="Date range">
       <button class="fbtn${isAll?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','','')">All</button>
       <button class="fbtn${isR13?' fbtn-active':''}" onclick="customDatesOpen=false;setDateRange('${page}','${r13.from}','${r13.to}')">13w</button>
@@ -1954,7 +1995,7 @@ function buildFBar(page){
         ${offices.map(o=>`<label class="rgdrop-item"><input type="checkbox"${offArr.includes(o)?' checked':''} onchange="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',this.checked,event)"><span>${esc(o)}</span></label>`).join('')}
       </div>
     </div>`:''}
-    ${page==='resurvey'?'':`<div class="fsep"></div>
+    ${!show.status?'':`<div class="fsep"></div>
     ${(()=>{
       const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
       const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
@@ -1966,8 +2007,8 @@ function buildFBar(page){
         </div>
       </div>`;
     })()}`}
-    ${catDropdowns}
-    ${isWip?wipExtraControls():''}
+    ${show.resource?catDropdowns:''}
+    ${show.extras?wipExtraControls():''}
     ${chips.length?`<div class="fsep"></div><div class="fchips">${chips.join('')}</div>`:''}
     <div class="fgroup" style="margin-left:auto;">
       <button class="fbtn" onclick="clearF('${page}')">Reset</button>
@@ -2056,6 +2097,10 @@ function onOfficeClear(page,ev){
 function renderFBars(){
   PAGES.forEach(p=>{
     if(p==='week') return; // Current is fixed-week and has no bar
+    // The Map builds its own bar INLINE, inside the panel, because which
+    // controls apply changes with the mode — see renderMap(). Same builder,
+    // different home.
+    if(p==='map') return;
     const el=document.getElementById('fb-'+p); if(!el) return;
     el.innerHTML=buildFBar(p);
     const hint=el.querySelector('.fhint');
@@ -5180,7 +5225,12 @@ const RS_MATURE_DAYS=21;
 // would otherwise lead with somebody's single survey. Module scope so there is
 // one number, not one per surface: at 5 completions a single defect is 20% and
 // names a rep off noise.
-const RS_MIN_CELL=10;
+// How many completions a group needs before its RATE is shown rather than its
+// sample count. `let`, not const: Settings → Quality owns it, the same way
+// DATA_CUTOFF is owned by Settings → Data. Read by the Quality table, the
+// Resource page and the map's colouring (MAP_MIN_N), so one edit moves all
+// three and a market is thin in each of them at once.
+let RS_MIN_CELL=SETTING_DEFAULTS.minCell;
 // Reasons are a Salesforce multi-select: "Survey Incomplete; Re-Roof".
 const rsReasons=r=>(r.resurvey_reason||'').split(';').map(s=>s.trim()).filter(Boolean);
 // Category labels and their one-line hints live in lib/metrics.cjs beside the
@@ -5662,7 +5712,23 @@ function renderResurvey(){
 const MAP_ZIP_RE = /,\s*([A-Za-z]{2})\.?\s+(\d{5})/;
 // Averages over one or two jobs are noise; below this a ZIP draws hollow.
 // Same guard the Resurveys page uses for per-rep rates.
-const MAP_MIN_N = 3;
+// The floor a market must clear before the map will RATE it. One constant,
+// read by the colouring, the legend, the tooltip and the list below, so a
+// market is thin in all four at once.
+//
+// Raised from 3 to RS_MIN_CELL (10) on 2026-08-31. Three was too low for a
+// rate: of the 114 markets it coloured, 60 sat on fewer than ten completions,
+// and 29 of the 36 painting a perfect 0% resurvey rate did it on three to
+// nine jobs — a green dot that says "no defects here" off a sample that could
+// not have shown one. At ten, 54 markets are rated and every one of them has
+// a denominator worth the colour; the rest draw as the hollow ring that
+// already means "a market, too thin to rate".
+//
+// Ten is not a new threshold: it is the same RS_MIN_CELL the Quality table
+// and the Resource page floor on, so a market is thin here exactly when it is
+// thin there. Volume and Open WIP are deliberately exempt — they are counts,
+// not rates, and dot size already draws a one-job market as a one-job market.
+let MAP_MIN_N = RS_MIN_CELL;
 const MAP_STATE_NAMES = {AL:'Alabama',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
 
 // ── City names, derived from the addresses themselves. Salesforce gives one
@@ -5938,7 +6004,7 @@ function renderMap(){
               ${OpsCoverage.RADIUS_CHOICES.map(r=>`<option value="${r}"${mapRadius===r?' selected':''}>${r}mi</option>`).join('')}
             </select></label>
           <div class="toggle-group" role="group" aria-label="What the map shows">
-            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
+            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}<span class="tgl-div" aria-hidden="true"></span>${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
           </div>
           <div class="map-layers">
           <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
@@ -5949,6 +6015,7 @@ function renderMap(){
         </div>
       </div>
       <div class="ssub map-sub" id="map-sub">&nbsp;</div>
+      ${buildFBar('map')}
       <div class="map-wrap mw-anim">
         <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
@@ -8982,6 +9049,14 @@ function renderSettings(){
       </div>
 
       <div class="set-sec">
+        <div class="set-title">Rates</div>
+        <div class="set-row">
+          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before a first-pass-yield or resurvey rate is shown instead of its sample count · applies to the Quality table, the Resource markets and the map's Cycle and Resurvey colouring · at 10 the map rates 54 of 214 markets, at 3 it rates 114 and 29 of them paint a perfect 0% off fewer than ten jobs</div></div>
+          <div class="set-control"><input type="number" min="1" max="100" value="${S.minCell}" onchange="setSetting('minCell',parseInt(this.value)||1)"></div>
+        </div>
+      </div>
+
+      <div class="set-sec">
         <div class="set-title">Outliers</div>
         <div class="set-row">
           <div><div class="set-label">Outlier threshold (days)</div><div class="set-desc">Surveys with a cycle time above this are counted as outliers · filter bar "Hide &gt;Nd" uses this value</div></div>
@@ -9420,6 +9495,7 @@ window.addEventListener('load',()=>{
   // allRows was already built once at script-eval time, before localStorage was
   // read — so it used SETTING_DEFAULTS for BOTH the cutoff and the anchor.
   // Rebuild if the saved settings disagree with either.
+  RS_MIN_CELL = MAP_MIN_N = S.minCell;
   const _reanchor = S.anchor!==SETTING_DEFAULTS.anchor;
   if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
   else if(_reanchor){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
