@@ -577,7 +577,17 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 /* The layer and the siting tool are checkbox-shaped controls, not segments of
    the metric toggle: they compose with it rather than replacing it. Filter
    chips in this app darken their border one step and never move — same here. */
-.map-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0;}
+/* The map head's subtitle is a full-width row UNDER the controls, not the
+   second line of a flex child beside them. As a child it sized the left
+   column, and this subtitle changes length with the mode — "Jun 1 – Aug 30 ·
+   job density" against "Who is doing the work · the whole book, not the date
+   range · turn on Team reach…", 2.7x longer — so picking a mode squeezed
+   .map-ctl and rewrapped the toggle groups onto another line. The buttons
+   were moving because the sentence beside them changed. */
+.map-head{align-items:center;margin-bottom:6px;}
+.map-head .stitle{flex:0 0 auto;}
+.map-sub{margin:0 0 11px;min-height:15px;}
+.map-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0;flex:0 0 auto;}
 .map-layers{display:flex;gap:8px;}
 .map-layer{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;font-weight:600;
   color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:6px;
@@ -595,6 +605,12 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
 .map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
+/* The radius sits with the market picker, not with the mode toggle: it says
+   what a market IS, which is scope, while the toggle says what to draw. As a
+   twin segmented control it rhymed with the modes and the row read as ten
+   interchangeable buttons. */
+.map-radius{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
 .map-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--border);
   border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;}
 .map-back{font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border:1px solid var(--border);
@@ -5905,27 +5921,24 @@ function renderMap(){
   // the live model rather than written into the label — Settings can move it.
   const teamCfg=OpsCoverage.surveyorConfig();
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
-  const rTgl=r=>`<button class="tgl-btn${mapRadius===r?' active':''}" aria-pressed="${mapRadius===r}" title="Group jobs within ${r} miles of each other into one market" onclick="setMapRadius(${r})">${r}mi</button>`;
 
   el.innerHTML=`
     <div id="map-kpis"></div>
     <div class="sec">
-      <div class="shead">
-        <div>
-          <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}${kinfo(TIP.mapLocation)}</div>
-          <div class="ssub" id="map-sub">&nbsp;</div>
-        </div>
+      <div class="shead map-head">
+        <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}${kinfo(TIP.mapLocation)}</div>
         <div class="map-ctl">
           ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All markets</button>`:''}
           <select class="map-sel" aria-label="Market" onchange="setMapMarket(this.value)">
             <option value="US"${mapMarket==='US'?' selected':''}>All markets</option>
             ${markets.map(([s,n])=>`<option value="${s}"${mapMarket===s?' selected':''}>${esc(MAP_STATE_NAMES[s]||s)} (${n})</option>`).join('')}
           </select>
+          <label class="map-radius" title="How far apart two jobs can be and still count as one market. Changes the dots in every mode, and the market count in the rail.">market
+            <select class="map-sel" aria-label="Market radius" onchange="setMapRadius(this.value)">
+              ${OpsCoverage.RADIUS_CHOICES.map(r=>`<option value="${r}"${mapRadius===r?' selected':''}>${r}mi</option>`).join('')}
+            </select></label>
           <div class="toggle-group" role="group" aria-label="What the map shows">
             ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
-          </div>
-          <div class="toggle-group" role="group" aria-label="Market radius">
-            ${OpsCoverage.RADIUS_CHOICES.map(r=>rTgl(r)).join('')}
           </div>
           <div class="map-layers">
           <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
@@ -5935,6 +5948,7 @@ function renderMap(){
           </div>
         </div>
       </div>
+      <div class="ssub map-sub" id="map-sub">&nbsp;</div>
       <div class="map-wrap mw-anim">
         <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
