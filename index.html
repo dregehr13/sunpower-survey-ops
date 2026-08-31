@@ -605,20 +605,15 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
 .map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
-/* The radius sits with the market picker, not with the mode toggle: it says
-   what a market IS, which is scope, while the toggle says what to draw. As a
-   twin segmented control it rhymed with the modes and the row read as ten
-   interchangeable buttons. */
-/* The four modes that read the filter bar, then the two that read the live
-   book. A hairline instead of a heading: the contextual bar below already
-   shows the difference by dropping the controls those two ignore, so the
-   divider only has to say "these are a different kind of question". */
-.tgl-div{width:1px;align-self:stretch;background:var(--border);margin:0 3px;flex:0 0 auto;}
+/* The two scope pickers — which state to zoom to, and how wide a market is.
+   Both are definitions rather than views, which is why the radius sits here
+   and not in the mode toggle: as a twin segmented control it rhymed with the
+   six mode buttons and the row read as ten interchangeable ones. */
 /* The map's own filter bar, inline in the panel rather than a strip at the
    top of the page. It sheds controls the current mode ignores, so it changes
    width — it must not be able to move the head above it. */
 .map-content-bar .fbar{margin:0 0 10px;}
-.map-radius{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+.map-pick{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
   letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
 .map-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--border);
   border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;}
@@ -1905,6 +1900,10 @@ function toggleCustomDates(){ customDatesOpen=!customDatesOpen; renderFBars(); }
 // ask to drop it, and silently dropping it would be its own surprise.
 function fbShow(page){
   const on={dates:true,region:true,office:true,status:true,resource:true,extras:false};
+  // The Map places rows by the ZIP in the address, so it already cuts by place
+  // twice — the State picker and Office. Region is a sales territory, not a
+  // geography, so a third slice here only confuses the two. Doug, 2026-08-31.
+  if(page==='map') on.region=false;
   if(page==='wip')      return {...on,dates:false,extras:true};   // a live queue has no date range
   if(page==='resurvey') return {...on,status:false};              // every row here is already complete
   if(page==='map'&&mapIsRes())
@@ -1961,7 +1960,7 @@ function buildFBar(page){
   // Chips only for state the bar doesn't already show: region picks
   // (hidden inside the dropdown) and the outlier setting (lives in Settings)
   const chips=[];
-  regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
+  if(show.region) regArr.forEach(r=>chips.push(`<span class="fchip">${esc(r)}<button class="fchip-x" aria-label="Remove ${esc(r)} filter" onclick="onRegion('${page}','${esc(r)}',false,event)">×</button></span>`));
   offArr.forEach(o=>chips.push(`<span class="fchip">${esc(o)}<button class="fchip-x" aria-label="Remove ${esc(o)} filter" onclick="onOffice('${page}','${esc(o).replace(/'/g,"\\'")}',false,event)">×</button></span>`));
   // The outlier filter tests ct_total, which an open survey does not have — so
   // it is neither offered nor advertised on the live queue.
@@ -1982,14 +1981,14 @@ function buildFBar(page){
       <span style="color:var(--faint);font-size:10px;">–</span>
       <input type="date" aria-label="Completed to date" value="${f.dateTo}" onchange="onF('${page}','dateTo',this.value)">
     </div>`:''}`}
-    <div class="fsep"></div>
+    ${!show.region?'':`<div class="fsep"></div>
     <div class="rgdrop">
       <button class="rgdrop-btn${regArr.length?' active':''}" aria-label="Filter by region" aria-expanded="${panelOpen}" onclick="toggleRegionDrop('${page}',event)">${esc(regLabel)}<span class="rg-caret">&#9660;</span></button>
       <div class="rgdrop-panel${panelOpen?' open':''}">
         ${regArr.length?`<button class="rgdrop-clear" onclick="onRegionClear('${page}',event)">Clear selection</button>`:''}
         ${regions.map(r=>`<label class="rgdrop-item"><input type="checkbox"${regArr.includes(r)?' checked':''} onchange="onRegion('${page}','${esc(r)}',this.checked,event)"><span>${esc(r)}</span></label>`).join('')}
       </div>
-    </div>
+    </div>`}
     ${hasOffices?`<div class="fsep"></div>
     <div class="rgdrop offdrop">
       <button class="rgdrop-btn${offArr.length?' active':''}" aria-label="Filter by sales office" aria-expanded="${offPanelOpen}" onclick="toggleOfficeDrop('${page}',event)">${esc(offLabel)}<span class="rg-caret">&#9660;</span></button>
@@ -2581,24 +2580,21 @@ const TIP={
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
-  mapLocation:'Position comes from the ZIP in the installation address, not the Sales Region. Region is a sales territory, not a place: 317 of Virginia\'s rows are tagged "VA Richmond" while the addresses run from Burke to King George. Reading the address also places the rows whose Region is blank, which no other view can show.',
-  mapVolume:'Job density. Each market contributes a blob weighted by how many jobs it holds, and overlapping blobs add together, so colour reads as concentration rather than any single survey.',
-  mapCycle:'Average Project Start to Site Survey Complete for the completed jobs in each ZIP, banded against the same targets as every other card. ZIPs below the minimum sample are drawn hollow rather than coloured.',
-  mapResurvey:'Share of each ZIP\'s completions carrying any resurvey signal. Same definition as the Resurveys page. ZIPs below the minimum sample are drawn hollow rather than coloured.',
-  mapWip:'Surveys that have started and are not yet complete, as of the latest export — what is on the books right now rather than what sold in the period. Every other mode counts jobs by when they were sold; this one ignores that and shows the live queue. Hover a market for its average days open.',
-  mapTimeline:'Weekly job volume across the selected range, by Project Start Date. Context only — the period itself is set by the date range in the filter bar, so time is chosen in one place rather than two.',
-  mapReach:'Each surveyor\'s home ZIP and the ground they can work as a day trip from it — the same test the Resource page applies, drawn rather than tabulated. The radius is maxOneWayMi from the capacity model in Settings, measured straight-line, and overlapping rings are filled once so the tint says covered or not covered rather than covered twice.',
-  mapCoverage:'Coverage and Plan read every open and completed survey on the books and ignore the date range. That is not a preference: the recommendation measures its per-week rates over the last eight weeks to the export date, so under an older date range the recent window is empty and every market in the country reads "Gone quiet". The bar\'s region and office choices still apply; the Resource filter does not, because it partitions the very thing these modes measure.',
-  mapAbsorb:'Surveys a week going to the vendor inside markets a surveyor can already reach as a day trip — the work the team is paying for twice. Per week rather than a total, because that is the unit capacity is quoted in. The dollar figure beside it is what those markets have actually been invoiced, from the imported statements.',
-  mapSite:'Prices a surveyor based at any point you click: which markets come into day-trip range, how much of that work is outsourced today, what the model says one person could do at that drive, and what it would cost against the vendor\'s per-survey price. It prices a location, it does not choose one — an optimiser would answer with a point in a field.',
-  mapTopMarket:'The state holding the most jobs in view, counted by the ZIP in each installation address rather than by Sales Region. Click any state on the map to open it.',
+  mapVolume:'Job density. Blob size follows job count and overlaps add, so colour shows concentration.',
+  mapCycle:'Average project start to survey complete, per market. Hollow means too few completions to rate.',
+  mapResurvey:'Share of a market\'s completions that came back. Hollow means too few completions to rate.',
+  mapWip:'Surveys started and not yet complete, as of the last export. Ignores the date range.',
+  mapReach:'Each surveyor\'s base and the ground they can cover as a day trip. Radius comes from Settings.',
+  mapAbsorb:'Vendor surveys per week in markets a surveyor could already reach, and what they were billed.',
+  mapSite:'Click anywhere to price a surveyor based there: work in range, what it costs, break-even against the vendor.',
+  mapTopMarket:'The state with the most jobs in view. Click a state on the map to open it.',
   resSplit:'How the survey work divides across the three resources. Volume and share read the last 8 weeks; yield and cycle read every completion, because eight weeks of one resource is too thin to band a defect rate on.',
   resCapacity:'A modelled ceiling, not an observation: one surveyor\'s day is field hours minus overhead minus the drive, divided by time on site plus admin plus a hop between jobs. ~15 a week each at an 8-mile market, summed across the roster. Every knob is an estimate, editable in Settings → Resource model. Read the gap against it as a question, not as headroom.',
   resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A case to check, never a verdict — the thresholds are fitted to this team\'s own history. A group takes the recommendation of the markets inside it.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
   billPerSurvey:'Total invoiced divided by billed survey visits, so travel adders and demobilisation are inside it. Compare an SPWR surveyor against this, not against the base rate.',
   billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, never a verdict — the tool knows what the invoice and Salesforce say, not what the contract says.',
-  mapTopLocation:'The market holding the most jobs in view, named for the town inside it with the most work. A market is every job within the selected radius of one another — the ground one surveyor could cover from one base — so Portland here means Gresham, Beaverton, Hillsboro and 28 other towns, not the city limits.',
+  mapTopLocation:'The market with the most jobs in view, named for its biggest town. A market is everything within the selected radius.',
 };
 const SF_BASE='https://ambia.lightning.force.com/lightning/r/TASKRAY__Project_Task__c/';
 function sfUrl(r){ return r.task_id?SF_BASE+r.task_id+'/view':''; }
@@ -6004,19 +6000,20 @@ function renderMap(){
     <div id="map-kpis"></div>
     <div class="sec">
       <div class="shead map-head">
-        <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}${kinfo(TIP.mapLocation)}</div>
+        <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}</div>
         <div class="map-ctl">
-          ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All markets</button>`:''}
-          <select class="map-sel" aria-label="Market" onchange="setMapMarket(this.value)">
-            <option value="US"${mapMarket==='US'?' selected':''}>All markets</option>
+          ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All states</button>`:''}
+          <label class="map-pick" title="Zoom the map to one state">state
+          <select class="map-sel" aria-label="State" onchange="setMapMarket(this.value)">
+            <option value="US"${mapMarket==='US'?' selected':''}>All states</option>
             ${markets.map(([s,n])=>`<option value="${s}"${mapMarket===s?' selected':''}>${esc(MAP_STATE_NAMES[s]||s)} (${n})</option>`).join('')}
-          </select>
-          <label class="map-radius" title="How far apart two jobs can be and still count as one market. Changes the dots in every mode, and the market count in the rail.">market
+          </select></label>
+          <label class="map-pick" title="How far apart two jobs can be and still count as one market. Changes the dots in every mode, and the market count in the rail.">market
             <select class="map-sel" aria-label="Market radius" onchange="setMapRadius(this.value)">
               ${OpsCoverage.RADIUS_CHOICES.map(r=>`<option value="${r}"${mapRadius===r?' selected':''}>${r}mi</option>`).join('')}
             </select></label>
           <div class="toggle-group" role="group" aria-label="What the map shows">
-            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}<span class="tgl-div" aria-hidden="true"></span>${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
+            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
           </div>
           <div class="map-layers">
           <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
@@ -6043,9 +6040,9 @@ function renderMap(){
       <div class="note">${mapIgnoresDates()
         ? mapMetric==='wip'
         ? `Every survey open right now, whatever the date range holds — an open survey is open whichever period you are looking at${unplaced?'':''}`
-        : `Every open and completed survey on the books, whatever the date range holds${kinfo(TIP.mapCoverage)} · per-week rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
+        : `The whole book, whatever the date range holds · rates are the last ${OpsCoverage.RECENT_WEEKS} weeks to ${fmtDate(_mapToday())}`
           + (GF.resource&&GF.resource!=='all'?` · <strong>the Resource filter does not apply here</strong> — it is what this mode measures`:'')
-        : `Weekly volume across the range${kinfo(TIP.mapTimeline)} · the period is set by the date range in the filter bar`}${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
+        : `Weekly volume across the range`}${unplaced?` · <strong>${unplaced}</strong> row${unplaced!==1?'s':''} could not be placed from ${unplaced!==1?'their':'its'} address`:''}</div>
     </div>
     <div id="map-site"></div>
     <div class="sec" id="map-top-sec">

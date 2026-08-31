@@ -426,6 +426,24 @@ becomes relevant instead of standing there inert. Things not to undo:
   buttons. It is load-bearing and must not be deleted: it changes the dots in
   **every** mode (360 markets at 15mi, 214 at 25, 151 at 35), sets the market
   count in the rail, and the Resource page's table reads the same number
+- **Region is not on this page** (2026-08-31, Doug's call). The map places rows
+  by the ZIP in the address, so it already cuts by place twice — the State
+  picker and Office. Region is a sales territory, not a geography, and a third
+  slice only confuses the two. It stays on every other page
+- **The state picker says State, not Market.** It selects a state; "market" on
+  this page means a radius cluster, and the two sat nine pixels apart reading
+  the same word. `.map-pick` labels both scope pickers — STATE and MARKET
+- **No divider inside the mode toggle.** One was tried and removed the same
+  day: `.tgl-btn` drops its right border and leans on `:last-child` to restore
+  it, so a non-button between two buttons leaves the one before it with no
+  right edge and opens a gap. The contextual bar already shows the split
+- **Tooltips are one sentence** (2026-08-31, Doug: too many, too long, and he
+  is the primary reader). The map's ran 137–330 characters and several
+  restated the visible text beside them; they are 74–117 now, and
+  `mapLocation`, `mapCoverage` and `mapTimeline` were deleted outright because
+  the panel title, the note and the disappearing controls already said it.
+  Deleting the `kinfo` means deleting the `TIP` entry — `test/surfaces.test.js`
+  fails on an entry no card references
 - **`fbShow(page)` is the one table of which controls reach a view**, replacing
   three scattered conditionals. A control that changes nothing is **not
   rendered** — the view says what it obeys by showing only what it obeys,
