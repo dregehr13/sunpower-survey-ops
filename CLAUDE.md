@@ -56,7 +56,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - `test/snapshot.test.js` — every metric against a frozen real-data fixture (`test/fixtures/rows.json`, rebuilt by `scripts/build-fixture.cjs`). A definition change fails with a value diff; accept it deliberately with `UPDATE_SNAPSHOT=1 npm test`
   - `test/surfaces.test.js` — static cross-surface guards: no surface may reimplement the completion test, read a data.js const off `window`, band inline, redefine a shared definition, destructure a name metrics.cjs doesn't export, or leave a `TIP` entry unreferenced
 - **`docs/METRICS.md` is the metric register** — every displayed number, its definition, and which surfaces read it. Update it when adding a metric
-- parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings, resurveys resting on a bare `reopened_by_design` flag); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
+- parse-sf.js prints a non-blocking import sanity report to stderr (surveys predating the agreement, dup ids, unknown resources, rep-name casing, stale schedules, row-count swings, resurveys resting on a bare `reopened_by_design` flag, reactivated-after-cancel cycle-time candidates, stale anchor-override entries); push.sh surfaces it automatically. It also **decodes HTML entities** — SF ships free text escaped, so offices arrive as `"Solar&#39;s Dead" - Dragons`
 - **Sales office is a global filter** alongside Region, applied through `gfDim` **and `applyFilter`** so it reaches every page. It only ever lived in `gfDim`, which meant Performance — the one page reading `filtered` — showed an active button, a chip and identical numbers (fixed 2026-08-14). Both the filter and the Resurveys breakdown hide/fall back on exports predating 2026-08-06, which have no office field
 - **One label scale, every page** (added 2026-08-17). A single 10px uppercase `.05em` style used to do four jobs at once, so four ranks of information read as one. The seven roles: section/KPI label 11/600/.07em uppercase `--muted` · panel title 13/700 sentence `--text` · panel subtitle 11/400 `--faint` · table header 11/700 sentence `--muted` · chart legend 11/400 `--muted` · axis tick 10/400 `--faint` · footnote 10/400 `--faint`. **10px survives only as axis ticks and footnotes**
 - **Hover means "this opens something"** (added 2026-08-17). Lift and shadow are reserved for it — `.drill-tgt` cards and the `.wip-expand` caret. Panels (`.sec`) and plain KPI cards have no hover state at all; `.pill` does not scale (most pills are status readouts in table cells, not controls); filter chips darken their border one step with no transform. Row hover is one value, `var(--bg)`, not the three off-whites it was — the one
@@ -283,6 +283,46 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - To revert the feature entirely, set `anchor` back to `'start'` in
     `SETTING_DEFAULTS` — every other part of it is inert while the anchor is
     `'start'`
+- **Manual anchor overrides** (`overrides.json`, added 2026-09-01). A project
+  cancelled before its survey and reactivated months later keeps its original
+  Project Start, so the cancelled gap counts as cycle time — 2175DUND read 68d
+  for a survey done the day it was reactivated (SF field history: Status
+  Canceled → In Progress 8/31, same task, no reactivation-date field exists to
+  key off). `overrides.json` hard-swaps `start` for named rows. Things not to
+  undo:
+  - **It swaps `start` AND `opened` to the same date**, so the row reads
+    identically under either Settings anchor. `parse-sf.js` does this before the
+    `ct_*` math (baked into data.js — compose and the morning card inherit it
+    with no code of their own); `applyOverrides()` in index.html re-applies it
+    for a row overridden since the last push, running **before** `applyAnchor`
+    and setting `r._override` so `applyAnchor` leaves the row alone
+  - **`applyOverrides` and `applyAnchor` are the ONLY writers of `r.start`** in
+    index.html — `test/surfaces.test.js` asserts exactly two, pinned to those
+    functions. Same one-mutation-point rule the anchor itself follows: teaching
+    50 readers about a second date is how the three SS ratios drifted 34%
+  - **The row stays counted everywhere** — FPY, the Trends week, completions.
+    Only its cycle time moves. This is a correction, not an exclusion (unlike
+    Unnecessary Request, which drops rows from the Resurveys page)
+  - **Keyed by `task_id`**, the true PK, with `project` stored beside it as a
+    label and drift check. `parse-sf.js` warns if an override points at a task
+    no longer in the export or whose project label changed, and prints what
+    each applied override did
+  - **`parse-sf.js` flags candidates**: a completed row that was `Canceled` at
+    the last export, is live now, and carries a >21d cycle — the reactivation
+    fingerprint, off an actual signal (the status flip vs the previous
+    data.json). Doug reviews and adds the override if the survey itself was
+    quick
+  - **Managed on the Data page** (`_ovPanel()` above the source editor), not
+    Settings — it is row-scoped. Add form resolves a typed project name to its
+    task_id. `api/update-overrides.js` commits `overrides.json` to main, the
+    `outlook.json`/`resmodel.json` endpoint shape, but **keeps the update
+    password** (`UPDATE_PASSWORD`): it writes a correction to the dataset, the
+    same class as `api/update.js`, not an on-page assumption like resmodel
+  - localStorage (`S.overrides`) is the working copy, `S.ovSaved` the arbiter —
+    exactly the resmodel pattern (clean browser adopts the server, dirty browser
+    keeps its edit)
+  - To retire the feature: empty `overrides.json`'s `rows`. `applyOverrides` and
+    the parser guard are inert with an empty map
 - No weekly goals — data was "vibe coded" by previous manager, not building that out
 - No historical data — starting fresh with current SF export
 - New fields must not break old rows (import defaults missing sfCols to `''`)

@@ -1652,6 +1652,12 @@ const SETTING_DEFAULTS = {
   // applyResModel() → OpsCoverage.setModel(), never read knob by knob.
   resModel:             {},        // capacity knobs — RES_MODEL_FIELDS
   resCost:              {},        // SPWR cost knobs — RES_COST_FIELDS
+  // Manual cycle-time anchor overrides, keyed by TaskRay Task ID. Each entry
+  // hard-swaps one survey's start date for metric purposes — see overrides.json
+  // and applyOverrides(). Working copy; the committed file is the source of
+  // truth and ovSaved stamps what the server held when this browser adopted it.
+  overrides:            {},
+  ovSaved:              '',
 };
 
 let S = {...SETTING_DEFAULTS};
@@ -1713,14 +1719,43 @@ let DATA_CUTOFF = OpsMetrics.DATA_CUTOFF;
 // SETTING_DEFAULTS to 'start'; every other change in this feature is inert
 // while the anchor is 'start'.
 function applyAnchor(r){
+  if(r._override) return;                  // start already set by applyOverrides
   if(S.anchor!=='opened') return;          // Spec 12744 behaviour, unchanged
   if(!r.opened) return;                    // no Open date: keep Project Start
   r.start = r.opened;
   if(r.ct_open!==undefined) r.ct_total = r.ct_open;
 }
+
+// ═══ ANCHOR OVERRIDES ════════════════════════════════════
+// A handful of rows carry a Project Start that counts calendar time the survey
+// could not have been worked — a project cancelled before survey and revived
+// months later on the same task. overrides.json hard-swaps the start for those
+// rows; parse-sf.js bakes the swap into data.js, and this re-applies it for a
+// row overridden in the app since the last push. Runs BEFORE applyAnchor, and
+// sets _override so applyAnchor leaves the row alone. The raw Open date is
+// swapped too so the row reads the same under either anchor. The row stays
+// counted everywhere — only its cycle time moves. Same one-mutation-point
+// discipline as the anchor: this and applyAnchor are the only writers of
+// r.start, enforced by test/surfaces.test.js.
+let _overrides = null, _overridesLoad = null, _overridesErr = null;
+const _ovStamp = o => JSON.stringify(o || {});
+const _ovActive = () => (S && S.overrides) || {};
+function applyOverrides(r){
+  const ov = _ovActive()[r.task_id];
+  if(!ov || !ov.start) return;
+  r._override = ov;
+  r.start = ov.start;
+  r.opened = ov.start;
+  const ec = OpsMetrics.effectiveComplete(r);
+  r.ct_total = dDiff(r.start, ec);
+  if(r.ct_total != null && r.ct_total < 0) r.ct_total = 0;
+  r.ct_open = r.ct_total;
+}
+
 function loadAll(src){
   // Before the cutoff filter, so the cutoff applies to the same date every
   // metric downstream measures from.
+  src.forEach(applyOverrides);
   src.forEach(applyAnchor);
   const out = src.filter(r=>r.start>=DATA_CUTOFF);
   out.forEach(r=>{ r.sales_rep=OpsMetrics.normalizeName(r.sales_rep); if(!r.resource&&r.complete) r.resource='Sales Rep'; if(r.ct_total!=null&&r.ct_total<0) r.ct_total=0; if(r.ct_resurvey!=null&&r.ct_resurvey<0) r.ct_resurvey=0; if(r.ct_full!=null&&r.ct_full<0) r.ct_full=0; });
@@ -7248,6 +7283,80 @@ function saveResModel(){
     .catch(e=>{ btn.disabled=false; msg.innerHTML=`<b style="color:var(--red);">${esc(e.message)}</b>`; });
 }
 
+// ── Anchor overrides: fetch, adopt, save ──────────────────────────────────
+// Same shape as the resource model: overrides.json is the source of truth,
+// localStorage (S.overrides) is the working copy so an edit takes effect before
+// it is pushed, and S.ovSaved stamps what the server held when this browser
+// last adopted it — the only way to tell an unpushed local edit from a change
+// saved elsewhere. Unlike resmodel this one KEEPS the update password: it
+// commits a correction to the dataset, the same class as api/update.js.
+function _rebuildFromOverrides(){
+  allRows=loadAll(JSON.parse(JSON.stringify(RAW)));
+  scopeRows(); applyFilter(); renderFBars();
+  if(currentPage) renderPage(currentPage);
+}
+function overridesEnsure(){
+  if(_overrides||_overridesLoad) return _overridesLoad;
+  _overridesLoad = fetch('overrides.json',{cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('no overrides.json ('+r.status+')'); return r.json(); })
+    .then(j=>{ _overrides=j; _overridesErr=null; adoptOverrides(j); })
+    .catch(e=>{ _overridesErr=e.message; _overrides={rows:{}}; })
+    .then(()=>{ _overridesLoad=null; if(currentPage==='data') renderEditor(); });
+  return _overridesLoad;
+}
+function adoptOverrides(j){
+  const rows=(j&&j.rows)||{}, srv=_ovStamp(rows), before=_ovStamp(S.overrides);
+  if(!S.ovSaved || _ovStamp(S.overrides)===S.ovSaved) S.overrides={...rows};
+  S.ovSaved=srv; saveSettings();
+  if(_ovStamp(S.overrides)!==before) _rebuildFromOverrides();
+}
+const overridesDirty = () => !!S.ovSaved && _ovStamp(S.overrides)!==S.ovSaved;
+function _ovSaveState(){
+  if(_overridesErr) return `<span style="color:var(--amber);">Not loaded from the server &mdash; ${esc(_overridesErr)}. Changes stay in this browser.</span>`;
+  if(overridesDirty()) return '<b style="color:var(--blue-dk);">Changed here, not yet on the server.</b>';
+  const at=_overrides&&_overrides.updated, by=_overrides&&_overrides.by;
+  return `<span style="color:var(--faint);">On the server${at?' &middot; '+esc(at):''}${by?' &middot; '+esc(by):''}</span>`;
+}
+// Add / replace an override from the Data-page form. Resolves the typed project
+// name to its task id off the loaded rows so the key is always the real PK.
+function ovAdd(){
+  const proj=(document.getElementById('ov-proj')||{}).value||'';
+  const date=(document.getElementById('ov-date')||{}).value||'';
+  const reason=(document.getElementById('ov-reason')||{}).value||'';
+  const msg=document.getElementById('ov-msg');
+  const key=proj.trim().toLowerCase();
+  const hit=RAW.find(r=>(r.project||'').toLowerCase()===key);
+  if(!hit||!hit.task_id){ msg.innerHTML='<b style="color:var(--red);">No project by that name in the data.</b>'; return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ msg.innerHTML='<b style="color:var(--red);">Enter the new start as YYYY-MM-DD.</b>'; return; }
+  if(!reason.trim()){ msg.innerHTML='<b style="color:var(--red);">Give a reason — it shows on the row and in the commit.</b>'; return; }
+  S.overrides={...S.overrides,[hit.task_id]:{start:date,project:hit.project,reason:reason.trim().slice(0,280)}};
+  saveSettings(); _rebuildFromOverrides(); renderEditor();
+  toast('Override added — Save to put it on the server.');
+}
+function ovRemove(tid){
+  if(!S.overrides[tid]) return;
+  const next={...S.overrides}; delete next[tid]; S.overrides=next;
+  saveSettings(); _rebuildFromOverrides(); renderEditor();
+  toast('Override removed — Save to update the server.');
+}
+function ovSave(){
+  const msg=document.getElementById('ov-msg'), btn=document.getElementById('ov-save');
+  const pw=prompt('Update password (same as the Salesforce data upload):');
+  if(pw==null) return;
+  btn.disabled=true; msg.textContent='Saving…';
+  fetch('/api/update-overrides',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ rows:S.overrides||{}, by:'Doug', password:pw })})
+    .then(r=>r.json().then(j=>({ok:r.ok,j})))
+    .then(({ok,j})=>{
+      if(!ok) throw new Error(j.error||'save failed');
+      _overrides=j.overrides; _overridesErr=null;
+      S.overrides={...(j.overrides.rows||{})}; S.ovSaved=_ovStamp(j.overrides.rows); saveSettings();
+      _rebuildFromOverrides(); renderEditor();
+      toast('Overrides saved'+(j.commit?' · '+j.commit:''));
+    })
+    .catch(e=>{ btn.disabled=false; msg.innerHTML=`<b style="color:var(--red);">${esc(e.message)}</b>`; });
+}
+
 // How many of the roster drive their own vehicle, phrased for a sentence.
 function _resOwnCount(){
   const svs=(_roster&&_roster.surveyors)||[];
@@ -9258,6 +9367,46 @@ function renderSettings(){
     </div>`;
 }
 
+// The anchor-override panel on the Data page. Lists the active overrides and
+// carries the add form + the server save. See applyOverrides() / overrides.json.
+function _ovPanel(){
+  const ov=S.overrides||{};
+  const ids=Object.keys(ov);
+  const byTask=new Map(allRows.map(r=>[r.task_id,r]));
+  const rowHtml=ids.map(tid=>{
+    const o=ov[tid], r=byTask.get(tid);
+    const cyc=r&&r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—';
+    const gone=r?'':' <span class="pill pam">not in data</span>';
+    return `<tr>
+      <td style="font-weight:600;">${esc(o.project||tid)}${gone}</td>
+      <td style="white-space:nowrap;">${esc(o.start)}</td>
+      <td class="r" style="color:var(--muted);">${cyc}</td>
+      <td style="color:var(--muted);font-size:11px;line-height:1.5;">${esc(o.reason||'')}</td>
+      <td><button class="edel" onclick="ovRemove('${esc(tid)}')" title="Remove override">×</button></td>
+    </tr>`;
+  }).join('');
+  return `<div class="sec">
+    <div class="shead">
+      <div><div class="stitle">Cycle-time anchor overrides</div>
+      <div class="ssub">Hard-swap one survey's start date when the Salesforce date counts time it could not have been worked — a project cancelled pre-survey, then reactivated on the same task. The row stays counted everywhere; only its cycle time moves.</div></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:10px;">${_ovSaveState()}</span>
+        <button class="fbtn" id="ov-save" onclick="ovSave()">Save to server</button>
+      </div>
+    </div>
+    ${ids.length?`<div class="ewrap"><table class="etable">
+      <thead><tr><th>Project</th><th>New start</th><th class="r">Cycle now</th><th>Reason</th><th style="width:22px;"></th></tr></thead>
+      <tbody>${rowHtml}</tbody></table></div>`:`<div class="note">No overrides. Add one below when a reactivated project is dragging a dead gap into its cycle time.</div>`}
+    <div class="etbar" style="margin-top:10px;flex-wrap:wrap;">
+      <input type="text" id="ov-proj" placeholder="Project (e.g. 2175DUND)" style="width:180px;">
+      <input type="date" id="ov-date" title="New start date" style="width:150px;">
+      <input type="text" id="ov-reason" placeholder="Reason (shows on the row + commit)" style="flex:1;min-width:220px;">
+      <button class="fbtn" onclick="ovAdd()">Add override</button>
+    </div>
+    <div id="ov-msg" class="note" style="min-height:14px;margin-top:6px;"></div>
+  </div>`;
+}
+
 function saveSFFromSettings(){
   const inst=document.getElementById('set-sf-inst').value.trim();
   const rid=document.getElementById('set-sf-rid').value.trim();
@@ -9287,6 +9436,7 @@ function renderEditor(){
   const pg=src.slice(ePageNum*EP,(ePageNum+1)*EP);
 
   document.getElementById('dt-content').innerHTML=`
+    ${_ovPanel()}
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Source data editor</div><div class="ssub">Edit inline · YYYY-MM-DD for dates · cycle times recalculate automatically · session only</div></div>
@@ -9332,7 +9482,7 @@ function renderEditor(){
   document.getElementById('etbody').innerHTML=pg.map(r=>`<tr>
     <td><button class="edel" onclick="delRow(${r.id})" title="Delete">×</button></td>
     ${editFields.map(f=>`<td><input class="ei" type="${f.type==='date'?'date':'text'}" value="${esc(r[f.key]||'')}" onchange="updR(${r.id},'${f.key}',this.value)" style="${f.type==='date'?'width:115px;':''}${f.key==='region'?'width:110px;':''}"></td>`).join('')}
-    <td class="r" style="color:var(--muted);font-size:10px;" id="ect-${r.id}">${r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'}</td>
+    <td class="r" style="color:var(--muted);font-size:10px;" id="ect-${r.id}" title="${r._override?'anchor override: '+esc(r._override.reason):''}">${r._override?'↩ ':''}${r.ct_total!=null?r.ct_total.toFixed(1)+'d':'—'}</td>
     <td class="r" style="color:var(--muted);font-size:10px;">${r.ct_r2s!=null?r.ct_r2s.toFixed(1)+'d':'—'}</td>
   </tr>`).join('');
 }
@@ -9572,13 +9722,15 @@ window.addEventListener('load',()=>{
   // then fetch the committed copy, which may be newer than this browser's.
   applyResModel();
   resModelEnsure();
+  overridesEnsure();
   // allRows was already built once at script-eval time, before localStorage was
-  // read — so it used SETTING_DEFAULTS for BOTH the cutoff and the anchor.
-  // Rebuild if the saved settings disagree with either.
+  // read — so it used SETTING_DEFAULTS for the cutoff, the anchor AND an empty
+  // override map. Rebuild if the saved settings disagree with any of them.
   RS_MIN_CELL = MAP_MIN_N = S.minCell;
   const _reanchor = S.anchor!==SETTING_DEFAULTS.anchor;
+  const _hasOv = S.overrides && Object.keys(S.overrides).length;
   if(S.dataCutoff&&S.dataCutoff!==DATA_CUTOFF){ DATA_CUTOFF=S.dataCutoff; allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
-  else if(_reanchor){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
+  else if(_reanchor||_hasOv){ allRows=loadAll(JSON.parse(JSON.stringify(RAW))); }
   scopeRows(); // re-scope based on restored GF.statuses
   // Sync SF credentials from localStorage into settings
   if(!S.sfInst) S.sfInst=localStorage.getItem('sf_inst')||'';

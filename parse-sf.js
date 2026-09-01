@@ -10,6 +10,15 @@ import OpsMetrics from './lib/metrics.cjs';
 const file = process.argv[2];
 if (!file) { console.error('Usage: node parse-sf.js <report.xls>'); process.exit(1); }
 
+// Manual cycle-time anchor overrides, keyed by TaskRay Task ID — see
+// overrides.json and applyOverrides() in index.html. Applied below, before the
+// cycle math, so the swap is baked into data.js/data.json for every reader
+// (compose and the morning card included). Missing file is normal.
+let OVERRIDES = {};
+try {
+  OVERRIDES = JSON.parse(readFileSync(new URL('./overrides.json', import.meta.url), 'utf8')).rows || {};
+} catch { /* no overrides.json — nothing to apply */ }
+
 // Must mirror the FIELDS registry in index.html
 const FIELDS = [
   { key:'project_status',       sfCol:'Project Status',                                          type:'text' },
@@ -163,6 +172,11 @@ allData.slice(headerRowIdx + 1).forEach((row, i) => {
   // with no identifying info at all — i.e. report artifacts, not surveys.
   if (!r.region && !r.project && !r.address && !r.task_id) return;
   if (!r.resource && r.complete) r.resource = 'Sales Rep';
+  // Anchor override: swap the start AND the raw Open date so the row reads the
+  // same under either Settings anchor. Done before the cycle math below — every
+  // ct_* falls out correct with no special case.
+  const _ov = r.task_id && OVERRIDES[r.task_id];
+  if (_ov && _ov.start) { r.start = _ov.start; r.opened = _ov.start; }
   r.ct_s2r      = dDiff(r.start, r.requested);
   r.ct_r2s      = dDiff(r.requested, r.scheduled);
   // effectiveComplete, not r.complete: a re-signed account carries a real
@@ -276,10 +290,34 @@ try {
     // Keyed on task_id, not id — id is the row index and shifts whenever the
     // report's sort order does.
     const was = new Map(prev.filter(r => r.task_id).map(r => [r.task_id, r.opened]));
-    const drifted = rows.filter(r => r.task_id && was.get(r.task_id) && r.opened && was.get(r.task_id) !== r.opened);
+    const drifted = rows.filter(r => r.task_id && !OVERRIDES[r.task_id] && was.get(r.task_id) && r.opened && was.get(r.task_id) !== r.opened);
     if (drifted.length) warnings.push(`${drifted.length} row(s) Open date MOVED since the last export — it is not a stable anchor, check the Settings toggle: ${sample(drifted, r => `${label(r)} (${was.get(r.task_id)} → ${r.opened})`)}`);
+
+    // Reactivated-after-cancel candidates: a completed row whose project was
+    // Canceled at the last export and is now live again, carrying a long cycle
+    // time that is mostly the cancelled gap. These are what the anchor-override
+    // mechanism is for — add one on the Data page if the survey itself was quick.
+    const wasStatus = new Map(prev.filter(r => r.task_id).map(r => [r.task_id, r.project_status]));
+    const reactivated = rows.filter(r =>
+      r.task_id && !OVERRIDES[r.task_id] && r.complete &&
+      wasStatus.get(r.task_id) === 'Canceled' && r.project_status !== 'Canceled' &&
+      r.ct_total != null && r.ct_total > 21);
+    if (reactivated.length) warnings.push(`${reactivated.length} row(s) reactivated after cancellation with a >21d cycle — the original start counts the cancelled gap. Add an anchor override if the survey was quick: ${sample(reactivated, r => `${label(r)} (${r.ct_total}d, ${SF_TASK}${r.task_id}/view)`)}`);
   }
 } catch { /* no existing data.json — first import, nothing to compare */ }
+
+// Anchor overrides — report what each one did, and flag any that no longer
+// point at a row in the export or whose project label has drifted.
+const ovIds = Object.keys(OVERRIDES);
+if (ovIds.length) {
+  const byTask = new Map(rows.filter(r => r.task_id).map(r => [r.task_id, r]));
+  ovIds.forEach(tid => {
+    const ov = OVERRIDES[tid], r = byTask.get(tid);
+    if (!r) { warnings.push(`anchor override for ${ov.project || tid} points at a task no longer in the export — remove it from overrides.json`); return; }
+    if (ov.project && r.project && ov.project !== r.project) warnings.push(`anchor override ${tid} is labelled "${ov.project}" but that task is now "${r.project}" — check overrides.json`);
+    console.error(`override: ${r.project || tid} start → ${ov.start} (${r.ct_total != null ? r.ct_total + 'd cycle' : 'no completion'})`);
+  });
+}
 
 warnings.forEach(w => console.error('WARN: ' + w));
 console.error(`${rows.length.toLocaleString()} rows, ${warnings.length} warning${warnings.length === 1 ? '' : 's'}`);

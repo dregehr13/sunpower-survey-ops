@@ -51,22 +51,49 @@ test('no surface reads a data.js const off window', () => {
   assert.deepEqual(bad, [], `use a bare typeof guard instead:\n${bad.join('\n')}`);
 });
 
-test('the cycle-time anchor is assigned in exactly one place per surface', () => {
+test('the cycle-time anchor is assigned only in the two blessed places', () => {
   // Every cycle time and queue age measures from r.start — ~50 readers across
-  // index.html and lib/metrics.cjs. The Settings toggle works by rewriting
-  // r.start itself, once, inside applyAnchor() (index.html) / anchorRows()
-  // (compose). That is only safe while it stays the SOLE assignment: a second
-  // one, anywhere, and half the app measures from a different date than the
-  // other half with nothing on screen to say so.
-  const found = [];
-  for (const f of SURFACES) {
-    linesMatching(read(f), /\br\.start\s*=(?!=)/)
-      .forEach(({ n, line }) => found.push(`${f}:${n}  ${line.slice(0, 90)}`));
+  // index.html and lib/metrics.cjs. Two functions, and only two, may rewrite
+  // it: applyAnchor() swaps to the Open-date anchor per the Settings toggle,
+  // and applyOverrides() hard-swaps one row's start per overrides.json. compose
+  // carries the anchor swap alone (anchorRows()); the override reaches it baked
+  // into data.js by parse-sf.js. A third assignment anywhere and half the app
+  // measures from a different date than the other half with nothing on screen
+  // to say so.
+  const idx = linesMatching(read('index.html'), /\br\.start\s*=(?!=)/);
+  assert.equal(idx.length, 2,
+    `expected exactly two r.start assignments in index.html, got:\n${idx.map(m => `${m.n}  ${m.line}`).join('\n')}`);
+  assert.ok(idx.some(m => /ov\.start/.test(m.line)), 'one r.start assignment must be applyOverrides() (r.start = ov.start)');
+  assert.ok(idx.some(m => /r\.opened/.test(m.line)), 'one r.start assignment must be applyAnchor() (r.start = r.opened)');
+
+  const compose = linesMatching(read('compose/index.html'), /\br\.start\s*=(?!=)/);
+  assert.equal(compose.length, 1,
+    `expected exactly one r.start assignment in compose (anchorRows), got:\n${compose.map(m => `${m.n}  ${m.line}`).join('\n')}`);
+});
+
+test('overrides.json is well-formed', () => {
+  // parse-sf.js and applyOverrides() both key on task_id and trust `start` to
+  // be an ISO date. A malformed entry would silently not apply (or apply a
+  // garbage start). The endpoint validates on write; this guards a hand edit.
+  const ov = JSON.parse(read('overrides.json'));
+  assert.ok(ov && typeof ov.rows === 'object', 'overrides.json needs a rows object');
+  for (const [tid, o] of Object.entries(ov.rows)) {
+    assert.match(tid, /^[A-Za-z0-9]{15,18}$/, `bad task id key: ${tid}`);
+    assert.match(String(o.start), /^\d{4}-\d{2}-\d{2}$/, `${tid}: start must be YYYY-MM-DD`);
+    assert.ok(!Number.isNaN(Date.parse(o.start)), `${tid}: start is not a real date`);
+    assert.ok(o.reason && o.reason.length <= 280, `${tid}: needs a reason ≤280 chars`);
   }
-  assert.equal(found.length, 2,
-    `expected exactly one r.start assignment per surface (the anchor swap), got:\n${found.join('\n')}`);
-  assert.ok(found[0].startsWith('index.html:'), `index.html must carry one:\n${found.join('\n')}`);
-  assert.ok(found[1].startsWith('compose/'), `compose must carry one:\n${found.join('\n')}`);
+});
+
+test('parse-sf.js applies the anchor override before the cycle math', () => {
+  // The swap has to land before ct_total/ct_open are computed, or the row keeps
+  // its dead-gap cycle. Structural check: the OVERRIDES read sits above the
+  // first dDiff(r.start, ...) in the row builder.
+  const src = read('parse-sf.js');
+  const applied = src.indexOf('OVERRIDES[r.task_id]');
+  const firstCt = src.indexOf('r.ct_total    = dDiff(r.start');
+  assert.ok(applied > -1 && firstCt > -1 && applied < firstCt,
+    'the OVERRIDES swap must precede the ct_total computation');
 });
 
 test('lib/metrics.cjs never reads the raw Open date', () => {
