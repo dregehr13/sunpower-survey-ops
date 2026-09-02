@@ -1,12 +1,17 @@
 {
   "_comment": "Manual cycle-time anchor overrides. Each entry hard-swaps one survey's Project Start Date (and Open date) for metric purposes — used when Salesforce's recorded start counts calendar time the survey could not have been worked, e.g. a project cancelled before survey and reactivated months later on the same task. Keyed by TaskRay Task ID. Applied at import by parse-sf.js (baked into data.js/data.json) and at load by applyOverrides() in index.html, so every cycle time and queue age measures from the override date. The row is still counted everywhere else — only its cycle time changes. Written from the Data page via api/update-overrides.js (update password, same as the Salesforce data upload) or by hand here.",
-  "updated": "2026-09-01",
+  "updated": "2026-09-02",
   "by": "Doug",
   "rows": {
     "a03US00000vEoPD": {
       "start": "2026-08-31",
       "project": "2175DUND",
       "reason": "Canceled 2026-06-24, reactivated 2026-08-31 on the same task. Original start counted ~68d of dead queue time against a survey completed the day it was reactivated."
+    },
+    "a03US00000mBTHb": {
+      "start": "2026-03-06",
+      "project": "1897LI",
+      "reason": "Reactivated March 3, then canceled again the 17th. Tightening cycle for accuracy"
     }
   }
 }
