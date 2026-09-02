@@ -2673,6 +2673,9 @@ function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys · '+d
 const _DRILL_RES_COL={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
 function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
+// Who actually did the initial survey: the rep by name when they self-surveyed,
+// otherwise the vendor/team short name (SPWR / Radicl).
+function _drillSurveyor(r){ return r.resource==='Sales Rep' ? (r.sales_rep||'Sales Rep') : (_DRILL_RES_SHORT[r.resource]||r.resource||''); }
 function _drillDaysSpan(r,today){
   // A Holding/Reopened row carries a completion date and a ct_total from an
   // earlier pass but is still open — testing r.complete showed 28 such rows as
@@ -2836,6 +2839,8 @@ function drillCols(mode,shown,today){
       sortVal:r=>(r.resource||'').toLowerCase(), txt:r=>r.resource||'', cell:r=>_drillResSpan(r.resource)},
     rep:{k:'rep',label:'Sales Rep',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
       sortVal:r=>(r.sales_rep||'').toLowerCase(), txt:r=>r.sales_rep||'', cell:r=>hl(r.sales_rep||'—')},
+    surveyor:{k:'surveyor',label:'Surveyor',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>_drillSurveyor(r).toLowerCase(), txt:r=>_drillSurveyor(r), cell:r=>hl(_drillSurveyor(r)||'—')},
     office:{k:'office',label:'Sales Office',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
       sortVal:r=>(r.sales_office||'').toLowerCase(), txt:r=>r.sales_office||'', cell:r=>hl(r.sales_office||'—')},
     start:{k:'start',label:'Start',tdStyle:'white-space:nowrap;color:var(--muted);',
@@ -2880,8 +2885,8 @@ function drillCols(mode,shown,today){
     ? [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
     : [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsCycle];
   if(mode==='resurvey') return openRs
-    ? [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
-    : [col.proj,col.region,col.rep,col.attr,col.reason,col.det,col.rsCycle];
+    ? [col.proj,col.region,col.surveyor,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
+    : [col.proj,col.region,col.surveyor,col.attr,col.reason,col.det,col.rsCycle];
   if(mode==='groupBy')  return [col.proj,col.region,col.reason,col.complete,{...col.days,label:'Cycle'}];
   if(mode==='byDate')   return [col.proj,col.region,col.resource,col.complete,col.days];
   return [col.proj,col.region,col.resource,col.start,col.complete,col.days];
@@ -3520,7 +3525,11 @@ function renderThisWeek(){
   const today=localISO(new Date());
   // Use the DATA_TS date as the cutoff — export captures completions through the moment it was run
   const dataThrough=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):today;
-  const completedTW=rows.filter(r=>isComplete(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
+  // First-time completions, not the isComplete() gate — matches Current → Last
+  // Week. A survey that closed this week and was then reopened for resurvey
+  // still counts as a this-week completion; the resurvey story is First-pass
+  // yield, not a reason for this number to shrink.
+  const completedTW=rows.filter(r=>everCompleted(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
   const scheduledRem=rows.filter(r=>!isComplete(r)&&(
     (r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to)||
     (r.resurvey_scheduled&&r.resurvey_scheduled>=dataThrough&&r.resurvey_scheduled<=tw.to)
@@ -3555,12 +3564,12 @@ function renderThisWeek(){
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   const lwr=weekRange(-1);
-  const lwSrc=rows.filter(r=>isComplete(r)&&r.complete>=lwr.from&&r.complete<=lwr.to);
+  const lwSrc=rows.filter(r=>everCompleted(r)&&r.complete>=lwr.from&&r.complete<=lwr.to);
   const lwCount=lwSrc.length;
   const lwAvgT=avg(lwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   // 3-week avg for cycle context
   const w3r=weekRange(-3);
-  const triSrcTW=rows.filter(r=>isComplete(r)&&r.complete>=w3r.from&&r.complete<=lwr.to);
+  const triSrcTW=rows.filter(r=>everCompleted(r)&&r.complete>=w3r.from&&r.complete<=lwr.to);
   const triAvgTW=avg(triSrcTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   const twBand=avgT!=null?(bandFor(avgT,S.targetAvg)||'good'):'good';
   const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
@@ -3585,7 +3594,7 @@ function renderThisWeek(){
   _curD.twSched=scheduledRem; _curD.twWip=wipProjects;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})")}>
-      <div class="klabel">Completed so far${kinfo(TIP.complete)}</div>
+      <div class="klabel">Completed so far${kinfo(TIP.firstComplete)}</div>
       <div class="srail-val">${completedTW.length}<span class="srail-sub">through today</span></div>
     </div>
     <div class="srail-cell">
@@ -3607,7 +3616,7 @@ function renderThisWeek(){
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
-  const dayCounts=dayDates.map(date=>rows.filter(r=>isComplete(r)&&r.complete===date).length);
+  const dayCounts=dayDates.map(date=>rows.filter(r=>everCompleted(r)&&r.complete===date).length);
   const schedCounts=dayDates.map(date=>rows.filter(r=>r.scheduled===date).length);
   const todayIdx=dayDates.indexOf(today);
   // Past days: no scheduled bars. Today: scheduled-but-not-yet-complete stacked on top. Future: all scheduled.
@@ -3712,7 +3721,7 @@ function renderThisWeek(){
       onClick:(evt,els)=>{ if(!els.length) return;
         const i=els[0].index, date=dayDates[i], lbl=dayNames[i]+' '+fmtDateShort(date);
         if(els[0].datasetIndex===0){
-          const dr=rows.filter(r=>isComplete(r)&&r.complete===date);
+          const dr=rows.filter(r=>everCompleted(r)&&r.complete===date);
           openDrill('Completed · '+lbl,dr.length+' survey'+(dr.length===1?'':'s'),dr,{sort:'days'});
         } else {
           // Past days carry no scheduled bar, and today's counts only the ones
