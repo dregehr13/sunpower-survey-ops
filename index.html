@@ -4400,7 +4400,7 @@ function renderTrends(){
     if(isComplete(r)) outByDay[r.complete]=(outByDay[r.complete]||0)+1; });
   const isWknd=s=>{const g=new Date(s+'T12:00:00').getDay();return g===0||g===6;};
   const flowIn=flowDays.map(d=>inByDay[d]||0);
-  const flowOut=flowDays.map(d=>-(outByDay[d]||0));
+  const flowOut=flowDays.map(d=>outByDay[d]||0);
   const flowWip=flowDays.map(d=>wipOn(trendSrc,d));
 
   // Clearance rate and intake trend answer "growing, or falling behind?"
@@ -4489,14 +4489,13 @@ function renderTrends(){
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   } else {
-    // Diverging bars (New In above zero, Completed below), matching the daily
-    // view — a grouped side-by-side layout here would flip the chart's whole
-    // visual language on every toggle click.
+    // Grouped bars (New In and Completed both rise from zero, side by side),
+    // matching the daily view.
     CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
       type:'bar',
       data:{labels:inOutLabels,datasets:[
         {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
-        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted).map(v=>-v),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
+        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
         {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
@@ -4514,7 +4513,7 @@ function renderTrends(){
           y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
     });
   }
-  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#a9a390',v=>Math.abs(v));
+  _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#a9a390',v=>v);
   _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
