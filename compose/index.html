@@ -114,12 +114,44 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .tc-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:6px;}
 .tc-stat-val{font-size:30px;font-weight:700;line-height:1;}
 .tc-val-good{color:#107C10;}.tc-val-neutral{color:#292929;}.tc-val-warn{color:#D83B01;}
+
+/* ── Huddle ─────────────────────────────────────────── */
+.huddle-wrap{max-width:820px;margin:0 auto;padding:18px 22px;}
+.huddle-wrap>#huddle-body{display:flex;flex-direction:column;gap:14px;}
+.hd-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid var(--text);padding-bottom:10px;}
+.hd-day{font-size:20px;font-weight:600;letter-spacing:-.01em;}
+.hd-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.hd-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:720px){.hd-grid{grid-template-columns:1fr;}}
+.hd-faint{color:var(--faint);font-size:11px;}
+.hd-strong{font-weight:700;font-variant-numeric:tabular-nums;}
+.hd-good{color:var(--green);}.hd-warn{color:var(--amber);}
+.hd-report{list-style:none;margin:0;padding:0;counter-reset:hd;display:flex;flex-direction:column;gap:2px;}
+.hd-report li{display:grid;grid-template-columns:22px 1fr;gap:9px;padding:8px 0;border-top:1px solid var(--border);font-size:12.5px;line-height:1.5;}
+.hd-report li:first-child{border-top:0;}
+.hd-report li::before{counter-increment:hd;content:counter(hd);font-size:11px;font-weight:600;color:var(--blue);}
+.hd-blank{display:inline-block;min-width:70px;border-bottom:1.5px dotted var(--border);color:var(--faint);font-size:11px;}
+.hd-build{display:flex;flex-direction:column;}
+.hd-leg{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-top:1px solid var(--border);font-size:12.5px;}
+.hd-leg:first-child{border-top:0;}
+.hd-total{font-weight:700;}
+.hd-num{font-variant-numeric:tabular-nums;}
+.hd-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.hd-tbl th{text-align:left;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:4px 8px;border-bottom:1px solid var(--border);}
+.hd-tbl td{padding:5px 8px;border-bottom:1px solid var(--border-lt,#f0efe9);}
+.hd-tbl td.r,.hd-tbl th.r{text-align:right;font-variant-numeric:tabular-nums;}
+.hd-tbl tbody tr:last-child td{border-bottom:0;}
+.hd-tbl tr.hd-today td{background:var(--bg);}
+.hd-points{margin:0;padding-left:16px;font-size:12.5px;line-height:1.65;}
+.hd-points li{margin-bottom:6px;}
+.hd-points li:last-child{margin-bottom:0;}
 </style>
 </head>
 <body>
 
 <nav class="nav">
   <div class="brand">Site Survey <span>Email</span></div>
+  <button class="nav-mode" id="btn-huddle" onclick="setMode('huddle')">Huddle</button>
   <button class="nav-mode" id="btn-monday" onclick="setMode('monday')">Monday recap</button>
   <button class="nav-mode" id="btn-daily" onclick="setMode('daily')">Daily (Tue–Fri)</button>
   <button class="nav-mode" id="btn-team" onclick="setMode('team')">Team card</button>
@@ -183,6 +215,13 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       </div>
     </div>
   </div>
+</div>
+
+<!-- HUDDLE — the live version of the daily operations-call prep sheet. Not an
+     email: the four-line report scaffold, today's target, the week projection
+     with its build, and the standing talking points. -->
+<div class="huddle-wrap" id="huddle-wrap" style="display:none;">
+  <div id="huddle-body"><div class="empty-state">No data loaded.</div></div>
 </div>
 
 <div class="team-wrap" id="team-wrap" style="display:none;">
@@ -271,7 +310,7 @@ function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
 const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
        businessDays, weekDaysRemaining, buildExpectedCt,
-       buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
+       buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, projectWeek, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 // The cycle-time anchor, read from the same ops_settings the dashboard writes
 // (same origin, so this is the dashboard's own toggle). compose keeps its own
 // copy of the data and its own ct_total reads, so leaving it out would have the
@@ -398,7 +437,13 @@ function computeStats(){
     const wipProjects=ROWS.filter(r=>r.start&&!isComplete(r));
     const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
     const wip=wipProjects.length;
-    const proj=projectWeek(ALL_ROWS,wtdFrom,yesterday,{cacheKey:(typeof DATA_TS!=='undefined'?DATA_TS:'')});
+    // asOf = the export date, not "yesterday" — the data only runs through the
+    // export, and the dashboard hero anchors there too. Anchoring on a wall-
+    // clock "yesterday" earlier than the export would drop the export-day
+    // completions and stretch the days-remaining, so the recap number would
+    // disagree with the page it is written from (the 2026-08-14 defect).
+    const projAsOf=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):yesterday;
+    const proj=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{cacheKey:(typeof DATA_TS!=='undefined'?DATA_TS:'')});
     const projectedWeek=proj.point;
     const projLo=proj.lo, projHi=proj.hi;
 
@@ -426,12 +471,22 @@ function computeStats(){
     const globalFence=iqrFence(allCts);
     const slowYesterday=ROWS.filter(r=>isComplete(r)&&r.complete===yesterday&&r.ct_total!=null&&r.ct_total>globalFence);
 
+    // Huddle extras — today's target is the week projection × today's weekday
+    // completion share (Mon & Thu carry the week), same formula the prep sheet
+    // states. scheduledToday is context, not the target.
+    const today=todayISO();
+    const wShare=buildWeekdayShape(ROWS,projAsOf,8).share;
+    const todayWd=new Date(today+'T12:00:00').getDay();
+    const todayTarget=proj.daysLeft>0?Math.round(proj.point*(wShare[todayWd]||0)):null;
+    const scheduledToday=ROWS.filter(r=>r.scheduled===today&&!isComplete(r)).length;
+
     return {
       mode:'daily', yesterday, wtdFrom, wtdTo:yesterday,
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length, newInWTD,
       medCycleWTD:med(wtdCts), avgCycleWTD:avg(wtdCts),
-      projectedWeek, projLo, projHi, daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
+      projectedWeek, projLo, projHi, proj, todayTarget, scheduledToday,
+      daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
       slowYesterday,
     };
   }
@@ -821,13 +876,13 @@ function buildSubject(){
 // ─── UI ───────────────────────────────────────────────────
 function setMode(m){
   mode=m;
-  document.getElementById('btn-monday').classList.toggle('active',m==='monday');
-  document.getElementById('btn-daily').classList.toggle('active',m==='daily');
-  document.getElementById('btn-team').classList.toggle('active',m==='team');
-  document.getElementById('email-wrap').style.display=m==='team'?'none':'';
+  ['huddle','monday','daily','team'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',m===x));
+  document.getElementById('email-wrap').style.display=(m==='team'||m==='huddle')?'none':'';
   document.getElementById('team-wrap').style.display=m==='team'?'':'none';
+  document.getElementById('huddle-wrap').style.display=m==='huddle'?'':'none';
   selectedCommentary='';
   if(m==='team'){ teamStats=computeTeamStats(); renderTeamStats(); renderTCPreview(); }
+  else if(m==='huddle'){ stats=computeStats(); renderHuddle(); }
   else render();
 }
 
@@ -1153,6 +1208,106 @@ function computeTeamStats(){
     wip: wip.length,
     unscheduled: wip.filter(r=>!r.scheduled).length,
   };
+}
+
+// ─── HUDDLE ───────────────────────────────────────────────
+function renderHuddle(){
+  const el=document.getElementById('huddle-body');
+  if(!stats){ el.innerHTML='<div class="empty-state">No data loaded.<br>Export the dashboard first.</div>'; return; }
+  const s=stats, p=s.proj||{};
+  const today=todayISO();
+  const dayW=new Date(today+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
+  const through=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS:today;
+  const RES_SHORT={'Sales Rep':'Sales rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const buildLine=(lbl,val,note)=>`<div class="hd-leg"><span>${lbl}${note?` <span class="hd-faint">${note}</span>`:''}</span><span class="hd-num">${val}</span></div>`;
+  const build=(p.daysLeft>0)?
+    buildLine('Done so far',p.completedSoFar,'this week')
+    +buildLine('From the open queue','+'+Math.round(p.pipeline),`${(p.pipelineScheduled||0).toFixed(0)} booked · of ${p.wipOpen} open`)
+    +buildLine('Walk-in still to come','+'+Math.round(p.intake),'new + done this week')
+    +(p.slippageAdj?buildLine('Recent slippage',Math.round(p.slippageAdj),'model ran '+(p.recentBias>0?'high':'low')+' ~'+Math.abs(Math.round(p.recentBias||0))+' the last '+p.nBacktest+' wks'):'')
+    +`<div class="hd-leg hd-total"><span>Projected total</span><span class="hd-num">${s.projectedWeek}  <span class="hd-faint">range ${s.projLo}–${s.projHi}</span></span></div>`
+    :`<div class="hd-faint">Week closed — ${p.completedSoFar} completed.</div>`;
+
+  const dayRows=(p.byDay||[]).map(d=>{
+    const wd=DOW[new Date(d.date+'T12:00:00').getDay()];
+    return `<tr${d.date===today?' class="hd-today"':''}><td>${wd} <span class="hd-faint">${fmtMed(d.date).replace(/^\w+,\s*/,'')}</span></td>
+      <td class="r">${d.projected==null?d.actual:'<span class="hd-faint">—</span>'}</td>
+      <td class="r">${d.projected==null?'<span class="hd-faint">—</span>':'~'+d.projected}</td></tr>`;
+  }).join('');
+
+  const bt=(p.backtest||[]);
+  const btRows=bt.slice(-6).map(b=>{const m=b.predicted-b.actual;
+    return `<tr><td>${fmtMed(b.weekStart).replace(/^\w+,\s*/,'')}</td><td class="r">${b.predicted}</td><td class="r">${b.actual}</td>
+      <td class="r ${Math.abs(m)<=8?'hd-faint':m>0?'hd-warn':'hd-good'}">${m>0?'+':''}${m}</td></tr>`;}).join('');
+
+  const mix=p.model&&p.model.mix?Object.entries(p.model.mix).map(([k,v])=>`${RES_SHORT[k]||k} ${Math.round(v*100)}%`).join(' · '):'';
+  const cx=p.model&&p.model.cancelNoSurvey?p.model.cancelNoSurvey['Radicl Services']:null;
+
+  el.innerHTML=`
+  <div class="hd-head">
+    <div><div class="hd-day">${dayW}</div><div class="hd-sub">Daily 8:00 MT operations call · data through ${esc(through)}</div></div>
+    <button class="btn" onclick="copyHuddle(this)">Copy for the call</button>
+  </div>
+
+  <div class="hd-grid">
+    <div class="panel">
+      <div class="ptitle">The four-line report</div>
+      <ol class="hd-report">
+        <li><b>Yesterday's goal</b> <span class="hd-blank">your number</span></li>
+        <li><b>Yesterday's actual</b> — <span class="hd-strong">${s.completedYesterday}</span> completed${s.newInYesterday!=null?` · ${s.newInYesterday} new in`:''}</li>
+        <li><b>Recovery plan</b> <span class="hd-faint">only if you missed — what slipped + which lever</span></li>
+        <li><b>Today's target</b> — <span class="hd-strong">~${s.todayTarget!=null?s.todayTarget:'—'}</span>${s.scheduledToday!=null?` <span class="hd-faint">(${s.scheduledToday} booked today + walk-in)</span>`:''}</li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <div class="ptitle">The week · Mon ${fmtMed(s.wtdFrom).replace(/^\w+,\s*/,'')}</div>
+      <div class="hd-build">${build}</div>
+    </div>
+  </div>
+
+  <div class="hd-grid">
+    <div class="panel">
+      <div class="ptitle">By day</div>
+      <table class="hd-tbl"><thead><tr><th>Day</th><th class="r">Actual</th><th class="r">Projected</th></tr></thead><tbody>${dayRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Model vs actual — last ${bt.slice(-6).length} wks</div>
+      <table class="hd-tbl"><thead><tr><th>Week of</th><th class="r">Proj</th><th class="r">Act</th><th class="r">Miss</th></tr></thead><tbody>${btRows}</tbody></table>
+      <div class="hd-faint" style="margin-top:8px;">Walk-in ~${p.model?Math.round(p.model.walkInPerWeek):'—'}/wk · intake ~${p.model?Math.round(p.model.intakePerWeek):'—'}/wk · ${mix}${cx!=null?` · Radicl cancel ${Math.round(cx*100)}%`:''}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">Say these before someone else does</div>
+    <ul class="hd-points">
+      <li><b>Monday reads are directional.</b> A week's walk-in swings 15–60 and nothing Monday says which — quote the range, firm it up Wednesday.</li>
+      <li><b>Mix is shifting.</b> Sales-rep share of new work 70% → ${p.model&&p.model.mix?Math.round(p.model.mix['Sales Rep']*100):'~30'}%; Radicl now ${p.model&&p.model.mix?Math.round(p.model.mix['Radicl Services']*100):'~44'}%. Rep surveys close same-day, Radicl takes a week+ and ~22% cancel first — throughput drops even when sales hold.</li>
+      <li><b>Intake &gt; clearance.</b> ~${p.model?Math.round(p.model.intakePerWeek):'—'}/wk in vs ~${s.histAvg}/wk done — backlog and SS ratio drift up. This is the capacity framing.</li>
+    </ul>
+  </div>`;
+}
+function copyHuddle(btn){
+  const s=stats; if(!s) return;
+  const p=s.proj||{};
+  const txt=[
+    `SITE SURVEY — ${new Date(todayISO()+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}`,
+    ``,
+    `Yesterday goal:    ____`,
+    `Yesterday actual:  ${s.completedYesterday} completed (${s.newInYesterday} new in)`,
+    `Recovery plan:     ____   (only if missed)`,
+    `Today's target:    ~${s.todayTarget!=null?s.todayTarget:'—'}   (${s.scheduledToday} booked today + walk-in)`,
+    ``,
+    `Week projected:    ${s.projectedWeek}   (range ${s.projLo}-${s.projHi})   ·   ${p.completedSoFar} done so far`,
+    p.daysLeft>0?`   = ${p.completedSoFar} done + ${Math.round(p.pipeline)} from the queue + ${Math.round(p.intake)} walk-in${p.slippageAdj?`  ${Math.round(p.slippageAdj)} slippage`:''}`:``,
+    ``,
+    `Intake ~${p.model?Math.round(p.model.intakePerWeek):'?'}/wk vs completions ~${s.histAvg}/wk — backlog still building.`,
+  ].join('\n');
+  navigator.clipboard.writeText(txt).then(()=>{
+    const t=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>{btn.textContent=t;},1400);
+  }).catch(()=>{ btn.textContent='Copy failed'; setTimeout(()=>{btn.textContent='Copy for the call';},1400); });
 }
 
 function renderTeamStats(){
