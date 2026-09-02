@@ -270,8 +270,8 @@ function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
 const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
-       businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-       buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
+       businessDays, weekDaysRemaining, buildExpectedCt,
+       buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 // The cycle-time anchor, read from the same ops_settings the dashboard writes
 // (same origin, so this is the dashboard's own toggle). compose keeps its own
 // copy of the data and its own ct_total reads, so leaving it out would have the
@@ -287,6 +287,10 @@ const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioFo
   RAW.forEach(r=>{ if(!r.opened) return; r.start=r.opened; if(r.ct_open!==undefined) r.ct_total=r.ct_open; });
 })();
 const ROWS = OpsMetrics.filterRows(RAW);
+// The projection model needs cancelled rows in the denominator (see
+// lib/metrics.cjs) — ROWS drops them. This is the index.html `allRows` set:
+// anchored (above) and cut only at the data cutoff.
+const ALL_ROWS = RAW.filter(r => r.start >= DATA_CUTOFF);
 
 // ─── STATS HELPERS ────────────────────────────────────────
 function iqrFence(arr,mult=1.5){
@@ -384,24 +388,19 @@ function computeStats(){
     const wtdCts=wtdRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
     const newInWTD=ROWS.filter(r=>r.start>=wtdFrom&&r.start<=yesterday).length;
 
-    // Pipeline-based projection: per-row show-rates + expected cycle times
+    // Weekly projection — shared model in lib/metrics.cjs. Same call the
+    // dashboard hero makes; reads ALL_ROWS so the cancellation drag is in it.
     const wkEnd=toISO(addDays(new Date(wtdFrom+'T12:00:00'),6));
     const daysRemaining=yesterday>wkEnd?0:weekDaysRemaining(yesterday);
     const sixWksAgo=toISO(addDays(new Date(yesterday+'T12:00:00'),-42));
     const recentCompletions=ROWS.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=yesterday&&r.ct_total!=null&&r.ct_total>=1);
     const expectedCt=buildExpectedCt(recentCompletions);
-    const showRates=buildShowRates(ROWS,yesterday);
     const wipProjects=ROWS.filter(r=>r.start&&!isComplete(r));
     const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
-    const schedRows=wipProjects.filter(r=>
-      (r.scheduled&&r.scheduled>=yesterday&&r.scheduled<=wkEnd)||
-      (r.resurvey_scheduled&&r.resurvey_scheduled>=yesterday&&r.resurvey_scheduled<=wkEnd)
-    );
-    const schedSet=new Set(schedRows);
-    const unschedRows=wipProjects.filter(r=>!schedSet.has(r));
-    const scheduledRem=schedRows.length;
     const wip=wipProjects.length;
-    const projectedWeek=projectWeekTotal(wtdRows.length,schedRows,unschedRows,{daysRemaining,showRates,expectedCt});
+    const proj=projectWeek(ALL_ROWS,wtdFrom,yesterday,{cacheKey:(typeof DATA_TS!=='undefined'?DATA_TS:'')});
+    const projectedWeek=proj.point;
+    const projLo=proj.lo, projHi=proj.hi;
 
     // 4-week historical weekly completion avg
     const wtdMonday=new Date(wtdFrom+'T12:00:00');
@@ -432,7 +431,7 @@ function computeStats(){
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length, newInWTD,
       medCycleWTD:med(wtdCts), avgCycleWTD:avg(wtdCts),
-      projectedWeek, daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
+      projectedWeek, projLo, projHi, daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
       slowYesterday,
     };
   }
@@ -612,7 +611,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN WTD',val:String(s.newInWTD),sub:s.newInYesterday+' yesterday'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED WTD',val:String(s.completedWTD),sub:s.completedYesterday+' yesterday'},
       {bg:ctA.bg,b:ctA.b,lc:ctA.lc,vc:ctA.vc,sc:ctA.sc,sbc:ctA.sbc,label:'WTD AVG CYCLE',val:s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—',sub:'target ≤4d'+ctA.mark},
-      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?'~'+s.projectedWeek:'—',sub:s.wip+' open · '+s.recentAvgCt.toFixed(1)+'d avg cycle'},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?'~'+s.projectedWeek:'—',sub:(s.projLo!=null?'range '+s.projLo+'–'+s.projHi:s.wip+' open')},
     ];
   }
   const cardsPng=await buildCardsImage(cardsData);
@@ -870,7 +869,7 @@ function renderStats(){
       <div class="stat-row"><span class="stat-label">New in WTD</span><span class="stat-val">${stats.newInWTD}</span></div>
       <div class="stat-row"><span class="stat-label">Completed WTD</span><span class="stat-val">${stats.completedWTD}</span></div>
       ${ct!=null?`<div class="stat-row"><span class="stat-label">WTD median cycle</span><span class="stat-val ${ctClass}">${ct.toFixed(1)}d</span></div>`:''}
-      ${stats.projectedWeek!=null?`<div class="stat-row"><span class="stat-label">Projected week total</span><span class="stat-val">${stats.projectedWeek} <span style="font-size:10px;font-weight:400;color:var(--muted);">(4-wk avg: ${stats.histAvg})</span></span></div>`:''}`;
+      ${stats.projectedWeek!=null?`<div class="stat-row"><span class="stat-label">Projected week total</span><span class="stat-val">${stats.projectedWeek}${stats.projLo!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(range ${stats.projLo}–${stats.projHi}; 4-wk avg ${stats.histAvg})</span>`:''}</span></div>`:''}`;
   }
 }
 

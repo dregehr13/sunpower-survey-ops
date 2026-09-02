@@ -85,7 +85,15 @@
    "remaining": 4
   },
   "weekDaysRemaining": 6.5,
-  "projectWeekTotal": 17
+  "weekdayShapeWed": 0.1,
+  "projectWeek": {
+   "point": 21,
+   "completedSoFar": 0,
+   "pipeline": 13.1,
+   "intake": 7.8,
+   "wipOpen": 32,
+   "daysLeft": 6.5
+  }
  },
  "helpers": {
   "bandFor": [

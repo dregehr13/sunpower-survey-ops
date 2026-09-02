@@ -168,6 +168,7 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
    at 10px uppercase it read as the same rank as the KPI labels inside it. */
 .stitle{font-size:13px;font-weight:700;color:var(--text);}
 .ssub{font-size:11px;font-weight:400;color:var(--faint);margin-top:2px;}
+.tny{font-size:10px;font-weight:400;line-height:1.5;}
 
 /* LEGEND */
 .leg{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:9px;align-items:center;}
@@ -1502,6 +1503,20 @@ body{padding-left:180px;}
   </div>
 </div>
 
+<!-- PROJECTION BREAKDOWN MODAL -->
+<!-- The "Projected total" hero cell opens this: where the number comes from,
+     by day and by resource, plus how the model has tracked the last weeks.
+     Read straight off the projectWeek() result — nothing recomputed here. -->
+<div class="mback hidden" id="projModal">
+  <div class="modal" style="width:600px;max-width:96vw;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <h2>Projected total &mdash; where it comes from</h2>
+      <button onclick="closeProjModal()" aria-label="Close" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div id="proj-modal-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div id="drill-overlay" class="drill-overlay" onclick="closeDrill()"></div>
@@ -1562,8 +1577,8 @@ const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
 const {isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
-       businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-       buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
+       businessDays, weekDaysRemaining, buildExpectedCt,
+       buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
 // ═══ FIELD REGISTRY ═══════════════════════════════════════
 const FIELDS = [
@@ -2479,6 +2494,7 @@ document.addEventListener('keydown',e=>{
     closeUpdateModal();
     closeBillImport();
     closeOutlook();
+    closeProjModal();
     // Status was never in this list, so Escape closed two of the three filter
     // dropdowns and left the third open.
     if(rgDropOpenPage!==null||offDropOpenPage!==null||statusDropOpen){ rgDropOpenPage=null; offDropOpenPage=null; statusDropOpen=false; renderFBars(); }
@@ -3546,18 +3562,19 @@ function renderThisWeek(){
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=dataThrough&&r.ct_total!=null&&r.ct_total>=1);
   const expectedCt=buildExpectedCt(recentComps);
-  const showRates=buildShowRates(rows,dataThrough);
   const wipProjects=rows.filter(r=>isWIP(r));
   const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
   const avgWipAge=avg(wipProjects.map(r=>ssDaysOpen(r,dataThrough)));
-  const schedSet=new Set(scheduledRem);
-  const unschedRows=wipProjects.filter(r=>!schedSet.has(r));
-  const projTotal=projectWeekTotal(completedTW.length,scheduledRem,unschedRows,{daysRemaining:daysRem,showRates,expectedCt});
-  // Breakdown for the tooltip — mirrors projectWeekTotal's internals
-  let _schedExp=0;scheduledRem.forEach(r=>{const v=showRates.byResource[r.resource||''];_schedExp+=v!=null?v:showRates.global;});
-  let _flowExp=0;unschedRows.forEach(r=>{_flowExp+=Math.min(daysRem/Math.max(expectedCt(r),1),1);});
-  const projTip=`${completedTW.length} completed + ${_schedExp.toFixed(1)} expected from ${scheduledRem.length} scheduled (measured show-rates by resource) + ${_flowExp.toFixed(1)} expected from ${unschedRows.length} unscheduled WIP (rep/region cycle times) over the ${daysRem} days left ≈ ${projTotal}.`;
+  // Weekly projection (lib/metrics.cjs). Reads allRows — cancelled rows carry
+  // the cancellation drag the model needs — and ignores the page filter, so
+  // cacheKey on DATA_TS keeps a filter change from recomputing it.
+  const proj=projectWeek(allRows,tw.from,dataThrough,{cacheKey:(typeof DATA_TS!=='undefined'?DATA_TS:'')});
+  _curD.proj=proj; _curD.projWeek={from:tw.from,to:tw.to};
+  const projTotal=proj.point;
+  const projTip=proj.daysLeft>0
+    ? `${proj.completedSoFar} done + ${proj.pipeline.toFixed(0)} from the ${proj.wipOpen} open in the queue + ${proj.intake.toFixed(0)} walk-in still to come${proj.slippageAdj?`, ${proj.slippageAdj>0?'+':''}${Math.round(proj.slippageAdj)} for recent slippage`:''} ≈ ${projTotal} (range ${proj.lo}–${proj.hi}). Click for the breakdown.`
+    : `${projTotal} completed — week closed.`;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const avgT=avg(tots);
   const eks=(v,t)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,t)]||'');
@@ -3597,9 +3614,9 @@ function renderThisWeek(){
       <div class="klabel">Completed so far${kinfo(TIP.firstComplete)}</div>
       <div class="srail-val">${completedTW.length}<span class="srail-sub">through today</span></div>
     </div>
-    <div class="srail-cell">
+    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openProjModal()")}>
       <div class="klabel">Projected total${kinfo(projTip)}</div>
-      <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0?(wip+' open · '+recentAvgCt.toFixed(1)+'d avg'):'week complete'}</span></div>
+      <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0&&proj.lo!=null?('range '+proj.lo+'–'+proj.hi):(daysRem>0?wip+' open':'week complete')}</span></div>
     </div>
     <div class="srail-cell${scheduledRem.length?' rail-d':''}" ${scheduledRem.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})`):''}>
       <div class="klabel">Scheduled remaining${kinfo(TIP.schedRem)}</div>
@@ -3760,6 +3777,102 @@ function renderThisWeek(){
           y:{min:0,grid:{color:'rgba(20,20,25,.05)'},ticks:{color:'#83838c',callback:v=>v+'d'}}}}
     });
   }
+}
+
+// ═══ PROJECTION BREAKDOWN MODAL ═══════════════════════════════════════
+// Opened from the "Projected total" hero cell. Every number is read off the
+// projectWeek() result stored in _curD.proj — nothing is recomputed here.
+function openProjModal(){
+  if(!_curD.proj){ renderThisWeek(); }
+  _renderProjModal();
+  const m=document.getElementById('projModal'); if(m) m.classList.remove('hidden');
+}
+function closeProjModal(){ const m=document.getElementById('projModal'); if(m) m.classList.add('hidden'); }
+document.getElementById('projModal').addEventListener('click',e=>{ if(e.target.id==='projModal') closeProjModal(); });
+function dataThroughISO(){ return (typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date()); }
+
+function _renderProjModal(){
+  const p=_curD.proj, wk=_curD.projWeek;
+  const el=document.getElementById('proj-modal-body'); if(!el||!p||!wk) return;
+  const dayW=new Date().toLocaleDateString('en-US',{weekday:'long'});
+  const closed=!(p.daysLeft>0);
+  const through=dataThroughISO();
+  const RES_SHORT={'Sales Rep':'Sales rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR surveyor'};
+
+  const legRow=(lbl,val,sub,kind)=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-top:1px solid var(--border);${kind==='total'?'font-weight:700;':''}">
+    <span>${lbl}${sub?` <span class="tny" style="color:var(--faint);">${sub}</span>`:''}</span>
+    <span style="font-variant-numeric:tabular-nums;">${kind==='add'?(val>0?'+':'')+val:val}</span></div>`;
+  const build=closed
+    ? `<div class="tny" style="color:var(--muted);padding:6px 0;">Week closed — ${p.completedSoFar} completed.</div>`
+    : legRow('Completed so far',p.completedSoFar,'through '+fmtDateShort(through),'base')
+      +legRow('From the open queue',Math.round(p.pipeline),`${p.pipelineScheduled.toFixed(0)} booked · ${p.pipelineUnscheduled.toFixed(0)} not booked · of ${p.wipOpen} open`,'add')
+      +legRow('Walk-in still to come',Math.round(p.intake),'in and done this week','add')
+      +(p.capAdj?legRow('SPWR capacity ceiling',Math.round(p.capAdj),'team maxes ~'+(p.model&&p.model.spwrCap)+'/wk','add'):'')
+      +(p.slippageAdj?legRow('Recent slippage',Math.round(p.slippageAdj),'model ran '+(p.recentBias>0?'high':'low')+' ~'+Math.abs(Math.round(p.recentBias))+' the last '+p.nBacktest+' wks','add'):'')
+      +legRow('Projected total',`${p.point} <span style="font-weight:400;color:var(--muted);">range ${p.lo}–${p.hi}</span>`,'','total');
+
+  const rr=Object.entries(p.byResource).map(([k,v])=>{
+    const proj=Math.round(v.soFar+v.pipeline+v.intake);
+    return `<tr><td style="font-size:12px;">${RES_SHORT[k]||k}</td>
+      <td class="r">${v.soFar}</td><td class="r">${v.pipeline.toFixed(1)}</td>
+      <td class="r">${v.intake.toFixed(1)}</td><td class="r"><b>${proj}</b></td></tr>`;
+  }).join('');
+
+  const dn=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const [wy,wm,wd0]=wk.from.split('-').map(Number);
+  const DOW_W=[0.20,0.13,0.17,0.23,0.18,0.08,0.005];
+  const remain=Math.max(0,p.point-p.completedSoFar);
+  let futW=0; const dd=[];
+  for(let i=0;i<7;i++){ const dISO=localISO(new Date(wy,wm-1,wd0+i)); const isPast=dISO<=through;
+    dd.push({i,dISO,isPast,actual:rows.filter(r=>everCompleted(r)&&r.complete===dISO).length});
+    if(!isPast) futW+=DOW_W[i]; }
+  const dayRows=dd.map(d=>{
+    const proj=d.isPast?null:(futW>0?remain*DOW_W[d.i]/futW:0);
+    return `<tr${d.dISO===through?' style="background:var(--bg);"':''}>
+      <td style="font-size:12px;">${dn[d.i]} <span class="tny" style="color:var(--faint);">${fmtDateShort(d.dISO)}</span></td>
+      <td class="r">${d.isPast?d.actual:'<span style="color:var(--faint);">—</span>'}</td>
+      <td class="r">${d.isPast?'<span style="color:var(--faint);">—</span>':'~'+Math.round(proj)}</td></tr>`;
+  }).join('');
+
+  const bt=(p.backtest||[]);
+  const btRows=bt.map(b=>{ const miss=b.predicted-b.actual;
+    return `<tr><td style="font-size:12px;">${fmtDateShort(b.weekStart)}</td>
+      <td class="r">${b.predicted}</td><td class="r">${b.actual}</td>
+      <td class="r" style="color:${Math.abs(miss)<=8?'var(--faint)':miss>0?'var(--amber)':'var(--blue)'};">${miss>0?'+':''}${miss}</td></tr>`;
+  }).join('');
+  const m=p.model||{};
+  const mix=m.mix?Object.entries(m.mix).map(([k,v])=>`${RES_SHORT[k]||k} ${Math.round(v*100)}%`).join(' · '):'';
+  const cx=m.cancelNoSurvey?m.cancelNoSurvey['Radicl Services']:null;
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:baseline;gap:12px;margin:2px 0 12px;">
+      <div style="font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;">${closed?p.point:'~'+p.point}</div>
+      ${closed?'':`<div style="font-size:12px;color:var(--muted);">range <b>${p.lo}–${p.hi}</b><br>${dayW} · ${fmtDate(wk.from)}–${fmtDate(wk.to)} · ${p.daysLeft} day${p.daysLeft===1?'':'s'} left</div>`}
+    </div>
+    <div class="klabel" style="margin-bottom:2px;">The build</div>
+    <div style="margin-bottom:16px;border-bottom:1px solid var(--border);">${build}</div>
+
+    <div class="klabel" style="margin-bottom:4px;">By resource</div>
+    <table class="tbl-static" style="margin-bottom:16px;"><thead><tr>
+      <th>Resource</th><th class="r">Done</th><th class="r">Queue</th><th class="r">Walk-in</th><th class="r">Projected</th>
+    </tr></thead><tbody>${rr}</tbody></table>
+
+    <div class="klabel" style="margin-bottom:4px;">By day</div>
+    <table class="tbl-static" style="margin-bottom:16px;"><thead><tr>
+      <th>Day</th><th class="r">Actual</th><th class="r">Projected</th>
+    </tr></thead><tbody>${dayRows}</tbody></table>
+
+    ${bt.length?`<div class="klabel" style="margin-bottom:4px;">Model vs actual — last ${bt.length} weeks, read at this weekday</div>
+    <table class="tbl-static" style="margin-bottom:8px;"><thead><tr>
+      <th>Week of</th><th class="r">Projected</th><th class="r">Actual</th><th class="r">Miss</th>
+    </tr></thead><tbody>${btRows}</tbody></table>
+    <div class="tny" style="color:var(--faint);margin-bottom:14px;">Average miss ${p.recentBias>0?'+':''}${p.recentBias}, typical ±${p.recentMae}. The point above already carries this correction.</div>`:''}
+
+    <div class="klabel" style="margin-bottom:4px;">Model inputs</div>
+    <div class="tny" style="color:var(--muted);line-height:1.7;">
+      Walk-in running <b>~${m.walkInPerWeek!=null?Math.round(m.walkInPerWeek):'—'}/wk</b> · new jobs in <b>~${m.intakePerWeek!=null?Math.round(m.intakePerWeek):'—'}/wk</b><br>
+      Recent intake mix: ${mix}${cx!=null?`<br>Radicl bookings cancelled before any survey: <b>${Math.round(cx*100)}%</b> — already inside the rates above`:''}
+    </div>`;
 }
 
 // ═══ RESURVEYS REQUESTED — the intake inbox on the Quality page ══════

@@ -10,7 +10,7 @@ const {
   effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
-  buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal,
+  buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
   bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
 
@@ -410,37 +410,66 @@ test('buildExpectedCt prefers rep history for Sales Rep surveys', () => {
   assert.equal(ct({ resource: 'SunPower Surveyor', region: 'ZZ' }), avg([1, 1, 1, 8]));
 });
 
-// ── projectWeekTotal: per-row show-rates + flow probability ──
-const flatCtx = (daysRemaining, rate, ctDays) => ({
-  daysRemaining,
-  showRates: { byResource: {}, global: rate },
-  expectedCt: () => ctDays,
+// ── Weekly projection (v2) — buildWeekdayShape / buildProjectionModel / projectWeek ──
+// A synthetic book: 10 weeks of history, every survey a rep self-survey that
+// starts Monday and completes Wednesday (cycle 2), plus one open row.
+const _iso = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+function _synthBook() {
+  const rows = [];
+  let id = 0;
+  // Mondays 2026-06-01 … 2026-08-03 (Mon), each week 8 completed surveys
+  const mondays = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29',
+    '2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03'];
+  for (const mon of mondays) {
+    const [y, m, d] = mon.split('-').map(Number);
+    const wed = new Date(y, m - 1, d + 2);
+    const wedISO = _iso(wed.getFullYear(), wed.getMonth() + 1, wed.getDate());
+    for (let i = 0; i < 8; i++) {
+      rows.push({ id: id++, start: mon, complete: wedISO, list: 'Complete',
+        project_status: 'In Progress', resource: 'Sales Rep', region: 'VA Test' });
+    }
+  }
+  return rows;
+}
+
+test('buildWeekdayShape: completions land on the modelled weekday', () => {
+  const shape = buildWeekdayShape(_synthBook(), '2026-08-12', 8);
+  assert.ok(shape.share[3] > 0.9, 'almost all completions are on Wednesday (getDay 3)');
+  assert.equal(shape.share.reduce((a, b) => a + b, 0).toFixed(4), '1.0000');
 });
 
-test('projectWeekTotal: completed + Σ showRate + Σ min(daysLeft/ct, 1)', () => {
-  const sched = [{}, {}, {}, {}];       // 4 scheduled at 0.9 → 3.6
-  const unsched = Array.from({ length: 20 }, () => ({})); // 20 × min(3/5,1)=0.6 → 12
-  assert.equal(projectWeekTotal(10, sched, unsched, flatCtx(3, 0.9, 5)), 26);
+test('buildProjectionModel: hazard is high for a fresh scheduled row, ~0 for a stale one', () => {
+  const m = buildProjectionModel(_synthBook(), '2026-08-12', {});
+  // synthetic rows all cleared inside their week at age 2 → the 0-3 open band
+  // should carry a high weekly hazard, the 31+ band essentially none.
+  assert.ok(m.hazOpen('Sales Rep', 0) > 0.5);
+  assert.ok(m.hazOpen('Sales Rep', 4) < 0.2);
 });
 
-test('projectWeekTotal caps per-row flow probability at 1', () => {
-  const unsched = [{}, {}]; // min(6.5/1, 1) = 1 each
-  assert.equal(projectWeekTotal(0, [], unsched, flatCtx(6.5, 0.9, 1)), 2);
+test('projectWeek: a finished week returns exactly its completions', () => {
+  const book = _synthBook();
+  // week of 2026-07-06 is fully in the past relative to 2026-08-12
+  const r = projectWeek(book, '2026-07-06', '2026-08-12', { _noBacktest: true });
+  assert.equal(r.point, 8);
+  assert.equal(r.completedSoFar, 8);
+  assert.equal(r.intake, 0);
 });
 
-test('projectWeekTotal uses per-resource show-rate when available', () => {
-  const ctx = {
-    daysRemaining: 2.5,
-    showRates: { byResource: { 'Sales Rep': 1 }, global: 0.5 },
-    expectedCt: () => 4,
-  };
-  const sched = [{ resource: 'Sales Rep' }, { resource: 'Radicl Services' }];
-  // 1 + 0.5 = 1.5 → rounds to 2
-  assert.equal(projectWeekTotal(0, sched, [], ctx), 2);
+test('projectWeek: mid-week point sits between done-so-far and a full week', () => {
+  const book = _synthBook();
+  book.push({ id: 999, start: '2026-08-10', list: 'In Progress', project_status: 'In Progress', resource: 'Sales Rep', region: 'VA Test' });
+  // Wednesday 2026-08-12 of an in-progress week: nothing completed yet in it
+  const r = projectWeek(book, '2026-08-10', '2026-08-12', { _noBacktest: true });
+  assert.ok(r.point >= r.completedSoFar);
+  assert.ok(r.lo == null || r.lo <= r.point);
+  assert.ok(r.hi == null || r.hi >= r.point);
 });
 
-test('projectWeekTotal with no days remaining returns completions only', () => {
-  assert.equal(projectWeekTotal(37, [{}, {}], [{}], flatCtx(0, 0.9, 4)), 37);
+test('projectWeek: cacheKey memoises the result', () => {
+  const book = _synthBook();
+  const a = projectWeek(book, '2026-07-06', '2026-08-12', { cacheKey: 'k1' });
+  const b = projectWeek(book, '2026-07-06', '2026-08-12', { cacheKey: 'k1' });
+  assert.equal(a, b); // same object reference
 });
 
 // ── buildSegmentAvgs / lookupSegmentAvg ──

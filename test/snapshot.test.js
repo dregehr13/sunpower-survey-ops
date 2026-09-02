@@ -26,7 +26,7 @@ const {
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
   ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-  buildSegmentAvgs, lookupSegmentAvg, projectWeekTotal, bandFor, trendLabel,
+  buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, projectWeek, bandFor, trendLabel,
 } = OpsMetrics;
 
 const asOf = FIXTURE.asOf;
@@ -110,6 +110,8 @@ function computeAll() {
   const showRates = buildShowRates(rows, asOf);
   const expectedCt = buildExpectedCt(recent);
   const segAvgs = buildSegmentAvgs(recent, ['region', 'resource']);
+  // asOf is a Monday in the fixture — project that same week from its start.
+  const pw = projectWeek(rows, asOf, asOf, { _noBacktest: true });
   const projection = {
     recentCompletions: recent.length,
     showRateGlobal: round(showRates.global),
@@ -119,9 +121,12 @@ function computeAll() {
     lookupFallback: round(lookupSegmentAvg({ region: 'nowhere', resource: 'nothing' }, ['region', 'resource'], segAvgs, 4)),
     businessDays: businessDays(asOf),
     weekDaysRemaining: weekDaysRemaining(asOf),
-    projectWeekTotal: projectWeekTotal(10, wip.slice(0, 5), wip.slice(5, 12), {
-      daysRemaining: 2.5, showRates, expectedCt,
-    }),
+    weekdayShapeWed: round(buildWeekdayShape(rows, asOf, 8).share[3]),
+    projectWeek: {
+      point: pw.point, completedSoFar: pw.completedSoFar,
+      pipeline: round(pw.pipeline), intake: round(pw.intake),
+      wipOpen: pw.wipOpen, daysLeft: pw.daysLeft,
+    },
   };
 
   // ── resurvey categories are NOT snapshotted, deliberately ──
