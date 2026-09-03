@@ -3805,6 +3805,18 @@ function closeProjModal(){ const m=document.getElementById('projModal'); if(m) m
 document.getElementById('projModal').addEventListener('click',e=>{ if(e.target.id==='projModal') closeProjModal(); });
 function dataThroughISO(){ return (typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date()); }
 
+// Miss-per-week sparkline: bars from a zero line, over-projection amber up,
+// under-projection blue down, small misses faint.
+function _missSpark(bt,w){
+  if(!bt||!bt.length) return '';
+  const h=36,bw=w/bt.length,mid=h/2,mx=Math.max(6,...bt.map(b=>Math.abs(b.predicted-b.actual)));
+  const bars=bt.map((b,i)=>{ const ms=b.predicted-b.actual, bh=Math.max(1,Math.abs(ms)/mx*(mid-4));
+    const y=ms>0?mid-bh:mid, c=Math.abs(ms)<=8?'var(--faint)':ms>0?'#c0912e':'#2563eb';
+    return `<rect x="${(i*bw+1.5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-3).toFixed(1)}" height="${bh.toFixed(1)}" fill="${c}" rx="1"><title>${fmtDateShort(b.weekStart)}: ${ms>0?'+':''}${ms} (proj ${b.predicted}, act ${b.actual})</title></rect>`;
+  }).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;max-width:100%;">
+    <line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="var(--border)" stroke-width="1"/>${bars}</svg>`;
+}
 function _renderProjModal(){
   const p=_curD.proj, wk=_curD.projWeek;
   const el=document.getElementById('proj-modal-body'); if(!el||!p||!wk) return;
@@ -3820,7 +3832,7 @@ function _renderProjModal(){
   const build=closed
     ? `<div class="tny" style="color:var(--muted);padding:6px 0;">Week closed — ${p.completedSoFar} completed.</div>`
     : legRow('Done so far',p.completedSoFar,'this week, through '+fmtDateShort(through),'base')
-      +(rest>=1?legRow('Still to come today',rest,`${p.todayActual} done · ~${Math.round(p.expectedToday)} typical for the day`,'add'):'')
+      +(rest>=1?legRow('Still to come today',rest,`${p.todayScheduled} booked + ~${Math.round(p.todayWalkExpected)} walk-up · ${p.todayActual} done, ~${Math.round(p.expectedToday)} typical`,'add'):'')
       +legRow('From the open queue',Math.round(p.pipeline),`the rest of the week · ${p.pipelineScheduled.toFixed(0)} booked, of ${p.wipOpen} open`,'add')
       +legRow('New this week',Math.round(p.intake),'booked and done inside the week','add')
       +(p.capAdj?legRow('SPWR capacity ceiling',Math.round(p.capAdj),'team maxes ~'+(p.model&&p.model.spwrCap)+'/wk','add'):'')
@@ -3846,11 +3858,7 @@ function _renderProjModal(){
   }).join('');
 
   const bt=(p.backtest||[]);
-  const btRows=bt.map(b=>{ const miss=b.predicted-b.actual;
-    return `<tr><td style="font-size:12px;">${fmtDateShort(b.weekStart)}</td>
-      <td class="r">${b.predicted}</td><td class="r">${b.actual}</td>
-      <td class="r" style="color:${Math.abs(miss)<=8?'var(--faint)':miss>0?'var(--amber)':'var(--blue)'};">${miss>0?'+':''}${miss}</td></tr>`;
-  }).join('');
+  const over=bt.filter(b=>b.predicted-b.actual>8).length, under=bt.filter(b=>b.predicted-b.actual<-8).length;
   const m=p.model||{};
   const mix=m.mix?Object.entries(m.mix).map(([k,v])=>`${RES_SHORT[k]||k} ${Math.round(v*100)}%`).join(' · '):'';
   const cx=m.cancelNoSurvey?m.cancelNoSurvey['Radicl Services']:null;
@@ -3874,11 +3882,9 @@ function _renderProjModal(){
       <th>Day</th><th class="r">Actual</th><th class="r">Projected</th>
     </tr></thead><tbody>${dayRows}</tbody></table>
 
-    ${bt.length?`<div class="klabel" style="margin-bottom:4px;">Model vs actual — last ${bt.length} weeks, read at this weekday</div>
-    <table class="tbl-static" style="margin-bottom:8px;"><thead><tr>
-      <th>Week of</th><th class="r">Projected</th><th class="r">Actual</th><th class="r">Miss</th>
-    </tr></thead><tbody>${btRows}</tbody></table>
-    <div class="tny" style="color:var(--faint);margin-bottom:14px;">Typical miss ±${p.recentMae}. The point already carries the ~${Math.abs(Math.round(p.recentBias||0))}-survey adjustment for the recent ${p.recentBias>0?'over':'under'}-run.</div>`:''}
+    ${bt.length?`<div class="klabel" style="margin-bottom:4px;">Track record — miss per week, last ${bt.length}, read at this weekday</div>
+    ${_missSpark(bt,320)}
+    <div class="tny" style="color:var(--faint);margin:6px 0 14px;">${over} over, ${under} under &middot; typical miss ±${p.recentMae}. The point already carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment for the recent ${p.recentBias>0?'over':'under'}-run.</div>`:''}
 
     <div class="klabel" style="margin-bottom:4px;">Model inputs</div>
     <div class="tny" style="color:var(--muted);line-height:1.7;">

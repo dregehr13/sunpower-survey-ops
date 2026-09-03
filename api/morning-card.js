@@ -33,12 +33,30 @@ function computeStats(rows) {
   const isComplete = OpsMetrics.isComplete;
   const wip = filtered.filter(OpsMetrics.isWIP);
 
+  // Weekly projection — same model as the dashboard hero. Needs the full set
+  // (cancelled rows carry the drag) with the Open-date anchor applied, which
+  // is the dashboard default.
+  const anchored = rows
+    .filter(r => r.start >= OpsMetrics.DATA_CUTOFF)
+    .map(r => {
+      const c = { ...r };
+      if (c.opened) { c.start = c.opened; if (c.ct_open !== undefined) c.ct_total = c.ct_open; }
+      return c;
+    });
+  const weekMon = addDaysISO(today, -((new Date(today + 'T12:00:00Z').getUTCDay() + 6) % 7));
+  let projected = null, projectedLo = null, projectedHi = null;
+  try {
+    const proj = OpsMetrics.projectWeek(anchored, weekMon, today, { asOfHour: 8 });
+    projected = proj.point; projectedLo = proj.lo; projectedHi = proj.hi;
+  } catch (_) { /* projection is best-effort here */ }
+
   return {
     refLabel,
     refDate,
     completed: filtered.filter(r => isComplete(r) && r.complete === refDate).length,
     wip: wip.length,
     unscheduled: wip.filter(r => !r.scheduled).length,
+    projected, projectedLo, projectedHi,
   };
 }
 

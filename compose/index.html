@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#111111">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<title>Site Survey — Email Generator</title>
+<title>Site Survey Ops — Staging</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&display=swap" rel="stylesheet">
 <style>
@@ -161,7 +161,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 <body>
 
 <nav class="nav">
-  <div class="brand">Site Survey <span>Email</span></div>
+  <div class="brand">Site Survey <span>Ops</span></div>
   <button class="nav-mode" id="btn-huddle" onclick="setMode('huddle')">Huddle</button>
   <button class="nav-mode" id="btn-monday" onclick="setMode('monday')">Monday recap</button>
   <button class="nav-mode" id="btn-daily" onclick="setMode('daily')">Daily (Tue–Fri)</button>
@@ -1225,11 +1225,17 @@ function computeTeamStats(){
   const refDate=toISO(addDays(today,-daysBack));
   const refLabel=dow===1?'Friday':'Yesterday';
   const wip=ROWS.filter(r=>r.start&&!isComplete(r));
+  const wtdFrom=getThisWeekMon();
+  const projHour=(typeof DATA_TS!=='undefined'&&DATA_TS&&DATA_TS.length>=13)?parseInt(DATA_TS.slice(11,13),10):8;
+  const projAsOf=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):toISO(today);
+  let projected=null,projLo=null,projHi=null;
+  try{ const pr=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{asOfHour:projHour,cacheKey:(DATA_TS||'')+'|team'}); projected=pr.point; projLo=pr.lo; projHi=pr.hi; }catch(e){}
   return{
     refDate, refLabel,
     completed: ROWS.filter(r=>isComplete(r)&&r.complete===refDate).length,
     wip: wip.length,
     unscheduled: wip.filter(r=>!r.scheduled).length,
+    projected, projLo, projHi,
   };
 }
 
@@ -1254,14 +1260,22 @@ function _huddleModel(){
       ? `Yesterday, ${yDay} — goal was <b>${s.yGoal}</b>${s.yBand?` (${rng(s.yBand)})`:''}, we did <b>${s.completedYesterday}</b> — <span class="hd-v ${yMiss<=-3?'hd-warn':yMiss>=2?'hd-good':''}">${yVerdict}</span>.`
       : `Yesterday, ${yDay} — <b>${s.completedYesterday}</b> completed.`,
     l1b:(yMiss!=null&&yMiss<=-3)
-      ? `Recovery — ${s.scheduledToday} are booked today; <span class="hd-blank">name the lever you're using</span>.` : null,
+      ? `Recovery — ${p.todayScheduled!=null?p.todayScheduled:s.scheduledToday} booked for today; <span class="hd-blank">name the lever you're using</span>.` : null,
     l2:s.todayTarget!=null
-      ? `Today, ${tDay} — targeting <b>${s.todayTarget}</b>${s.todayBand?` (${rng(s.todayBand)})`:''}. ${s.scheduledToday} booked or in progress, the rest are same-week walk-ups.`
+      ? `Today, ${tDay} — targeting <b>${s.todayTarget}</b>${s.todayBand?` (${rng(s.todayBand)})`:''}. ${p.todayScheduled!=null?p.todayScheduled:s.scheduledToday} booked for today${p.todayActual?`, ${p.todayActual} already in`:''}; the rest is the day's usual walk-up volume.`
       : `Today, ${tDay} — week is closed.`,
     l3:(p.daysLeft>0)
-      ? `Week — projecting <b>${s.projectedWeek}</b>, likely ${s.projLo}–${s.projHi}. <b>${p.completedSoFar}</b> done through yesterday; pace is ~${s.histAvg}/wk over the last three.`
+      ? `Week — projecting <b>${s.projectedWeek}</b>, likely ${s.projLo}–${s.projHi}. <b>${p.completedSoFar}</b> done so far; pace is ~${s.histAvg}/wk over the last three.`
       : `Week — closed at <b>${s.projectedWeek}</b>.`,
   };
+}
+function _missSpark(bt,w){
+  if(!bt||!bt.length) return '';
+  const h=34,bw=w/bt.length,mid=h/2,mx=Math.max(6,...bt.map(b=>Math.abs(b.predicted-b.actual)));
+  const bars=bt.map((b,i)=>{const ms=b.predicted-b.actual,bh=Math.max(1,Math.abs(ms)/mx*(mid-4));
+    const y=ms>0?mid-bh:mid,c=Math.abs(ms)<=8?'var(--faint)':ms>0?'var(--amber)':'var(--blue)';
+    return `<rect x="${(i*bw+1.5).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-3).toFixed(1)}" height="${bh.toFixed(1)}" fill="${c}" rx="1"><title>${fmtMed(b.weekStart)}: ${ms>0?'+':''}${ms}</title></rect>`;}).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;max-width:100%;"><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" stroke="var(--border)"/>${bars}</svg>`;
 }
 function renderHuddle(){
   const el=document.getElementById('huddle-body');
@@ -1275,7 +1289,7 @@ function renderHuddle(){
   const rest=Math.round(p.restOfToday||0);
   const build=(p.daysLeft>0)?
     buildLine('Done so far',p.completedSoFar,'this week')
-    +(rest>=1?buildLine('Still to come today','+'+rest,`${p.todayActual} done · ~${Math.round(p.expectedToday)} typical`):'')
+    +(rest>=1?buildLine('Still to come today','+'+rest,`${p.todayScheduled} booked + ~${Math.round(p.todayWalkExpected||0)} walk-up · ${p.todayActual} in`):'')
     +buildLine('From the open queue','+'+Math.round(p.pipeline),`rest of the week · ${(p.pipelineScheduled||0).toFixed(0)} booked, of ${p.wipOpen} open`)
     +buildLine('New this week','+'+Math.round(p.intake),'booked and done inside the week')
     +(p.slippageAdj?buildLine('Model adjustment',Math.round(p.slippageAdj),'runs ~'+Math.abs(Math.round(p.recentBias||0))+' '+(p.recentBias>0?'high':'low')+' vs the last '+p.nBacktest+' weeks'):'')
@@ -1291,10 +1305,7 @@ function renderHuddle(){
   }).join('');
 
   const bt=(p.backtest||[]);
-  const btRows=bt.slice(-6).map(b=>{const m=b.predicted-b.actual;
-    return `<tr><td>${fmtMed(b.weekStart).replace(/^\w+,\s*/,'')}</td><td class="r">${b.predicted}</td><td class="r">${b.actual}</td>
-      <td class="r ${Math.abs(m)<=8?'hd-faint':m>0?'hd-warn':'hd-good'}">${m>0?'+':''}${m}</td></tr>`;}).join('');
-
+  const over=bt.filter(b=>b.predicted-b.actual>8).length, under=bt.filter(b=>b.predicted-b.actual<-8).length;
   const mix=p.model&&p.model.mix?Object.entries(p.model.mix).map(([k,v])=>`${RES_SHORT[k]||k} ${Math.round(v*100)}%`).join(' · '):'';
   const cx=p.model&&p.model.cancelNoSurvey?p.model.cancelNoSurvey['Radicl Services']:null;
 
@@ -1318,9 +1329,10 @@ function renderHuddle(){
       <div class="hd-cols">
         <div class="hd-block"><div class="hd-block-t">By day</div>
           <table class="hd-tbl"><thead><tr><th>Day</th><th class="r">Actual</th><th class="r">Projected</th></tr></thead><tbody>${dayRows}</tbody></table></div>
-        <div class="hd-block"><div class="hd-block-t">Model vs actual, last ${bt.slice(-6).length} wks</div>
-          <table class="hd-tbl"><thead><tr><th>Week of</th><th class="r">Proj</th><th class="r">Act</th><th class="r">Miss</th></tr></thead><tbody>${btRows}</tbody></table>
-          <div class="hd-faint" style="margin-top:6px;">Same-week clears ~${p.model?Math.round(p.model.walkInPerWeek):'—'}/wk · new jobs in ~${p.model?Math.round(p.model.intakePerWeek):'—'}/wk · ${mix}${cx!=null?` · Radicl cancels first ${Math.round(cx*100)}%`:''}</div></div>
+        <div class="hd-block"><div class="hd-block-t">Track record — miss per week, last ${bt.length}</div>
+          ${_missSpark(bt,240)}
+          <div class="hd-faint" style="margin-top:6px;">${over} over, ${under} under · typical ±${p.recentMae}. Point carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment.</div>
+          <div class="hd-faint" style="margin-top:8px;">Same-week clears ~${p.model?Math.round(p.model.walkInPerWeek):'—'}/wk · new jobs in ~${p.model?Math.round(p.model.intakePerWeek):'—'}/wk · ${mix}${cx!=null?` · Radicl cancels first ${Math.round(cx*100)}%`:''}</div></div>
       </div>
     </div>
   </details>
@@ -1357,7 +1369,8 @@ function renderTeamStats(){
   el.innerHTML=`
     <div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.completed}</span></div>
     <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
-    <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>`;
+    <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>
+    ${teamStats.projected!=null?`<div class="stat-row"><span class="stat-label">Projected this week</span><span class="stat-val">${teamStats.projected}${teamStats.projLo!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(${teamStats.projLo}–${teamStats.projHi})</span>`:''}</span></div>`:''}`;
 }
 
 function renderTCPreview(){
