@@ -3574,7 +3574,7 @@ function renderThisWeek(){
   _curD.proj=proj; _curD.projWeek={from:tw.from,to:tw.to};
   const projTotal=proj.point;
   const projTip=proj.daysLeft>0
-    ? `${proj.completedSoFar} done this week${proj.restOfToday>=1?` + ${Math.round(proj.restOfToday)} more expected today`:''} + ${proj.pipeline.toFixed(0)} from the ${proj.wipOpen} open in the queue + ${proj.intake.toFixed(0)} new this week${proj.slippageAdj?`, ${proj.slippageAdj>0?'+':''}${Math.round(proj.slippageAdj)} model adjustment`:''} ≈ ${projTotal} (likely ${proj.lo}–${proj.hi}). Click for the breakdown.`
+    ? `${proj.completedSoFar} done this week${proj.restOfToday>=1?` + ${Math.round(proj.restOfToday)} more expected today`:''} + ${proj.pipeline.toFixed(0)} from the ${proj.wipOpen} open in the queue + ${proj.intake.toFixed(0)} new this week${proj.slippageAdj?`, ${proj.slippageAdj>0?'+':''}${Math.round(proj.slippageAdj)} model adjustment`:''} ≈ ${projTotal}. Recent weeks landed within ${proj.recentMed!=null?'±'+proj.recentMed:'—'} of the call at this point (±${proj.bandWide||'?'} in a swingy week). Click for the breakdown.`
     : `${projTotal} completed — week closed.`;
   const tots=completedTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const avgT=avg(tots);
@@ -3617,7 +3617,7 @@ function renderThisWeek(){
     </div>
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openProjModal()")}>
       <div class="klabel">Projected total${kinfo(projTip)}</div>
-      <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0&&proj.lo!=null?('likely '+proj.lo+'–'+proj.hi):(daysRem>0?wip+' open':'week complete')}</span></div>
+      <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0&&proj.recentMed!=null?('usually ±'+proj.recentMed):(daysRem>0?wip+' open':'week complete')}</span></div>
     </div>
     <div class="srail-cell${scheduledRem.length?' rail-d':''}" ${scheduledRem.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})`):''}>
       <div class="klabel">Scheduled remaining${kinfo(TIP.schedRem)}</div>
@@ -3837,7 +3837,7 @@ function _renderProjModal(){
       +legRow('New this week',Math.round(p.intake),'booked and done inside the week','add')
       +(p.capAdj?legRow('SPWR capacity ceiling',Math.round(p.capAdj),'team maxes ~'+(p.model&&p.model.spwrCap)+'/wk','add'):'')
       +(p.slippageAdj?legRow('Model adjustment',Math.round(p.slippageAdj),'runs ~'+Math.abs(Math.round(p.recentBias))+' '+(p.recentBias>0?'high':'low')+' vs the last '+p.nBacktest+' weeks','add'):'')
-      +legRow('Projected total',`${p.point} <span style="font-weight:400;color:var(--muted);">likely ${p.lo}–${p.hi}</span>`,'','total');
+      +legRow('Projected total',`${p.point}${p.recentMed!=null?` <span style="font-weight:400;color:var(--muted);">usually ±${p.recentMed}</span>`:''}`,'','total');
 
   const rr=Object.entries(p.byResource).map(([k,v])=>{
     const proj=Math.round(v.soFar+v.pipeline+v.intake+(v.today||0));
@@ -3867,7 +3867,7 @@ function _renderProjModal(){
   el.innerHTML=`
     <div style="display:flex;align-items:baseline;gap:12px;margin:2px 0 12px;">
       <div style="font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;">${closed?p.point:'~'+p.point}</div>
-      ${closed?'':`<div style="font-size:12px;color:var(--muted);">likely <b>${p.lo}–${p.hi}</b> · ${conf}<br>${dayW} · ${fmtDate(wk.from)}–${fmtDate(wk.to)} · ${p.daysLeft} day${p.daysLeft===1?'':'s'} left</div>`}
+      ${closed?'':`<div style="font-size:12px;color:var(--muted);">${p.recentMed!=null?`usually within <b>±${p.recentMed}</b> · `:''}${conf}<br>${dayW} · ${fmtDate(wk.from)}–${fmtDate(wk.to)} · ${p.daysLeft} day${p.daysLeft===1?'':'s'} left</div>`}
     </div>
     <div class="klabel" style="margin-bottom:2px;">The build</div>
     <div style="margin-bottom:16px;border-bottom:1px solid var(--border);">${build}</div>
@@ -3884,7 +3884,7 @@ function _renderProjModal(){
 
     ${bt.length?`<div class="klabel" style="margin-bottom:4px;">Track record — miss per week, last ${bt.length}, read at this weekday</div>
     ${_missSpark(bt,320)}
-    <div class="tny" style="color:var(--faint);margin:6px 0 14px;">${over} over, ${under} under &middot; typical miss ±${p.recentMae}. The point already carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment for the recent ${p.recentBias>0?'over':'under'}-run.</div>`:''}
+    <div class="tny" style="color:var(--faint);margin:6px 0 14px;">Half of the last ${bt.length} landed within <b>±${p.recentMed}</b>, most within ±${p.bandWide}; the odd week runs wider. ${over} over, ${under} under. The point already carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment for the recent ${p.recentBias>0?'over':'under'}-run.</div>`:''}
 
     <div class="klabel" style="margin-bottom:4px;">Model inputs</div>
     <div class="tny" style="color:var(--muted);line-height:1.7;">

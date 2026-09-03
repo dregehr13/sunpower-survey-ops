@@ -44,10 +44,10 @@ function computeStats(rows) {
       return c;
     });
   const weekMon = addDaysISO(today, -((new Date(today + 'T12:00:00Z').getUTCDay() + 6) % 7));
-  let projected = null, projectedLo = null, projectedHi = null;
+  let projected = null, projectedTypical = null;
   try {
     const proj = OpsMetrics.projectWeek(anchored, weekMon, today, { asOfHour: 8 });
-    projected = proj.point; projectedLo = proj.lo; projectedHi = proj.hi;
+    projected = proj.point; projectedTypical = proj.recentMed;
   } catch (_) { /* projection is best-effort here */ }
 
   return {
@@ -56,7 +56,7 @@ function computeStats(rows) {
     completed: filtered.filter(r => isComplete(r) && r.complete === refDate).length,
     wip: wip.length,
     unscheduled: wip.filter(r => !r.scheduled).length,
-    projected, projectedLo, projectedHi,
+    projected, projectedTypical,
   };
 }
 

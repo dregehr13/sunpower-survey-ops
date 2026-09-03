@@ -457,7 +457,7 @@ function computeStats(){
     const projHour=(typeof DATA_TS!=='undefined'&&DATA_TS&&DATA_TS.length>=13)?parseInt(DATA_TS.slice(11,13),10):null;
     const proj=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{cacheKey:(typeof DATA_TS!=='undefined'?DATA_TS:''),asOfHour:projHour});
     const projectedWeek=proj.point;
-    const projLo=proj.lo, projHi=proj.hi;
+    const projLo=proj.lo, projHi=proj.hi, projMed=proj.recentMed, projWide=proj.bandWide;
 
     // 4-week historical weekly completion avg
     const wtdMonday=new Date(wtdFrom+'T12:00:00');
@@ -508,7 +508,7 @@ function computeStats(){
       completedYesterday, newInYesterday,
       completedWTD:wtdRows.length, newInWTD,
       medCycleWTD:med(wtdCts), avgCycleWTD:avg(wtdCts),
-      projectedWeek, projLo, projHi, proj, todayTarget, todayBand, yGoal, yBand, scheduledToday,
+      projectedWeek, projLo, projHi, projMed, projWide, proj, todayTarget, todayBand, yGoal, yBand, scheduledToday,
       daysRemaining, wip, recentAvgCt, histAvg, histDailyAvg, wtdDays,
       slowYesterday,
     };
@@ -689,7 +689,7 @@ async function buildEmailHTML(s, commentary, manualNote){
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'NEW IN WTD',val:String(s.newInWTD),sub:s.newInYesterday+' yesterday'},
       {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'COMPLETED WTD',val:String(s.completedWTD),sub:s.completedYesterday+' yesterday'},
       {bg:ctA.bg,b:ctA.b,lc:ctA.lc,vc:ctA.vc,sc:ctA.sc,sbc:ctA.sbc,label:'WTD AVG CYCLE',val:s.avgCycleWTD!=null?s.avgCycleWTD.toFixed(1)+'d':'—',sub:'target ≤4d'+ctA.mark},
-      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?'~'+s.projectedWeek:'—',sub:(s.projLo!=null?'range '+s.projLo+'–'+s.projHi:s.wip+' open')},
+      {bg:'#f8f8f8',b:'#e8e8e8',lc:'#999',vc:'#111',sc:'#aaa',sbc:'#e8e8e8',label:'PROJ WEEK',val:s.projectedWeek!=null?'~'+s.projectedWeek:'—',sub:(s.projMed!=null?'usually ±'+s.projMed:s.wip+' open')},
     ];
   }
   const cardsPng=await buildCardsImage(cardsData);
@@ -947,7 +947,7 @@ function renderStats(){
       <div class="stat-row"><span class="stat-label">New in WTD</span><span class="stat-val">${stats.newInWTD}</span></div>
       <div class="stat-row"><span class="stat-label">Completed WTD</span><span class="stat-val">${stats.completedWTD}</span></div>
       ${ct!=null?`<div class="stat-row"><span class="stat-label">WTD median cycle</span><span class="stat-val ${ctClass}">${ct.toFixed(1)}d</span></div>`:''}
-      ${stats.projectedWeek!=null?`<div class="stat-row"><span class="stat-label">Projected week total</span><span class="stat-val">${stats.projectedWeek}${stats.projLo!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(range ${stats.projLo}–${stats.projHi}; 4-wk avg ${stats.histAvg})</span>`:''}</span></div>`:''}`;
+      ${stats.projectedWeek!=null?`<div class="stat-row"><span class="stat-label">Projected week total</span><span class="stat-val">${stats.projectedWeek}${stats.projMed!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(usually ±${stats.projMed}; 4-wk avg ${stats.histAvg})</span>`:''}</span></div>`:''}`;
   }
 }
 
@@ -1228,14 +1228,14 @@ function computeTeamStats(){
   const wtdFrom=getThisWeekMon();
   const projHour=(typeof DATA_TS!=='undefined'&&DATA_TS&&DATA_TS.length>=13)?parseInt(DATA_TS.slice(11,13),10):8;
   const projAsOf=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):toISO(today);
-  let projected=null,projLo=null,projHi=null;
-  try{ const pr=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{asOfHour:projHour,cacheKey:(DATA_TS||'')+'|team'}); projected=pr.point; projLo=pr.lo; projHi=pr.hi; }catch(e){}
+  let projected=null,projMed=null;
+  try{ const pr=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{asOfHour:projHour,cacheKey:(DATA_TS||'')+'|team'}); projected=pr.point; projMed=pr.recentMed; }catch(e){}
   return{
     refDate, refLabel,
     completed: ROWS.filter(r=>isComplete(r)&&r.complete===refDate).length,
     wip: wip.length,
     unscheduled: wip.filter(r=>!r.scheduled).length,
-    projected, projLo, projHi,
+    projected, projMed,
   };
 }
 
@@ -1265,7 +1265,7 @@ function _huddleModel(){
       ? `Today, ${tDay} — targeting <b>${s.todayTarget}</b>${s.todayBand?` (${rng(s.todayBand)})`:''}. ${p.todayScheduled!=null?p.todayScheduled:s.scheduledToday} booked for today${p.todayActual?`, ${p.todayActual} already in`:''}; the rest is the day's usual walk-up volume.`
       : `Today, ${tDay} — week is closed.`,
     l3:(p.daysLeft>0)
-      ? `Week — projecting <b>${s.projectedWeek}</b>, likely ${s.projLo}–${s.projHi}. <b>${p.completedSoFar}</b> done so far; pace is ~${s.histAvg}/wk over the last three.`
+      ? `Week — projecting <b>${s.projectedWeek}</b>${s.projMed!=null?`; recent ${p.daysLeft>=5?'Monday':p.daysLeft>=2.5?'midweek':'Friday'} calls have landed within ~${s.projMed}`:''}. <b>${p.completedSoFar}</b> done so far; pace is ~${s.histAvg}/wk over the last three.`
       : `Week — closed at <b>${s.projectedWeek}</b>.`,
   };
 }
@@ -1293,7 +1293,7 @@ function renderHuddle(){
     +buildLine('From the open queue','+'+Math.round(p.pipeline),`rest of the week · ${(p.pipelineScheduled||0).toFixed(0)} booked, of ${p.wipOpen} open`)
     +buildLine('New this week','+'+Math.round(p.intake),'booked and done inside the week')
     +(p.slippageAdj?buildLine('Model adjustment',Math.round(p.slippageAdj),'runs ~'+Math.abs(Math.round(p.recentBias||0))+' '+(p.recentBias>0?'high':'low')+' vs the last '+p.nBacktest+' weeks'):'')
-    +`<div class="hd-leg hd-total"><span>Projected total</span><span class="hd-num">${s.projectedWeek}  <span class="hd-faint">likely ${s.projLo}–${s.projHi}</span></span></div>`
+    +`<div class="hd-leg hd-total"><span>Projected total</span><span class="hd-num">${s.projectedWeek}${s.projMed!=null?`  <span class="hd-faint">usually ±${s.projMed}</span>`:''}</span></div>`
     :`<div class="hd-faint">Week closed — ${p.completedSoFar} completed.</div>`;
 
   const dayRows=(p.byDay||[]).map(d=>{
@@ -1331,7 +1331,7 @@ function renderHuddle(){
           <table class="hd-tbl"><thead><tr><th>Day</th><th class="r">Actual</th><th class="r">Projected</th></tr></thead><tbody>${dayRows}</tbody></table></div>
         <div class="hd-block"><div class="hd-block-t">Track record — miss per week, last ${bt.length}</div>
           ${_missSpark(bt,240)}
-          <div class="hd-faint" style="margin-top:6px;">${over} over, ${under} under · typical ±${p.recentMae}. Point carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment.</div>
+          <div class="hd-faint" style="margin-top:6px;">Half within ±${p.recentMed}, most within ±${p.bandWide}. ${over} over, ${under} under. Point carries a ~${Math.abs(Math.round(p.recentBias||0))} ${p.recentBias>0?'down':'up'} adjustment.</div>
           <div class="hd-faint" style="margin-top:8px;">Same-week clears ~${p.model?Math.round(p.model.walkInPerWeek):'—'}/wk · new jobs in ~${p.model?Math.round(p.model.intakePerWeek):'—'}/wk · ${mix}${cx!=null?` · Radicl cancels first ${Math.round(cx*100)}%`:''}</div></div>
       </div>
     </div>
@@ -1370,7 +1370,7 @@ function renderTeamStats(){
     <div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.completed}</span></div>
     <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
     <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>
-    ${teamStats.projected!=null?`<div class="stat-row"><span class="stat-label">Projected this week</span><span class="stat-val">${teamStats.projected}${teamStats.projLo!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(${teamStats.projLo}–${teamStats.projHi})</span>`:''}</span></div>`:''}`;
+    ${teamStats.projected!=null?`<div class="stat-row"><span class="stat-label">Projected this week</span><span class="stat-val">${teamStats.projected}${teamStats.projMed!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(usually ±${teamStats.projMed})</span>`:''}</span></div>`:''}`;
 }
 
 function renderTCPreview(){
