@@ -4622,8 +4622,8 @@ function renderTrends(){
     CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
       type:'bar',
       data:{labels:inOutLabels,datasets:[
-        {label:'New In',data:inOutNewIn,backgroundColor:'rgba(110,140,190,.68)',borderRadius:3,yAxisID:'y',order:2},
-        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted),backgroundColor:'rgba(46,185,120,.75)',borderRadius:3,yAxisID:'y',order:2},
+        {label:'New In',data:inOutNewIn,backgroundColor:'#60a5fa',borderRadius:3,yAxisID:'y',order:2},
+        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted),backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
         {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
