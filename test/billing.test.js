@@ -317,6 +317,20 @@ test('an EPC-matched line is matched, so it stops reading as a missing record', 
   assert.ok(!out[0].flags.includes('no_sf_match'), 'it has a project, just not a SunPower one');
 });
 
+test('an EPC match carries which EPC, when the registry row names one', () => {
+  const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
+  const out = B.reconcile([l], [survey()], [epc({ epc: 'Cobalt' })]);
+  assert.equal(out[0].epcName, 'Cobalt');
+});
+
+test('an EPC match with no recorded name falls back to a blank, not a crash', () => {
+  // Most of the registry predates this field — a financier, not an EPC name,
+  // was all the original export carried.
+  const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
+  const out = B.reconcile([l], [survey()], [epc()]);
+  assert.equal(out[0].epcName, '');
+});
+
 test('with no registry, an EPC line still reads exactly as it did before', () => {
   const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
   for (const reg of [undefined, []]) {

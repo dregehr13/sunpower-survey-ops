@@ -9122,7 +9122,7 @@ function _renderBillingTable(scoped,meta){
         const sfName = m ? esc(m.project||m.contact||'—') : '';
         const sf = m
           ? (sfHref ? `<a href="${sfHref}" target="_blank" rel="noopener" class="drill-proj-link">${sfName}</a>` : sfName)
-            +`<div class="cmeta">${l.epc?'external EPC':l.archived?'before the export window':esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
+            +`<div class="cmeta">${l.epc?('external EPC'+(l.epcName?' · '+esc(l.epcName):'')):l.archived?'before the export window':esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
           : l.reviewed
             ? `<span class="pna">reviewed</span><div class="cmeta">confirmed legitimate — Salesforce record can't be matched automatically</div>`
             : `<span class="pna">no match</span>`;
