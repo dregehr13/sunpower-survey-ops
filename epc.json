@@ -1504,6 +1504,60 @@
    "opp_stage": "Closed Lost",
    "sales_rep": "Nicholas Nunez",
    "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "Cynthia Pulfer",
+   "address": "4145 Palo Verde Ave Lakewood, CA 90713",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "Mahdi Zeinali",
+   "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "Rodrigo Barrera",
+   "address": "1247 Marline Ave El Cajon, CA 92021",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "Seth Santoro",
+   "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "Rodrigo Barrera",
+   "address": "1251 Marline Ave El Cajon, CA 92021",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "Seth Santoro",
+   "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "Chris Salazar",
+   "address": "1702 Grier St Pomona, CA 91766",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "",
+   "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "John Walesby",
+   "address": "6602 Stingray Ct Apollo Beach, FL 33572",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "Jake",
+   "financier": ""
+  },
+  {
+   "project": "",
+   "contact": "Claudia Durnerin",
+   "address": "85438 Giorno Ct Indio, CA 92203",
+   "project_status": "",
+   "opp_stage": "",
+   "sales_rep": "",
+   "financier": ""
   }
  ]
 }
