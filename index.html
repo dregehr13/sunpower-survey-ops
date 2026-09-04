@@ -9127,12 +9127,29 @@ function _renderBillingTable(scoped,meta){
           return (em && !em.derivable)?`<span class="pill bill-pill sev-${em.sev}">${esc(em.label)}</span>`:'';
         }).filter(Boolean).join(' ');
         const prior=(l.priorLines||[]).map(p=>`${p.subtype} ${fmtDateShort(p.date)}`).join(', ');
+        // A duplicate is a PAIR, and the whole question is how far apart the
+        // two charges are: same day reads as a double bill, three months apart
+        // reads as a second visit, and the rule cannot tell them apart. So the
+        // flagged line carries the charge it repeats — date, amount and the
+        // gap — rather than the bare "after Base Jul 13" a plain repeat gets.
+        // It states the gap and stops; which ones are really duplicates is the
+        // vendor's to answer, and this is the list to ask them with.
+        const dupPrior=(l.flags||[]).includes('duplicate_charge')
+          ? (l.priorLines||[]).filter(p=>(p.subtype||'')===(l.subtype||''))
+          : [];
+        const dupTxt=dupPrior.map(p=>{
+          const g=Math.round((Date.parse(l.date)-Date.parse(p.date))/864e5);
+          return fmtDateShort(p.date)+' · '+_bmoney(OpsBilling.usd(Math.abs(p.units||0),l.vendor))
+            +' · '+(g===0?'same day':g+(g===1?' day':' days')+' earlier');
+        }).join('; ');
         return `<tr>
           <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}${
             multiSt?`<div class="cmeta">${esc((l.statement||'').split('/').pop())}</div>`:''}</td>
           <td><div>${esc(l.name||'—')}</div><div class="cmeta">${esc(l.address||'')}</div></td>
           <td style="color:var(--muted);">${esc(_billState(l)||'—')}</td>
-          <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${prior?`<div class="cmeta">after ${esc(prior)}</div>`:''}</td>
+          <td style="white-space:nowrap;">${esc(l.subtype||l.type||'—')}${
+            dupTxt?`<div class="cmeta">repeats ${esc(dupTxt)}</div>`
+            :prior?`<div class="cmeta">after ${esc(prior)}</div>`:''}</td>
           <td class="r" style="white-space:nowrap;">${_bmoney(OpsBilling.usd(Math.abs(l.units||0),l.vendor))}</td>
           <td>${sf}</td>
           <td>${others||'<span class="pna">—</span>'}</td>
