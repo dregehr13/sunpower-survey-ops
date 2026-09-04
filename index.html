@@ -8657,6 +8657,7 @@ function _resRows(key){
 //     and Map are already held to
 let _billing = null, _billingLoad = null, _billingErr = null;
 let _billRecon = null, _billReconFor = null;   // memoized reconcile of the whole history
+let _epc = [];                                 // external EPC account registry (epc.json)
 let _billImpFile = null;
 // One filter object, one Reset. Deliberately NOT persisted to ops_filters:
 // that store is the survey filter bar's, whose region/office/status mean
@@ -8678,9 +8679,19 @@ let billLimit = BILL_PAGE;
 // parse-radicl.js on its own cadence, which is not the daily data push.
 function billingEnsure(){
   if(_billing||_billingLoad) return _billingLoad;
-  _billingLoad = fetch('billing.json',{cache:'no-store'})
-    .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); })
-    .then(j=>{ _billing=j; _billingErr=null; _billRecon=null; })
+  // epc.json is fetched WITH the history rather than after it. Reconciling
+  // against a half-loaded registry would flag every external-EPC line as a
+  // missing Salesforce record on the first paint and then silently correct
+  // itself, which is worse than either answer on its own. It is optional: a
+  // missing or broken file leaves those lines reading exactly as they did
+  // before the registry existed.
+  _billingLoad = Promise.all([
+      fetch('billing.json',{cache:'no-store'})
+        .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); }),
+      fetch('epc.json',{cache:'no-store'})
+        .then(r=>r.ok?r.json():null).catch(()=>null),
+    ])
+    .then(([j,e])=>{ _billing=j; _epc=(e&&Array.isArray(e.accounts))?e.accounts:[]; _billingErr=null; _billRecon=null; })
     .catch(e=>{ _billingErr=e.message; })
     // Re-render whatever page is waiting on this, not always Billing. The
     // Resource page's Vendor cost column reads the same history and used to sit
@@ -8715,7 +8726,7 @@ const _billAcctState = entry => { const m=(entry.lines||[]).find(l=>l.match); re
 function billingReconciled(){
   if(!_billing) return [];
   if(!_billRecon || _billReconFor!==allRows){
-    _billRecon = OpsBilling.reconcile(_billing.lines, allRows);
+    _billRecon = OpsBilling.reconcile(_billing.lines, allRows, _epc);
     _billReconFor = allRows;
   }
   return _billRecon;
@@ -9093,9 +9104,15 @@ function _renderBillingTable(scoped,meta){
     </tr></thead><tbody>
       ${rows.map(l=>{
         const m=l.match;
+        // An EPC-matched row has a project name but no TaskRay task, so there
+        // is nothing to link to. `sfUrl(m)||'#'` used to be unreachable, since
+        // every match came from the survey export; it now renders a link that
+        // opens a blank tab, so the name is plain text when there is no URL.
+        const sfHref = m ? sfUrl(m) : '';
+        const sfName = m ? esc(m.project||m.contact||'—') : '';
         const sf = m
-          ? `<a href="${sfUrl(m)||'#'}" target="_blank" rel="noopener" class="drill-proj-link">${esc(m.project||m.contact||'—')}</a>`
-            +`<div class="cmeta">${esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
+          ? (sfHref ? `<a href="${sfHref}" target="_blank" rel="noopener" class="drill-proj-link">${sfName}</a>` : sfName)
+            +`<div class="cmeta">${l.epc?'external EPC':esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
           : `<span class="pna">no match</span>`;
         const others=(l.flags||[]).filter(f=>f!==billF.flag).map(f=>{
           const em=OpsBilling.exceptionMeta(f);
@@ -9168,6 +9185,7 @@ function _renderBillingOutcome(scoped,meta){
     </tr></thead><tbody>
       ${all.map(o=>`<tr>
         <td><div>${esc(o.status)}</div>${o.dead?`<div class="cmeta">project canceled after the survey</div>`
+          :o.epc?`<div class="cmeta">cost only · no survey resource or dates on these</div>`
           :!o.matched?`<div class="cmeta">no project to attribute it to · includes their travel adders</div>`:''}</td>
         <td class="r">${o.accounts}</td>
         <td class="r">${o.visits}</td>

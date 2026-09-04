@@ -1,0 +1,1446 @@
+{
+ "_comment": "External EPC accounts. Built by scripts/build-epc.cjs from a Salesforce report; refresh it the same way and commit. Cost only — this export carries no survey resource or dates, so these accounts can never feed cycle time or first pass yield.",
+ "updated": "2026-09-04",
+ "accounts": [
+  {
+   "project": "15CRMORE",
+   "contact": "Rebecca Morea",
+   "address": "15 Crown St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "55LEMORI",
+   "contact": "Kathleen Morin",
+   "address": "55 Lenox St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "276ALUAN",
+   "contact": "Hongkhao Luangpraseuth",
+   "address": "276 Avery St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "67HUTSE",
+   "contact": "Candice Tse",
+   "address": "67 Huntington Dr",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "73BAALLA",
+   "contact": "David Allan",
+   "address": "73 Bayberry Rd",
+   "project_status": "",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "659MPAL",
+   "contact": "Ashishkumar Pal",
+   "address": "659 Mountain Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "46SHDUBO",
+   "contact": "Robert Dubois",
+   "address": "46 Shagbark Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "4HIPMAND",
+   "contact": "Craig Mandzuk",
+   "address": "4 Hipp Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "48BICHRI",
+   "contact": "Sandra Christie",
+   "address": "48 Bigelow St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "14JOLOVE",
+   "contact": "Brooke Lovett",
+   "address": "14 Jones River Dr",
+   "project_status": "",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Daniel Duncan",
+   "financier": "Concert Finance"
+  },
+  {
+   "project": "154BROME",
+   "contact": "Antonio Romero",
+   "address": "154 Berwick Ave",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "39WHCOLA",
+   "contact": "Cheryl Colangelo",
+   "address": "39 Whitecap Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Scott Newsom",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "23NOHOLL",
+   "contact": "Darrell Holley",
+   "address": "23 Norman St",
+   "project_status": "",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Seth Gergetz",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "21NOHOLL",
+   "contact": "Darrell Holley",
+   "address": "21 Norman St",
+   "project_status": "",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Seth Gergetz",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "42COCAO",
+   "contact": "Nhat Cao",
+   "address": "42 Courtland St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Seth Gergetz",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "80TRCALL",
+   "contact": "Jenny Calle",
+   "address": "80 Treat Avenue,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "14BETROY",
+   "contact": "Wanda Troy",
+   "address": "14 Berkshire Cir",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "9WOOBINK",
+   "contact": "Zachary Binkowski",
+   "address": "9 Woodland Walk",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "14BIPEDR",
+   "contact": "Brandon Pedreira",
+   "address": "14 birchwood dr",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "155BMITC",
+   "contact": "Dante Mitchell",
+   "address": "155 Birmingham St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "395AOQUE",
+   "contact": "Antonio Oquendo",
+   "address": "395 Arctic Street",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1511DINI",
+   "contact": "Paul Dinice",
+   "address": "15 11th street",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "15CHDEBI",
+   "contact": "Eric Debiase",
+   "address": "15 cherry street,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "12KECUNN",
+   "contact": "Linda Cunningham",
+   "address": "12 Kenilworth Dr E,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "51ELMANG",
+   "contact": "Teresita Manguinao",
+   "address": "51 Elm Tree Place,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "165MWOOD",
+   "contact": "Rodney Woodhouse",
+   "address": "165 Mt Pleasant Street,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "16UPBERG",
+   "contact": "Dina Berger",
+   "address": "16 Upland Road,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "20CHSACK",
+   "contact": "Adam Sack",
+   "address": "20 Chester St,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "27HAWOOD",
+   "contact": "Melissa Wood",
+   "address": "27 Hartford Avenue,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "37LIVALD",
+   "contact": "Saul Valdovinos",
+   "address": "37 Little Hill Dr,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "27KIMITC",
+   "contact": "Nicole Mitchell",
+   "address": "27 Kindle Lane,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "502HALCA",
+   "contact": "Cristhian Alcantara Cadillo",
+   "address": "502 Hope Street,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "116LAHME",
+   "contact": "Mokther Ahmed",
+   "address": "116 Lafayette St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "116LAHME",
+   "contact": "Mokther Ahmed",
+   "address": "116 Lafayette St 2nd floor",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "55REFRAN",
+   "contact": "Justin Frantzreb",
+   "address": "55 Relihan Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "668PESTR",
+   "contact": "Jessie Estrada",
+   "address": "668 Parker St",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "127MRODR",
+   "contact": "Roberto Rodriguez-Pellot",
+   "address": "127 Massachusetts Ave",
+   "project_status": "",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1064PALA",
+   "contact": "Edwin Palacios",
+   "address": "1064 Noble Avenue,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "221WBART",
+   "contact": "Thomas Bartram",
+   "address": "221 Willowbrook Avenue,",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "48HAGUAC",
+   "contact": "Remigio Guachichullca",
+   "address": "48 Harding Ave",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "373PBALD",
+   "contact": "Douglas Baldwin",
+   "address": "373 Page Blvd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "58UNBRYS",
+   "contact": "Charles Bryson",
+   "address": "58 Unity Rd",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Scott Newsom",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "171SSUSA",
+   "contact": "Zolia Susana",
+   "address": "171 Southfield Ave",
+   "project_status": "",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Scott Newsom",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1594NICH",
+   "contact": "James Nicholoff",
+   "address": "1594 Ensenada Dr",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Heath Meeks",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1158VORG",
+   "contact": "Jason Vorgity",
+   "address": "1158 Oak Bluff Dr",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Heath Meeks",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1214MCGR",
+   "contact": "Steven McGrew",
+   "address": "12143 Califa St",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Miguel Garcia",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1125BUEN",
+   "contact": "Samuel Buenrostro",
+   "address": "1125 Trenton Ave",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Miguel Garcia",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "541TPADI",
+   "contact": "Victor Padilla",
+   "address": "541 Trisha Court,",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Brian Allard",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "128PWILH",
+   "contact": "John Wilhorn",
+   "address": "128 Purple Sage Lane,",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Brian Allard",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "406BHERR",
+   "contact": "David Herring",
+   "address": "406 Bahama Grande Boulevard,",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Jake Vossler",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "6020ALEX",
+   "contact": "Barry Alexander",
+   "address": "6020 E Tenison St",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Jeremy Odell",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "5740SWIN",
+   "contact": "Nelda Swink",
+   "address": "5740 South Bristol Terrace,",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Jeremy Odell",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "702NROUR",
+   "contact": "Jamie Rourke",
+   "address": "702 N Lincoln Ave",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Krystal Crowder",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2512COOL",
+   "contact": "Logan Cooley",
+   "address": "25122 Black Horse Ln",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Landon Everson",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "622DMUNO",
+   "contact": "Lizette Munoz",
+   "address": "622 Dover Dr",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Michael Swan",
+   "financier": "Propel"
+  },
+  {
+   "project": "125ICOOP",
+   "contact": "Joel Cooper",
+   "address": "125 Irvine Cove Court,",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Mike Roberts",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "5395NERI",
+   "contact": "Ricardo Neri",
+   "address": "5395 North D Street",
+   "project_status": "In Progress",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1073MOYA",
+   "contact": "Virginia Moya",
+   "address": "1073 E 70th Way Unit B",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "NLITN",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2571GONZ",
+   "contact": "Jose Gonzalez",
+   "address": "2571 E Bryce Ct",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1073MOYA",
+   "contact": "Santiago Moya",
+   "address": "1073 E 70th Way Unit A",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "NLITN",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1415MEEM",
+   "contact": "Tamara Meem",
+   "address": "1415 Oneonta Knoll",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "NLITN",
+   "financier": "Propel"
+  },
+  {
+   "project": "996BCORO",
+   "contact": "Jazmine Coronado",
+   "address": "996 Blackwood Drive",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "932LHERN",
+   "contact": "Ricardo Hernandez",
+   "address": "932 Lilac Place,",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1626BENN",
+   "contact": "SJ Bennett",
+   "address": "1626 Goldfield Place,",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1311DOZI",
+   "contact": "Larry Dozier",
+   "address": "13112 Wilton Place,",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "4295VALE",
+   "contact": "Bertha Valenzuela",
+   "address": "4295 Raquel Court,",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "249HNIEV",
+   "contact": "Sasha Nieves",
+   "address": "249 Henry St",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "cougar olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "122IAKGU",
+   "contact": "Faruk Akguc",
+   "address": "122 Island Water Way",
+   "project_status": "In Progress",
+   "opp_stage": "Installation Scheduled",
+   "sales_rep": "Carlos Morales",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1214BENN",
+   "contact": "Celia Bennett",
+   "address": "12140 Chesterton St",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Christopher Combs",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "3672SUAR",
+   "contact": "Maria Suarez",
+   "address": "36721 3rd Street West",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "3916CLEV",
+   "contact": "Joel Cleveland",
+   "address": "39168 Sweetwater Drive",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "SUNDER",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2060SIGA",
+   "contact": "Jaime Sigala",
+   "address": "2060 Riverside Avenue",
+   "project_status": "In Progress",
+   "opp_stage": "PTO Submitted",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "924RARAN",
+   "contact": "Manuel Araniva",
+   "address": "924 Russell Place",
+   "project_status": "In Progress",
+   "opp_stage": "Funding Approved",
+   "sales_rep": "SUNDER",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "6491CLEV",
+   "contact": "Cheryl Cleveland",
+   "address": "64919 Oakmount Blvd",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "398CJOHN",
+   "contact": "Ashley Johnson",
+   "address": "398 Clark Street",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "78MADRAB",
+   "contact": "Maria Drabczynska",
+   "address": "78 Maitland Road,",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "15CHDEBI",
+   "contact": "Eric Debiase",
+   "address": "15 Cherry Street 2nd Floor,",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "24ABGUAM",
+   "contact": "Jaime Guaman",
+   "address": "24 Abel Avenue,",
+   "project_status": "In Progress",
+   "opp_stage": "Install Completed",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "57BARICH",
+   "contact": "Carol Richards-Thompson",
+   "address": "57 Bassick Ave",
+   "project_status": "In Progress",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "PATSBRUC",
+   "contact": "Patsy Bruce",
+   "address": "3375 Olive St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Courtney Stevens",
+   "financier": ""
+  },
+  {
+   "project": "1601CHEN",
+   "contact": "Sin Chen",
+   "address": "16011 LAS PALMERAS AVE",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Carlos Puerto",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1706SALA",
+   "contact": "Chris Salazar",
+   "address": "1706 Grier Street,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Albert Barajas",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "8909MACI",
+   "contact": "Samuel Macias",
+   "address": "8909 Canby Avenue,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Albert Barajas",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "622DGONZ",
+   "contact": "Jose Gonzalez",
+   "address": "622 Dover Dr",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Andrew McCullen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2155PETR",
+   "contact": "Nicholas Petrillo",
+   "address": "2155 Titus Ave",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Andrew McCullen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "685PMORA",
+   "contact": "Renee Morales",
+   "address": "685 Palo Alto Ave",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Andrew McCullen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "6020ALEX",
+   "contact": "Barry Alexander",
+   "address": "6020 East Tenison Street,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Jeremy Odell",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "8436WAKE",
+   "contact": "Marty Wakefield",
+   "address": "8436 Futureside Loop,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Jeremy Odell",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "3153JONE",
+   "contact": "Vanda Jones",
+   "address": "3153 West 79th Street",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (Loan)"
+  },
+  {
+   "project": "4649SOLI",
+   "contact": "JCarmen Salas Solis",
+   "address": "46495 Orchid Street",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "2070PLAM",
+   "contact": "Minerva Palma",
+   "address": "2070 Easy Avenue",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "208ECHAI",
+   "contact": "Miguel Chairez",
+   "address": "208 East Sherman Street",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "5925PETE",
+   "contact": "Michael Peters",
+   "address": "5925 East Seaside Walk",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "7437FAIR",
+   "contact": "Johanna Fairchild",
+   "address": "74374 Zircon Cir E",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "222STORR",
+   "contact": "Rosendo Torres",
+   "address": "222 S Spruce St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1451VALE",
+   "contact": "Joel Barrera Valencia",
+   "address": "1451 E Kenwood Ave",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1239CELL",
+   "contact": "Juan Cellona",
+   "address": "1239 Venezia Place,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1120CARD",
+   "contact": "Benjamin Cardenas",
+   "address": "1120 South Lilac Avenue,",
+   "project_status": "Canceled",
+   "opp_stage": "Installation Scheduled",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1626CRUZ",
+   "contact": "Angie Cruz",
+   "address": "1626 Vejar Street,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1193JOHN",
+   "contact": "Shaunte Johnson",
+   "address": "11939 Calenda Court",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Seth Santoro",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "224NTRUE",
+   "contact": "Charles Trueblood",
+   "address": "224 North Salaine Drive,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Tyler Sherritt",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "4475AYUB",
+   "contact": "Emma Ayub-Rodriguez",
+   "address": "4475 Orchard St, Montclair, CA 91763",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Christopher Combs",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1903TORR",
+   "contact": "Luis Torres",
+   "address": "1903 Grier St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1597GUTI",
+   "contact": "Lilia Gutierrez",
+   "address": "1597 West 21st Street",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1135APAT",
+   "contact": "Timothy Apat",
+   "address": "1135 Elliot Drive",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "SUNDER",
+   "financier": "Lightreach"
+  },
+  {
+   "project": "5197VANL",
+   "contact": "Steve Vanloon",
+   "address": "5197 Mission Hills Dr",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "406BHERR",
+   "contact": "David Herring",
+   "address": "406 Bahama Grande Blvd",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Jake Vossler",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "42COCAO",
+   "contact": "Nhat Cao",
+   "address": "42 Courtland St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Seth Gergetz",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1841WYMO",
+   "contact": "Gerald Wymore",
+   "address": "18415 Niagara Dr",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Awwad Gohar",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "3043GARO",
+   "contact": "Robert Garofallou",
+   "address": "3043 Clinton St S",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Carlos Morales",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "3043GARO (duplicate)",
+   "contact": "Robert Garofallou",
+   "address": "3043 Clinton Street South,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Carlos Morales",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2355HAWK",
+   "contact": "Jennifer Hawk",
+   "address": "2355 White Lilly Dr",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Carlos Morales",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "7947PASC",
+   "contact": "Gerald Pasco",
+   "address": "7947 Agnew Ave",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Christopher Combs",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "7778TVEI",
+   "contact": "Thomas Tveit",
+   "address": "77780 Calle Chillon",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Christopher Combs",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1599CORT",
+   "contact": "Sergio Cortez",
+   "address": "1599 South Park Avenue",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Justin Agee",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2524KRIS",
+   "contact": "Sundari Krishnamurthy",
+   "address": "2524 Tarrytown Dr",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Mario Alvarez Colin",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2220COST",
+   "contact": "Iva Costa",
+   "address": "2220 Holly Place,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2220COST",
+   "contact": "Iva Costa",
+   "address": "2220 Holly Place",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "SUNDER",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1756SHAR",
+   "contact": "Dennis Sharpe",
+   "address": "1756 Golden Hills Road",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "2287OCHO",
+   "contact": "Jacqueline Ochoa",
+   "address": "22879 Penasco Cir",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "911MSREY",
+   "contact": "Pheap Srey",
+   "address": "911 Monarch Drive",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "SUNDER",
+   "financier": "Lightreach"
+  },
+  {
+   "project": "90HUDAMA",
+   "contact": "Ritesh Damania",
+   "address": "90 Hubbell Ave",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "6.16",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "12CHLOND",
+   "contact": "Nelsy Londono",
+   "address": "12 Charters Road",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "87SAPONT",
+   "contact": "Giuseppe Pontoriero",
+   "address": "87 Savoy Street,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "41CAKUSI",
+   "contact": "Richard Kusiowski",
+   "address": "41 Cambridge Road,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "596FMORA",
+   "contact": "Alexis Morales",
+   "address": "596 Fairfield Avenue,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Benson Smith",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "70WECOCC",
+   "contact": "Beth Cocca",
+   "address": "70 West Street",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "28GEPEEL",
+   "contact": "Robert Peel",
+   "address": "28 George Street",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2MCKWILM",
+   "contact": "Vicki Wilmot",
+   "address": "2 Mckinley Avenue",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "152DSTAM",
+   "contact": "Laura Stampone",
+   "address": "152 derby ave",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "390RLEVY",
+   "contact": "Juanita Levy",
+   "address": "390 Remington Street,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "240FANOR",
+   "contact": "Julio Anorga",
+   "address": "240 Fox Hill Road",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "35PUHENL",
+   "contact": "Joan Henlin",
+   "address": "35 Puritan Lane,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "788HPINT",
+   "contact": "Jon Pinto",
+   "address": "788 Hope street,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Cougar Olsen",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "11LIJIME",
+   "contact": "Sergio Jimenez",
+   "address": "11 Liberty St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "50ROLOPE",
+   "contact": "Walter Lopez",
+   "address": "50 Rockwood Ave",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2LAUFRAG",
+   "contact": "Cristina Fraga",
+   "address": "2 Laurel Lane",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "1276OLIV",
+   "contact": "Edgar Olivares Barquero",
+   "address": "1276 Laurel Avenue",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "2LAUFRAG",
+   "contact": "Cristina Fraga",
+   "address": "2 Laurel Lane,",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Isaac Shillig",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "221WBART",
+   "contact": "Thomas Bartram",
+   "address": "221 Willowbrook Avenue,",
+   "project_status": "Canceled",
+   "opp_stage": "NTP Received",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "346PATHI",
+   "contact": "Amnouy Athitang",
+   "address": "346 Poplar St",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Samuel LeBaron",
+   "financier": "LightReach Finance"
+  },
+  {
+   "project": "35TETEST",
+   "contact": "Builder Test One",
+   "address": "35 Terrace Dr",
+   "project_status": "Canceled",
+   "opp_stage": "Contract Signed",
+   "sales_rep": "Enerflo Admin",
+   "financier": "Cash Finance"
+  },
+  {
+   "project": "2630JAMI",
+   "contact": "Jesse Jamison",
+   "address": "26309 Allentown Drive,",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "Andrew McCullen",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "729EWATK",
+   "contact": "Daryl Watkins",
+   "address": "729 East Glendale Avenue",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "17CASANG",
+   "contact": "Rick Sanghera",
+   "address": "17 Calle Ameno",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "2139WERN",
+   "contact": "Wayne Wernimont",
+   "address": "21391 Brandy Wine Ln",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "3495GREE",
+   "contact": "Adam Green",
+   "address": "3495 Jefferson Street",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (Loan)"
+  },
+  {
+   "project": "607VGUTI",
+   "contact": "Fernando Gutierrez",
+   "address": "607 Valleywood St",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "512SPHAM",
+   "contact": "Hoang Pham",
+   "address": "512 South Peregrine Street",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "2391HAYW",
+   "contact": "Ernest Hayward",
+   "address": "23911 Stillwater Lane",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "221AANCE",
+   "contact": "Lacey Ancell",
+   "address": "221 Avenida Santa Barbara",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "2240NAUM",
+   "contact": "Virginia Naumescu",
+   "address": "22402 Rippling Brook",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "NLITN",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "4305NECO",
+   "contact": "Angelica Necoechea",
+   "address": "4305 Raquel Court,",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "Sebastian Hernandez",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1149WINA",
+   "contact": "Michael Winans",
+   "address": "11499 Explorer Court",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "3522GIBS",
+   "contact": "Christine Gibson",
+   "address": "3522 Ponderosa Drive",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "825NGUZM",
+   "contact": "Gonzalo Guzman",
+   "address": "825 N Lowell St",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1087CAST",
+   "contact": "Jose Castaneda",
+   "address": "1087 Hushabye Lane",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "712STORR",
+   "contact": "Raul Torrejon",
+   "address": "712 South Sycamore Avenue",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1852PORR",
+   "contact": "Joel Porres",
+   "address": "1852 Fleming St",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "1710RAMO",
+   "contact": "Rudy Ramos",
+   "address": "1710 W 9th St",
+   "project_status": "Complete",
+   "opp_stage": "PTO Approved",
+   "sales_rep": "SUNDER",
+   "financier": "GoodLeap (TPO)"
+  }
+ ]
+}

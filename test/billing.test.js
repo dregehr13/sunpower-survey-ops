@@ -257,3 +257,69 @@ test('byOutcome never reads the opportunity stage', () => {
   assert.ok(!/opp_stage/.test(src), 'billing must cut by project_status, not opp_stage');
   assert.ok(/project_status/.test(src), 'and it must actually read project_status');
 });
+
+// ── Service lines ─────────────────────────────────────────────────────────
+// A vendor can bill more than one book of business. Averaging O&M visits into
+// a per-survey figure overstates what a survey costs, which is the whole
+// reason the Billing page opens on the survey segment.
+test('service lines come from the vendor spec, and top-ups are not one', () => {
+  assert.equal(B.lineService(line({ type: 'Survey' })), 'survey');
+  assert.equal(B.lineService(line({ type: 'O&M', subtype: 'Quality Check' })), 'om');
+  assert.equal(B.lineService(line({ type: 'Credits Added', units: 1000 })), 'topup');
+  // An unrecognised service becomes its own segment rather than being absorbed
+  // into the survey book, where it would quietly move the per-survey cost.
+  assert.equal(B.lineService(line({ type: 'Rooftop Cleaning' })), 'other');
+  assert.equal(B.isSurveyService(line({ type: 'O&M' })), false);
+});
+
+// ── External EPC accounts ─────────────────────────────────────────────────
+// Projects sold through an external EPC never reach the Site Survey export, so
+// without the registry every line we were billed for one reads as a missing
+// Salesforce record.
+const epc = (o = {}) => ({ contact: 'Ada Vance', address: '77 Elm Ave', project: '77ELVANC',
+  project_status: 'Canceled', ...o });
+
+test('Salesforce always wins: the EPC registry is only tried where SF has nothing', () => {
+  // Same account present on both sides. The SF row carries the resource and the
+  // dates; the EPC row carries neither, so matching the EPC one would lose
+  // information the page needs.
+  const l = line({ name: 'Jane Smith', address: '123 Main St, Springfield' });
+  const out = B.reconcile([l], [survey()], [epc({ contact: 'Jane Smith', address: '123 Main St' })]);
+  assert.equal(out[0].matchSource, 'sf');
+  assert.ok(!out[0].epc);
+  assert.ok(!out[0].flags.includes('epc_account'));
+});
+
+test('an EPC-matched line is matched, so it stops reading as a missing record', () => {
+  const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
+  const out = B.reconcile([l], [survey()], [epc()]);
+  assert.equal(out[0].matchSource, 'epc');
+  assert.equal(out[0].epc, true);
+  assert.ok(out[0].flags.includes('epc_account'));
+  assert.ok(!out[0].flags.includes('no_sf_match'), 'it has a project, just not a SunPower one');
+});
+
+test('with no registry, an EPC line still reads exactly as it did before', () => {
+  const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
+  for (const reg of [undefined, []]) {
+    const out = B.reconcile([l], [survey()], reg);
+    assert.ok(out[0].flags.includes('no_sf_match'));
+    assert.ok(!out[0].epc);
+  }
+});
+
+test('EPC spend is its own outcome group, not folded into the SunPower statuses', () => {
+  // Both are Canceled. Mixing them would make "N% of spend went to canceled
+  // projects" a statement about neither population.
+  const out = B.reconcile([
+    line({ name: 'Jane Smith', address: '123 Main St, Springfield', line: 1 }),
+    line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown', line: 2 }),
+  ], [survey({ project_status: 'Canceled' })], [epc()]);
+  const groups = B.byOutcome(out);
+  const names = groups.map(g => g.status);
+  assert.ok(names.includes(B.OUTCOME_EPC));
+  assert.ok(names.includes('Canceled'));
+  const e = groups.find(g => g.status === B.OUTCOME_EPC);
+  assert.equal(e.epc, true);
+  assert.equal(e.dead, false, 'an EPC group is not a SunPower loss, whatever its own status says');
+});
