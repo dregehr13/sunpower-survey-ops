@@ -364,8 +364,12 @@ test('the archive is tried before the EPC registry', () => {
   const out = B.reconcile([l], [survey()], [epc({ contact: 'Otto Prewitt', address: '9 Kiln Rd' })], [old()]);
   assert.equal(out[0].matchSource, 'archive');
   assert.ok(!out[0].epc);
-  assert.ok(out[0].flags.includes('archived_project'));
   assert.ok(!out[0].flags.includes('no_sf_match'));
+  // An archived match is deliberately NOT a chip: it needs no review and its
+  // outcome group is its real project status. `archived` carries it instead,
+  // which is what labels the row under the project name.
+  assert.equal(out[0].archived, true);
+  assert.equal(out[0].flags.length, 0);
 });
 
 test('an archived match groups by its own project status, not a bucket of its own', () => {
@@ -383,4 +387,18 @@ test('both registries are optional and absent ones change nothing', () => {
     assert.ok(out[0].flags.includes('no_sf_match'));
     assert.ok(!out[0].archived);
   }
+});
+
+test('a derivable rule keeps its chip but stops restating the charge type', () => {
+  // travel_adder IS isTravel(l), the same test the Charge column prints, so
+  // showing it again on a Travel row says nothing. It still needs the flag:
+  // the chip is where the travel total is read.
+  const travel = B.EXCEPTIONS.find(e => e.k === 'travel_adder');
+  assert.equal(travel.derivable, true);
+  // Nothing whose population is a genuine subset may be marked derivable:
+  // own_defect_rebill is some Go Backs, not all of them.
+  const own = B.EXCEPTIONS.find(e => e.k === 'own_defect_rebill');
+  assert.ok(!own.derivable);
+  const out = B.reconcile([line({ subtype: 'Travel', units: -9 })], [survey()]);
+  assert.ok(out[0].flags.includes('travel_adder'), 'the flag survives for the chip');
 });

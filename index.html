@@ -9122,8 +9122,10 @@ function _renderBillingTable(scoped,meta){
           : `<span class="pna">no match</span>`;
         const others=(l.flags||[]).filter(f=>f!==billF.flag).map(f=>{
           const em=OpsBilling.exceptionMeta(f);
-          return em?`<span class="pill bill-pill sev-${em.sev}">${esc(em.label)}</span>`:'';
-        }).join(' ');
+          // A derivable rule says nothing the Charge column has not already
+          // said on the same row. It keeps its chip; it just stops repeating.
+          return (em && !em.derivable)?`<span class="pill bill-pill sev-${em.sev}">${esc(em.label)}</span>`:'';
+        }).filter(Boolean).join(' ');
         const prior=(l.priorLines||[]).map(p=>`${p.subtype} ${fmtDateShort(p.date)}`).join(', ');
         return `<tr>
           <td style="white-space:nowrap;color:var(--muted);">${fmtDateShort(l.date)}${
