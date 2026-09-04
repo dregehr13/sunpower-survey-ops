@@ -1347,6 +1347,29 @@ amount matters on its own: one repeats a Go Back billed at $180 rather than the
 $284 every other Go Back carries. It states the gap and stops — which ones are
 really duplicates is the vendor's to answer.
 
+### Cost per survey is per PROPERTY, never per billed visit (2026-09-04)
+Doug's call, and the data settles it rather than taste. Every work subtype
+bills at the same 14.2 credits, so a cleanup visit adds one to the numerator
+AND one to the denominator: **in July cleanup hit 1.65 visits per property and
+the per-visit figure FELL from $391 to $378 while per-property rose from $527
+to $624.** A cost metric that improves as quality gets worse is worse than no
+metric. Across the year per-visit moves in a 20% band and per-property in 51%.
+- The rail reads **`$491`, with `$737 if it survives` as its sub-line** — the
+  same spend over only the properties whose project has not since canceled.
+  Both figures carry every dollar including cancelled work; what changes is
+  what counts as having been received for it. 288 of 862 surveyed properties
+  are on dead deals, so about **$246 of dead deal rides on every survivor**
+- **`byOutcome().perSurvey` divides by properties too.** It divided by visits
+  and printed **$399 in the footer under a column of $477 to $539** — a second
+  definition of the same words on the same screen
+- `perVisit` stays on the summarize object and is honest for exactly two jobs:
+  comparing one vendor's rate to another's, and capacity planning. It is not a
+  cost-of-survey figure and no surface shows it as one
+- **The "$530" quoted externally in the Q4 plan** was this family's
+  per-property figure for the Jul 1 to Aug 24 window alone. It was never
+  comparable to the dashboard's old per-visit $399, and the confusion that
+  caused is why the rail changed
+
 ### Entrance animation on the two async pages
 `animateSections()` runs once in the `requestAnimationFrame` after
 `renderPage()`. Billing and Resource render a **"Loading…" placeholder** first

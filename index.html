@@ -2659,7 +2659,7 @@ const TIP={
   resCapacity:'A modelled ceiling, not an observation: one surveyor\'s day is field hours minus overhead minus the drive, divided by time on site plus admin plus a hop between jobs. ~15 a week each at an 8-mile market, summed across the roster. Every knob is an estimate, editable in Settings → Resource model.',
   resRec:'One recommendation per area, from five facts: is it still live, can we reach it, is there enough work to carry a body, is that work durable, and who is doing it badly today. A case to check, not a verdict. A group takes the recommendation of the markets inside it.',
   billSpend:'Everything drawn down on imported statements, converted at the vendor\'s unit rate. Charges are stored negative on the invoice; this is reported positive.',
-  billPerSurvey:'Total invoiced ÷ billed survey visits, so travel adders and demobilisation are inside it.',
+  billPerSurvey:'Total invoiced ÷ properties surveyed, so a property carries its own cleanup and rework. The second figure divides the same spend by only the properties whose project is still live.',
   billReview:'Lines carrying at least one rule flag that is not purely informational. A prompt to check, not a verdict.',
   mapTopLocation:'The market with the most jobs in view, named for its biggest town. A market is everything within the selected radius.',
 };
@@ -8487,7 +8487,7 @@ function _resVendorTable(billSum){
         <td><b>${esc(d.v.name)}</b><div class="cmeta">${esc(d.v.sfResource||'no SF resource')} &middot; ${_rmoney(d.v.unitUsd)}/${esc(d.v.unit)}</div></td>
         <td>${d.recent?'<span class="pill pg">Active</span>':d.sf?'<span class="pill pn">No recent work</span>':'<span class="pill pn">On file only</span>'}</td>
         <td class="r">${_r1(d.perWeek)}<div class="cmeta">${d.sf.toLocaleString()} all-time</div></td>
-        <td class="r">${d.sum?_rmoney(d.sum.perSurvey):'<span class="pna">—</span>'}${d.sum?`<div class="cmeta">${d.sum.surveys} billed visits</div>`:''}</td>
+        <td class="r">${d.sum?_rmoney(d.sum.perSurvey):'<span class="pna">—</span>'}${d.sum?`<div class="cmeta">${d.sum.surveyed} surveyed</div>`:''}</td>
         <td class="r">${d.sum&&d.sum.travelShare!=null?_rpct(d.sum.travelShare):'<span class="pna">—</span>'}${d.sum?`<div class="cmeta">${_rmoney(d.sum.travelUsd)}</div>`:''}</td>
         <td class="r">${d.sum&&d.sum.cleanupN?_rmoney(d.sum.cleanupUsd):'<span class="pna">—</span>'}${d.sum&&d.sum.cleanupN?`<div class="cmeta">${d.sum.cleanupN} visits</div>`:''}</td>
         <td class="r"><span class="res-m-v ${resFpyBand(d.fpyV)}" style="font-size:12px;">${d.fpyV==null?'—':d.fpyV.toFixed(1)+'%'}</span><div class="cmeta">${d.done.toLocaleString()} completed</div></td>
@@ -9008,7 +9008,7 @@ function _renderBillMain(){
   host.innerHTML=`
     <div class="srail">
       ${cell('Invoiced',_bmoney(sum.usd),period,TIP.billSpend)}
-      ${cell('Per survey',_bmoney(sum.perSurvey),sum.surveys+' billed',TIP.billPerSurvey)}
+      ${cell('Per survey',_bmoney(sum.perSurvey),sum.perLiveSurvey?_bmoney(sum.perLiveSurvey)+' if it survives':sum.surveyed+' surveyed',TIP.billPerSurvey)}
       ${cell('To review',_bmoney(sum.disputedUsd),sum.disputed+' line'+(sum.disputed===1?'':'s'),TIP.billReview)}
     </div>
 
@@ -9188,6 +9188,9 @@ function _renderBillingOutcome(scoped,meta){
   const totUsd=all.reduce((s,o)=>s+o.usd,0);
   const totN=all.reduce((s,o)=>s+o.n,0);
   const totVisits=all.reduce((s,o)=>s+o.visits,0);
+  // The footer divides by properties, like every row above it. Dividing by
+  // visits printed $399 under a column of $477-$539.
+  const totSurveyed=all.reduce((s,o)=>s+(o.surveyed||0),0);
   const totAccts=OpsBilling.byAccount(list).length;
   const dead=all.filter(o=>o.dead);
   const deadUsd=dead.reduce((s,o)=>s+o.usd,0);
@@ -9225,7 +9228,7 @@ function _renderBillingOutcome(scoped,meta){
     <tfoot><tr class="q-rate-all">
       <td><strong>All charges</strong></td>
       <td class="r">${totAccts}</td><td class="r">${totVisits}</td><td class="r">${totN}</td>
-      <td class="r" style="white-space:nowrap;">${totVisits?_bmoney(totUsd/totVisits):'<span class="pna">—</span>'}</td>
+      <td class="r" style="white-space:nowrap;">${totSurveyed?_bmoney(totUsd/totSurveyed):'<span class="pna">—</span>'}</td>
       <td class="r" style="white-space:nowrap;"><strong>${_bmoney(totUsd)}</strong></td>
     </tr></tfoot></table></div>
     ${_billFoot(all.length,all.length,'bill-outcome-tbl','cost by outcome')}`

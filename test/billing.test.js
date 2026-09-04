@@ -402,3 +402,36 @@ test('a derivable rule keeps its chip but stops restating the charge type', () =
   const out = B.reconcile([line({ subtype: 'Travel', units: -9 })], [survey()]);
   assert.ok(out[0].flags.includes('travel_adder'), 'the flag survives for the chip');
 });
+
+test('per survey means per PROPERTY, in the rail and the outcome lens alike', () => {
+  // Every work subtype bills at the same rate, so dividing by visits makes the
+  // figure improve as rework rises: in July cleanup hit 1.65 visits per
+  // property and per-visit FELL while per-property climbed $97. A cost metric
+  // that gets better as quality gets worse is worse than none.
+  const ls = [
+    line({ subtype: 'Base', line: 1 }),
+    line({ subtype: 'Partial Survey', line: 2 }),   // same rate, same account
+  ];
+  const out = B.reconcile(ls, [survey()]);
+  const s = B.summarize(out);
+  assert.equal(s.surveyed, 1, 'one property');
+  assert.equal(s.surveys, 2, 'two billed visits');
+  assert.equal(s.perSurvey, 568, 'the property carries its own rework');
+  assert.equal(s.perVisit, 284, 'per-visit is blind to it, which is the point');
+  // and the outcome lens must not carry a second definition of the same words
+  const g = B.byOutcome(out)[0];
+  assert.equal(g.perSurvey, s.perSurvey);
+});
+
+test('per live survey drops the properties whose project died, not the spend', () => {
+  const out = B.reconcile([
+    line({ name: 'Jane Smith', address: '123 Main St, Springfield', line: 1 }),
+    line({ name: 'Otto Prewitt', address: '9 Kiln Rd, Millbrook', line: 2 }),
+  ], [survey(), survey({ contact: 'Otto Prewitt', address: '9 Kiln Rd Millbrook, IL 62704', project_status: 'Canceled' })]);
+  const s = B.summarize(out);
+  assert.equal(s.surveyed, 2);
+  assert.equal(s.liveSurveyed, 1);
+  // same numerator in both: the dead survey's cost lands on the live one
+  assert.equal(s.perSurvey, 284);
+  assert.equal(s.perLiveSurvey, 568);
+});
