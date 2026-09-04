@@ -290,6 +290,24 @@ test('Salesforce always wins: the EPC registry is only tried where SF has nothin
   assert.ok(!out[0].flags.includes('epc_account'));
 });
 
+test('the EPC chip covers every line the account drew, not just the visit', () => {
+  // Work-only, the chip reported $9,203 against the $11,077 the outcome lens
+  // showed for the same population. no_sf_match beside it stays work-only on
+  // purpose: that rule asks whether a survey exists, which only a visit can
+  // answer, where this one says whose project the account is.
+  const out = B.reconcile([
+    line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown', subtype: 'Base', line: 1 }),
+    line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown', subtype: 'Travel', units: -9, line: 2 }),
+    line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown', subtype: 'Demob', units: -4.45, line: 3 }),
+  ], [survey()], [epc()]);
+  assert.deepEqual(out.map(l => l.flags.includes('epc_account')), [true, true, true]);
+  // and the chip's total is the group's total
+  const flagged = out.filter(l => l.flags.includes('epc_account'));
+  const groups = B.byOutcome(out);
+  const g = groups.find(x => x.status === B.OUTCOME_EPC);
+  assert.equal(flagged.length, g.n, 'chip and outcome group must count the same lines');
+});
+
 test('an EPC-matched line is matched, so it stops reading as a missing record', () => {
   const l = line({ name: 'Ada Vance', address: '77 Elm Ave, Rivertown' });
   const out = B.reconcile([l], [survey()], [epc()]);
