@@ -1441,6 +1441,69 @@
    "opp_stage": "PTO Approved",
    "sales_rep": "SUNDER",
    "financier": "GoodLeap (TPO)"
+  },
+  {
+   "project": "220GRAND",
+   "contact": "Ian Randall",
+   "address": "220 Ginger Dr Auburn, CA 95603",
+   "project_status": "In Progress",
+   "opp_stage": "Closed Won",
+   "sales_rep": "Marc Lui",
+   "financier": ""
+  },
+  {
+   "project": "3155CLOU",
+   "contact": "Jeffrey Clough",
+   "address": "31551 Poppy St Winchester, CA 92596",
+   "project_status": "In Progress",
+   "opp_stage": "Closed Won",
+   "sales_rep": "Jacob Keller",
+   "financier": ""
+  },
+  {
+   "project": "100CKALE",
+   "contact": "Katie Kale",
+   "address": "100 Chubb Rd Auburn, CA 95603",
+   "project_status": "In Progress",
+   "opp_stage": "Closed Won",
+   "sales_rep": "Marc Lui",
+   "financier": ""
+  },
+  {
+   "project": "827SLAMA",
+   "contact": "Ken Lamarche",
+   "address": "827 S Knickerbocker Dr Sunnyvale, CA 94087",
+   "project_status": "Canceled",
+   "opp_stage": "Closed Lost",
+   "sales_rep": "Nathan Porter",
+   "financier": ""
+  },
+  {
+   "project": "410DNASH",
+   "contact": "Mohamed Nasher",
+   "address": "410 Duvall Ct Benicia, CA 94510",
+   "project_status": "Canceled",
+   "opp_stage": "Closed Lost",
+   "sales_rep": "Justin Agee",
+   "financier": ""
+  },
+  {
+   "project": "331PCAST",
+   "contact": "Aureliano Castro Garcia",
+   "address": "331 Pickwood Ln Stockton, CA 95207",
+   "project_status": "Canceled",
+   "opp_stage": "Closed Lost",
+   "sales_rep": "Justin Agee",
+   "financier": ""
+  },
+  {
+   "project": "2795LOWE",
+   "contact": "Julian Lowery",
+   "address": "2795 Romora Bay Dr Pittsburg, CA 94565",
+   "project_status": "Canceled",
+   "opp_stage": "Closed Lost",
+   "sales_rep": "Nicholas Nunez",
+   "financier": ""
   }
  ]
 }
