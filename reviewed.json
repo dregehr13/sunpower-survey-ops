@@ -1,0 +1,12 @@
+{
+ "_comment": "Manually-cleared billing charges — a line checked by hand and confirmed real, kept out of \"No Salesforce record\" even though the automatic matcher can't find it. Keyed to the exact billing line (name/address/date/subtype), not an account, and carries no survey data of its own. See reviewedKey() and reconcile() in lib/billing.cjs.",
+ "lines": [
+  {
+   "name": "Gypsy Warrick",
+   "address": "63325 Gypsy Ln, Coos Bay",
+   "date": "2026-03-15",
+   "subtype": "Base",
+   "note": "In data.json as project GYPSWARR (task a03US00000pk54H), but Salesforce's own address field is missing the house number (\"Gypsy Dr Coos Bay, OR 97420\"), which fails the match's street-number gate. last_comment on that row reads \"Per Radicl's email I uploaded the survey report...\", confirming Radicl performed and billed the survey. Doug confirmed 2026-09-04; Salesforce can't be corrected."
+  }
+ ]
+}

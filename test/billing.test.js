@@ -389,6 +389,38 @@ test('both registries are optional and absent ones change nothing', () => {
   }
 });
 
+// ── Manually-cleared charges (reviewed.json) ───────────────────────────────
+// A charge someone checked against Salesforce by hand and confirmed real,
+// kept out of "No Salesforce record" even though the automatic matcher can't
+// find it — e.g. Salesforce's own address is missing its house number, which
+// fails the match's street-number gate and can't be fixed on that side.
+test('a reviewed line drops no_sf_match without becoming a match', () => {
+  const l = line({ name: 'Gypsy Warrick', address: '63325 Gypsy Ln, Coos Bay', date: '2026-03-15' });
+  const out = B.reconcile([l], [survey({ contact: 'nobody here', address: 'nowhere' })], [], [],
+    [{ name: 'Gypsy Warrick', address: '63325 Gypsy Ln, Coos Bay', date: '2026-03-15', subtype: 'Base', note: 'confirmed' }]);
+  assert.equal(out[0].match, null, 'it asserts nothing about the survey itself');
+  assert.equal(out[0].reviewed, true);
+  assert.equal(out[0].reviewNote, 'confirmed');
+  assert.ok(!out[0].flags.includes('no_sf_match'));
+});
+
+test('an unreviewed line with the same shape still flags', () => {
+  // The key is exact — name, address, date and subtype all have to agree, or
+  // a loose match would risk quietly clearing a charge nobody actually checked.
+  const l = line({ name: 'Gypsy Warrick', address: '63325 Gypsy Ln, Coos Bay', date: '2026-03-16' });
+  const out = B.reconcile([l], [survey({ contact: 'nobody here', address: 'nowhere' })], [], [],
+    [{ name: 'Gypsy Warrick', address: '63325 Gypsy Ln, Coos Bay', date: '2026-03-15', subtype: 'Base' }]);
+  assert.ok(out[0].flags.includes('no_sf_match'));
+});
+
+test('a real Salesforce match always wins over a reviewed clearance', () => {
+  const l = line();
+  const out = B.reconcile([l], [survey()], [], [],
+    [{ name: l.name, address: l.address, date: l.date, subtype: l.subtype }]);
+  assert.equal(out[0].matchSource, 'sf');
+  assert.ok(!out[0].reviewed, 'a genuine match needs no manual clearance');
+});
+
 test('a derivable rule keeps its chip but stops restating the charge type', () => {
   // travel_adder IS isTravel(l), the same test the Charge column prints, so
   // showing it again on a Travel row says nothing. It still needs the flag:
