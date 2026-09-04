@@ -1232,6 +1232,121 @@ labelled. Things not to undo:
     vocabulary as Performance, Quality and the drill drawer. The charges table
     had no sort at all before, only a hardcoded newest-first
 
+### The 2026-09-04 YTD import (one statement, four match passes)
+Radicl replaced the monthly remittances with a year-to-date statement and Doug
+moved to it wholesale: the two monthlies were dropped rather than merged,
+because every one of their 624 lines is contained in the YTD file. Monthly
+statements resume from here. Things not to undo:
+- **The YTD export is shaped differently from the monthlies and each
+  difference failed silently.** All three fixes are needed for any future
+  statement of either shape:
+  - the date column heads **`Date`**, not `Mission Date`. Added as an alias in
+    `VENDORS.radicl.columns`, which is where the existing comment says vendor
+    renames belong. The two are the same field: 624 of 624 real charges agree
+    exactly, and the ten apparent mismatches were repeat customers paired on a
+    date-blind key
+  - it ships dates as **real date cells**, so SheetJS returns an Excel serial
+    and `isoDate()` (string-only) still returned nothing even after the alias.
+    It handles serials now; both shapes work
+  - **`Beginning Balance` and `Ending Balance` sit inside the data area** and
+    parsed as charges. The Ending Balance alone was **$11,986 of spend that
+    does not exist**
+- **It has no Address column, and `scoreMatch()` gates on street number**, so
+  importing it as-is took Salesforce matching from **97.7% to 0.1%**. Addresses
+  are backfilled from Radicl's own missions export, joined on name and on
+  nearest mission date where a name recurs. **Validated rather than trusted**:
+  against the 624 charges the monthlies also carry, 582 match the same
+  Salesforce row, **0 match a different one**, 42 decline. It never picks
+  wrong, it only declines, which is the correct direction to fail. Ask Radicl
+  for Address on the YTD export and this step goes away
+- **52 lines are billed at $0.00** — 31 Base, 11 Partial Survey, 10 Go Back,
+  and 42 of the 52 in August. Real in the file, not a parse artefact. Doug's
+  read is that these are go-backs Radicl absorbed for their own errors; the 31
+  zero-charge *Base* surveys concentrated in one month do not fit that and are
+  unexplained. `isCharge()` excludes them (units must be < 0), which is why the
+  no-match chip reads 51 lines where 83 work lines have no match
+
+### Billing service lines (added 2026-09-04)
+A vendor can bill more than one book of business: the YTD statement carries
+**O&M** visits (Quality Check, Service — 10 lines, $5,608, all January) beside
+site surveys. Averaging those into a per-survey figure overstates what a survey
+costs, so `services` is part of the vendor spec, `lineService()` reads the
+statement's `type` column, and **the Billing page opens on the survey book**.
+- The default hides money, so it has to be visible: it is a segmented control
+  at the head of the bar (Site survey · O&M · All), not a quiet filter
+- Anything unrecognised lands in `other` and becomes its own segment rather
+  than being absorbed into the survey book, where it would silently move the
+  per-survey cost
+- The Charge and State dropdowns rebuild from the selected segment. Built from
+  the whole history, the survey view offered Quality Check and Service as
+  options that filtered to nothing
+- Top-ups are money in, not work out. They are excluded from every dollar
+  figure and are never a segment
+
+### Two account registries, and the order of the match passes
+`reconcile(lines, surveyRows, epcRows, archiveRows)` tries four things in a
+fixed order: **Salesforce → archive → EPC → unmatched**. Both registries are
+optional, both are committed, and a missing one leaves those lines reading
+exactly as they did before it existed. Things not to undo:
+- **Salesforce always wins.** An SF row carries the survey resource, the dates
+  and the resurvey history; a registry row carries none of that. A line that
+  CAN match the live export must, or the page loses what it matched for. Tested
+  in both directions
+- **`archive.json` — projects older than `DATA_CUTOFF`.** A vendor bills in the
+  month it surveys, not the month the project started, so a January statement
+  carries work on projects sold the previous summer. Those sit outside
+  data.json and read as "No Salesforce record": 49 charge lines, $10,846.
+  **Moving `DATA_CUTOFF` would fix the attribution and restate first pass
+  yield, cycle time and every trend line to do it.** Instead a 20,007-row
+  export is used ONCE by `scripts/build-archive.cjs`, and what is committed is
+  not the export but the accounts that actually resolved something: **27 rows,
+  7KB**. Re-runnable and additive. Nothing on the metrics side can see it.
+  A wider export buys nothing — the oldest resolved project starts 2025-05-28,
+  and a 4-year pull returned the same 27 accounts a Jan-2025 pull did
+- **`epc.json` — projects sold through an external EPC.** They never reach the
+  Site Survey export because it is scoped to SunPower's own survey tasks, and
+  we are still billed for surveying them: 48 lines, $11,077. Built by
+  `scripts/build-epc.cjs`. **Cost only** — the export carries no survey
+  resource or dates, so these can never feed cycle time or first pass yield
+- **Archive before EPC**, because an archived project is ours and carries a
+  real status, so it groups by outcome normally. An EPC line is its own outcome
+  group instead: both populations contain canceled projects, and mixing them
+  would make "N% of spend went to canceled projects" a statement about neither
+- **The EPC group is named for the population and the chip for the rule**, the
+  same split `No project matched` / `No Salesforce record` already keeps
+- **`epc_account` is NOT inside the `isWork` block**, unlike `no_sf_match`
+  beside it. That rule asks whether a survey exists behind a visit, which only
+  a work line can answer; this one says whose project the account is, which is
+  true of every line it drew. Work-only, the chip read $9,203 against the
+  $11,077 the outcome lens showed for the same population
+- **An archive match gets no chip.** It is not an exception: the charge is
+  ordinary, there is nothing to review, and its outcome group is its real
+  project status. `l.archived` labels the row under the project name instead
+
+### A rule that restates the charge type does not print twice (2026-09-04)
+`travel_adder` is `isTravel(l)`, which is the same test the Charge column
+prints: **672 flagged, 672 with subtype Travel, zero either way**. It keeps its
+chip, because that is where the $113,033 is read, but it no longer repeats
+itself in the row's "Also flagged" cell nine pixels from the column that
+already says Travel. `derivable: true` on the rule marks that, rather than the
+table hardcoding a name. **Only travel qualifies**: `own_defect_rebill` is 18
+of 49 Go Backs, a real subset, and `cleanup_of_other` is every Partial Survey
+today but asserts the original was someone ELSE'S and can stop being 1-1 the
+moment the vendor finishes one of its own. A test pins both as not derivable.
+
+### A duplicate charge shows the charge it repeats (2026-09-04)
+A duplicate is a PAIR, and the whole question is the gap: same day reads as a
+double bill, three months apart reads as a second visit, and the rule cannot
+tell them apart — the same false-positive trap that already forced
+Base→Go Back out of this rule. Each flagged line carries the charge it repeats:
+date, amount and the gap in days, in place of the bare "after Base Jul 13" a
+plain `repeat_visit` gets. It renders in the cell, so **Copy table carries it
+with no separate path**, which is what makes it a list to hand a vendor. Live
+the 16 split same day 5 / 1-2 days 2 / 12-36 days 6 / 65+ days 3, and the
+amount matters on its own: one repeats a Go Back billed at $180 rather than the
+$284 every other Go Back carries. It states the gap and stops — which ones are
+really duplicates is the vendor's to answer.
+
 ### Entrance animation on the two async pages
 `animateSections()` runs once in the `requestAnimationFrame` after
 `renderPage()`. Billing and Resource render a **"Loading…" placeholder** first
