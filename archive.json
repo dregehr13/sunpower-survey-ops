@@ -1,0 +1,277 @@
+{
+ "_comment": "Projects older than DATA_CUTOFF that a billing line matched. Built by scripts/build-archive.cjs from a wide Salesforce export and committed; the export itself is not kept. Read ONLY by billing reconciliation, and only where the live export has nothing, so no survey metric can see these rows. Re-run after importing a statement that reaches further back than the last one did — it appends.",
+ "updated": "2026-09-04",
+ "source": "report1788538903698.xls",
+ "accounts": [
+  {
+   "task_id": "a03US00000YWWcJ",
+   "contact": "John Sartorio",
+   "address": "104 Atlanta Pl Pittsburgh, PA 15228",
+   "project": "104ASART",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-05-28",
+   "complete": "2025-05-29"
+  },
+  {
+   "task_id": "a03US00000omxCc",
+   "contact": "Matthias Rezzato",
+   "address": "21 south circle Dr santa cruz, CA 95060",
+   "project": "21SOMATT",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-06-04",
+   "complete": "2025-06-06"
+  },
+  {
+   "task_id": "a03US00000Z5ejs",
+   "contact": "Ruchella Howell",
+   "address": "207 W N 2nd St Georgetown, IL 61846",
+   "project": "207WHOWE",
+   "project_status": "At-Risk",
+   "resource": "",
+   "start": "2025-06-07",
+   "complete": "2025-06-11"
+  },
+  {
+   "task_id": "a03US00000oxQsy",
+   "contact": "Darlene and Daniel LaMaster",
+   "address": "509 Sycamore Shoals Trace LOUISVILLE, KY 40223",
+   "project": "509SLAMA - Battery Only",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-06-17",
+   "complete": "2025-06-20"
+  },
+  {
+   "task_id": "a03US00000omt76",
+   "contact": "Domingos Pires",
+   "address": "169 Cedar Street Milford, MA 01757",
+   "project": "169CDOMI",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-06-28",
+   "complete": "2025-07-01"
+  },
+  {
+   "task_id": "a03US00000omtXL",
+   "contact": "John Kim RETROFIT, BATTERY",
+   "address": "7561 Shorthorn St Chino, CA 91708",
+   "project": "7561JOHN",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-07-15",
+   "complete": "2025-07-18"
+  },
+  {
+   "task_id": "a03US00000omvhH",
+   "contact": "Danny Diaz",
+   "address": "19651 Jeffrey Cir Cerritos, CA 90703",
+   "project": "1965DANN",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-08-22",
+   "complete": "2025-08-29"
+  },
+  {
+   "task_id": "a03US00000omxXR",
+   "contact": "Jordan Maus",
+   "address": "64 Summit Avenue Redlands, CA 92373",
+   "project": "64SUJORD",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-08-22",
+   "complete": "2025-08-26"
+  },
+  {
+   "task_id": "a03US00000oxPAW",
+   "contact": "Matt Halker",
+   "address": "11314 Antelope Ln Parker, CO 80138",
+   "project": "1131HALK",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-09-09",
+   "complete": "2025-09-11"
+  },
+  {
+   "task_id": "a03US00000omizw",
+   "contact": "Richard Morgan",
+   "address": "414 Harrison St Port Clinton, OH 43452",
+   "project": "414HRICH",
+   "project_status": "Complete",
+   "resource": "",
+   "start": "2025-09-12",
+   "complete": "2025-09-23"
+  },
+  {
+   "task_id": "a03US00000omugP",
+   "contact": "Paul Beckwith",
+   "address": "3674 Norwegian Hollow Rd Dodgeville, WI 53533",
+   "project": "3674PAUL",
+   "project_status": "Complete",
+   "resource": "",
+   "start": "2025-09-12",
+   "complete": "2025-09-19"
+  },
+  {
+   "task_id": "a03US00000oxTUF",
+   "contact": "Chris Laine",
+   "address": "19544 53rd Ave NE Lake Forest Park, WA 98155",
+   "project": "1954LAIN",
+   "project_status": "Change Order",
+   "resource": "",
+   "start": "2025-10-24",
+   "complete": "2025-10-25"
+  },
+  {
+   "task_id": "a03US00000omsgS",
+   "contact": "Christopher Williams",
+   "address": "3538 NE 65th Ave Portland, OR 97213",
+   "project": "3538CHRI",
+   "project_status": "Change Order",
+   "resource": "",
+   "start": "2025-11-26",
+   "complete": "2025-11-29"
+  },
+  {
+   "task_id": "a03US00000kq2JQ",
+   "contact": "Stephen Johnston",
+   "address": "2280 Fallview Dr Pueblo, CO 81006",
+   "project": "2280JOHN",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-12-10",
+   "complete": "2026-01-30"
+  },
+  {
+   "task_id": "a03US00000kpimL",
+   "contact": "Kate Kapner",
+   "address": "62 Mt Hunger Rd Monterey, MA 1245",
+   "project": "62MTKAPN",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-10",
+   "complete": "2025-12-12"
+  },
+  {
+   "task_id": "a03US00000ku8rf",
+   "contact": "Rebecca Kilpatrick",
+   "address": "500 Ranch Springs Rd Laporte, CO 80535",
+   "project": "500RKILP",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-11",
+   "complete": "2026-01-14"
+  },
+  {
+   "task_id": "a03US00000omrtW",
+   "contact": "Donnie Kilgore",
+   "address": "1947 Harbor Dr Hemet, CA 92545",
+   "project": "1947DONN",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-12-15",
+   "complete": "2026-01-10"
+  },
+  {
+   "task_id": "a03US00000lKfC5",
+   "contact": "Andrea Calderon",
+   "address": "3739 W Meyers Road San Bernadino, CA 92407",
+   "project": "3739CALD",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-17",
+   "complete": "2026-01-08"
+  },
+  {
+   "task_id": "a03US00000lLrJP",
+   "contact": "Jeremy Rosario",
+   "address": "1521 Ravine St Janesville, WI 53548",
+   "project": "1521ROSA",
+   "project_status": "Complete",
+   "resource": "",
+   "start": "2025-12-17",
+   "complete": "2026-01-29"
+  },
+  {
+   "task_id": "a03US00000lZwnf",
+   "contact": "Albert Rivera - Luna",
+   "address": "13626 Walnut St Whittier, CA 90602",
+   "project": "1362RIVE",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-22",
+   "complete": "2026-01-02"
+  },
+  {
+   "task_id": "a03US00000lZvCB",
+   "contact": "Angelo Spagnoli",
+   "address": "2671 18th Ave San Francisco, CA 94116",
+   "project": "2671SPAG",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-22",
+   "complete": "2026-01-02"
+  },
+  {
+   "task_id": "a03US00000leBg4",
+   "contact": "Ross Campbell",
+   "address": "8951 Stallings Drive Providence Village, TX 76227",
+   "project": "8951CAMP",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-23",
+   "complete": "2026-01-17"
+  },
+  {
+   "task_id": "a03US00000ls6YT",
+   "contact": "Chistopher Ndidi",
+   "address": "2291 North Beechwood Avenue Rialto, CA 92377",
+   "project": "2291NDID",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2025-12-29",
+   "complete": "2026-01-17"
+  },
+  {
+   "task_id": "a03US00000lsjrY",
+   "contact": "Jacek Balcerkiewicz",
+   "address": "1728 Brill St Philadelphia, PA 19124",
+   "project": "1728BALC",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2025-12-29",
+   "complete": ""
+  },
+  {
+   "task_id": "a03US00000oE0Zf",
+   "contact": "Myckenzie Calhoun",
+   "address": "8 View Cir Oreana, IL 62554",
+   "project": "8VIECALH",
+   "project_status": "Canceled",
+   "resource": "",
+   "start": "2026-02-04",
+   "complete": "2026-02-11"
+  },
+  {
+   "task_id": "a03US00000ovuGt",
+   "contact": "Patrick Landis",
+   "address": "195 River St Fillmore, CA 93015",
+   "project": "195RLAND",
+   "project_status": "In Progress",
+   "resource": "",
+   "start": "2026-02-24",
+   "complete": "2026-02-25"
+  },
+  {
+   "task_id": "a03US00000xySlr",
+   "contact": "Larry and Wife Turley",
+   "address": "1372 Fincastle Tpke Tazewell, VA 24651",
+   "project": "1372TURL",
+   "project_status": "In Progress",
+   "resource": "Radicl Services",
+   "start": "2026-08-14",
+   "complete": "2026-08-24"
+  }
+ ]
+}

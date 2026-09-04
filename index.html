@@ -8658,6 +8658,7 @@ function _resRows(key){
 let _billing = null, _billingLoad = null, _billingErr = null;
 let _billRecon = null, _billReconFor = null;   // memoized reconcile of the whole history
 let _epc = [];                                 // external EPC account registry (epc.json)
+let _archive = [];                             // pre-cutoff project registry (archive.json)
 let _billImpFile = null;
 // One filter object, one Reset. Deliberately NOT persisted to ops_filters:
 // that store is the survey filter bar's, whose region/office/status mean
@@ -8690,8 +8691,13 @@ function billingEnsure(){
         .then(r=>{ if(!r.ok) throw new Error('no billing.json ('+r.status+')'); return r.json(); }),
       fetch('epc.json',{cache:'no-store'})
         .then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('archive.json',{cache:'no-store'})
+        .then(r=>r.ok?r.json():null).catch(()=>null),
     ])
-    .then(([j,e])=>{ _billing=j; _epc=(e&&Array.isArray(e.accounts))?e.accounts:[]; _billingErr=null; _billRecon=null; })
+    .then(([j,e,a])=>{ _billing=j;
+      _epc=(e&&Array.isArray(e.accounts))?e.accounts:[];
+      _archive=(a&&Array.isArray(a.accounts))?a.accounts:[];
+      _billingErr=null; _billRecon=null; })
     .catch(e=>{ _billingErr=e.message; })
     // Re-render whatever page is waiting on this, not always Billing. The
     // Resource page's Vendor cost column reads the same history and used to sit
@@ -8726,7 +8732,7 @@ const _billAcctState = entry => { const m=(entry.lines||[]).find(l=>l.match); re
 function billingReconciled(){
   if(!_billing) return [];
   if(!_billRecon || _billReconFor!==allRows){
-    _billRecon = OpsBilling.reconcile(_billing.lines, allRows, _epc);
+    _billRecon = OpsBilling.reconcile(_billing.lines, allRows, _epc, _archive);
     _billReconFor = allRows;
   }
   return _billRecon;
@@ -9112,7 +9118,7 @@ function _renderBillingTable(scoped,meta){
         const sfName = m ? esc(m.project||m.contact||'—') : '';
         const sf = m
           ? (sfHref ? `<a href="${sfHref}" target="_blank" rel="noopener" class="drill-proj-link">${sfName}</a>` : sfName)
-            +`<div class="cmeta">${l.epc?'external EPC':esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
+            +`<div class="cmeta">${l.epc?'external EPC':l.archived?'before the export window':esc(m.resource||'no resource')}${m.complete?' · done '+fmtDateShort(m.complete):''}</div>`
           : `<span class="pna">no match</span>`;
         const others=(l.flags||[]).filter(f=>f!==billF.flag).map(f=>{
           const em=OpsBilling.exceptionMeta(f);

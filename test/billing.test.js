@@ -341,3 +341,46 @@ test('EPC spend is its own outcome group, not folded into the SunPower statuses'
   assert.equal(e.epc, true);
   assert.equal(e.dead, false, 'an EPC group is not a SunPower loss, whatever its own status says');
 });
+
+// ── Projects older than the dashboard's window ────────────────────────────
+// A vendor bills in the month it surveys, not the month the project started,
+// so a January statement carries work on projects sold the previous summer.
+const old = (o = {}) => ({ task_id: 'a03OLD', contact: 'Otto Prewitt', address: '9 Kiln Rd',
+  project: '9KIPREW', project_status: 'Complete', start: '2025-06-01', ...o });
+
+test('the live export always wins over the archive', () => {
+  // The archive row has no resurvey history and no resource; a line that can
+  // match the live export must, or the page loses what it matched for.
+  const l = line({ name: 'Jane Smith', address: '123 Main St, Springfield' });
+  const out = B.reconcile([l], [survey()], [], [old({ contact: 'Jane Smith', address: '123 Main St' })]);
+  assert.equal(out[0].matchSource, 'sf');
+  assert.ok(!out[0].archived);
+});
+
+test('the archive is tried before the EPC registry', () => {
+  // Both could match. An archived project is ours and carries a real status,
+  // so it groups by outcome normally; an EPC one cannot.
+  const l = line({ name: 'Otto Prewitt', address: '9 Kiln Rd, Millbrook' });
+  const out = B.reconcile([l], [survey()], [epc({ contact: 'Otto Prewitt', address: '9 Kiln Rd' })], [old()]);
+  assert.equal(out[0].matchSource, 'archive');
+  assert.ok(!out[0].epc);
+  assert.ok(out[0].flags.includes('archived_project'));
+  assert.ok(!out[0].flags.includes('no_sf_match'));
+});
+
+test('an archived match groups by its own project status, not a bucket of its own', () => {
+  const out = B.reconcile([line({ name: 'Otto Prewitt', address: '9 Kiln Rd, Millbrook' })],
+    [survey()], [], [old({ project_status: 'Complete' })]);
+  const g = B.byOutcome(out);
+  assert.ok(g.some(x => x.status === 'Complete'));
+  assert.ok(!g.some(x => x.status === B.OUTCOME_EPC));
+});
+
+test('both registries are optional and absent ones change nothing', () => {
+  const l = line({ name: 'Otto Prewitt', address: '9 Kiln Rd, Millbrook' });
+  for (const args of [[[l], [survey()]], [[l], [survey()], []], [[l], [survey()], [], []]]) {
+    const out = B.reconcile(...args);
+    assert.ok(out[0].flags.includes('no_sf_match'));
+    assert.ok(!out[0].archived);
+  }
+});
