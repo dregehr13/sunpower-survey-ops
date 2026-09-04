@@ -8662,7 +8662,12 @@ let _billImpFile = null;
 // that store is the survey filter bar's, whose region/office/status mean
 // nothing to an invoice line, and a remembered date range on a page you visit
 // monthly is a trap rather than a convenience.
-const BILL_F0 = { flag:'all', vendor:'all', statement:'all', subtype:'all', state:'all', from:'', to:'', q:'' };
+// `service` defaults to the survey book rather than 'all'. This page's job is
+// what a site survey costs, and a vendor's other service lines (Radicl bills
+// O&M visits too) would otherwise be averaged into the per-survey figure. A
+// default that hides money has to be visible, which is why it is a segmented
+// control at the head of the bar and not a quiet filter.
+const BILL_F0 = { flag:'all', service:'survey', vendor:'all', statement:'all', subtype:'all', state:'all', from:'', to:'', q:'' };
 let billF = { ...BILL_F0 };
 let billLens = 'charges';            // charges | accounts | outcome
 let billSort = { charges:{k:'date',asc:false}, accounts:{k:'usd',asc:false}, outcome:{k:'usd',asc:false} };
@@ -8723,6 +8728,7 @@ function billScoped(){
   const q=(billF.q||'').toLowerCase();
   return billingReconciled().filter(l=>{
     if(!OpsBilling.isCharge(l)) return false;
+    if(billF.service!=='all' && OpsBilling.lineService(l)!==billF.service) return false;
     if(billF.vendor!=='all' && (l.vendor||OpsBilling.DEFAULT_VENDOR)!==billF.vendor) return false;
     if(billF.statement!=='all' && l.statement!==billF.statement) return false;
     if(billF.from && String(l.date||'')<billF.from) return false;
@@ -8858,13 +8864,18 @@ function _renderBillBar(){
   // Subtypes in taxonomy order (first visit, cleanup, rework, travel, other)
   // rather than alphabetically — the order says what the charges mean.
   const ROLE_ORDER=['first','cleanup','rework','travel','other'];
-  const subtypes=[...new Set(charges.map(l=>l.subtype||l.type||'').filter(Boolean))]
+  // Scoped to the selected service: with the survey segment active, O&M's
+  // subtypes filter to nothing, and an option that can only return an empty
+  // table is the same defect as a control that does nothing.
+  const svcCharges = billF.service==='all' ? charges
+    : charges.filter(l => OpsBilling.lineService(l)===billF.service);
+  const subtypes=[...new Set(svcCharges.map(l=>l.subtype||l.type||'').filter(Boolean))]
     .sort((a,b)=>{
-      const ra=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:a,vendor:charges[0]&&charges[0].vendor}));
-      const rb=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:b,vendor:charges[0]&&charges[0].vendor}));
+      const ra=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:a,vendor:svcCharges[0]&&svcCharges[0].vendor}));
+      const rb=ROLE_ORDER.indexOf(OpsBilling.subtypeRole({subtype:b,vendor:svcCharges[0]&&svcCharges[0].vendor}));
       return ra-rb || a.localeCompare(b);
     });
-  const states=[...new Set(charges.map(_billState).filter(Boolean))].sort();
+  const states=[...new Set(svcCharges.map(_billState).filter(Boolean))].sort();
 
   const sel=(key,label,opts)=>{
     const on=billF[key]&&billF[key]!=='all';
@@ -8876,7 +8887,19 @@ function _renderBillBar(){
   };
   const dirty=Object.keys(BILL_F0).some(k=>billF[k]!==BILL_F0[k]);
 
+  // Service segments, in spec order, offered only where there is more than one
+  // book of business to choose between — a control that changes nothing is not
+  // rendered. Topups are money in, not work out, and are never a segment.
+  const svcCounts = {};
+  charges.forEach(l => { const k = OpsBilling.lineService(l); svcCounts[k] = (svcCounts[k]||0)+1; });
+  const svcKeys = Object.keys(svcCounts);
+  const svcBtn = (v,l) => `<button class="fbtn${billF.service===v?' fbtn-active':''}" onclick="setBillF('service','${v}')">${esc(l)}</button>`;
+
   host.innerHTML=`<div class="fbar">
+    ${svcKeys.length>1?`<div class="fbtn-group" role="group" aria-label="Service line">
+      ${svcKeys.map(k=>svcBtn(k, OpsBilling.SERVICE_LABELS[k]||k)).join('')}
+      ${svcBtn('all','All')}
+    </div><div class="fsep"></div>`:''}
     <div class="fbtn-group" role="group" aria-label="Mission date range">
       <button class="fbtn${isAll?' fbtn-active':''}" onclick="setBillDates('','')">All</button>
       <button class="fbtn${isRange(d30)?' fbtn-active':''}" onclick="setBillDates('${d30.from}','${d30.to}')">30d</button>
