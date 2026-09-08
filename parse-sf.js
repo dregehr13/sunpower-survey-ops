@@ -244,6 +244,15 @@ rows.forEach(r => { if (r.task_id) idCounts[r.task_id] = (idCounts[r.task_id] ||
 const dupIds = Object.entries(idCounts).filter(([, n]) => n > 1);
 if (dupIds.length) warnings.push(`${dupIds.length} duplicate project id(s): ${sample(dupIds, ([id, n]) => `${id} ×${n}`)}`);
 
+// Same project, more than one OPEN survey task (distinct task ids). Keyed on
+// task_id, the dup check above never sees this — two TaskRay tasks on one
+// project with identical data. Only flags rows still open, since a project
+// legitimately carries an old completed task plus a live resurvey task.
+const openByProject = {};
+rows.forEach(r => { if (r.project && !OpsMetrics.isComplete(r)) (openByProject[r.project] = openByProject[r.project] || []).push(r); });
+const dupProjects = Object.entries(openByProject).filter(([, rs]) => rs.length > 1);
+if (dupProjects.length) warnings.push(`${dupProjects.length} project(s) with more than one open survey task (possible SF duplicate): ${sample(dupProjects, ([p, rs]) => `${p} (${rs.map(r => SF_TASK + r.task_id + '/view').join(' , ')})`)}`);
+
 // Unrecognized resource values
 const KNOWN_RESOURCES = new Set(['', 'Sales Rep', 'Radicl Services', 'SunPower Surveyor']);
 const badResources = [...new Set(rows.map(r => r.resource))].filter(v => !KNOWN_RESOURCES.has(v));
