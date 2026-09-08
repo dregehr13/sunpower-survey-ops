@@ -25,7 +25,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
-- Metric definitions (DATA_CUTOFF, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen/hasRepGrace/inRepGrace, avg/med/pct, hasResurveySig, isResurveyDefect, isOpenResurvey) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- Metric definitions (DATA_CUTOFF, inScope/PARKED_LIST, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen/hasRepGrace/inRepGrace, avg/med/pct, hasResurveySig, isResurveyDefect, isOpenResurvey) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
 - **Three shared libraries, not one.** `lib/metrics.cjs` answers "how is the
   survey work going". `lib/coverage.cjs` answers "who should be doing it and
   can they reach it" — distance, market clustering, surveyor capacity.
@@ -280,6 +280,18 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       past-tense state, never a bare "at risk" (a rep-chase note saying "the
       customer does **not** want to cancel" must not trip it). History-wide the
       phrasing is on 40 rows, 38 already Canceled. 1 live row (2615OKAF)
+    - **A parked List is out of scope entirely** — `PARKED_LIST` in
+      `lib/metrics.cjs` is `list === 'Inactive'` (task parked) or
+      `'Not Required'` (no survey needed), and `inScope` / `isWIP` /
+      `isOpenResurvey` all drop it unless the survey genuinely completed
+      (`isComplete` needs `list === 'Complete'`, which a parked row can't be).
+      195RLAND (Inactive, 195d, last touched 4/20) and 1372TURL were sitting
+      in the WIP queue reading Past due / New. index.html mirrors it in
+      `scopeRows()` (its own population gate — `loadAll` stays broad for
+      Billing's Canceled rows) and `wipFiltered()` now routes through `isWIP`.
+      Live: open WIP 67 → 65. No completion / FPY / cycle impact — parked rows
+      were never `isComplete`. `4936OLEM` (Inactive + status Complete) was
+      already out via the status gate
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing

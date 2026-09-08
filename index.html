@@ -1811,7 +1811,11 @@ PAGES.forEach(p => pageF[p] = GF);
 function scopeRows(){
   const s=GF&&GF.statuses;
   if(!Array.isArray(s)){ rows=allRows.slice(); return; }
-  rows = allRows.filter(r=>s.includes(r.project_status)||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
+  // A List of 'Inactive' (task parked) or 'Not Required' (no survey needed) is
+  // neither active work nor a finished survey — drop it from the scoped
+  // population unless the survey genuinely completed (isComplete requires List
+  // 'Complete', so a parked row can never satisfy the second clause).
+  rows = allRows.filter(r=>(s.includes(r.project_status)&&r.list!=='Inactive'&&r.list!=='Not Required')||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
 }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
@@ -2239,7 +2243,7 @@ function wipScoped(){
 // cards all describe. They used to disagree: only the table read this, so
 // filtering to one region left 1 row in the queue under a 113-open KPI row and
 // a 113-row age bar whose bands, when clicked, filtered a 1-row table.
-function wipFiltered(){ return wipScoped().filter(r=>r.start&&!isComplete(r)); }
+function wipFiltered(){ return wipScoped().filter(isWIP); }
 
 function onWipF(key,value){
   wipF[key]=value;
