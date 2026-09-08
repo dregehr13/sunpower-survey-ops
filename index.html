@@ -748,6 +748,13 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-split-bar>span{display:block;height:100%;}
 .res-split-key{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--muted);margin-bottom:2px;}
 .res-split-key b{color:var(--text);font-weight:700;}
+/* The trailing weekly-share strip under the split bar — the same story the
+   Trends "Survey resource mix" chart tells, compressed to say only "which way
+   is the mix moving" beside the current snapshot. No axis, no toggle. */
+.res-mix-strip{display:flex;align-items:stretch;gap:1px;height:32px;margin:8px 0 3px;}
+.res-mix-strip>div{flex:1;display:flex;flex-direction:column;min-width:0;}
+.res-mix-strip>div>span{display:block;width:100%;}
+.res-mix-cap{font-size:10px;color:var(--faint);}
 /* A GRID, not a flex row, so every band — name, share, rate, lead, the three
    measures, the note, the expander — sits at the same height in all three
    columns. Flex could only align the tops: the lead line wraps to two lines in
@@ -2634,6 +2641,7 @@ const TIP={
   p75:'75% of completed surveys finished at or under this cycle time.',
   p90:'90% of completed surveys finished at or under this cycle time. Useful for spotting a long tail the average hides.',
   resourceMix:'Share of completions in view by who performed the survey: sales rep, Radicl, or a SunPower surveyor.',
+  trResMix:'Each week’s completions split by who ran the survey, bucketed on the completion date. Share is a 100%-stacked bar; Count keeps real volume and adds a sales-rep-% line.',
 
   // ── Resurveys ──
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded from this page entirely: nothing was re-surveyed, so the survey did not fail.',
@@ -4292,6 +4300,11 @@ function setTrFlowView(v){ trFlowView=v; renderTrends(); }
 // it. Weekly-only: Daily mode always reads current-truth (Out by day).
 let trFlowCompletionBasis='current';
 function setTrFlowCompletionBasis(v){ trFlowCompletionBasis=v; renderTrends(); }
+// 'share' | 'count' — the resource-mix chart. Share is a 100%-stacked bar (the
+// "who's running the surveys, and how has that moved" question); count keeps
+// the zero baseline and carries a Sales-rep-% overlay line for the same read.
+let trResMixMode='share';
+function setTrResMixMode(v){ trResMixMode=v; renderTrends(); }
 function renderTrends(){
   const trendSrc=rows.filter(gfDim); // global region/resource/type filters apply
   if(!trendSrc.length){
@@ -4359,6 +4372,16 @@ function renderTrends(){
   const flowDays=[]; for(let i=0,n=Math.max(dayCount(flowFrom,flowTo)+1,1);i<n;i++) flowDays.push(isoAddD(flowFrom,i));
   const flowRangeLabel=hasDateRange?(fmtDateShort(flowFrom)+' – '+fmtDateShort(flowTo)):'last 8 weeks';
   const chartWD=Math.max(containerW, flowDays.length*15);
+
+  // Survey resource mix — completions per week bucketed by who ran them. Same
+  // colours as the Performance "Resource mix" cell, stack order rep→Radicl→SPWR.
+  const RESM3=['Sales Rep','Radicl Services','SunPower Surveyor'];
+  const RESM_C={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
+  const mixMap={};
+  trendDone.forEach(r=>{ const wk=weekOf(r.complete); if(!wk) return;
+    (mixMap[wk]||(mixMap[wk]={}))[r.resource]=(mixMap[wk]?.[r.resource]||0)+1; });
+  const mixTot=allWks.map(wk=>RESM3.reduce((a,res)=>a+(mixMap[wk]?.[res]||0),0));
+
   // Weekly rhythm always averages the trailing 8 weeks, independent of the
   // picker above — it's a "what's normal" chart, not a browsing one, and a
   // short custom range would give each weekday only one or two samples.
@@ -4443,6 +4466,24 @@ function renderTrends(){
         <div style="flex:0 0 40px;height:230px;"><canvas id="tr-vol-yL" width="40" height="230"></canvas></div>
         <div id="tr-vol-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:230px;position:relative;"><canvas id="tr-vol"></canvas></div></div>
         <div style="flex:0 0 46px;height:230px;"><canvas id="tr-vol-yR" width="46" height="230"></canvas></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="shead">
+        <div><div class="stitle">Survey resource mix</div><div class="ssub">Completions by week, split by who performed the survey${kinfo(TIP.trResMix)} · current week is partial</div></div>
+        <div class="toggle-group">
+          <button class="tgl-btn${trResMixMode==='share'?' active':''}" onclick="setTrResMixMode('share')">Share</button>
+          <button class="tgl-btn${trResMixMode==='count'?' active':''}" onclick="setTrResMixMode('count')">Count</button>
+        </div>
+      </div>
+      <div class="leg">
+        ${RESM3.map(r=>`<span class="li" style="color:${RESM_C[r]};"><span class="ld" style="background:${RESM_C[r]};"></span>${r}</span>`).join('')}
+        ${trResMixMode==='count'?`<span class="li" style="color:#4f7fae;"><span class="ldash" style="background:#4f7fae;"></span>Sales rep %</span>`:''}
+      </div>
+      <div style="display:flex;align-items:stretch;">
+        <div style="flex:0 0 40px;height:230px;"><canvas id="tr-mix-yL" width="40" height="230"></canvas></div>
+        <div id="tr-mix-wrap" style="flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;"><div style="width:${chartW}px;height:230px;position:relative;"><canvas id="tr-mix"></canvas></div></div>
+        <div style="flex:0 0 46px;height:230px;"><canvas id="tr-mix-yR" width="46" height="230"></canvas></div>
       </div>
     </div>
     <div class="sec">
@@ -4786,6 +4827,51 @@ function renderTrends(){
   _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#a9a390',v=>String(Math.round(v)));
   _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#3a9e6a',v=>Math.round(v)+'%');
 
+  // ── tr-mix: resource composition of completions, by week ──────
+  const mixShare=trResMixMode==='share';
+  const repPctLine=allWks.map((wk,i)=>mixTot[i]?Math.round((mixMap[wk]?.['Sales Rep']||0)/mixTot[i]*100):null);
+  dc('tr-mix');
+  CH['tr-mix']=new Chart(document.getElementById('tr-mix'),{
+    type:'bar',
+    data:{labels:inOutLabels,datasets:[
+      ...RESM3.map(res=>({
+        label:res,
+        data:allWks.map((wk,i)=>{ const c=mixMap[wk]?.[res]||0;
+          return mixShare?(mixTot[i]?+(c/mixTot[i]*100).toFixed(1):null):c; }),
+        backgroundColor:RESM_C[res], borderWidth:0, borderRadius:3,
+        stack:'mix', yAxisID:'y', order:2,
+      })),
+      ...(mixShare?[]:[{label:'Sales rep %',data:repPctLine,type:'line',borderColor:'#4f7fae',
+        backgroundColor:'transparent',tension:.3,borderWidth:2,
+        pointRadius:3,pointBackgroundColor:'#4f7fae',spanGaps:false,yAxisID:'y1',order:1}]),
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onHover:drillHover,
+      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index];
+        const res=RESM3[els[0].datasetIndex]; if(!res) return;
+        const dr=trendDone.filter(r=>weekOf(r.complete)===wk&&r.resource===res);
+        openDrill(res+' · '+lbl,dr.length+' completed that week',dr,{sort:'days'}); },
+      plugins:{legend:{display:false},
+        tooltip:{mode:'index',intersect:false,callbacks:{
+          title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
+          label:ctx=>{ const wk=allWks[ctx.dataIndex];
+            if(ctx.dataset.label==='Sales rep %') return ` Sales rep: ${ctx.parsed.y==null?'—':ctx.parsed.y+'%'}`;
+            const c=mixMap[wk]?.[ctx.dataset.label]||0, t=mixTot[ctx.dataIndex];
+            return mixShare
+              ? ` ${ctx.dataset.label}: ${t?Math.round(c/t*100):0}% (${c})`
+              : ` ${ctx.dataset.label}: ${c}`; }
+        }}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}},stacked:true},
+        y:{min:0,max:mixShare?100:undefined,stacked:true,position:'left',grid:{color:'rgba(80,65,40,.06)'},
+           ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}},
+        y1:{min:0,max:100,position:'right',display:!mixShare,grid:{drawOnChartArea:false},
+            ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
+  });
+  _drawAxis('tr-mix-yL',CH['tr-mix'].scales.y,true,'#a9a390',mixShare?(v=>Math.round(v)+'%'):(v=>String(Math.round(v))));
+  if(!mixShare) _drawAxis('tr-mix-yR',CH['tr-mix'].scales.y1,false,'#4f7fae',v=>Math.round(v)+'%');
+  else { const yr=document.getElementById('tr-mix-yR'); if(yr){const c=yr.getContext('2d');c.clearRect(0,0,yr.width,yr.height);} }
+
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
     const ws=wkMap[wk],wc=wkCMap[wk];
     const wkEnd=ws?.weekEnd||wc?.weekEnd||'';
@@ -4816,7 +4902,7 @@ function renderTrends(){
   }).join('');
 
   // Scroll all charts to most recent (right end) and keep them in sync
-  const wrapIds=['tr-flow-wrap','tr-wf-wrap','tr-vol-wrap'];
+  const wrapIds=['tr-flow-wrap','tr-wf-wrap','tr-vol-wrap','tr-mix-wrap'];
   requestAnimationFrame(()=>{
     wrapIds.forEach(id=>{const el=document.getElementById(id);if(el) el.scrollLeft=el.scrollWidth;});
     let _trSync=false;
@@ -7672,6 +7758,39 @@ function resSplit(){
   return { res:out, recentN:recentAll.length, perWeek:recentAll.length/rw };
 }
 
+// The trailing weekly-share strip under the split bar. Same story as the Trends
+// "Survey resource mix" chart (completions bucketed by completion week, split by
+// resource), compressed to 16 bars with no axis — it answers "which way is the
+// mix moving" next to the current snapshot, nothing more. Reads resScope() like
+// the rest of the page; a week with no completions draws empty.
+function _resMixStrip(){
+  const WKS=16;
+  const [y,m,d]=_mapToday().split('-').map(Number);
+  const keys=[];
+  for(let i=WKS-1;i>=0;i--) keys.push(weekOf(localISO(new Date(y,m-1,d-i*7))));
+  const map={};
+  resScope().forEach(r=>{ if(!isComplete(r)) return; const wk=weekOf(r.complete);
+    if(!(wk in map)&&!keys.includes(wk)) return;
+    (map[wk]||(map[wk]={}))[r.resource]=(map[wk]?.[r.resource]||0)+1; });
+  let any=false;
+  const bars=keys.map(wk=>{
+    const c=map[wk]||{};
+    const tot=RES_TRIO.reduce((a,t)=>a+(c[t.k]||0),0);
+    if(!tot) return `<div title="Week of ${wk} · no completions"></div>`;
+    any=true;
+    // Stack SPWR → Outsourced → Sales reps top-to-bottom, so the rep share
+    // (usually the largest) sits on the baseline the same way the split bar
+    // reads left-to-right.
+    const segs=RES_TRIO.map(t=>{ const n=c[t.k]||0; if(!n) return '';
+      return `<span style="height:${(n/tot*100).toFixed(1)}%;background:var(${t.css});"></span>`; }).join('');
+    const lbl=RES_TRIO.map(t=>`${t.label} ${Math.round((c[t.k]||0)/tot*100)}%`).join(' · ');
+    return `<div title="Week of ${wk} · ${tot} done · ${lbl}">${segs}</div>`;
+  }).join('');
+  if(!any) return '';
+  return `<div class="res-mix-strip">${bars}</div>
+    <div class="res-mix-cap">Share of weekly completions by resource · last ${WKS} weeks</div>`;
+}
+
 // Per-ZIP cost actually invoiced, from the billing history. Only lines that
 // matched a Salesforce row can be placed, so this is reported where it exists
 // and left blank where it does not — an average stamped on an unmatched market
@@ -8094,6 +8213,7 @@ function renderResource(){
       <div class="res-split-bar">
         ${split.res.filter(r=>r.recentN>0).map(r=>`<span style="width:${(r.share||0)*100}%;background:var(${r.css});" title="${esc(r.label)}: ${r.recentN}"></span>`).join('')}
       </div>
+      ${_resMixStrip()}
       <div class="res-cols">${split.res.map(col).join('')}</div>
       ${drawer}
     </div>

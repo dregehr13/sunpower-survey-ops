@@ -1384,6 +1384,38 @@ on. Don't replace this with an unconditional `animateSections()` in the loader �
 Resource has three loaders that can each resolve separately, and the sections
 would re-stagger on every one.
 
+### Survey resource mix over time (added 2026-09-08)
+Doug's ask: is there anything that tells the story of resource composition (job
+% by who ran the survey) over time. There wasn't — every existing surface was a
+snapshot. Built as two views of one bucketing (completions by completion week ×
+`r.resource`), NOT a shared definition — it is a per-surface `weekOf(r.complete)`
+group, same weight as the Pipeline cohorts `cohortMap`. Things not to undo:
+- **Trends `tr-mix`, directly below Pipeline cohorts.** Reads `trendDone`, so the
+  filter bar and the `allWks` date-range clamp both apply. **Share / Count
+  toggle** (`trResMixMode`, default `share`): Share is a 100%-stacked bar — the
+  "% over time" question as asked; Count keeps real volume and adds a
+  **Sales-rep-% overlay line** on a hidden `y1`, the same shape the cohorts chart
+  uses for Complete %. Only the rep line, because rep share is the series that
+  moves (SPWR and Radicl sit in a narrow band). Scroll-synced with the other
+  three Trends charts via `wrapIds`; frozen axes via `_drawAxis` (left = % in
+  share mode / count in count mode; right axis drawn only in count mode, and the
+  share branch clears `tr-mix-yR` by hand since `_drawAxis` isn't called for it).
+  Click a segment → drill to that resource's completions that week
+- **Resource `_resMixStrip()`, under the split bar in the hero.** The same
+  picture compressed to **16 axis-less bars** — a "which way is the mix moving"
+  cue beside the current 55/9/36 snapshot, deliberately not a second full chart
+  (the app's no-duplication rule). Reads `resScope()` completions like the rest
+  of that page (live rows, no date filter). Stacks SPWR→Outsourced→rep top to
+  bottom so the rep share rests on the baseline the way the split bar reads left
+  to right. Colours are the `--res-*` tokens, same as the bar above it. Renders
+  nothing if no week in the window has a completion
+- **No unassigned segment.** `parse-sf.js` defaults a blank `resource` to
+  Sales Rep whenever `complete` is set, so a completions-based split is ~100%
+  covered — unlike the Performance chart, which splits all rows and carries an
+  Unassigned bucket
+- `TIP.trResMix` on the Trends subtitle; `docs/METRICS.md` → *Survey resource
+  mix* in the non-shared table
+
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
 2. Terminal: `~/Projects/survey-ops/push.sh`
