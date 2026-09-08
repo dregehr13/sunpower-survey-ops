@@ -473,6 +473,10 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .upd-sfbtn:hover{background:#005fb2;}
 .upd-drophere{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:var(--muted);margin-top:8px;transition:border-color .15s,background .15s;}
 .upd-drophere.drag-over{border-color:#2563eb;background:#eff6ff;color:#2563eb;}
+.upd-drophere.loaded{border-style:solid;border-color:#5b9a5b;background:#f0f7f0;color:#2f6b2f;}
+.upd-drophere.loaded strong{color:#2f6b2f;}
+.upd-drophere.err{border-color:#c0392b;background:#fdefed;color:#a5342a;}
+.upd-drophere.err strong{color:#a5342a;}
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
 .drag-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(37,99,235,.08);border:2px solid #2563eb;pointer-events:none;z-index:300;animation:dragPulse .9s ease infinite;display:none;}
 .drag-overlay.active{display:block;}
@@ -9838,11 +9842,23 @@ function exportCSV(){
 }
 
 // ═══ IMPORT ═══════════════════════════════════════════════
+const DROPZONE_DEFAULT='<strong>Drop .xls file here</strong>or click to browse';
+function setDropZone(state,html){
+  const dz=document.getElementById('dropZone'); if(!dz) return;
+  dz.classList.remove('loaded','err','drag-over');
+  if(state) dz.classList.add(state);
+  dz.innerHTML=html||DROPZONE_DEFAULT;
+}
 function loadFile(file){
   const reader=new FileReader();
+  reader.onerror=()=>setDropZone('err','<strong>Couldn’t read that file</strong>try exporting again, then drop it here');
   reader.onload=ev=>{
     const parsed=parseImport(ev.target.result);
-    if(!parsed||!parsed.length){ toast('Could not parse — check column headers match the Salesforce report.'); return; }
+    if(!parsed||!parsed.length){
+      setDropZone('err','<strong>Couldn’t parse '+esc(file.name)+'</strong>check the column headers match the Salesforce report');
+      document.getElementById('upd-save').style.display='none';
+      toast('Could not parse — check column headers match the Salesforce report.'); return;
+    }
     allRows=loadAll(parsed); scopeRows(); changedIds.clear();
     dataTimestamp=new Date();
     const ts=document.getElementById('nav-ts');
@@ -9854,8 +9870,9 @@ function loadFile(file){
     // Pop the nav badge
     const badge=document.getElementById('navBadge');
     if(badge){ badge.textContent=parsed.length+' projects'; badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop'); }
-    // Show save panel
+    // Confirm in the drop zone itself, then show save panel
     const regions=[...new Set(parsed.map(r=>r.region).filter(Boolean))].length;
+    setDropZone('loaded',`<strong>✓ ${esc(file.name)}</strong>${parsed.length.toLocaleString()} projects loaded — review and save below`);
     document.getElementById('upd-save-summary').textContent=`${parsed.length} projects across ${regions} regions loaded. Save to dashboard for everyone?`;
     document.getElementById('upd-save-status').textContent='';
     const savePanel=document.getElementById('upd-save');
@@ -9930,7 +9947,8 @@ function openUpdateModal(gate){
   tsLine.textContent = dataTimestamp
     ? 'Last updated: ' + dataTimestamp.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
     : 'No data loaded yet';
-  // Reset save panel
+  // Reset save panel + drop zone
+  setDropZone(null);
   const savePanel = document.getElementById('upd-save');
   savePanel.style.display = 'none'; savePanel.classList.remove('visible');
   const btn = document.getElementById('upd-save-btn');
