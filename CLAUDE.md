@@ -273,6 +273,13 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       close-or-cancel candidate)
     - Net on live data: Past due 5 → 0 (all phantom), Unclassified 1 → 0,
       Awaiting rep 13 → 8, + Awaiting customer 6, + Blocked 1, New 1 → 5
+    - **Likely cancel also reads the note, not just the subject / status**
+      (added on the next export's re-scan). "The account is marked at risk and
+      he needs retentions to reactivate it" under a subject reading only "REP
+      EMAIL" — matched on `MARKED AT RISK` / `RETENTIONS TO REACTIVATE`, the
+      past-tense state, never a bare "at risk" (a rep-chase note saying "the
+      customer does **not** want to cancel" must not trip it). History-wide the
+      phrasing is on 40 rows, 38 already Canceled. 1 live row (2615OKAF)
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing

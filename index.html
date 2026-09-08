@@ -5069,7 +5069,15 @@ function renderAgingWIP(){
     if(sched&&sched>=today) return QS.scheduled;
     if(sched&&sched<today) return QS.pastdue;
     // Unscheduled — classify by last review subject
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return QS.likelyCancel;
+    // The at-risk state is also written only in the note: "the account is
+    // marked at risk and he needs retentions to reactivate it" under a subject
+    // reading just "REP EMAIL". Matched on the specific past-tense phrasing
+    // ("marked at risk", "retentions to reactivate") rather than a bare "at
+    // risk" — a rep-chase note saying "the customer does not want to cancel"
+    // must not read as likely-cancel. History-wide the phrasing sits on 40
+    // rows, 38 of them already Canceled.
+    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')
+       ||/RETENTIONS TO REACTIVATE|NEEDS? RETENTIONS|MARKED AT.?RISK|ACCOUNT IS (MARKED )?AT.?RISK/.test(comm)) return QS.likelyCancel;
     // Reviewers write both "MISSING UB" and "MISSING UTILITY BILL"; matching
     // only the abbreviation left four of these reading Unscheduled. The same
     // ask written as prose is tested lower down, below Awaiting rep.
