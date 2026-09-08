@@ -237,6 +237,42 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       as a live one
     Across the whole history it moves exactly two rows, both out of
     Unclassified; live it is Missing UB 3 → 4 and Unclassified 2 → 1
+  - **Awaiting customer, Blocked, and the reopened-schedule fix** (2026-09-08,
+    from a review of all 60 open rows against their notes — ~12 were
+    mislabelled). Things not to undo:
+    - **Awaiting customer is its own status, split out of Awaiting rep.** A
+      bare `ATTEMPT n` subject (not `REP ATTEMPT`) over a note reading
+      "called, texted, and emailed the customer in an attempt to schedule the
+      site survey" is SS chasing the **customer** for a booking — a different
+      bottleneck, and the queue lens exists to name the bottleneck. `ATTEMPT`
+      alone swept 6 of 60 live rows into Awaiting rep. Tested **before** the
+      rep catch; the `RESCHEDULE NEEDED - ` prefix rides along (rep cancelled,
+      customer won't rebook). ~7 rows across history
+    - **Blocked is parked on work outside SS** — `NEW ROOF` / `REROOF` etc.
+      Nobody in SS can move it and there is nothing to schedule until the
+      outside work lands. This is exactly what the retired **Follow-up set**
+      status covered (removed 2026-08-31 because zero rows had the shape); the
+      shape came back — 9 rows across history, 1 live (10CHMCCO). Re-added as
+      `blocked` on Doug's explicit call
+    - **A reopened-by-design row with no open resurvey object has its
+      `r.scheduled` cleared when that date is past.** It is the ORIGINAL
+      visit — weeks or months stale — and was driving a phantom Past due on 4
+      live rows (195RLAND at 195d, 1944BROT, 226SBARN, 133SNAGI). Same
+      reasoning the Pending photo rule already applies. Only a PAST date is
+      dropped; a future one on such a row is a real new booking. Guard is
+      `!isOpenResurvey(r) && (reopened_by_design==='1' || list==='Reopened')`
+    - **A missing-photos / `SCHEDULE WITH FIELD` note beats a stale (past)
+      schedule date** — on a rep self-survey that date is only the rep's own
+      nominal visit, and the note says the real state is a rep chase. Not a
+      future booking, which stays Scheduled. 1 live row (2940BOWM)
+    - **`RESURVEY REQUIRED` subject → New**, alongside `SITE SURVEY COMPLETE`.
+      Design writes it when it kicks a survey back before the resurvey object
+      exists — nothing done on it yet. The bare `reopened_by_design` shape
+      behind these is the same one `parse-sf.js` already warns on; fix at
+      source where possible (195RLAND, Inactive 141d untouched, is a
+      close-or-cancel candidate)
+    - Net on live data: Past due 5 → 0 (all phantom), Unclassified 1 → 0,
+      Awaiting rep 13 → 8, + Awaiting customer 6, + Blocked 1, New 1 → 5
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing

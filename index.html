@@ -5004,10 +5004,12 @@ function renderAgingWIP(){
   // `sort` is the table's status sort order, not display order.
   // `bar` is the solid fill in the status bar, `bg`/`fg` the badge and chip.
   // Scheduled and Past due carry the only judgement here (blue = neutral
-  // state, red = over threshold); the five waiting-reasons are categories of
+  // state, red = over threshold); the waiting-reasons are categories of
   // waiting, not severities, so they stay unsaturated except where the reason
   // itself is the problem. Awaiting rep takes slate rather than the Scheduled
-  // blue so two different statuses never share a fill.
+  // blue so two different statuses never share a fill. Awaiting customer is a
+  // lighter slate — same "someone still has to book" family as Awaiting rep,
+  // but a different someone, which is the whole reason it is its own status.
   // `sort` is the table's status sort order, and QS_ORDER is schedule order:
   // booked, overdue, then everything still waiting.
   const QS={
@@ -5017,11 +5019,13 @@ function renderAgingWIP(){
     radicl:      {key:'radicl',      label:'Radicl scheduling',    bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
     missingUb:   {key:'missingUb',   label:'Missing UB',           bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
     awaitingRep: {key:'awaitingRep', label:'Awaiting rep',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
-    likelyCancel:{key:'likelyCancel',label:'Likely cancel',        bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:6},
-    new:         {key:'new',         label:'New',                  bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:7},
-    unscheduled: {key:'unscheduled', label:'Unclassified',         bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:8},
+    awaitingCust:{key:'awaitingCust',label:'Awaiting customer',    bg:'#eef1f4', fg:'#5b6b7d',     bar:'#7c8ba0', sort:6},
+    likelyCancel:{key:'likelyCancel',label:'Likely cancel',        bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:7},
+    blocked:     {key:'blocked',     label:'Blocked',              bg:'#f1eef2', fg:'#6b5d75',     bar:'#8a7d94', sort:8},
+    new:         {key:'new',         label:'New',                  bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:9},
+    unscheduled: {key:'unscheduled', label:'Unclassified',         bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:10},
   };
-  const QS_ORDER=['scheduled','pastdue','pendingPhoto','radicl','missingUb','awaitingRep','likelyCancel','new','unscheduled'];
+  const QS_ORDER=['scheduled','pastdue','pendingPhoto','radicl','missingUb','awaitingRep','awaitingCust','likelyCancel','blocked','new','unscheduled'];
   // Everything from Radicl scheduling down is a survey with no booking — the
   // old Schedule row's "Unscheduled" segment, reachable in one click from the
   // legend. Anchored on the key rather than a slice count: Pending photo
@@ -5036,10 +5040,20 @@ function renderAgingWIP(){
   // priority order — a Radicl job whose review says the utility bill is
   // missing is blocked on the bill, not on Radicl.
   const wipQueueStatus=r=>{
-    const sched=wipSchedDate(r);
+    const openRs=isOpenResurvey(r);
+    let sched=wipSchedDate(r);
     const subj=(r.last_reviewed_subject||'').toUpperCase();
     const comm=(r.last_comment||'').toUpperCase();
     const any=re=>re.test(subj)||re.test(comm);
+    // A row design has kicked back for rework (reopened_by_design, or List
+    // Reopened) that has no open-resurvey object yet: its r.scheduled is the
+    // ORIGINAL visit, weeks or months stale, and must not drive Scheduled /
+    // Past due — the note is the current truth. Only a PAST date is dropped; a
+    // future one on such a row is a genuine new booking. Same reasoning the
+    // Pending photo rule already applies to its stale booking dates. Fixed
+    // four live rows (195RLAND at 195d, 1944BROT, 226SBARN, 133SNAGI) that
+    // were reading Past due off a schedule nobody was waiting on.
+    if(!openRs&&(r.reopened_by_design==='1'||r.list==='Reopened')&&sched&&sched<today) sched='';
     // Tested ahead of the schedule date on purpose. The rep performed the
     // survey and the SF automation failed to attach the photos, so the job is
     // waiting on an internal upload, not on a visit — and its booking date,
@@ -5048,6 +5062,10 @@ function renderAgingWIP(){
     // twins reading a follow-up. Distinct from Awaiting rep's NO PHOTOS /
     // MISSING PHOTOS, which is the rep not having taken any.
     if(any(/PENDING PHOTO UPLOAD/)) return QS.pendingPhoto;
+    // A rep chase — missing photos, or "schedule with field" — beats a STALE
+    // (past) schedule date, which on a rep self-survey is only the rep's own
+    // nominal visit date. Not a future booking: that stays Scheduled.
+    if(sched&&sched<today&&(subj.includes('MISSING PHOTOS')||subj.includes('SCHEDULE WITH FIELD')||comm.includes('NO PHOTOS'))) return QS.awaitingRep;
     if(sched&&sched>=today) return QS.scheduled;
     if(sched&&sched<today) return QS.pastdue;
     // Unscheduled — classify by last review subject
@@ -5066,6 +5084,15 @@ function renderAgingWIP(){
     // state as RADICL SCHEDULING; without this they fell through unclassified.
     if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))
        ||any(/(SENT|SUBMITTED|ASSIGNED|OVER)[\s\S]{0,40}?TO RADICL/)) return QS.radicl;
+    // A bare "ATTEMPT n" subject (not "REP ATTEMPT") whose note reads "called,
+    // texted, and emailed the customer in an attempt to schedule the site
+    // survey" is SS chasing the CUSTOMER for a booking — a different bottleneck
+    // from the rep chase below. The "RESCHEDULE NEEDED - " prefix rides along
+    // (rep cancelled, now the customer won't rebook). Six live rows were
+    // reading Awaiting rep. Tested before the rep catch, which "ATTEMPT" alone
+    // would otherwise sweep them into.
+    if(/^(RESCHEDULE NEEDED\s*-\s*)?ATTEMPT \d/.test(subj.trim())&&!subj.includes('REP ATTEMPT')
+       &&/EMAILED THE CUSTOMER|CUSTOMER IN AN ATTEMPT|ATTEMPT TO SCHEDULE THE SITE SURVEY/.test(subj+' '+comm)) return QS.awaitingCust;
     // "FOLLOW UP WITH REP 8/17" is the rep-chasing state spelled out.
     // "RESCHEDULE NEEDED" is the rep cancelling a booked visit; SS offers a new
     // date and waits on them. Tested after Radicl, so the same subject ending
@@ -5087,13 +5114,20 @@ function renderAgingWIP(){
     // ask, stays. Adds exactly two rows across the whole history, both from
     // Unclassified.
     if(any(/(MISSING|NEEDS?|WAITING ON|REQUIRES?)((?!UPLOAD)[\s\S]){0,40}?(UTILITY BILL|\bUB\b)/)) return QS.missingUb;
+    // Parked on work outside Site Survey — a reroof, mostly ("two week wait for
+    // the customer to get a new roof … resubmit to Radicl when it's done").
+    // Nobody in SS can move it and there is nothing to schedule until the
+    // outside work lands. This is what the retired "Follow-up set" status
+    // covered; the shape came back. 9 rows across history, 1 live (10CHMCCO).
+    if(any(/NEW ROOF|REROOF|RE-?ROOF|ROOF (IS )?BEING (INSTALLED|REPLACED)|WAITING ON .{0,15}ROOF/)) return QS.blocked;
     // A COMPLETE note on a row that is not complete describes work that has
     // already finished — the initial survey — and says nothing about what the
     // row is waiting on now. Six open resurveys requested 8/26 carried
     // "COMPLETE / I uploaded the radicl pdf" as their last note and fell to
-    // Unclassified on it, which classified the wrong event. Drop the note and
-    // the row is what it is: requested, with nothing done on it yet.
-    if(subj==='COMPLETE') return QS.new;
+    // Unclassified on it, which classified the wrong event. "RESURVEY REQUIRED"
+    // is the subject design writes when it kicks a survey back before the
+    // resurvey object exists — nothing has been done on it yet. Both read New.
+    if(/^(SITE SURVEY )?COMPLETE\b/.test(subj.trim())||subj.trim().startsWith('RESURVEY REQUIRED')) return QS.new;
     if(!r.last_reviewed_date) return QS.new;
     // Deliberately kept though it reads 0 today: a review subject nobody has
     // seen before must land somewhere visible rather than be forced into a
