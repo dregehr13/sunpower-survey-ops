@@ -4647,7 +4647,7 @@ function renderTrends(){
         {label:'WIP',data:flowWip,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
       ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:false,
+      options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
         // The weekly bars have drilled for months and the daily ones — the
         // default view — did not, which read as the chart being inert.
@@ -4680,7 +4680,7 @@ function renderTrends(){
         {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:false,
+      options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
         onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr,{basis:trFlowCompletionBasis==='first'?'first':'current'}); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
@@ -4718,7 +4718,7 @@ function renderTrends(){
       {label:'Bucket level (cumulative)',data:cumLine,type:'line',borderColor:'#8677b8',backgroundColor:'transparent',
        tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
       plugins:{legend:{display:false},tooltip:{callbacks:{
         label:ctx=>ctx.dataset.label.startsWith('Bucket')?` Bucket level: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y}`:` ${ctx.dataset.label}: ${ctx.parsed.y}/day avg`}}},
       scales:{x:{grid:{display:false},ticks:{color:'#a9a390',font:{size:10}}},
@@ -4752,7 +4752,7 @@ function renderTrends(){
        backgroundColor:'transparent',tension:.3,borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#5570a8',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
       onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const w=weeklyC[els[0].index]; const dr=trendDone.filter(r=>weekOf(r.complete)===w.week); openDrill('Completions · Week of '+fmtWeekLabel(w),dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
@@ -4809,7 +4809,7 @@ function renderTrends(){
        backgroundColor:'transparent',tension:.3,borderWidth:2,
        pointRadius:3,pointBackgroundColor:'#3a9e6a',spanGaps:false,yAxisID:'y1',order:1},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isComplete(r)) return state==='Complete'; if(hasResurveySig(r)) return state==='Resurvey pending'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
@@ -4845,7 +4845,7 @@ function renderTrends(){
         backgroundColor:'transparent',tension:.3,borderWidth:2,
         pointRadius:3,pointBackgroundColor:'#4f7fae',spanGaps:false,yAxisID:'y1',order:1}]),
     ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,
+    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
       onHover:drillHover,
       onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index];
         const res=RESM3[els[0].datasetIndex]; if(!res) return;
