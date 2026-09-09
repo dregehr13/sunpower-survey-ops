@@ -4568,37 +4568,6 @@ function renderTrends(){
     ctx.restore();
   }
 
-  // Small inline trend line for a stat cell — area fill, faint grid-free
-  // baseline, a dashed reference at the alarm/baseline threshold, and an
-  // emphasized endpoint coloured to match the cell's current state.
-  function miniSpark(series,opts){
-    opts=opts||{};
-    const W=110,H=28,PAD=3;
-    const vals=series.filter(v=>v!=null);
-    if(vals.length<2) return '';
-    const thresh=opts.thresh;
-    const min=Math.min(...vals,thresh!=null?thresh:Infinity);
-    const max=Math.max(...vals,thresh!=null?thresh:-Infinity);
-    const range=(max-min)||1;
-    const n=series.length;
-    const x=i=>PAD+(i/(n-1))*(W-PAD*2);
-    const y=v=>H-PAD-((v-min)/range)*(H-PAD*2);
-    const color=opts.color||'#8a8571';
-    let d='';
-    let lastIdx=-1;
-    series.forEach((v,i)=>{ if(v==null) return; d+=(d?'L ':'M ')+x(i).toFixed(1)+','+y(v).toFixed(1)+' '; lastIdx=i; });
-    let svg=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:5px;" aria-hidden="true">`;
-    if(thresh!=null){
-      const ty=y(thresh).toFixed(1);
-      svg+=`<line x1="${PAD}" y1="${ty}" x2="${W-PAD}" y2="${ty}" stroke="#c7c2b5" stroke-width="1" stroke-dasharray="2,2"/>`;
-    }
-    svg+=`<path d="M ${x(0).toFixed(1)},${(H-PAD).toFixed(1)} L ${d.trim().replace(/^M /,'')} L ${x(lastIdx).toFixed(1)},${(H-PAD).toFixed(1)} Z" fill="${color}" opacity="0.10"/>`;
-    svg+=`<path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
-    if(lastIdx>=0) svg+=`<circle cx="${x(lastIdx).toFixed(1)}" cy="${y(series[lastIdx]).toFixed(1)}" r="2.6" fill="${color}"/>`;
-    svg+='</svg>';
-    return svg;
-  }
-
   // ── tr-flow: daily or weekly intake/clearance chart ───────
   // The Sat/Sun buildup is structural — reps sell weekends, the admin team is
   // Mon–Fri. Weekend bars are muted so the eye reads the trend, not the rhythm.
@@ -4634,7 +4603,6 @@ function renderTrends(){
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
     const cl=clear4!=null?Math.round(clear4*100):null;
-    const clColor=cl==null?'#8a8571':aClear?'#b3402e':cl<90?'#8a6413':'#2e7a52';
     const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
     // The week-over-week intake move is the biggest number on this strip and
     // used to render as unstyled grey caption text, quieter than the Clearance
@@ -4643,13 +4611,11 @@ function renderTrends(){
     const inDeltaRaw=fwPrev&&fwPrev.inn?Math.round((fw.inn/fwPrev.inn-1)*100):null;
     const inDelta=inDeltaRaw==null?null
       :`<span style="color:${inDeltaRaw>=10?'var(--red)':inDeltaRaw<=-10?'var(--green)':'inherit'};font-weight:${Math.abs(inDeltaRaw)>=10?'600':'400'};">${inDeltaRaw>=0?'+':''}${inDeltaRaw}%</span> vs prior week`;
-    const clearSpark=miniSpark(clearSeries.map(v=>v==null?null:Math.round(v*100)),{thresh:90,color:clColor});
-    const floorSpark=miniSpark(floorSeries,{color:'#8a8571'});
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',fw.out,'last full week','',TIP.complete)
-      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
-      +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
+      +stat('Clearance (4wk)',cl!=null?cl+'%':'—','completed ÷ started · alarm below 90%',clCls,TIP.clearance)
+      +stat('Weekly floor',floorSeries[floorSeries.length-1]??'—','lowest daily WIP that week','',TIP.weeklyFloor);
   }
   const aEl=document.getElementById('tr-alarm');
   if(aEl){
