@@ -1124,8 +1124,9 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .srail-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
 .srail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
-/* Resurveys breakdown on Current — 3 figures, so it reads as a compact cluster
-   inside the panel rather than a full-width rail stretched over blank space. */
+/* Resurveys breakdown on Current — 3 figures, so the whole panel shrinks to fit
+   its content rather than stretching a rail over blank space. */
+.rs-brk-sec{width:fit-content;max-width:100%;}
 .rs-brk{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .rs-brk-cell{padding:11px 20px 12px;border-right:1px solid var(--border);white-space:nowrap;}
 .rs-brk-cell:last-child{border-right:none;}
@@ -3344,7 +3345,7 @@ function _rsBreakdownPanel(from,to,key){
       <div class="klabel">${label}</div>
       <div class="rs-brk-val">${n}${sub?`<span class="srail-sub">${sub}</span>`:''}</div>
     </div>`;
-  return `<div class="sec">
+  return `<div class="sec rs-brk-sec">
     <div class="shead"><div><div class="stitle">Resurveys</div><div class="ssub">Tracked on resurvey dates — never part of the completion count above</div></div></div>
     <div class="rs-brk">
       ${cell('Done','Completed',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':'')}
