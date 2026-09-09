@@ -66,11 +66,17 @@ memo chart and the dashboard look like one system. Give every chart a caption;
 it is what the reader reads first. Images are scaled to the text column and
 never enlarged past their natural size.
 
-WRITE IT IN DOUG'S VOICE, which is the house style already recorded in
-CLAUDE.md: state the number and stop, no em dashes, no restating the case for a
-decision already made, no summary paragraph at the end repeating the memo. An
-official memo is read once by a VP; every sentence should carry a fact, a
-recommendation, or a caveat that changes how a number is read.
+VOICE — apply `/humanize --business casual` to every memo. This is not
+optional and it is not a final polish; write it that way from the first draft.
+Read `.claude/commands/humanize.md` and follow it: contractions, short crisp
+sentences, no corporate jargon, how a smart coworker actually writes.
+
+A memo is still a memo. Business casual is the register, not the rigour, so it
+sits on top of the house style rather than replacing it: state the number and
+stop, no em dashes, no restating a decision already taken, no closing paragraph
+summarising what the reader just read. Every sentence carries a fact, a
+recommendation, or a caveat that changes how a number is read. Never soften a
+finding to sound friendlier.
 
 STEP 3 — BUILD IT.
     node scripts/build-memo.cjs <path/to/memo.md>
