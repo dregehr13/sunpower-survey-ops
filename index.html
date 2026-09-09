@@ -1124,6 +1124,17 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .srail-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
 .srail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
+/* Resurveys breakdown on Current — 3 figures, so it reads as a compact cluster
+   inside the panel rather than a full-width rail stretched over blank space. */
+.rs-brk{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.rs-brk-cell{padding:11px 20px 12px;border-right:1px solid var(--border);white-space:nowrap;}
+.rs-brk-cell:last-child{border-right:none;}
+.rs-brk-cell.rail-d{cursor:pointer;position:relative;transition:background .16s;}
+.rs-brk-cell.rail-d:hover{background:var(--bg);}
+.rs-brk-cell.rail-d:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
+.rs-brk-cell.rail-d::after{content:'↗';position:absolute;top:9px;right:11px;font-size:11px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
+.rs-brk-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
+.rs-brk-val{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums;}
 /* Search sits above the grouped table. With no floor the rep cut is 300 rows,
    so reach comes from search and sort rather than from hiding anything. */
 .p-tools{display:flex;align-items:center;gap:8px;margin-bottom:11px;}
@@ -3329,13 +3340,13 @@ function _rsBreakdownPanel(from,to,key){
   const open=rows.filter(isOpenResurvey);
   const cyc=avg(done.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
   _curD[key+'RsDone']=done; _curD[key+'RsReq']=req; _curD[key+'RsOpen']=open;
-  const cell=(k,label,n,sub)=>`<div class="srail-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
+  const cell=(k,label,n,sub)=>`<div class="rs-brk-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
       <div class="klabel">${label}</div>
-      <div class="srail-val">${n}${sub?`<span class="srail-sub">${sub}</span>`:''}</div>
+      <div class="rs-brk-val">${n}${sub?`<span class="srail-sub">${sub}</span>`:''}</div>
     </div>`;
   return `<div class="sec">
     <div class="shead"><div><div class="stitle">Resurveys</div><div class="ssub">Tracked on resurvey dates — never part of the completion count above</div></div></div>
-    <div class="srail" style="margin:0;">
+    <div class="rs-brk">
       ${cell('Done','Completed',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':'')}
       ${cell('Req','Requested',req.length,'')}
       ${cell('Open','Open now',open.length,'backlog')}
