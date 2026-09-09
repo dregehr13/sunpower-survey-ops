@@ -1124,19 +1124,6 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .srail-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
 .srail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
-/* Resurveys breakdown on Current — 3 figures, so the whole panel shrinks to fit
-   its content rather than stretching a rail over blank space. */
-.rs-brk-wrap{display:flex;justify-content:flex-end;}
-.rs-brk-sec{width:fit-content;max-width:100%;margin-bottom:0;}
-.rs-brk{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.rs-brk-cell{padding:11px 20px 12px;border-right:1px solid var(--border);white-space:nowrap;}
-.rs-brk-cell:last-child{border-right:none;}
-.rs-brk-cell.rail-d{cursor:pointer;position:relative;transition:background .16s;}
-.rs-brk-cell.rail-d:hover{background:var(--bg);}
-.rs-brk-cell.rail-d:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
-.rs-brk-cell.rail-d::after{content:'↗';position:absolute;top:9px;right:11px;font-size:11px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
-.rs-brk-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
-.rs-brk-val{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums;}
 /* Search sits above the grouped table. With no floor the rep cut is 300 rows,
    so reach comes from search and sort rather than from hiding anything. */
 .p-tools{display:flex;align-items:center;gap:8px;margin-bottom:11px;}
@@ -3334,26 +3321,20 @@ function renderWipCountBadge(){
 }
 
 // Resurveys are tracked on their own dates, never folded into the initial
-// completion count. This panel is the separate line — completed / requested in
-// the week, plus the live open backlog. `key` seeds the drill store.
-function _rsBreakdownPanel(from,to,key){
+// completion count. Two rail cells — completed / requested in the week — take
+// the slot the WIP cell used to hold. `key` seeds the drill store.
+function _rsWeekCells(from,to,key){
   const done=rows.filter(r=>r.resurvey_complete&&r.resurvey_complete>=from&&r.resurvey_complete<=to);
   const req=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=from&&r.resurvey_requested<=to);
-  const open=rows.filter(isOpenResurvey);
   const cyc=avg(done.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
-  _curD[key+'RsDone']=done; _curD[key+'RsReq']=req; _curD[key+'RsOpen']=open;
-  const cell=(k,label,n,sub)=>`<div class="rs-brk-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
+  _curD[key+'RsDone']=done; _curD[key+'RsReq']=req;
+  const wk=key==='tw'?'this week':'last week';
+  const cell=(k,label,n,sub)=>`<div class="srail-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
       <div class="klabel">${label}</div>
-      <div class="rs-brk-val">${n}${sub?`<span class="srail-sub">${sub}</span>`:''}</div>
+      <div class="srail-val">${n}<span class="srail-sub">${sub}</span></div>
     </div>`;
-  return `<div class="sec rs-brk-sec">
-    <div class="shead"><div><div class="stitle">Resurveys</div><div class="ssub">Tracked on resurvey dates — never part of the completion count above</div></div></div>
-    <div class="rs-brk">
-      ${cell('Done','Completed',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':'')}
-      ${cell('Req','Requested',req.length,'')}
-      ${cell('Open','Open now',open.length,'backlog')}
-    </div>
-  </div>`;
+  return cell('Done','Resurveys done',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':wk)
+    +cell('Req','Resurveys requested',req.length,wk);
 }
 
 function renderLastWeek(){
@@ -3404,10 +3385,6 @@ function renderLastWeek(){
   // used to disagree: the count was last Sunday's WIP while the age was the
   // *currently* open rows measured as Proj Age off the wall clock, so it read
   // ~12.6d beside the 4.8d that This Week, the WIP page and the Map all show.
-  const lwWipRows=rows.filter(r=>r.start&&r.start<=lw.to&&(!isComplete(r)||r.complete>lw.to));
-  const wip=lwWipRows.length;
-  const avgAge=avg(lwWipRows.map(r=>ssDaysOpen(r,lw.to)));
-  _curD.lwWip=lwWipRows;
   // The misses, not the hits: "68% on target" is read to ask which ones blew it.
   _curD.lwMiss=src.filter(r=>r.ct_total!=null&&r.ct_total>S.targetAvg);
   // Every survey the department did last week, whatever became of the deal — the
@@ -3431,10 +3408,7 @@ function renderLastWeek(){
       <div class="klabel">On target &le;${S.targetAvg}d${kinfo(TIP.onTarget())}</div>
       <div class="srail-val ${onTgt==null?'':(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c')}">${onTgt!=null?onTgt+'%':'—'}<span class="srail-sub">${tots.length} with data</span></div>
     </div>
-    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs(`drillCur('lwWip','WIP at the close of last week','Open as of ${fmtDate(lw.to)} · ${wip} survey${wip===1?'':'s'}',{sort:'days'})`)}>
-      <div class="klabel">WIP${kinfo(TIP.wip)}</div>
-      <div class="srail-val">${wip}<span class="srail-sub">${avgAge!=null?'~'+avgAge.toFixed(1)+'d avg age':'open surveys'}</span></div>
-    </div>`;
+    ${_rsWeekCells(lw.from,lw.to,'lw')}`;
   const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
@@ -3539,8 +3513,7 @@ function renderLastWeek(){
       <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
     </div>
     </div>
-    </div>
-    <div class="rs-brk-wrap">${_rsBreakdownPanel(lw.from,lw.to,'lw')}</div>`;
+    </div>`;
 
 
   const dist=distBuckets(src);
@@ -3614,7 +3587,6 @@ function renderThisWeek(){
   const wipProjects=rows.filter(r=>isWIP(r)&&inScope(r));
   const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
-  const avgWipAge=avg(wipProjects.map(r=>ssDaysOpen(r,dataThrough)));
   // Weekly projection (lib/metrics.cjs). Reads allRows — cancelled rows carry
   // the cancellation drag the model needs — and ignores the page filter, so
   // cacheKey on DATA_TS keeps a filter change from recomputing it.
@@ -3658,7 +3630,7 @@ function renderThisWeek(){
     <div class="brief-sentence">${paceStr}${qualTWStr}.
     </div>`;
   _thisWeekSrc=completedTW;
-  _curD.twSched=scheduledRem; _curD.twWip=wipProjects;
+  _curD.twSched=scheduledRem;
   // The survey happened whatever became of the deal — count it. The split is
   // context: WIN's BOOKING_SS drops a job the moment it cancels, so this line
   // is the reconciliation ("we did 10; 2 of those deals have since died").
@@ -3680,10 +3652,7 @@ function renderThisWeek(){
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
       <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
     </div>
-    <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs(`drillCur('twWip','Open right now','${wip} survey${wip===1?'':'s'} in progress as of ${escAttrJs(fmtDate(dataThrough))}',{sort:'days'})`)}>
-      <div class="klabel">WIP${kinfo(TIP.wip)}</div>
-      <div class="srail-val">${wip}<span class="srail-sub">${avgWipAge!=null?'~'+avgWipAge.toFixed(1)+'d avg age':'open surveys'}</span></div>
-    </div>`;
+    ${_rsWeekCells(tw.from,tw.to,'tw')}`;
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
@@ -3775,8 +3744,7 @@ function renderThisWeek(){
       <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tw-done-tbl',this,'the completions')">Copy table</button></div>
     </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}
     </div>
-    </div>
-    <div class="rs-brk-wrap">${_rsBreakdownPanel(tw.from,tw.to,'tw')}</div>`;
+    </div>`;
 
 
   dc('tw-daily');
