@@ -252,16 +252,20 @@ test('fpy over a window is weighted, not a mean of weekly rates', () => {
   assert.equal(fpy([...thin, ...fat]), 99);
 });
 
-test('isOpenResurvey needs list to have left Complete, not just a blank date', () => {
-  const open = { resurvey_requested: '2026-07-01', resurvey_complete: '', list: 'Holding' };
+test('isOpenResurvey needs list to have left Complete and the project still active', () => {
+  const open = { resurvey_requested: '2026-07-01', resurvey_complete: '', list: 'Holding', project_status: 'In Progress' };
   assert.equal(isOpenResurvey(open), true);
   // Resolved the normal way.
   assert.equal(isOpenResurvey({ ...open, resurvey_complete: '2026-07-05' }), false);
   // Resolved but the Resurvey Complete Date was never filled in — 18 real rows
   // look like this. Testing only the dates would count them as still open.
   assert.equal(isOpenResurvey({ ...open, list: 'Complete' }), false);
+  // The deal died — no resurvey work to do. 84 of 98 apparent open resurveys
+  // were on Canceled / At-Risk projects.
+  assert.equal(isOpenResurvey({ ...open, project_status: 'Canceled' }), false);
+  assert.equal(isOpenResurvey({ ...open, project_status: 'At-Risk' }), false);
   // A resurvey that was never requested is not an open one.
-  assert.equal(isOpenResurvey({ resurvey_requested: '', list: 'Holding' }), false);
+  assert.equal(isOpenResurvey({ resurvey_requested: '', list: 'Holding', project_status: 'In Progress' }), false);
   assert.equal(isOpenResurvey({}), false);
 });
 
