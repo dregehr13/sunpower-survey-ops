@@ -3525,9 +3525,9 @@ function renderLastWeek(){
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
     </div>
-    ${_rsBreakdownPanel(lw.from,lw.to,'lw')}
     </div>
-    </div>`;
+    </div>
+    ${_rsBreakdownPanel(lw.from,lw.to,'lw')}`;
 
 
   const dist=distBuckets(src);
@@ -3725,12 +3725,7 @@ function renderThisWeek(){
     </div>
     </div>
     </div>
-    <div class="cur-grid">
-    <div class="cur-col">
     ${_rsBreakdownPanel(tw.from,tw.to,'tw')}
-    </div>
-    <div class="cur-col"></div>
-    </div>
     <div class="cur-grid">
     <div class="cur-col">
     ${atRisk.length?`
