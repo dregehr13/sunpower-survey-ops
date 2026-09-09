@@ -364,7 +364,7 @@ function computeStats(){
 
   if(mode==='monday'){
     const period=getLastWeekRange();
-    // First-time completions, not isComplete() — mirrors the Current → Last
+    // Completions by Site Survey Complete date (terminal) — mirrors Current → Last
     // Week fix. A survey that closed last week and was later reopened for
     // resurvey should still count as a last-week completion here.
     const rows=ROWS.filter(r=>everCompleted(r)&&r.complete>=period.from&&r.complete<=period.to);

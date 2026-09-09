@@ -5,44 +5,44 @@
  },
  "scope": {
   "rawRows": 150,
-  "inScope": 141,
-  "droppedByScope": 9,
-  "complete": 109,
-  "wip": 32,
-  "dateButNotComplete": 6,
-  "withResurveySig": 20,
+  "inScope": 144,
+  "droppedByScope": 6,
+  "complete": 118,
+  "wip": 26,
+  "reopenedForResurvey": 8,
+  "withResurveySig": 23,
   "blankRegion": 22
  },
  "cycle": {
-  "count": 109,
-  "avg": 2.91,
+  "count": 118,
+  "avg": 2.92,
   "med": 1,
   "p75": 2,
-  "p90": 3
+  "p90": 4
  },
  "age": {
   "hasRepGrace": 129,
-  "noRepGrace": 12,
+  "noRepGrace": 15,
   "inGraceNow": 1,
   "ssDaysOpen": {
-   "avg": 4.84,
+   "avg": 3,
    "med": 4,
-   "max": 46
+   "max": 4
   },
   "projectAge": {
-   "avg": 12.13,
+   "avg": 3.92,
    "med": 5,
-   "max": 79
+   "max": 5
   },
   "anchorsUnmovedByGrace": true
  },
  "ratio": {
   "weekEnd": "2026-08-02",
-  "wipOnWeekEnd": 31,
-  "meanWipForWeek": 26.571,
-  "avgWeeklyCompletions": 19.333,
-  "forWeek": 1.37,
-  "live": 1.66,
+  "wipOnWeekEnd": 25,
+  "meanWipForWeek": 21.571,
+  "avgWeeklyCompletions": 20,
+  "forWeek": 1.08,
+  "live": 1.3,
   "lastCompleteWeekEnd": "2026-08-02",
   "bands": [
    "0.5:good",
@@ -55,43 +55,43 @@
   ]
  },
  "flow": {
-  "rollingClearance4wk": 0.706,
+  "rollingClearance4wk": 0.729,
   "clearSeries": [
    null,
    null,
    0.095,
-   0.706
+   0.729
   ],
   "weeklyFloors": [
-   4,
-   4,
-   4,
-   18
+   0,
+   0,
+   0,
+   14
   ],
   "clearanceAlarm": true
  },
  "projection": {
-  "recentCompletions": 51,
+  "recentCompletions": 53,
   "showRateGlobal": 0.733,
   "showRateResources": [
    "Radicl Services",
    "Sales Rep"
   ],
-  "segmentKeys": 14,
-  "expectedCtSample": 4.37,
+  "segmentKeys": 15,
+  "expectedCtSample": 4.28,
   "lookupFallback": 4,
   "businessDays": {
    "elapsed": 1,
    "remaining": 4
   },
   "weekDaysRemaining": 6.5,
-  "weekdayShapeWed": 0.1,
+  "weekdayShapeWed": 0.099,
   "projectWeek": {
    "point": 23,
    "completedSoFar": 0,
-   "pipeline": 10.4,
-   "intake": 6.6,
-   "wipOpen": 32,
+   "pipeline": 9.9,
+   "intake": 6.7,
+   "wipOpen": 26,
    "daysLeft": 6.5
   }
  },

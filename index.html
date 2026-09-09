@@ -1587,7 +1587,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1998,7 +1998,7 @@ function fbShow(page){
 // Map printed "3748 of 3836 shown" nine pixels above a rail reading 3,824, and
 // the source editor printed it above a table of 3,836 rows.
 function fbHint(page){
-  if(page==='wip')  return wipFiltered().length+' of '+rows.filter(r=>isWIP(r)).length+' open';
+  if(page==='wip')  return wipFiltered().length+' of '+rows.filter(isOpenQueue).length+' open';
   if(page==='data') return rows.length+' rows in scope';
   if(page==='map')  return '';   // the rail below states the count the map actually draws
   return filtered.length+' of '+rows.length+' shown';
@@ -2243,7 +2243,13 @@ function wipScoped(){
 // cards all describe. They used to disagree: only the table read this, so
 // filtering to one region left 1 row in the queue under a 113-open KPI row and
 // a 113-row age bar whose bands, when clicked, filtered a 1-row table.
-function wipFiltered(){ return wipScoped().filter(isWIP); }
+// The open queue: open initial-survey WIP plus open resurveys. isWIP is
+// initial-only (a reopened row carries a completion date), so the resurvey
+// backlog has to be unioned in — the lens then splits the two apart. inScope
+// keeps open Change Orders out of the initial half (they re-enter WIP when the
+// CO resolves back to In Progress).
+const isOpenQueue=r=>(isWIP(r)&&inScope(r))||isOpenResurvey(r);
+function wipFiltered(){ return wipScoped().filter(isOpenQueue); }
 
 function onWipF(key,value){
   wipF[key]=value;
@@ -2621,11 +2627,10 @@ window.addEventListener('resize',hideKtip);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') hideKtip(); });
 const TIP={
   // ── Completions & cycle time (Spec 12744) ──
-  complete:'A survey counts as complete only when it has a Site Survey Complete date AND List status "Complete". A Holding or Reopened row keeps its date but is still open.',
-  firstComplete:'Counts a survey in the week its Site Survey Complete date lands, regardless of current List status — so unlike the plain "complete" count it never shrinks later if the survey reopens for a resurvey.',
+  complete:'A survey counts as complete once it has a Site Survey Complete date. That date is terminal — a later resurvey or a cancellation never un-counts it, and the week it landed in never changes.',
   cycle:'Project Start Date → Site Survey Complete, in calendar days. This is the Spec 12744 metric and is never adjusted.',
   onTarget:()=>`Share of completed surveys that finished within ${S.targetAvg} calendar days, the Spec 12744 average target.`,
-  schedRem:'Surveys and resurveys with a scheduled date between yesterday and the end of this week, not yet complete.',
+  schedRem:'Initial surveys with a scheduled date between yesterday and the end of this week, not yet complete.',
 
   // ── The two age metrics — different questions, don't mix them ──
   wip:'Surveys that have started but are not yet complete.',
@@ -2986,12 +2991,7 @@ function _renderDrill(){
   document.getElementById('drill-seg').innerHTML=showSegs
     ? DRILL_SEGS.map(s=>{ const n=counts[s.k]??0; return `<button class="drill-seg-btn${s.k===_drillSeg?' active':''}" ${n?'':'disabled'} onclick="setDrillSeg('${s.k}')">${s.label}<span class="drill-seg-n">${n}</span></button>`; }).join('')
     : '';
-  // The Current basis excludes reopened surveys by construction, so an empty
-  // "Open resurvey" there is a property of the basis, not good news.
-  document.getElementById('drill-seg-note').textContent=
-    (showSegs&&counts.rsopen===0&&opts.basis==='current')
-      ? 'No open resurveys can appear here: this view is on the Current completion basis, which drops a survey the moment it is reopened. Switch Intake & flow to First-time to see them.'
-      : '';
+  document.getElementById('drill-seg-note').textContent='';
   const clr=document.getElementById('drill-search-clr'); if(clr) clr.style.display=_drillQ?'':'none';
 
   const thead=document.getElementById('drill-thead');
@@ -3314,18 +3314,40 @@ function setWeekView(v){ weekView=v; renderWeek(); }
 function renderWipCountBadge(){
   const b=document.getElementById('wip-count-badge');
   if(!b) return;
-  const n=rows.filter(r=>isWIP(r)).length;
+  const n=rows.filter(isOpenQueue).length;
   b.textContent=n||'';
   b.title=n?n+' surveys open':'';
   b.style.display=n?'inline-flex':'none';
 }
 
+// Resurveys are tracked on their own dates, never folded into the initial
+// completion count. This panel is the separate line — completed / requested in
+// the week, plus the live open backlog. `key` seeds the drill store.
+function _rsBreakdownPanel(from,to,key){
+  const done=rows.filter(r=>r.resurvey_complete&&r.resurvey_complete>=from&&r.resurvey_complete<=to);
+  const req=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=from&&r.resurvey_requested<=to);
+  const open=rows.filter(isOpenResurvey);
+  const cyc=avg(done.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
+  _curD[key+'RsDone']=done; _curD[key+'RsReq']=req; _curD[key+'RsOpen']=open;
+  const cell=(k,label,n,sub)=>`<div class="srail-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
+      <div class="klabel">${label}</div>
+      <div class="srail-val">${n}${sub?`<span class="srail-sub">${sub}</span>`:''}</div>
+    </div>`;
+  return `<div class="sec">
+    <div class="shead"><div><div class="stitle">Resurveys</div><div class="ssub">Tracked on resurvey dates — never part of the completion count above</div></div></div>
+    <div class="srail" style="margin:0;">
+      ${cell('Done','Completed',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':'')}
+      ${cell('Req','Requested',req.length,'')}
+      ${cell('Open','Open now',open.length,'backlog')}
+    </div>
+  </div>`;
+}
+
 function renderLastWeek(){
   const lw=weekRange(-1);
-  // First-time completions, not the isComplete() gate — a survey that closed
-  // last week and then got reopened for resurvey should still count as a
-  // last-week completion. The resurvey story itself is the First-pass yield
-  // card below, not a reason to make this number disappear.
+  // Completions by their Site Survey Complete date — terminal, so a survey that
+  // closed last week and later reopened for resurvey still counts here. The
+  // resurvey is its own line on the Quality page.
   const src=rows.filter(r=>everCompleted(r)&&r.complete>=lw.from&&r.complete<=lw.to);
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
@@ -3375,10 +3397,14 @@ function renderLastWeek(){
   _curD.lwWip=lwWipRows;
   // The misses, not the hits: "68% on target" is read to ask which ones blew it.
   _curD.lwMiss=src.filter(r=>r.ct_total!=null&&r.ct_total>S.targetAvg);
+  // Every survey the department did last week, whatever became of the deal — the
+  // "since canceled" split reconciles against WIN's BOOKING_SS, which drops a
+  // job the moment it cancels.
+  const lwDead=src.filter(r=>r.project_status==='Canceled').length;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('Last Week Completions','By day',_lastWeekSrc,{mode:'byDate'})")}>
-      <div class="klabel">Completions${kinfo(TIP.firstComplete)}</div>
-      <div class="srail-val">${src.length}<span class="srail-sub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</span></div>
+      <div class="klabel">Completions${kinfo(TIP.complete)}</div>
+      <div class="srail-val">${src.length}<span class="srail-sub">${lwDead?lwDead+' since canceled':[...new Set(src.map(r=>r.region).filter(Boolean))].length+' regions'}</span></div>
     </div>
     <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
@@ -3499,6 +3525,7 @@ function renderLastWeek(){
       <div class="leg"><span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>${S.targetAvg}d target</span></div>
       <div class="cw" id="lw-rg-wrap"><canvas id="lw-rg"></canvas></div>
     </div>
+    ${_rsBreakdownPanel(lw.from,lw.to,'lw')}
     </div>
     </div>`;
 
@@ -3557,28 +3584,21 @@ function renderThisWeek(){
   const today=localISO(new Date());
   // Use the DATA_TS date as the cutoff — export captures completions through the moment it was run
   const dataThrough=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):today;
-  // First-time completions, not the isComplete() gate — matches Current → Last
-  // Week. A survey that closed this week and was then reopened for resurvey
-  // still counts as a this-week completion; the resurvey story is First-pass
-  // yield, not a reason for this number to shrink.
+  // Completions by Site Survey Complete date — terminal, matches Current → Last
+  // Week. A reopened-for-resurvey survey still counts; the resurvey is its own
+  // line on the Quality page.
   const completedTW=rows.filter(r=>everCompleted(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
-  const scheduledRem=rows.filter(r=>!isComplete(r)&&(
-    (r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to)||
-    (r.resurvey_scheduled&&r.resurvey_scheduled>=dataThrough&&r.resurvey_scheduled<=tw.to)
-  ));
-  // Initial surveys + open resurveys scheduled this week — matches what "Scheduled remaining" counts
-  const atRiskInit=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&!isComplete(r)&&!(r.resurvey_requested&&!r.resurvey_complete))
+  // Initial surveys only — resurveys have their own line (see rsBreak below).
+  const scheduledRem=rows.filter(r=>isWIP(r)&&inScope(r)&&r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to);
+  const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&isWIP(r)&&inScope(r))
     .map(r=>({r,sched:r.scheduled,isRs:false,openFrom:r.start}));
-  const atRiskRs=rows.filter(r=>r.resurvey_scheduled&&r.resurvey_scheduled>=tw.from&&r.resurvey_scheduled<=tw.to&&r.list!=='Complete'&&!r.resurvey_complete)
-    .map(r=>({r,sched:r.resurvey_scheduled,isRs:true,openFrom:r.resurvey_requested||r.start}));
-  const atRisk=[...atRiskInit,...atRiskRs];
   const {elapsed:bDaysElapsed}=businessDays(dataThrough);
   // Week is only over once the export date is past the week's Sunday
   const daysRem=dataThrough>tw.to?0:weekDaysRemaining(dataThrough);
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=dataThrough&&r.ct_total!=null&&r.ct_total>=1);
   const expectedCt=buildExpectedCt(recentComps);
-  const wipProjects=rows.filter(r=>isWIP(r));
+  const wipProjects=rows.filter(r=>isWIP(r)&&inScope(r));
   const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
   const avgWipAge=avg(wipProjects.map(r=>ssDaysOpen(r,dataThrough)));
@@ -3626,18 +3646,22 @@ function renderThisWeek(){
     </div>`;
   _thisWeekSrc=completedTW;
   _curD.twSched=scheduledRem; _curD.twWip=wipProjects;
+  // The survey happened whatever became of the deal — count it. The split is
+  // context: WIN's BOOKING_SS drops a job the moment it cancels, so this line
+  // is the reconciliation ("we did 10; 2 of those deals have since died").
+  const twDead=completedTW.filter(r=>r.project_status==='Canceled').length;
   document.getElementById('cur-kpis').innerHTML=`
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})")}>
-      <div class="klabel">Completed so far${kinfo(TIP.firstComplete)}</div>
-      <div class="srail-val">${completedTW.length}<span class="srail-sub">through today</span></div>
+      <div class="klabel">Completed so far${kinfo(TIP.complete)}</div>
+      <div class="srail-val">${completedTW.length}<span class="srail-sub">${twDead?twDead+' since canceled':'through today'}</span></div>
     </div>
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openProjModal()")}>
       <div class="klabel">Projected total${kinfo(projTip)}</div>
       <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0&&proj.recentMed!=null?('usually ±'+proj.recentMed):(daysRem>0?wip+' open':'week complete')}</span></div>
     </div>
-    <div class="srail-cell${scheduledRem.length?' rail-d':''}" ${scheduledRem.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('twSched','Scheduled remaining','${scheduledRem.length} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}, incl. resurveys',{sort:'days'})`):''}>
+    <div class="srail-cell${scheduledRem.length?' rail-d':''}" ${scheduledRem.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('twSched','Scheduled remaining','${scheduledRem.length} initial survey${scheduledRem.length===1?'':'s'} booked between ${escAttrJs(fmtDateShort(dataThrough))} and ${escAttrJs(fmtDateShort(tw.to))}',{sort:'days'})`):''}>
       <div class="klabel">Scheduled remaining${kinfo(TIP.schedRem)}</div>
-      <div class="srail-val">${scheduledRem.length}<span class="srail-sub">this week · incl. resurveys</span></div>
+      <div class="srail-val">${scheduledRem.length}<span class="srail-sub">this week</span></div>
     </div>
     <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
@@ -3703,9 +3727,15 @@ function renderThisWeek(){
     </div>
     <div class="cur-grid">
     <div class="cur-col">
+    ${_rsBreakdownPanel(tw.from,tw.to,'tw')}
+    </div>
+    <div class="cur-col"></div>
+    </div>
+    <div class="cur-grid">
+    <div class="cur-col">
     ${atRisk.length?`
     <div class="sec">
-      <div class="shead"><div><div class="stitle"><span class="ld" style="display:inline-block;margin-right:6px;background:rgba(148,163,184,0.5);"></span>Scheduled this week</div><div class="ssub">Open · ${atRiskInit.length} survey${atRiskInit.length===1?'':'s'}${atRiskRs.length?` + ${atRiskRs.length} resurvey${atRiskRs.length===1?'':'s'}`:''}</div></div></div>
+      <div class="shead"><div><div class="stitle"><span class="ld" style="display:inline-block;margin-right:6px;background:rgba(148,163,184,0.5);"></span>Scheduled this week</div><div class="ssub">Open · ${atRisk.length} initial survey${atRisk.length===1?'':'s'}</div></div></div>
       <div style="overflow-x:auto;"><table id="tw-sched-tbl" class="tbl-static"><thead><tr>
         <th>Project</th><th>Region</th><th>Sales Rep</th><th class="r">Scheduled</th><th class="r">Days open</th>
       </tr></thead><tbody>
@@ -3975,6 +4005,10 @@ function renderRsReq(){
   const openN=reqs.filter(isOpenResurvey).length;
   const unschedN=reqs.filter(r=>isOpenResurvey(r)&&!r.resurvey_scheduled).length;
   const dismissedN=reqs.filter(r=>!isResurveyDefect(r)).length;
+  // Resurvey completions closed inside the same two-week window — the throughput
+  // side of the intake above. Tracked on resurvey_complete, never folded into
+  // the initial completion count anywhere on the app.
+  const rsClosedN=rows.filter(r=>gfDim(r)&&r.resurvey_complete&&r.resurvey_complete>=w.from&&r.resurvey_complete<=w.to).length;
   const dayMax=Math.max(...ordered.map(d=>byDay[d].length),1);
   const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const relLabel=d=>{ const g=dDiff(d,today); return g===0?'today':g===1?'yesterday':''; };
@@ -3983,7 +4017,7 @@ function renderRsReq(){
     <div class="sec">
       <div class="shead">
         <div><div class="stitle">Resurveys requested</div>
-          <div class="ssub">${reqs.length} request${reqs.length===1?'':'s'}${openN?` · ${openN} still open`:''}${unschedN?` · ${unschedN} unscheduled`:''} · <b>last week and this week so far</b></div></div>
+          <div class="ssub">${reqs.length} request${reqs.length===1?'':'s'} · ${rsClosedN} completed${openN?` · ${openN} still open`:''}${unschedN?` · ${unschedN} unscheduled`:''} · <b>last week and this week so far</b></div></div>
         ${reqs.length?`<button class="fbtn" onclick="drillRsRequested()" style="font-size:11px;">All ${reqs.length} ↗</button>`:''}
       </div>
       ${reqs.length?`<div class="rswk-rows">
@@ -4302,12 +4336,6 @@ function drillTrWeek(wk,wkEnd,kind){
 }
 let trFlowView='daily'; // 'daily' | 'weekly' — Intake & flow chart granularity
 function setTrFlowView(v){ trFlowView=v; renderTrends(); }
-// 'current' | 'first' — completion basis for the Weekly Completed bar/stat.
-// 'current' matches isComplete() (drops out again if reopened for resurvey);
-// 'first' counts a survey once, the week it first closed, and never un-counts
-// it. Weekly-only: Daily mode always reads current-truth (Out by day).
-let trFlowCompletionBasis='current';
-function setTrFlowCompletionBasis(v){ trFlowCompletionBasis=v; renderTrends(); }
 // 'share' | 'count' — the resource-mix chart. Share is a 100%-stacked bar (the
 // "who's running the surveys, and how has that moved" question); count keeps
 // the zero baseline and carries a Sales-rep-% overlay line for the same read.
@@ -4332,7 +4360,6 @@ function renderTrends(){
   const inOutLabels=allWks.map(wk=>fmtWeekLabel({week:wk,weekEnd:wkEndMap[wk]||wk}));
   const inOutNewIn=allWks.map(wk=>wkMap[wk]?.count||0);
   const inOutCompleted=allWks.map(wk=>wkCMap[wk]?.count||0);
-  const inOutCompletedFirst=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return 0; return trendSrc.filter(r=>everCompleted(r)&&r.complete>=wk&&r.complete<=we).length; });
   const wipLine=allWks.map(wk=>{ const we=wkEndMap[wk]; if(!we) return null; return trendSrc.filter(r=>r.start&&r.start<=we&&(!isComplete(r)||r.complete>we)).length; });
   const labelsC=weeklyC.map(fmtWeekLabel);
   const al=weeklyC.map(()=>1);
@@ -4425,10 +4452,6 @@ function renderTrends(){
       <div class="shead">
         <div><div class="stitle">Intake &amp; flow</div><div class="ssub">${trFlowView==='daily'?`Surveys in (by start date) vs out (by complete date), ${flowRangeLabel} · weekend muted`:'New surveys (by start date) vs completions (by complete date), by week · current week is partial'} · line = open WIP</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${trFlowView==='weekly'?`<div class="toggle-group">
-            <button class="tgl-btn${trFlowCompletionBasis==='current'?' active':''}" onclick="setTrFlowCompletionBasis('current')">Current</button>
-            <button class="tgl-btn${trFlowCompletionBasis==='first'?' active':''}" onclick="setTrFlowCompletionBasis('first')">First-time</button>
-          </div>`:''}
           <div class="toggle-group">
             <button class="tgl-btn${trFlowView==='daily'?' active':''}" onclick="setTrFlowView('daily')">Daily</button>
             <button class="tgl-btn${trFlowView==='weekly'?' active':''}" onclick="setTrFlowView('weekly')">Weekly</button>
@@ -4439,7 +4462,7 @@ function renderTrends(){
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>${trFlowView==='daily'?'In':'New In'}</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':(trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed')}${trFlowView==='weekly'?kinfo(trFlowCompletionBasis==='first'?TIP.firstComplete:TIP.complete):''}</span>
+        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':'Completed'}${trFlowView==='weekly'?kinfo(TIP.complete):''}</span>
         ${trFlowView==='daily'?'<span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekend</span>':''}
         <span class="li" style="color:#d97706;"><span class="ldash" style="background:#d97706;"></span>WIP</span>
       </div>
@@ -4599,11 +4622,7 @@ function renderTrends(){
     const from=isoAddD(end,-6);
     const inn=trendSrc.filter(r=>r.start&&r.start>=from&&r.start<=end).length;
     const out=trendSrc.filter(r=>isComplete(r)&&r.complete>=from&&r.complete<=end).length;
-    // First-time completion count — see everCompleted() in lib/metrics.cjs.
-    // Clearance/floor/alarms stay on `out` (current-truth) on purpose; only
-    // the displayed Completed stat switches with the toggle.
-    const outFirst=trendSrc.filter(r=>everCompleted(r)&&r.complete>=from&&r.complete<=end).length;
-    flowWeeks.push({end,inn,out,outFirst,clear:inn?out/inn:null,floor:weeklyFloor(trendSrc,end)});
+    flowWeeks.push({end,inn,out,clear:inn?out/inn:null,floor:weeklyFloor(trendSrc,end)});
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
@@ -4633,7 +4652,7 @@ function renderTrends(){
     const floorSpark=miniSpark(floorSeries,{color:'#8a8571'});
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
-      +stat('Completed',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?fw.outFirst:fw.out,'last full week','',(trFlowView==='weekly'&&trFlowCompletionBasis==='first')?TIP.firstComplete:TIP.complete)
+      +stat('Completed',fw.out,'last full week','',TIP.complete)
       +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Clearance (4wk)${kinfo(TIP.clearance)}</div><div style="font-size:18px;font-weight:700;${clCls}">${cl!=null?cl+'%':'—'}</div><div style="font-size:10px;color:var(--faint);">completed ÷ started · alarm below 90%</div>${clearSpark}</div>`
       +`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Weekly floor${kinfo(TIP.weeklyFloor)}</div><div style="font-size:18px;font-weight:700;">${floorSeries[floorSeries.length-1]??'—'}</div><div style="font-size:10px;color:var(--faint);">lowest daily WIP that week</div>${floorSpark}</div>`;
   }
@@ -4684,13 +4703,13 @@ function renderTrends(){
       type:'bar',
       data:{labels:inOutLabels,datasets:[
         {label:'New In',data:inOutNewIn,backgroundColor:'#60a5fa',borderRadius:3,yAxisID:'y',order:2},
-        {label:trFlowCompletionBasis==='first'?'Completed (first-time)':'Completed',data:(trFlowCompletionBasis==='first'?inOutCompletedFirst:inOutCompleted),backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
+        {label:'Completed',data:inOutCompleted,backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
         {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
-        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trFlowCompletionBasis==='first'?trendSrc.filter(r=>everCompleted(r)&&weekOf(r.complete)===wk):trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr,{basis:trFlowCompletionBasis==='first'?'first':'current'}); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
+        onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; if(els[0].datasetIndex===1){ const dr=trendDone.filter(r=>weekOf(r.complete)===wk); openDrill('Completions · '+lbl,dr.length+' surveys',dr); } else { const dr=trendSrc.filter(r=>weekOf(r.start)===wk); openDrill('New this week · '+lbl,dr.length+' surveys',dr); } },
         plugins:{legend:{display:false},
           tooltip:{callbacks:{
             title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -4787,9 +4806,12 @@ function renderTrends(){
     const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1));
     const wk=`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
     if(!cohortMap[wk]) cohortMap[wk]={};
+    // Resurvey pending is a carve-out of Complete: the initial survey finished
+    // (terminal) but the job is back open for a resurvey. Tested first so a
+    // reopened row lands there rather than in the plain Complete bar.
     let cat;
-    if(isComplete(r)) cat='Complete';
-    else if(hasResurveySig(r)) cat='Resurvey pending';
+    if(isOpenResurvey(r)) cat='Resurvey pending';
+    else if(isComplete(r)) cat='Complete';
     else if(r.scheduled) cat='Scheduled';
     else cat='Unscheduled';
     cohortMap[wk][cat]=(cohortMap[wk][cat]||0)+1;
@@ -4797,7 +4819,8 @@ function renderTrends(){
   const completePct=allWks.map(wk=>{
     const d=cohortMap[wk]; if(!d) return null;
     const total=Object.values(d).reduce((a,b)=>a+b,0);
-    return total>0?Math.round((d['Complete']||0)/total*100):null;
+    // Both Complete and Resurvey pending finished their initial survey.
+    return total>0?Math.round(((d['Complete']||0)+(d['Resurvey pending']||0))/total*100):null;
   });
   dc('tr-vol');
   CH['tr-vol']=new Chart(document.getElementById('tr-vol'),{
@@ -4819,7 +4842,7 @@ function renderTrends(){
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
-      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isComplete(r)) return state==='Complete'; if(hasResurveySig(r)) return state==='Resurvey pending'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
+      onClick:(evt,els)=>{ if(!els.length) return; const wk=allWks[els[0].index]; const lbl=inOutLabels[els[0].index]; const state=COHORT_CATS[els[0].datasetIndex]; if(!state) return; const dr=trendSrc.filter(r=>{ if(weekOf(r.start)!==wk) return false; if(isOpenResurvey(r)) return state==='Resurvey pending'; if(isComplete(r)) return state==='Complete'; if(r.scheduled) return state==='Scheduled'; return state==='Unscheduled'; }); openDrill(state+' · '+lbl,dr.length+' surveys',dr); },
       plugins:{legend:{display:false},
         tooltip:{mode:'index',intersect:false,callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
@@ -4940,17 +4963,15 @@ function renderTrends(){
 // So there is one status bar carrying the full vocabulary in schedule order,
 // and the coarse "everything unscheduled" cut survives as a group toggle on
 // the legend rather than as a second row.
-// The queue lens. Three states, one control apiece on the rail: the whole open
-// queue, the open resurveys, or the initial surveys — the two lens cells are
-// mutually exclusive, so clicking one clears the other. The pair partitions
-// "Open now" exactly (both counts come off the same allWip), which is why the
-// third number is worth its cell: a resurvey and a first survey are different
-// work, and until now only one of them could be looked at on its own.
-let wipView='all'; // 'all' | 'openrs' | 'initial'
+// The queue lens. Initial (the reported WIP — first visits), Resurveys (the
+// backlog that came back, tracked on its own), or All (the two together, for
+// the team). isWIP and isOpenResurvey partition the union exactly. Initial is
+// the default; the Resurveys rail cell is the shortcut into that lens.
+let wipView='initial'; // 'initial' | 'openrs' | 'all' — Initial is the reported WIP; All is the combined team view
 const WIP_VIEWS={
-  all:     {noun:'open',            full:'open surveys',    sub:'Every open survey'},
-  initial: {noun:'initial surveys', full:'initial surveys', sub:'First visits only — nothing that came back'},
-  openrs:  {noun:'open resurveys',  full:'open resurveys',  sub:'Resurveys requested and not yet complete'},
+  initial: {noun:'initial surveys', full:'initial surveys', sub:'First visits — the reported WIP'},
+  openrs:  {noun:'open resurveys',  full:'open resurveys',  sub:'Resurveys requested and not yet complete — tracked separately'},
+  all:     {noun:'open',            full:'open surveys',    sub:'Initial surveys and open resurveys together'},
 };
 const wipViewIs=v=>wipView===v;
 // A plain assignment, because the lens toggle is a segmented control: clicking
@@ -5162,7 +5183,7 @@ function renderAgingWIP(){
   }));
   // The view is the outermost cut: every count on the page — rail, bands,
   // chips, footer — is computed within it, not against the national queue.
-  const inView=r=>wipView==='openrs'?isOpenResurvey(r):wipView==='initial'?!isOpenResurvey(r):true;
+  const inView=r=>wipView==='openrs'?isOpenResurvey(r):wipView==='initial'?isWIP(r):true;
   wip=wip.filter(inView);
   const viewPool=wip;
 
@@ -5216,11 +5237,12 @@ function renderAgingWIP(){
   }));
 
   // ── Stat rail ─────────────────────────────────────────────────────────
-  // The whole open queue under the page filter, NOT the view: the rail is the
-  // overview, the view toggle is a lens on the table beneath it. "Open
-  // resurveys" doubles as the pointer to that view.
-  const allWip=wipFiltered().map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
-  const wipUnfilteredCount=rows.filter(r=>isWIP(r)).length;
+  // Rail describes the current lens (Initial / Resurveys / All); the table
+  // below shows the same set. railInitial / railOpenRs come off the whole
+  // dim-filtered queue so the "Open resurveys" pointer cell and the All-view
+  // subtitle always show both halves regardless of the lens.
+  const allWip=wipFiltered().filter(inView).map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
+  const wipUnfilteredCount=rows.filter(r=>isOpenQueue(r)&&inView(r)).length;
   const wipDimFiltered=allWip.length!==wipUnfilteredCount;
   const totalWip=allWip.length;
   // Mean Days Open in SS. Past due held this slot and was the weakest cell on
@@ -5236,12 +5258,11 @@ function renderAgingWIP(){
   const OVER_MIN=PA_MINS[WIP_OVER_BANDS[0]];
   const railOverAge=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=OVER_MIN).length;
   const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
-  // Read off allWip rather than wipScoped(), so this and the initial count that
-  // sits beside it in the queue subtitle add to Open now exactly — a count
-  // taken from wipScoped() could include a row the table's own filter (start
-  // present, still open) drops.
-  const railOpenRs=allWip.filter(isOpenResurvey).length;
-  const railInitial=allWip.length-railOpenRs;
+  // The whole dim-filtered queue split into its two halves — not lens-scoped,
+  // so the "Open resurveys" cell and the All-view subtitle read the same
+  // whichever lens is active. isWIP and isOpenResurvey partition the union.
+  const railOpenRs=wipFiltered().filter(isOpenResurvey).length;
+  const railInitial=wipFiltered().filter(isWIP).length;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
   // Both sides of the ratio come from the same filtered population.
@@ -5404,7 +5425,7 @@ function renderAgingWIP(){
                     railOverAge?'var(--amber)':'var(--text)','Filter the queue to surveys '+OVER_MIN+' days old and over')
           +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
                     'Filter the queue to everything with no booking')
-          +cell(rsOn,`setWipView('${rsOn?'all':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
+          +cell(rsOn,`setWipView('${rsOn?'initial':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
                     railOpenRs?'var(--amber)':'var(--text)','Show only the open resurveys');
       })()}
       ${(()=>{const shown=pipeRatio!=null?Math.round(pipeRatio*10)/10:null;
@@ -5431,7 +5452,7 @@ function renderAgingWIP(){
           // already follow — the rail cell is a shortcut into a control that
           // exists below it, not the only place the state can be reached.
           const lt=(v,l,tip)=>`<button class="tgl-btn${wipView===v?' active':''}" onclick="setWipView('${v}')"${tip?` title="${esc(tip)}"`:''} aria-pressed="${wipView===v}">${l}</button>`;
-          return `<div class="wip-lens">${lt('all','All',TIP.wip)}${lt('initial','Initial',TIP.wipInitial)}${lt('openrs','Resurveys',TIP.rsOpen)}</div>`;
+          return `<div class="wip-lens">${lt('initial','Initial',TIP.wipInitial)}${lt('openrs','Resurveys',TIP.rsOpen)}${lt('all','All',TIP.wip)}</div>`;
         })()}
       </div>
 

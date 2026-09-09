@@ -14,21 +14,25 @@ const {
   bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
 
-// ── isComplete: requires BOTH a completion date AND List status 'Complete' ──
-test('isComplete requires both complete date and list status', () => {
+// ── isComplete: the Site Survey Complete date alone — terminal ──
+// A later resurvey or a List field drifting off 'Complete' never un-counts the
+// initial survey. isComplete and everCompleted are the same test.
+test('isComplete is the completion date, regardless of List status', () => {
   assert.equal(isComplete({ complete: '2026-07-01', list: 'Complete' }), true);
-  assert.equal(isComplete({ complete: '2026-07-01', list: 'In Progress' }), false);
-  assert.equal(isComplete({ complete: '2026-07-01', list: '' }), false);
+  assert.equal(isComplete({ complete: '2026-07-01', list: 'In Progress' }), true);
+  assert.equal(isComplete({ complete: '2026-07-01', list: 'Holding' }), true);
+  assert.equal(isComplete({ complete: '2026-07-01', list: '' }), true);
   assert.equal(isComplete({ complete: '', list: 'Complete' }), false);
   assert.equal(isComplete({ complete: '', list: '' }), false);
 });
 
-// ── isWIP: started but not complete ──
+// ── isWIP: started, initial survey not complete ──
 test('isWIP is started-and-not-complete', () => {
   assert.equal(isWIP({ start: '2026-06-01', complete: '', list: '' }), true);
   assert.equal(isWIP({ start: '2026-06-01', complete: '2026-06-05', list: 'Complete' }), false);
-  // complete date without list status: still WIP (matches isComplete)
-  assert.equal(isWIP({ start: '2026-06-01', complete: '2026-06-05', list: 'In Progress' }), true);
+  // a completion date is terminal — a reopened row is not initial WIP
+  assert.equal(isWIP({ start: '2026-06-01', complete: '2026-06-05', list: 'Reopened' }), false);
+  assert.equal(isWIP({ start: '2026-06-01', complete: '2026-06-05', list: 'Holding' }), false);
   assert.equal(isWIP({ start: '', complete: '', list: '' }), false);
 });
 
@@ -308,21 +312,26 @@ test('normalizeName leaves mixed-case and empty names untouched', () => {
 test('filterRows keeps active projects started on/after the cutoff', () => {
   const rows = [
     { project_status: 'In Progress',  start: DATA_CUTOFF,  sales_rep: 'A B' },
-    { project_status: 'Change Order', start: '2026-06-01', sales_rep: 'C D' },
-    { project_status: 'In Progress',  start: '2025-12-28', sales_rep: 'E F' }, // before cutoff
-    { project_status: 'Cancelled',    start: '2026-06-01', sales_rep: 'G H' }, // inactive, not complete
+    { project_status: 'Change Order', start: '2026-06-01', sales_rep: 'C D' }, // open CO — out of WIP until it resolves
+    { project_status: 'Change Order', start: '2026-06-01', complete: '2026-06-03', list: 'Complete', sales_rep: 'E F' }, // completed under a CO — the survey happened
+    { project_status: 'In Progress',  start: '2025-12-28', sales_rep: 'G H' }, // before cutoff
+    { project_status: 'Cancelled',    start: '2026-06-01', sales_rep: 'I J' }, // inactive, not complete
   ];
   const out = filterRows(rows);
-  assert.deepEqual(out.map(r => r.sales_rep), ['A B', 'C D']);
+  assert.deepEqual(out.map(r => r.sales_rep), ['A B', 'E F']);
 });
 
 test('inScope keeps completed surveys regardless of project status, but not as WIP', () => {
   const atRiskDone = { project_status: 'At-Risk', start: '2026-07-15', complete: '2026-07-16', list: 'Complete' };
   const cancelledDone = { project_status: 'Cancelled', start: '2026-07-10', complete: '2026-07-12', list: 'Complete' };
+  const cancelledDoneDrifted = { project_status: 'Cancelled', start: '2026-07-10', complete: '2026-07-12', list: 'Holding' };
   const atRiskOpen = { project_status: 'At-Risk', start: '2026-07-15', complete: '', list: 'Open' };
+  const changeOrderOpen = { project_status: 'Change Order', start: '2026-07-15', complete: '', list: 'Holding' };
   assert.equal(inScope(atRiskDone), true);
-  assert.equal(cancelledDone && inScope(cancelledDone), true);
+  assert.equal(inScope(cancelledDone), true);
+  assert.equal(inScope(cancelledDoneDrifted), true); // List drifted off 'Complete' — the survey still happened
   assert.equal(inScope(atRiskOpen), false); // never shows up as open WIP
+  assert.equal(inScope(changeOrderOpen), false); // open Change Order is out until it resolves
   assert.equal(isWIP(atRiskDone), false);
 });
 
@@ -506,16 +515,17 @@ test('bandFor bands: ≤target good, ≤target+2 mid, else bad, null → empty',
 });
 
 // ── SS Ratio ──
-test('wipOn counts Holding/Reopened rows as still open', () => {
-  // a completion date alone is not done — list must be 'Complete' too
+test('wipOn counts open initial WIP — a completion date is terminal', () => {
+  // a Site Survey Complete date ends the initial survey; a reopened row is
+  // resurvey work, tracked separately, not initial WIP
   const rows = [
     { start: '2026-07-01', complete: '2026-07-03', list: 'Complete' }, // done
-    { start: '2026-07-01', complete: '2026-07-03', list: 'Holding' },  // still open
-    { start: '2026-07-01', complete: '2026-07-03', list: 'Reopened' }, // still open
+    { start: '2026-07-01', complete: '2026-07-03', list: 'Holding' },  // reopened — not initial WIP
+    { start: '2026-07-01', complete: '2026-07-03', list: 'Reopened' }, // reopened — not initial WIP
     { start: '2026-07-01', complete: '', list: 'Open' },               // still open
   ];
-  assert.equal(wipOn(rows, '2026-07-05'), 3);
-  assert.equal(wipOn(rows, '2026-07-02'), 4); // nothing finished yet
+  assert.equal(wipOn(rows, '2026-07-05'), 1);
+  assert.equal(wipOn(rows, '2026-07-02'), 4); // nothing completed yet
   assert.equal(wipOn(rows, '2026-06-30'), 0); // nothing started yet
 });
 
