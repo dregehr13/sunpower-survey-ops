@@ -26,6 +26,67 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
 - Metric definitions (DATA_CUTOFF, inScope/PARKED_LIST, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen/hasRepGrace/inRepGrace, avg/med/pct, hasResurveySig, isResurveyDefect, isOpenResurvey) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- **Completion is terminal, and WIP is initial surveys only** (2026-09-09,
+  Doug's call — "separate initial from rework in reporting; I report on initial
+  surveys"). The through-line: the initial survey completing is final, and
+  everything after it — a resurvey, a cancellation — is tracked on its own and
+  never erases it. Things not to undo:
+  - **`isComplete(r)` is now just `!!r.complete`**, identical to `everCompleted`
+    — both names kept because ~50 call sites import each. It used to also
+    require `list === 'Complete'`, which flipped false the moment a survey was
+    reopened for resurvey: a past week's completion count shrank retroactively,
+    and ~14 reopened + ~140 completed-then-cancelled rows sat in the open queue.
+    Every "count completions in week X" site was already on `everCompleted`;
+    collapsing the two made the `isComplete` sites (Performance, Trends flow,
+    rsDefectPool, Resource, cohort) correct by construction too
+  - **`inScope(r)`**: completed branch uses `isComplete`; active branch is
+    **`project_status === 'In Progress'` only** — an open Change Order drops out
+    of WIP until it resolves back to In Progress (Doug keeps COs in the export
+    so they "pop back in" on their own). A *completed* survey under a CO still
+    counts — the work happened. Net on live data: WIP 69 → 52 (−2 open COs, and
+    the resurveys moved out), in-scope completions 3,847 → 3,997 (the reopened +
+    completed-then-cancelled rows that had leaked out)
+  - **`isWIP(r)` is initial-only by construction** — `start && !isComplete &&
+    !parked`, and a reopened row carries a completion date so it is out.
+    `isOpenResurvey` is the disjoint resurvey-backlog set (`isOpenResurvey &&
+    !complete` is 0 rows)
+  - **`isOpenResurvey(r)` gained `project_status === 'In Progress'`** (2026-09-09,
+    same day, second commit). It never checked status — it never needed to
+    before the 2026-08-26 report change brought every cancelled project in.
+    Once `isComplete` went terminal those reopened rows on dead deals reached
+    the scoped set: 98 apparent open resurveys = 14 In Progress + 6 At-Risk +
+    **78 Canceled**. The real number the team works is 14
+  - **The WIP page is `isWIP ∪ isOpenResurvey`, split by a lens.** `isOpenQueue`
+    = `(isWIP && inScope) || isOpenResurvey` is the shared union predicate (nav
+    badge, bar hint, `wipFiltered()`). Default lens is **Initial** (the reported
+    WIP); **Resurveys** (`isOpenResurvey`, tracked separately) and **All** (the
+    union) stay, All kept non-default for internal team use. The rail follows
+    the lens; `railInitial` / `railOpenRs` come off the whole dim-filtered queue
+    so the "Open resurveys" pointer cell and the All subtitle read both halves
+    whichever lens is active
+  - **SS ratio, `projectWeek()`, `api/morning-card.js`, compose's Huddle:
+    initial only.** The projection's resurvey leg (`hazRs`, the `'rs'` bump, the
+    `isOpenResurvey` branch in `pConv`) was removed outright — the projected
+    weekly total is initial completions, the number Doug reports
+  - **Current tabs**: WIP cell is `isWIP && inScope` (was leaking 2 open COs);
+    "Scheduled remaining" is initial-only; the Completions cells show
+    **"N since canceled"** — the reconciliation line against WIN's BOOKING_SS,
+    which drops a job the moment it cancels. New **Resurveys** panel
+    (`_rsBreakdownPanel`) on both Last Week / This Week: completed / requested
+    in the range + the live open backlog, tracked on resurvey dates
+  - **Trends**: the *Current / First-time* completion-basis toggle
+    (`trFlowCompletionBasis`) is gone — there is one completion truth now. The
+    Pipeline-cohorts chart's **"Resurvey pending"** slice is a carve-out of
+    Complete (`isOpenResurvey`, tested first) — of the surveys started that
+    week, how many completed but are back open
+  - **Quality is unchanged structurally** (Doug's call) — it stays the rework
+    surface. Its FPY population grew by the ~150 rows `isComplete` now admits,
+    consistent with the already-settled "FPY counts every completed survey,
+    canceled projects included". The inbox subtitle now also prints resurvey
+    completions ("N requests · M completed")
+  - **`test/surfaces.test.js` `no surface reimplements the completion test`**
+    still stands — it forbids a bare `!r.complete` and pushes everything through
+    the `isComplete` helper, even though the two are now equivalent
 - **Three shared libraries, not one.** `lib/metrics.cjs` answers "how is the
   survey work going". `lib/coverage.cjs` answers "who should be doing it and
   can they reach it" — distance, market clustering, surveyor capacity.
@@ -40,7 +101,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - **SS Ratio has two variants in `lib/metrics.cjs` — they answer different questions, don't merge them:**
   - `ssRatioForWeek(rows, weekEnd)` — the reported weekly number (Trends line, Monday recap). WIP is the **7-day mean across the week**, not the Sunday close: intake spikes Fri/Sat (342 in vs 52 done) while Monday clears ~210, so a week-close snapshot samples the weekly maximum every time and overstates backlog by ~a third
   - `ssRatioLive(rows, asOf)` — "what's on my desk right now" for the WIP page card. Denominator anchors on `lastCompleteWeekEnd()` so a part-finished week can't deflate it. This one legitimately reads high on a Monday morning — that's the real queue before the day's clearing
-  - Both count WIP with `isComplete()`. The old Trends line used `!r.complete`, which silently treated Holding/Reopened rows as finished and understated the ratio
+  - **Both sides are initial surveys only** (2026-09-09): the denominator counts initial completions, and `wipOn` counts open initial WIP (a reopened row carries a completion date, so it is out of both). Resurvey backlog is its own number. Live effect: `ssRatioLive` ~1.3 → 0.78
   - Partial weeks are never plotted on the Trends line — the week end is in the future, so WIP counts every open row while the denominator averages in a barely-started week
   - `ssRatioBand()` is shared by both surfaces: **≤1.0 green, 1–2 uncoloured, ≥2.0 amber**. The 1–2 range is the normal operating band and is deliberately not coloured — intake arrives over the weekend while the team is off, so an elevated reading is usually the rhythm. Two weeks of backlog is the real alarm
   - Called "SS ratio" everywhere (was "Pipeline ratio" in places). Every KPI card across all six pages carries a hoverable definition via `kinfo(TIP.x)` — keep `TIP` in index.html as the single source for that wording
@@ -50,7 +111,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - `clearanceAlarm` — `rollingClearance()` (4wk completions ÷ starts) under 90% for two readings running. The 4wk figure held 89–103% for five months, so it is a tight baseline; the single-week version is useless (under 100% in 12 of 20 weeks). Threshold is fit to this team's own 20-week history — encodes "unusual for us", not an industry standard. Revisit after a quarter
   - `weeklyFloor()` is the lowest daily WIP across the week (Mon–Sun) — shown on the same card, no alarm attached. It used to sample a single day (the Monday after the weekend buildup drains) on the assumption that was always the week's low point; a sustained backlog climb broke that (WIP kept rising Mon→Sun rather than draining), so it was redefined 2026-08-07 to take the actual weekly minimum
   - `floorAlarm`/`floorBaseline` (weekly floor above 1.5× the trailing 16-week median) were dropped from the UI the same day — that design assumed a stable baseline with occasional spikes, but the trailing median chases a sustained multi-month climb instead of anchoring it, so the alarm flickered true/false with no real change in trajectory. Functions remain in `lib/metrics.cjs`, tested, pending a redesign that detects sustained direction (e.g. consecutive rising weeks) rather than a threshold vs. recent history
-- **Weekly completion projection — `projectWeek()` in `lib/metrics.cjs`** (v2, 2026-09-02, replaced `projectWeekTotal`). The old model summed a show-rate for scheduled rows and `min(daysLeft/ct, 1)` for the rest — it saw only work already in the queue and read ~40% low every Monday, because ~40% of a week's completions are **walk-in** (start and finish inside one week, almost all Sales Rep self-surveys). Things not to undo:
+- **Weekly completion projection — `projectWeek()` in `lib/metrics.cjs`** (v2, 2026-09-02, replaced `projectWeekTotal`). **Initial surveys only since 2026-09-09** — the resurvey leg (`hazRs`, the `'rs'` accumulator bump, the `isOpenResurvey` branch of `pConv`, the `resurvey_requested` clause of the internal `wip` filter) was removed; the projected weekly total is initial completions, the number Doug reports. The old model summed a show-rate for scheduled rows and `min(daysLeft/ct, 1)` for the rest — it saw only work already in the queue and read ~40% low every Monday, because ~40% of a week's completions are **walk-in** (start and finish inside one week, almost all Sales Rep self-surveys). Things not to undo:
   - **Two terms, both resource-resolved.** Pipeline: each open WIP row × a weekly-completion **hazard** keyed resource × age band (`[0-3][4-7][8-14][15-30][31+]`) × booked-this-week, fit over every Mon–Sun boundary in the trailing 8 weeks — a booked row clears ~92% regardless, an unscheduled Radicl row ~10% (it is waiting to be booked), a 31+-day row ~0-5% whatever it is. Region is a gentle ±multiplier. Walk-in: `walkInPerWeek` (trailing 3-wk run rate of same-week completions) × `remainShare` (fraction of a week's completions still ahead of the export — 1.0 Monday, ~0.5 Wed, ~0.1 Fri, from `buildWeekdayShape`)
   - **Cancellation is inside the rates, never a separate multiplier.** `buildProjectionModel` takes the FULL row set (`allRows`, cancelled included) so a Radicl booking that cancels unsurveyed sits in the hazard denominator as a non-completer — that IS the drag (Radicl 22% cancel-no-survey vs rep 2%). The curb on a drifting cancel rate is the trailing window, not a factor. `cancelNoSurvey` is returned diagnostic-only; a test would catch a second application
   - **`walkInPerWeek`, not (bookings × same-week rate).** Booking counts swing 2× week to week; a 3-wk trailing booking rate overshot the next week's real intake by up to 2×. The walk-in run rate folds mix, cancellation and conversion into one measured number
@@ -153,13 +214,15 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
 - **The WIP page is a stat rail + one queue panel** (rebuilt 2026-08-17):
   - Rail cells: Open now · Avg age · Over 15 days · Unscheduled · Open resurveys · SS ratio. Median age and On-track ≤4d were dropped with the five KPI cards. Cell padding must stay **uniform** — trimming the first and last cell's inner padding makes those two 18px narrower, because `flex-basis:0` sizes the content box and padding is added on top of an equal share rather than taken out of it. Active/hover state on the three filter cells therefore rides on background and an **inset** box-shadow: a border or a padding change would resize just that cell
   - **Three rail cells filter the queue** (2026-08-17): Over 15 days, Unscheduled and Open resurveys. Each drives a control that already exists below it — the age bands, the Unscheduled bracket, the view toggle — so the rail is a shortcut into the queue, not a fourth filter vocabulary, and clicking one lights up its twin below. The other three cells are readouts and stay inert
-  - **The queue lens is one segmented control in the panel head — All · Initial ·
-    Resurveys** (`wipView` / `WIP_VIEWS`, third state added 2026-08-25). Doug
+  - **The queue lens is one segmented control in the panel head — Initial ·
+    Resurveys · All** (`wipView` / `WIP_VIEWS`; **Initial is the default since
+    2026-09-09**, All kept last and non-default for team use). Doug
     could see resurvey WIP on its own but not the initial surveys, which is the
     larger half and different work. Things not to undo:
-    - **Initial is `!isOpenResurvey`, not `survey_type`.** The question is "is
-      this a first visit or something that came back", which is a queue state.
-      `survey_type` is still unused everywhere
+    - **Initial is `isWIP`** (which is initial-only since 2026-09-09 — a
+      reopened row carries a completion date), Resurveys is `isOpenResurvey`,
+      and the two partition the union exactly. Was `!isOpenResurvey` over a pool
+      that still contained reopened rows. `survey_type` is still unused everywhere
     - **It is not a seventh rail cell.** That was built first and reverted: at
       1280px seven cells leave 112px of label width, and *every* filter label —
       "Over 15 days", "Unscheduled", "Open resurveys" — wraps, the last to three
@@ -284,14 +347,14 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
       `lib/metrics.cjs` is `list === 'Inactive'` (task parked) or
       `'Not Required'` (no survey needed), and `inScope` / `isWIP` /
       `isOpenResurvey` all drop it unless the survey genuinely completed
-      (`isComplete` needs `list === 'Complete'`, which a parked row can't be).
-      195RLAND (Inactive, 195d, last touched 4/20) and 1372TURL were sitting
-      in the WIP queue reading Past due / New. index.html mirrors it in
-      `scopeRows()` (its own population gate — `loadAll` stays broad for
-      Billing's Canceled rows) and `wipFiltered()` now routes through `isWIP`.
-      Live: open WIP 67 → 65. No completion / FPY / cycle impact — parked rows
-      were never `isComplete`. `4936OLEM` (Inactive + status Complete) was
-      already out via the status gate
+      (a parked row with a completion date still counts — the survey happened;
+      before 2026-09-09 `isComplete` also needed `list === 'Complete'`, which a
+      parked row can't be). 195RLAND (Inactive, 195d, last touched 4/20) and
+      1372TURL were sitting in the WIP queue reading Past due / New. index.html
+      mirrors it in `scopeRows()` (its own population gate — `loadAll` stays
+      broad for Billing's Canceled rows) and `wipFiltered()` routes through
+      `isOpenQueue`. `4936OLEM` (Inactive + status Complete) was already out
+      via the status gate
   - **Copy sits at the bottom-right of the table it copies**, as a `.copy-btn`, on every table in the app. It was an underlined link on WIP and a header button elsewhere — three shapes for one action. Every copy path ends in `.catch(_copyFail)`: a rejected clipboard write used to look exactly like a successful one
   - **"Everything unscheduled" is a bracket under the bar**, not a legend group. A container around five of eight legend chips makes one wrapped line read as a different kind of object. The bracket also shows how much of the queue is unscheduled, which a legend box cannot. It aligns by `calc()` — the bar mixes fixed 2px gaps with proportional segments, so a mirrored flex row drifts
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing
@@ -447,7 +510,7 @@ bookmarks and the Settings default-page picker keep working. Don't rename the id
   - **Attribution has no panel.** *Who is at fault* was removed 2026-08-17: with the backfill done it reads Surveyor 329 · Design 29 · Customer 5 · unattributed 2, so it said "it's us, 90% of the time" on every load. `resurvey_attributed` survives in the drill drawer's column and per-day in the inbox; nothing on this page computes with it. It never fed `isResurveyDefect`
   - **Reasons sit left.** The reason list says what to fix and is the actionable half; it pairs with the inbox, whose height varies, so the variable panel sits last on the page
   - **Status is not in this page's filter bar** — every row here is already complete
-  - **The open queue is not on this page.** Removed 2026-08-17 — it lives on the WIP rail as Open resurveys, whose cell filters the WIP queue to exactly those rows. Before removing it, `resurvey_reason` + `resurvey_details` were added to the **WIP expanded row** (`.wip-rs-why`): 41 of the 42 open resurveys carry a reason, and this page's queue table was the only place it could be read. What did not survive the move is the weekly grouping with its oldest-age and `rsStaleDays()` marker — WIP has no staleness cue specific to resurveys
+  - **The open queue is not on this page.** Removed 2026-08-17 — it lives on the WIP rail as Open resurveys (the Resurveys lens), which since 2026-09-09 counts `isOpenResurvey` on In-Progress projects only (~14 live, was reading 98 with the dead-deal rows). Before removing it, `resurvey_reason` + `resurvey_details` were added to the **WIP expanded row** (`.wip-rs-why`). What did not survive the move is the weekly grouping with its oldest-age and `rsStaleDays()` marker — WIP has no staleness cue specific to resurveys
 - **Map page** (added 2026-08-06). All markets by town, six modes (Volume / Open WIP / Cycle / Resurvey / Coverage / Plan), click a state nationally to open that market:
   - Location comes from the **ZIP in `address`, never `region`** — region is a sales territory, not a place, and reading the address also places the ~71 rows whose region is blank
   - Grouped by **town**, not ZIP: a ZIP is a postal artefact that split Glen Allen into two dots and buried Richmond's eight ZIPs entirely
@@ -1531,11 +1594,15 @@ and added two columns. Row count 2,530 → 4,706, nothing dropped.
 - **The canceled rows are the valuable half and are permanent.** 2,171 of the
   2,176 added rows are Canceled. They fixed Billing's reconciliation (**"No
   Salesforce record" 53 → 13**) and made *Cost by project outcome* possible
-- **`inScope()` already handled them and needed no change.** A completed survey
-  counts regardless of project status; only non-complete rows get the status
-  test. So WIP was **unaffected (60 → 60)** — the 126 open tasks on canceled
-  projects, median age 119 days, never reach the queue. The rule was written for
-  this population and had one row to act on until now
+- **`inScope()` handled the *open* canceled tasks fine** — a completed survey
+  counts regardless of project status; a non-complete canceled row gets the
+  status test and stays out (the 126 open tasks on canceled projects, median
+  age 119 days, never reach the queue). What it did NOT anticipate: the
+  *reopened-resurvey* rows on canceled projects. Those carry the initial
+  completion date, so once `isComplete` went terminal on 2026-09-09 they
+  reached the scoped set and inflated "open resurveys" 14 → 98 — fixed by
+  gating `isOpenResurvey` on `project_status === 'In Progress'` (see the
+  completion-is-terminal decision above)
 - **History restated, and one metric is biased by it.** Completions 2,381 →
   3,731. Cycle time is unbiased (within each resource the canceled rows sit
   within a few tenths, so the 4.02 → 3.71 move is a mix shift — canceled work is
