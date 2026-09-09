@@ -133,6 +133,83 @@ const listItem = (text, ordered) =>
   + `<w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr>${FONT}</w:rPr></w:pPr>`
   + inline(text) + '</w:p>';
 
+// A markdown table becomes a real Word table on the template's TableGrid
+// style. The header row is bold, lightly shaded, and marked <w:tblHeader/> so
+// it repeats if the table breaks across a page. Column alignment comes from
+// the separator row, `---:` for right, which is what numbers want.
+const TEXT_TWIPS = 9360;   // 12240 page - 1440 margins each side
+function tableXml(rows, aligns) {
+  const cols = rows[0].length;
+  const w = Math.floor(TEXT_TWIPS / cols);
+  const cell = (text, i, head) =>
+    `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>`
+    + (head ? '<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>' : '')
+    + `<w:vAlign w:val="center"/></w:tcPr>`
+    + `<w:p><w:pPr><w:spacing w:before="20" w:after="20"/>`
+    + (aligns[i] === 'right' ? '<w:jc w:val="right"/>' : aligns[i] === 'center' ? '<w:jc w:val="center"/>' : '')
+    + `<w:rPr>${FONT}${head ? '<w:b/>' : ''}</w:rPr></w:pPr>`
+    + (head ? run(text, { b: true }) : inline(text)) + '</w:p></w:tc>';
+  const tr = (cells, head) =>
+    `<w:tr>${head ? '<w:trPr><w:tblHeader/></w:trPr>' : ''}`
+    + cells.map((c, i) => cell(c, i, head)).join('') + '</w:tr>';
+  return '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/>'
+    // An explicit dxa width, not a percentage: pct is honoured
+    // inconsistently outside Word and the table sized to its content.
+    + `<w:tblW w:w="${TEXT_TWIPS}" w:type="dxa"/>`
+    // Fixed layout, or Word autofits to the content and ignores the widths
+    // declared above — which had a four-column table sitting at half the
+    // measure with the page empty beside it.
+    + '<w:tblLayout w:type="fixed"/>'
+    + '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>'
+    + '</w:tblPr><w:tblGrid>' + rows[0].map(() => `<w:gridCol w:w="${w}"/>`).join('') + '</w:tblGrid>'
+    + tr(rows[0], true) + rows.slice(1).map(r => tr(r, false)).join('') + '</w:tbl>';
+}
+
+// `![caption](chart.png)` embeds a picture, which is how a chart gets into a
+// memo — Word's own chart parts would mean shipping the data with it, and a
+// memo is a fixed record rather than something anyone re-pivots. The image is
+// scaled to the text column and never enlarged past its natural size.
+const media = [];   // { file, rid, name }
+function pngSize(buf) {
+  // IHDR width/height are the two big-endian uint32s at byte 16.
+  if (buf.length < 24 || buf.readUInt32BE(12) !== 0x49484452) return null;
+  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+}
+function imageXml(caption, file) {
+  const abs = path.isAbsolute(file) ? file : path.resolve(path.dirname(src), file);
+  if (!fs.existsSync(abs)) {
+    console.error(`  ! image not found, skipped: ${file}`);
+    return '';
+  }
+  const dim = pngSize(fs.readFileSync(abs));
+  if (!dim) { console.error(`  ! not a PNG, skipped: ${file}`); return ''; }
+  const EMU_PER_TWIP = 635, maxEmu = TEXT_TWIPS * EMU_PER_TWIP;
+  const natural = Math.round(dim.w * 9525);          // px at 96dpi → EMU
+  const cx = Math.min(natural, maxEmu);
+  const cy = Math.round(cx * dim.h / dim.w);
+  const n = media.length + 1;
+  const rid = `rIdImg${n}`;
+  media.push({ abs, rid, name: `memoimage${n}.png` });
+  const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  return `<w:p><w:pPr><w:spacing w:before="120" w:after="60"/><w:jc w:val="center"/></w:pPr>`
+    + `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">`
+    + `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>`
+    + `<wp:docPr id="${100 + n}" name="Picture ${n}" descr="${esc(caption)}"/>`
+    + `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="${A}" noChangeAspect="1"/></wp:cNvGraphicFramePr>`
+    + `<a:graphic xmlns:a="${A}"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+    + `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+    + `<pic:nvPicPr><pic:cNvPr id="0" name="${esc(path.basename(abs))}"/><pic:cNvPicPr/></pic:nvPicPr>`
+    + `<pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
+    + `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>`
+    + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>`
+    + `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
+    + (caption
+      ? `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="120"/><w:rPr>${FONT}<w:i/><w:sz w:val="18"/></w:rPr></w:pPr>`
+        + `<w:r><w:rPr>${FONT}<w:i/><w:sz w:val="18"/><w:color w:val="595959"/></w:rPr>`
+        + `<w:t xml:space="preserve">${esc(caption)}</w:t></w:r></w:p>`
+      : '');
+}
+
 // **bold** is the only inline markup a memo needs; it is how a figure is
 // carried in a sentence. Anything else is left as literal text.
 function inline(text) {
@@ -165,6 +242,22 @@ for (let i = 0; i < lines.length; i++) {
     continue;
   }
   let m;
+  // A table is its header row, a separator row, then its body. It is consumed
+  // whole here rather than line by line, because a row is not a paragraph.
+  if (/^\|.*\|$/.test(l) && /^\|[\s:|-]+\|$/.test((lines[i + 1] || '').trim())) {
+    const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    const head = cells(l);
+    const aligns = cells(lines[i + 1]).map(sp =>
+      /^:.*:$/.test(sp) ? 'center' : /:$/.test(sp) ? 'right' : 'left');
+    const rows = [head];
+    let j = i + 2;
+    for (; j < lines.length && /^\|.*\|$/.test(lines[j].trim()); j++) rows.push(cells(lines[j]));
+    body.push(tableXml(rows, aligns));
+    i = j - 1;
+    prevWasList = false;
+    continue;
+  }
+  if ((m = l.match(/^!\[([^\]]*)\]\(([^)]+)\)$/))) { body.push(imageXml(m[1], m[2])); prevWasList = false; continue; }
   if ((m = l.match(/^#{1,6}\s+(.*)$/))) { body.push(heading(m[1])); prevWasList = false; }
   else if ((m = l.match(/^[-*]\s+(.*)$/)))  { body.push(listItem(m[1], false)); prevWasList = true; }
   else if ((m = l.match(/^\d+[.)]\s+(.*)$/))) { body.push(listItem(m[1], true)); prevWasList = true; }
@@ -195,20 +288,67 @@ const bodyOpen = tplXml.indexOf('<w:body>') + '<w:body>'.length;
 const sectPr = tplXml.slice(tplXml.lastIndexOf('<w:sectPr'), tplXml.lastIndexOf('</w:body>'));
 const docXml = tplXml.slice(0, bodyOpen) + header + body.join('') + sectPr + '</w:body></w:document>';
 
-const slug = (meta.subject || path.basename(src, path.extname(src)))
-  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-const iso = dateStr.split('/').length === 3
-  ? `${dateStr.split('/')[2]}-${String(dateStr.split('/')[0]).padStart(2, '0')}`
-  : today.toISOString().slice(0, 7);
-const dest = out || path.join(ROOT, 'memos', `${iso}_${number}_${slug}.docx`);
+// `DRR-4A_Radicl_Billing_Review.docx` — the memo system's own convention, as
+// used on its published PDFs: the number leads, the title follows, and there
+// is no date prefix, because the number already identifies the memo and the
+// system shows the date beside it. This deliberately does NOT follow the
+// YYYY-MM_ convention used for other documents.
+//
+// Words are capitalised and joined with underscores, and anything already
+// upper-case is left alone so an acronym survives (RCCA243, SS, FDC). Set
+// `File:` in the front matter to name it exactly; the subject is only a
+// fallback, and a long subject makes a long filename.
+function titleCase(text) {
+  return String(text)
+    .replace(/[^A-Za-z0-9 ]+/g, ' ')
+    .split(/\s+/).filter(Boolean)
+    .map(w => (w === w.toUpperCase() ? w : w[0].toUpperCase() + w.slice(1)))
+    .join('_');
+}
+const fileTitle = (meta.file ? titleCase(meta.file)
+  : titleCase(meta.subject || path.basename(src, path.extname(src)))).slice(0, 70);
+const dest = out || path.join(ROOT, 'memos', `${number}_${fileTitle}.docx`);
+
+// The document is titled in both senses: the filename above, and Word's own
+// Title property here, which is what a document system lists it under. The
+// template ships an empty <dc:title> and Michael Chiaravalle as creator.
+const core = execFileSync('unzip', ['-p', TEMPLATE, 'docProps/core.xml'], { maxBuffer: 1 << 22 })
+  .toString('utf8')
+  .replace(/<dc:title>.*?<\/dc:title>/, `<dc:title>${esc(meta.subject || fileTitle)}</dc:title>`)
+  .replace(/<dc:creator>.*?<\/dc:creator>/, `<dc:creator>${esc(meta.author || reg.author || '')}</dc:creator>`)
+  .replace(/<cp:lastModifiedBy>.*?<\/cp:lastModifiedBy>/, `<cp:lastModifiedBy>${esc(meta.author || reg.author || '')}</cp:lastModifiedBy>`);
 
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.copyFileSync(TEMPLATE, dest);
 const stage = fs.mkdtempSync(path.join(require('os').tmpdir(), 'memo-'));
 fs.mkdirSync(path.join(stage, 'word'), { recursive: true });
+fs.mkdirSync(path.join(stage, 'docProps'), { recursive: true });
 fs.writeFileSync(path.join(stage, 'word', 'document.xml'), docXml);
-// `zip` replaces the one entry in place and leaves the other 32 untouched.
-execFileSync('zip', ['-q', path.resolve(dest), 'word/document.xml'], { cwd: stage });
+fs.writeFileSync(path.join(stage, 'docProps', 'core.xml'), core);
+const entries = ['word/document.xml', 'docProps/core.xml'];
+
+if (media.length) {
+  // Each picture needs its bytes under word/media and a relationship the
+  // drawing's r:embed points at. Ids are prefixed rather than numbered from
+  // the template's own rId16, so adding one can never collide with a part the
+  // template already relates to (the logo among them).
+  fs.mkdirSync(path.join(stage, 'word', 'media'), { recursive: true });
+  fs.mkdirSync(path.join(stage, 'word', '_rels'), { recursive: true });
+  media.forEach(mm => {
+    fs.copyFileSync(mm.abs, path.join(stage, 'word', 'media', mm.name));
+    entries.push(`word/media/${mm.name}`);
+  });
+  const rels = execFileSync('unzip', ['-p', TEMPLATE, 'word/_rels/document.xml.rels'], { maxBuffer: 1 << 22 })
+    .toString('utf8')
+    .replace('</Relationships>', media.map(mm =>
+      `<Relationship Id="${mm.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"`
+      + ` Target="media/${mm.name}"/>`).join('') + '</Relationships>');
+  fs.writeFileSync(path.join(stage, 'word', '_rels', 'document.xml.rels'), rels);
+  entries.push('word/_rels/document.xml.rels');
+}
+
+// `zip` replaces these entries in place and leaves every other part untouched.
+execFileSync('zip', ['-q', path.resolve(dest), ...entries], { cwd: stage });
 fs.rmSync(stage, { recursive: true, force: true });
 
 if (!dry) {
