@@ -2,6 +2,16 @@
   "_comment": "Issued memo numbers. scripts/build-memo.cjs appends here and takes the next number from it, so an Author File # is never reused. Format is DRR-<number><revision>, e.g. DRR-4A: the number is the memo, the letter is its revision. A letter moves only when an ALREADY PUBLISHED memo is reworked (build with --revise 4); a redraft before it goes out is still A. firstNumber carries the memos issued before this tool existed. file is relative to memos/.",
   "initials": "DRR",
   "author": "Douglas Regehr",
-  "memos": [],
+  "memos": [
+    {
+      "number": "DRR-4A",
+      "n": 4,
+      "revision": "A",
+      "date": "9/9/2026",
+      "subject": "Radicl billing review, January to August 2026",
+      "to": "Jimmy Garrett, Chelsea Herrin",
+      "file": "DRR-4A_Radicl_Billing_Review.docx"
+    }
+  ],
   "firstNumber": 4
 }
