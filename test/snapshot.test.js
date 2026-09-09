@@ -22,7 +22,7 @@ const SNAP_PATH = path.join(HERE, 'fixtures/snapshot.json');
 
 const {
   filterRows, isComplete, isWIP, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace,
-  hasResurveySig, rsCategories, avg, med, pct, normalizeName,
+  hasResurveySig, isOpenResurvey, rsCategories, avg, med, pct, normalizeName,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
   ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
@@ -53,9 +53,9 @@ function computeAll() {
     droppedByScope: raw.length - rows.length,
     complete: complete.length,
     wip: wip.length,
-    // rows carrying a completion date that are NOT complete — the Holding/Reopened
-    // shape the Trends ratio line used to count as finished
-    dateButNotComplete: rows.filter(r => r.complete && !isComplete(r)).length,
+    // completed initial surveys that are back open for a resurvey — counted as
+    // completions (initial done) AND tracked as open resurvey work
+    reopenedForResurvey: rows.filter(r => isComplete(r) && isOpenResurvey(r)).length,
     withResurveySig: rows.filter(hasResurveySig).length,
     blankRegion: rows.filter(r => !r.region).length,
   };
@@ -179,11 +179,12 @@ test('invariant: complete and WIP partition the scoped rows', () => {
   assert.equal(rows.filter(isComplete).length + rows.filter(isWIP).length, rows.length);
 });
 
-test('invariant: a completion date alone never counts as complete', () => {
+test('invariant: a completion date is terminal — a reopened row is not WIP', () => {
   const rows = filterRows(FIXTURE.rows);
   const holding = rows.filter(r => r.complete && r.list !== 'Complete');
   assert.ok(holding.length > 0, 'fixture lost its Holding/Reopened coverage');
-  assert.ok(holding.every(r => isWIP(r)), 'a Holding row is being treated as finished');
+  assert.ok(holding.every(r => isComplete(r) && !isWIP(r)),
+    'a row with a Site Survey Complete date is being treated as open initial WIP');
 });
 
 test('invariant: ssDaysOpen never exceeds the raw elapsed age', () => {
