@@ -1126,7 +1126,8 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
 /* Resurveys breakdown on Current — 3 figures, so the whole panel shrinks to fit
    its content rather than stretching a rail over blank space. */
-.rs-brk-sec{width:fit-content;max-width:100%;}
+.rs-brk-wrap{display:flex;justify-content:flex-end;}
+.rs-brk-sec{width:fit-content;max-width:100%;margin-bottom:0;}
 .rs-brk{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .rs-brk-cell{padding:11px 20px 12px;border-right:1px solid var(--border);white-space:nowrap;}
 .rs-brk-cell:last-child{border-right:none;}
@@ -3539,7 +3540,7 @@ function renderLastWeek(){
     </div>
     </div>
     </div>
-    ${_rsBreakdownPanel(lw.from,lw.to,'lw')}`;
+    <div class="rs-brk-wrap">${_rsBreakdownPanel(lw.from,lw.to,'lw')}</div>`;
 
 
   const dist=distBuckets(src);
@@ -3737,7 +3738,6 @@ function renderThisWeek(){
     </div>
     </div>
     </div>
-    ${_rsBreakdownPanel(tw.from,tw.to,'tw')}
     <div class="cur-grid">
     <div class="cur-col">
     ${atRisk.length?`
@@ -3775,7 +3775,8 @@ function renderThisWeek(){
       <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('tw-done-tbl',this,'the completions')">Copy table</button></div>
     </div>`:'<div style="padding:24px;text-align:center;color:var(--faint);font-size:12px;">No completions yet this week.</div>'}
     </div>
-    </div>`;
+    </div>
+    <div class="rs-brk-wrap">${_rsBreakdownPanel(tw.from,tw.to,'tw')}</div>`;
 
 
   dc('tw-daily');
