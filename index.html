@@ -1587,7 +1587,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, clearanceAlarm, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -4434,7 +4434,6 @@ function renderTrends(){
           </div>
         </div>
       </div>
-      <div id="tr-alarm" style="margin-bottom:10px;"></div>
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#60a5fa;"></span>${trFlowView==='daily'?'In':'New In'}</span>
@@ -4571,20 +4570,21 @@ function renderTrends(){
   }
   const fw=flowWeeks[flowWeeks.length-1], fwPrev=flowWeeks[flowWeeks.length-2];
   const stat=(lab,val,sub,cls,tip)=>`<div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">${lab}${tip?kinfo(tip):''}</div><div style="font-size:18px;font-weight:700;${cls||''}">${val}</div><div style="font-size:10px;color:var(--faint);">${sub}</div></div>`;
-  // Backlog alarm. The SS ratio is deliberately not one of these — see
-  // lib/metrics.cjs. The floor alarm (trailing-median multiplier) was dropped
-  // 2026-08-07: it assumed a stable baseline with occasional spikes, but a
-  // sustained multi-month climb makes the trailing median chase the trend,
-  // so the alarm flickered true/false with no real change in trajectory.
+  // Clearance and weekly floor are shown as figures with no alarm attached.
+  // The clearanceAlarm (4wk clearance under 90% two readings running) was
+  // dropped from the UI 2026-09-09 — Doug's call: the green "holding at or
+  // above 90%" reassurance box restated a fine state on every load. The
+  // floor alarm went the same way 2026-08-07 (trailing median chased a
+  // sustained climb). Both functions remain in lib/metrics.cjs, tested.
+  // The SS ratio is deliberately not an alarm either — see lib/metrics.cjs.
   const clearSeries=flowWeeks.map(w=>rollingClearance(trendSrc,w.end,4));
   const floorSeries=flowWeeks.map(w=>w.floor).filter(v=>v!=null);
   const clear4=clearSeries[clearSeries.length-1];
-  const aClear=clearanceAlarm(clearSeries);
 
   const fEl=document.getElementById('tr-floor');
   if(fEl&&fw){
     const cl=clear4!=null?Math.round(clear4*100):null;
-    const clCls=cl==null?'':aClear?'color:var(--red);':cl<90?'color:var(--amber);':'color:var(--green);';
+    const clCls=cl==null?'':cl<90?'color:var(--amber);':'color:var(--green);';
     // The week-over-week intake move is the biggest number on this strip and
     // used to render as unstyled grey caption text, quieter than the Clearance
     // figure beside it. Rising intake is the pressure signal, so colour it the
@@ -4595,16 +4595,8 @@ function renderTrends(){
     fEl.innerHTML=
       stat('Intake',fw.inn,(inDelta||'last full week'),'','Surveys that started in the last full week, by Project Start Date.')
       +stat('Completed',fw.out,'last full week','',TIP.complete)
-      +stat('Clearance (4wk)',cl!=null?cl+'%':'—','completed ÷ started · alarm below 90%',clCls,TIP.clearance)
+      +stat('Clearance (4wk)',cl!=null?cl+'%':'—','completed ÷ started · last full week',clCls,TIP.clearance)
       +stat('Weekly floor',floorSeries[floorSeries.length-1]??'—','lowest daily WIP that week','',TIP.weeklyFloor);
-  }
-  const aEl=document.getElementById('tr-alarm');
-  if(aEl){
-    const msgs=[];
-    if(aClear) msgs.push(`<strong>4-week clearance is ${Math.round(clear4*100)}%</strong>, under 90% for a second reading running — completions are not keeping up with intake, independent of volume.`);
-    aEl.innerHTML=msgs.length
-      ? `<div style="padding:10px 13px;border-radius:var(--radius);background:#fdf0ee;border:1px solid #e8b4aa;font-size:12px;color:#7a2f22;line-height:1.55;">${msgs.join('<br><br>')}</div>`
-      : `<div style="padding:8px 12px;border-radius:var(--radius);background:#f1f4f0;border:1px solid #d9e2d6;font-size:11px;color:#4a6b4f;">4-week clearance is holding at or above 90%.</div>`;
   }
   dc('tr-flow');
   if(trFlowView==='daily'){
