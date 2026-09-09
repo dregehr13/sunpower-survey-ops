@@ -6,3 +6,9 @@ node_modules
 
 # Cached upstream geo sources (re-downloaded by scripts/build-geo.cjs)
 geo/.src/
+
+# Memos are work product, not app files, and this repo deploys to a public URL.
+# The template and the number register are committed; the memos are not.
+memos/*
+!memos/template.docx
+!memos/register.json
