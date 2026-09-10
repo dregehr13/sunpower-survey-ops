@@ -4323,9 +4323,15 @@ function renderTrends(){
     document.getElementById('tr-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No surveys match the current filters.</div>`;
     return;
   }
-  const trendDone=trendSrc.filter(r=>isComplete(r)&&gfDateIn(r.complete));
+  const curWkStart=weekRange(0).from;
+  // Rolling presets (4w/8w/13w…) end on the last complete Sunday, so the
+  // in-progress week falls outside the range. When the range still runs up to
+  // now, surface that partial week on the weekly charts and the detail table
+  // anyway — the All range already does, and each surface marks it as partial.
+  const showPartialWk=!GF.dateTo||GF.dateTo>=weekRange(-1).to;
+  const trendDone=trendSrc.filter(r=>isComplete(r)&&(gfDateIn(r.complete)||(showPartialWk&&weekOf(r.complete)===curWkStart)));
   // Restrict the weekly series to weeks overlapping the global date range
-  const wkInRange=w=>(!GF.dateFrom||w.weekEnd>=GF.dateFrom)&&(!GF.dateTo||w.week<=GF.dateTo);
+  const wkInRange=w=>((!GF.dateFrom||w.weekEnd>=GF.dateFrom)&&(!GF.dateTo||w.week<=GF.dateTo))||(showPartialWk&&w.week===curWkStart);
   const weekly=weeklyStats(trendSrc).filter(wkInRange);
   const weeklyC=weeklyStatsByComplete(trendDone).filter(w=>w.week>=DATA_CUTOFF).filter(wkInRange);
   const roll3=rollingAvg(weeklyC,'start_to_complete',3);
@@ -4342,7 +4348,6 @@ function renderTrends(){
 
   // All-time hero metrics — the in-progress week is excluded so a lone Monday
   // completion can't swing the trend or drag the pace down
-  const curWkStart=weekRange(0).from;
   const doneWeeks=weeklyC.filter(w=>w.week<curWkStart);
   const allTots=trendDone.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const p75=pct(allTots,75),p90=pct(allTots,90);
@@ -4817,7 +4822,9 @@ function renderTrends(){
         const dr=trendDone.filter(r=>weekOf(r.complete)===wk&&r.resource===res);
         openDrill(res+' · '+lbl,dr.length+' completed that week',dr,{sort:'days'}); },
       plugins:{legend:{display:false},
-        tooltip:{mode:'index',intersect:false,callbacks:{
+        // reverse so the tooltip lists resources top-to-bottom in the same
+        // order they stack in the bar (SunPower on top … Sales Rep on the base)
+        tooltip:{mode:'index',intersect:false,reverse:true,callbacks:{
           title:ctx=>'Week of '+allWks[ctx[0].dataIndex],
           label:ctx=>{ const wk=allWks[ctx.dataIndex];
             if(ctx.dataset.label==='Sales rep %') return ` Sales rep: ${ctx.parsed.y==null?'—':ctx.parsed.y+'%'}`;
