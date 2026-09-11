@@ -1542,10 +1542,45 @@ group, same weight as the Pipeline cohorts `cohortMap`. Things not to undo:
    - Commits and pushes → Vercel auto-deploys in ~30s
 3. For code-only deploys (no data update): `git push`
 
-Note: Fully automated fetching was attempted but abandoned — Salesforce MFA
-triggers on every untrusted session and Chrome 134+ blocks CDP on the default
-profile. Manual export + push.sh is the reliable workflow until the SF API
-ticket is resolved.
+Note: Fully automated fetching (headless CDP/Playwright against the default
+profile) was attempted but abandoned — Salesforce MFA triggers on every
+untrusted session and Chrome 134+ blocks CDP on the default profile. That
+blocker does NOT apply to the Claude in Chrome browser extension, which drives
+Doug's real, already-authenticated Chrome as an installed extension rather than
+a remote-debugging attach — confirmed working 2026-09-11, no MFA prompt, full
+run in under 2 minutes.
+
+**When Doug asks to update the data, do this instead of asking him to run
+push.sh manually** — drive it directly with the Claude in Chrome tools:
+1. `navigate` to `https://ambia.lightning.force.com/lightning/r/Report/00OUS00000AOYnZ2AX/view?queryScope=userFolders`
+   (or read `S.sfInst`/`S.sfRid` from the dashboard's Settings/localStorage if
+   the report ID ever changes) and wait ~3s for the report to render
+2. **The report toolbar lives inside a same-origin Aura/VF iframe that
+   `read_page`/`find` cannot see into** (confirmed by testing — the
+   accessibility tree only shows the outer Lightning shell). Pixel clicks via
+   `computer` are the only way in; DOM/JS injection (`javascript_tool`) can't
+   reach it either. Screenshot first, don't assume prior-session coordinates —
+   the toolbar's exact pixel position drifts with viewport width and whether
+   the filter panel is open
+3. Click the small **caret to the right of the "Edit" button** (top right of
+   the report toolbar, NOT the funnel/filter icon — that one toggles a side
+   panel and is a common miss-click since it sits a wide margin to the left of
+   the real caret; zoom into just the "Edit ▾" pill first to get its precise
+   position before clicking)
+4. Click **Export** in the dropdown (below Save As / Save / Subscribe)
+5. In the Export modal, click the **Details Only** card (Formatted Report is
+   selected by default — wrong one). Format defaults to **Excel Format .xls**
+   already, which is correct — leave it
+6. Click the **Export** button. This opens and auto-closes a blank tab as the
+   download fires — no further interaction needed
+7. The file lands in Doug's real `~/Downloads` as `report<timestamp>.xls`
+   (confirmed — this is his actual local Chrome, not a sandboxed one). Find it
+   with `ls -t ~/Downloads/report*.xls | head -1`, then run
+   `~/Projects/survey-ops/push.sh <path>` exactly as the manual flow does
+8. `push.sh`'s autostash step can leave a stale `stash@{0}` behind if a rebase
+   conflict occurs — check `git stash list` after and offer to drop it (don't
+   drop without asking; it's someone else's call whether anything in it
+   matters)
 
 **The in-app modal's save is GZIPPED, and it has to be** (2026-08-27). Vercel
 caps a function's request body at **4.5MB**, ahead of the function — the
