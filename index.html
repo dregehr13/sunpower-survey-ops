@@ -1122,6 +1122,12 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 .srail-cell.rail-d:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;}
 .srail-cell.rail-d::after{content:'↗';position:absolute;top:10px;right:12px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
 .srail-cell.rail-d:hover::after{opacity:1;transform:translate(1px,-1px);}
+/* The Current page's fold-resurveys-in toggle, on "Resurveys done". Bottom
+   corner so it never collides with the rail-d "↗" cue at the top, and never
+   adds height to the cell — the rail must stay one height across all six. */
+.rs-fold-tgl{position:absolute;bottom:9px;right:12px;font-size:9px;font-weight:600;letter-spacing:.02em;color:var(--faint);background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:2px 7px;cursor:pointer;line-height:1.3;transition:color .15s,border-color .15s,background .15s;}
+.rs-fold-tgl:hover{color:var(--text);border-color:var(--muted);}
+.rs-fold-tgl.on{color:var(--blue-dk);border-color:var(--blue);background:var(--blue-bg);}
 .srail-val{font-size:29px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums;}
 .srail-sub{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:9px;}
 /* Search sits above the grouped table. With no floor the rep cut is 300 rows,
@@ -3282,6 +3288,10 @@ function distBuckets(src){
 
 // ═══ CURRENT ═════════════════════════════════════════════
 let weekView=new Date().getDay()===1?'last':'this';
+// Fold resurvey completions into Completions/cycle time/breakdowns below —
+// off by default (Doug reports initial surveys); the toggle lives on
+// "Resurveys done" in _rsWeekCells. Shared between Last Week and This Week.
+let curIncludeRs=false;
 function renderWeek(){
   const tgl=(v,l)=>`<button class="tgl-btn${weekView===v?' active':''}" onclick="setWeekView('${v}')">${l}</button>`;
   document.getElementById('week-content').innerHTML=`
@@ -3320,39 +3330,68 @@ function renderWipCountBadge(){
   b.style.display=n?'inline-flex':'none';
 }
 
+// Resurvey completions cloned into completion-shaped entries — `complete` and
+// `ct_total` swapped to the resurvey dates — so regionStats/distBuckets/the
+// tables below read them with no special-casing. Only built when the fold-in
+// toggle is on.
+function rsAsCompletions(from,to){
+  return rows.filter(r=>r.resurvey_complete&&r.resurvey_complete>=from&&r.resurvey_complete<=to)
+    .map(r=>Object.assign({},r,{complete:r.resurvey_complete,ct_total:r.ct_resurvey,_isRsEntry:true}));
+}
+// `initial` is initial-survey completions alone — FPY always reads off this,
+// whatever the toggle shows elsewhere, since a resurvey completing isn't a
+// second FPY event for the survey it resurveyed. `combined` is what the rail,
+// charts and tables below show, and folds resurveys in when curIncludeRs is on.
+function weekCompletions(from,to){
+  const initial=rows.filter(r=>everCompleted(r)&&r.complete>=from&&r.complete<=to);
+  const combined=curIncludeRs?initial.concat(rsAsCompletions(from,to)):initial;
+  return {initial,combined};
+}
+function toggleCurIncludeRs(ev){
+  ev&&ev.stopPropagation();
+  curIncludeRs=!curIncludeRs;
+  weekView==='last'?renderLastWeek():renderThisWeek();
+}
+
 // Resurveys are tracked on their own dates, never folded into the initial
-// completion count. Two rail cells — completed / requested in the week — take
-// the slot the WIP cell used to hold. `key` seeds the drill store.
+// completion count by default. Two rail cells — completed / requested in the
+// week — take the slot the WIP cell used to hold. `key` seeds the drill store.
+// The toggle on "Resurveys done" folds these same completions into
+// Completions, cycle time and the breakdowns below (see weekCompletions).
 function _rsWeekCells(from,to,key){
   const done=rows.filter(r=>r.resurvey_complete&&r.resurvey_complete>=from&&r.resurvey_complete<=to);
   const req=rows.filter(r=>r.resurvey_requested&&r.resurvey_requested>=from&&r.resurvey_requested<=to);
   const cyc=avg(done.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
   _curD[key+'RsDone']=done; _curD[key+'RsReq']=req;
   const wk=key==='tw'?'this week':'last week';
-  const cell=(k,label,n,sub)=>`<div class="srail-cell${n?' rail-d':''}" ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
+  const tgl=`<button class="rs-fold-tgl${curIncludeRs?' on':''}" onclick="toggleCurIncludeRs(event)" title="${curIncludeRs?'Showing initial + resurvey completions together — click to split them back out':'Fold these into Completions and cycle time above'}">${curIncludeRs?'✓ in totals':'+ fold in'}</button>`;
+  const cell=(k,label,n,sub,extra)=>`<div class="srail-cell${n?' rail-d':''}"${extra?' style="position:relative;"':''} ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
       <div class="klabel">${label}</div>
       <div class="srail-val">${n}<span class="srail-sub">${sub}</span></div>
+      ${extra||''}
     </div>`;
-  return cell('Done','Resurveys done',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':wk)
-    +cell('Req','Resurveys requested',req.length,wk);
+  return cell('Done','Resurveys done',done.length,cyc!=null?cyc.toFixed(1)+'d cycle':wk,tgl)
+    +cell('Req','Resurveys called out',req.length,wk);
 }
 
 function renderLastWeek(){
   const lw=weekRange(-1);
   // Completions by their Site Survey Complete date — terminal, so a survey that
   // closed last week and later reopened for resurvey still counts here. The
-  // resurvey is its own line on the Quality page.
-  const src=rows.filter(r=>everCompleted(r)&&r.complete>=lw.from&&r.complete<=lw.to);
+  // resurvey is its own line on the Quality page. `initialSrc` is always
+  // initial-only (FPY reads off it regardless of the fold-in toggle); `src`
+  // is what the rail/charts/tables below show and follows curIncludeRs.
+  const {initial:initialSrc,combined:src}=weekCompletions(lw.from,lw.to);
   _lastWeekSrc=src;
   const tots=src.map(r=>r.ct_total).filter(x=>x!=null&&x>=0);
   const eks=(v,t)=>({good:'kg-c',mid:'ka-c',bad:'kr-c'}[bandFor(v,t)]||'');
   // Prior week for comparison
   const pw=weekRange(-2);
-  const pwSrc=rows.filter(r=>everCompleted(r)&&r.complete>=pw.from&&r.complete<=pw.to);
+  const {initial:pwInitial,combined:pwSrc}=weekCompletions(pw.from,pw.to);
   const pwAvgT=avg(pwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   // 3-week avg (weeks -1, -2, -3)
   const w3=weekRange(-3);
-  const triSrc=rows.filter(r=>everCompleted(r)&&r.complete>=w3.from&&r.complete<=lw.to);
+  const {combined:triSrc}=weekCompletions(w3.from,lw.to);
   const triAvgT=avg(triSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   document.getElementById('cur-hero-hdr').innerHTML=`
     <div class="exec-title" style="margin-bottom:4px;">Last Week</div>
@@ -3441,13 +3480,14 @@ function renderLastWeek(){
     // FPY counts isResurveyDefect, not every resurvey signal: a request
     // dismissed as unnecessary, or a bare reopened-by-design flag with
     // nothing behind it, is not a survey failure. See lib/metrics.cjs.
-  const lwDefects=src.filter(isResurveyDefect);
-  const pwDefects=pwSrc.filter(isResurveyDefect);
+  // FPY is always initial-only, whatever the fold-in toggle shows elsewhere.
+  const lwDefects=initialSrc.filter(isResurveyDefect);
+  const pwDefects=pwInitial.filter(isResurveyDefect);
   // Same fpy() the Resurveys page uses, rounded to whole points because this
   // card shows an integer and a week-over-week delta between two of them.
   const rnd=v=>v==null?null:Math.round(v);
-  const lwFpy=rnd(fpy(src));
-  const pwFpy=rnd(fpy(pwSrc));
+  const lwFpy=rnd(fpy(initialSrc));
+  const pwFpy=rnd(fpy(pwInitial));
   const fpyDelta=lwFpy!=null&&pwFpy!=null?lwFpy-pwFpy:null;
   const fpyCls=lwFpy==null?'':(lwFpy>=90?'kg-c':lwFpy>=80?'ka-c':'kr-c');
   const fpyBarW=lwFpy!=null?lwFpy:0;
@@ -3492,7 +3532,7 @@ function renderLastWeek(){
       <div style="background:var(--border-lt);border-radius:3px;height:5px;margin-bottom:8px;overflow:hidden;">
         <div style="height:100%;width:${fpyBarW}%;background:${lwFpy>=90?'#3f9d6c':lwFpy>=80?'#c0912e':'#d94f4e'};border-radius:3px;"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);">${src.length} completions · ${lwDefects.length} resurveyed · 90% target</div>
+      <div style="font-size:11px;color:var(--muted);">${initialSrc.length} completions · ${lwDefects.length} resurveyed · 90% target</div>
     </div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
@@ -3573,7 +3613,9 @@ function renderThisWeek(){
   // Completions by Site Survey Complete date — terminal, matches Current → Last
   // Week. A reopened-for-resurvey survey still counts; the resurvey is its own
   // line on the Quality page.
-  const completedTW=rows.filter(r=>everCompleted(r)&&r.complete>=tw.from&&r.complete<=dataThrough);
+  // `combined` follows the fold-in toggle; This Week carries no FPY card, so
+  // nothing here needs the initial-only half on its own.
+  const completedTW=weekCompletions(tw.from,dataThrough).combined;
   // Initial surveys only — resurveys have their own line (see rsBreak below).
   const scheduledRem=rows.filter(r=>isWIP(r)&&inScope(r)&&r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to);
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&isWIP(r)&&inScope(r))
@@ -3603,12 +3645,12 @@ function renderThisWeek(){
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   const lwr=weekRange(-1);
-  const lwSrc=rows.filter(r=>everCompleted(r)&&r.complete>=lwr.from&&r.complete<=lwr.to);
+  const lwSrc=weekCompletions(lwr.from,lwr.to).combined;
   const lwCount=lwSrc.length;
   const lwAvgT=avg(lwSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   // 3-week avg for cycle context
   const w3r=weekRange(-3);
-  const triSrcTW=rows.filter(r=>everCompleted(r)&&r.complete>=w3r.from&&r.complete<=lwr.to);
+  const triSrcTW=weekCompletions(w3r.from,lwr.to).combined;
   const triAvgTW=avg(triSrcTW.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
   const twBand=avgT!=null?(bandFor(avgT,S.targetAvg)||'good'):'good';
   const twBvCls=twBand==='good'?'':twBand==='mid'?' bv-warn':' bv-bad';
@@ -3656,7 +3698,7 @@ function renderThisWeek(){
 
   // Day-by-day breakdown
   const dayDates=dayNames.map((_,i)=>{ const [y,m,d]=tw.from.split('-').map(Number); return localISO(new Date(y,m-1,d+i)); });
-  const dayCounts=dayDates.map(date=>rows.filter(r=>everCompleted(r)&&r.complete===date).length);
+  const dayCounts=dayDates.map(date=>completedTW.filter(r=>r.complete===date).length);
   const schedCounts=dayDates.map(date=>rows.filter(r=>r.scheduled===date).length);
   const todayIdx=dayDates.indexOf(today);
   // Past days: no scheduled bars. Today: scheduled-but-not-yet-complete stacked on top. Future: all scheduled.
@@ -3734,7 +3776,7 @@ function renderThisWeek(){
         <th>Project</th><th>Region</th><th>Resource</th><th class="r">Complete</th><th class="r">Cycle</th>
       </tr></thead><tbody>
         ${completedTW.sort((a,b)=>b.complete.localeCompare(a.complete)).map(r=>`<tr>
-          <td style="font-size:12px;">${projLink(r)}</td>
+          <td style="font-size:12px;">${projLink(r)}${r._isRsEntry?' <span style="font-size:10px;font-weight:700;color:#d97706;margin-left:4px;">RS</span>':''}</td>
           <td style="font-size:12px;"><span class="sbadge">${getState(r.region)}</span>${r.region.split(' ').slice(1).join(' ')}</td>
           <td style="font-size:12px;">${esc(r.resource||'—')}</td>
           <td class="r" style="font-size:12px;">${fmtDateShort(r.complete)}</td>
@@ -3773,7 +3815,7 @@ function renderThisWeek(){
       onClick:(evt,els)=>{ if(!els.length||els[0].datasetIndex===2) return;
         const i=els[0].index, date=dayDates[i], lbl=dayNames[i]+' '+fmtDateShort(date);
         if(els[0].datasetIndex===0){
-          const dr=rows.filter(r=>everCompleted(r)&&r.complete===date);
+          const dr=completedTW.filter(r=>r.complete===date);
           openDrill('Completed · '+lbl,dr.length+' survey'+(dr.length===1?'':'s'),dr,{sort:'days'});
         } else {
           // Past days carry no scheduled bar, and today's counts only the ones
