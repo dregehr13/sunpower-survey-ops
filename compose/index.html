@@ -102,10 +102,10 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .team-wrap{max-width:1100px;margin:0 auto;padding:18px 22px;display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
 @media(max-width:860px){.team-wrap{grid-template-columns:1fr;}}
 .tc{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.13);font-family:'Segoe UI',system-ui,sans-serif;width:100%;max-width:480px;border:1px solid #d8d8d8;}
-.tc-header{background:#2b579a;padding:16px 20px;}
+.tc-header{background:#4a4844;padding:16px 20px;}
 .tc-title{color:#fff;font-size:16px;font-weight:600;line-height:1.35;}
 .tc-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:3px;}
-.tc-body{padding:16px 20px;}
+.tc-body{padding:0 20px;}
 .tc-stats{display:grid;border-top:1px solid #efefef;}
 .tc-stat{padding:14px 8px;text-align:center;border-right:1px solid #efefef;}
 .tc-stat:last-child{border-right:none;}
@@ -164,7 +164,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .hd-points li:last-child{margin-bottom:0;}
 
 /* ── Escalations ────────────────────────────────────────── */
-.esc-wrap{max-width:1280px;margin:0 auto;padding:18px 22px 48px;display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;}
+.esc-wrap{max-width:none;margin:0;padding:18px 22px 48px;display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start;}
 @media(max-width:960px){.esc-wrap{grid-template-columns:1fr;}}
 .esc-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:5px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;margin:0 6px 6px 0;user-select:none;}
 .esc-chip:hover{border-color:#999;}
@@ -183,11 +183,11 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .esc-table th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;z-index:1;}
 .esc-table th:hover{color:var(--text);}
 .esc-table th.cb,.esc-table td.cb{padding-left:10px;padding-right:2px;width:20px;}
-.esc-table td{padding:6px 8px;border-bottom:1px solid var(--border-lt,#f0efe9);vertical-align:top;max-width:260px;}
+.esc-table td{padding:6px 10px;border-bottom:1px solid var(--border-lt,#f0efe9);vertical-align:top;max-width:360px;}
 /* Clamped to two lines so one long note can't blow a row out to five or six
    lines tall — the full text is still there on hover (title) and Copy always
    reads the raw field, unaffected by the clamp. */
-.esc-table td.note{white-space:normal;color:var(--muted);line-height:1.45;max-width:340px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:default;}
+.esc-table td.note{white-space:normal;color:var(--muted);line-height:1.45;max-width:560px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:default;}
 .esc-table tr.off td{color:var(--faint);}
 .esc-table tr:hover td{background:var(--bg);}
 .esc-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;white-space:nowrap;}
@@ -1299,21 +1299,22 @@ function computeTeamStats(){
   let projected=null,projMed=null;
   try{ const pr=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{asOfHour:projHour,cacheKey:(DATA_TS||'')+'|team'}); projected=pr.point; projMed=pr.recentMed; }catch(e){}
 
-  let periodLabel, periodCompleted, refLabel=null, refCompleted=null;
+  let periodLabel, periodRows, refLabel=null, refCompleted=null;
   if(isMonday){
     const period=getLastWeekRange();
     periodLabel='Last week';
-    periodCompleted=ROWS.filter(r=>everCompleted(r)&&r.complete>=period.from&&r.complete<=period.to).length;
+    periodRows=ROWS.filter(r=>everCompleted(r)&&r.complete>=period.from&&r.complete<=period.to);
   } else {
     const yesterday=getYesterday();
     periodLabel='Week to date';
-    periodCompleted=ROWS.filter(r=>isComplete(r)&&r.complete>=wtdFrom&&r.complete<=yesterday).length;
+    periodRows=ROWS.filter(r=>isComplete(r)&&r.complete>=wtdFrom&&r.complete<=yesterday);
     refLabel='Yesterday';
     refCompleted=ROWS.filter(r=>isComplete(r)&&r.complete===yesterday).length;
   }
+  const periodAvgCycle=avg(periodRows.map(r=>r.ct_total).filter(x=>x!=null&&x>=0));
 
   return{
-    isMonday, periodLabel, periodCompleted, refLabel, refCompleted,
+    isMonday, periodLabel, periodCompleted:periodRows.length, periodAvgCycle, refLabel, refCompleted,
     wip: wip.length,
     unscheduled: wip.filter(r=>!r.scheduled).length,
     projected, projMed,
@@ -1499,6 +1500,7 @@ function renderTeamStats(){
   if(!teamStats){el.innerHTML='<div class="empty-state">No data.</div>';return;}
   el.innerHTML=`
     <div class="stat-row"><span class="stat-label">${teamStats.periodLabel}</span><span class="stat-val">${teamStats.periodCompleted}</span></div>
+    <div class="stat-row"><span class="stat-label">Avg cycle</span><span class="stat-val">${teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—'}</span></div>
     ${teamStats.refLabel?`<div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.refCompleted}</span></div>`:''}
     <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
     <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>
@@ -1559,16 +1561,17 @@ function renderTCPreview(){
   const cells=[];
   if(teamStats){
     cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,cls:teamStats.periodCompleted>=10?'tc-val-good':'tc-val-neutral'});
-    if(teamStats.refLabel) cells.push({lbl:teamStats.refLabel.toUpperCase(),val:teamStats.refCompleted,cls:teamStats.refCompleted>=10?'tc-val-good':'tc-val-neutral'});
+    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',cls:'tc-val-neutral'});
     cells.push({lbl:'OPEN WIP',val:teamStats.wip,cls:'tc-val-neutral'});
     cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,cls:warnCls});
   } else {
-    cells.push({lbl:'WEEK TO DATE',val:'—',cls:'tc-val-neutral'},{lbl:'YESTERDAY',val:'—',cls:'tc-val-neutral'},{lbl:'OPEN WIP',val:'—',cls:'tc-val-neutral'},{lbl:'UNSCHEDULED',val:'—',cls:'tc-val-neutral'});
+    cells.push({lbl:'WEEK TO DATE',val:'—',cls:'tc-val-neutral'},{lbl:'AVG CYCLE',val:'—',cls:'tc-val-neutral'},{lbl:'OPEN WIP',val:'—',cls:'tc-val-neutral'},{lbl:'UNSCHEDULED',val:'—',cls:'tc-val-neutral'});
   }
+  const title=teamStats&&teamStats.isMonday?'Weekly recap':'Daily recap';
   el.innerHTML=`
     <div class="tc">
       <div class="tc-header">
-        <div class="tc-title">☀️ Good morning, Site Survey Team</div>
+        <div class="tc-title">${esc(title)}</div>
         <div class="tc-sub">${esc(dayStr)} · from Doug</div>
       </div>
       <div class="tc-body">
@@ -1583,21 +1586,22 @@ function buildAdaptiveCard(){
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   const warnColor=teamStats&&teamStats.unscheduled>20?'Attention':'Default';
+  const title=teamStats&&teamStats.isMonday?'Weekly recap':'Daily recap';
   const cells=[];
   if(teamStats){
     cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,color:'Good'});
-    if(teamStats.refLabel) cells.push({lbl:teamStats.refLabel.toUpperCase(),val:teamStats.refCompleted,color:'Default'});
+    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',color:'Default'});
     cells.push({lbl:'OPEN WIP',val:teamStats.wip,color:'Default'});
     cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,color:warnColor});
   } else {
-    cells.push({lbl:'WEEK TO DATE',val:'—',color:'Default'},{lbl:'YESTERDAY',val:'—',color:'Default'},{lbl:'OPEN WIP',val:'—',color:'Default'},{lbl:'UNSCHEDULED',val:'—',color:'Default'});
+    cells.push({lbl:'WEEK TO DATE',val:'—',color:'Default'},{lbl:'AVG CYCLE',val:'—',color:'Default'},{lbl:'OPEN WIP',val:'—',color:'Default'},{lbl:'UNSCHEDULED',val:'—',color:'Default'});
   }
   return{
     '$schema':'http://adaptivecards.io/schemas/adaptive-card.json',
     type:'AdaptiveCard', version:'1.4',
     body:[
       {type:'Container',style:'emphasis',bleed:true,items:[
-        {type:'TextBlock',text:'☀️ Good morning, Site Survey Team',weight:'Bolder',size:'Large',wrap:true},
+        {type:'TextBlock',text:title,weight:'Bolder',size:'Large',wrap:true},
         {type:'TextBlock',text:`${dayStr} · from Doug`,spacing:'None',isSubtle:true,size:'Small'},
       ]},
       {type:'ColumnSet',separator:true,spacing:'Medium',columns:cells.map((c,i)=>({
@@ -1613,16 +1617,17 @@ function buildAdaptiveCard(){
 async function copyTeamsText(){
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const title=teamStats&&teamStats.isMonday?'Weekly recap':'Daily recap';
   const cells=[];
   if(teamStats){
     cells.push(`<b>${teamStats.periodLabel}:</b> ${teamStats.periodCompleted}`);
-    if(teamStats.refLabel) cells.push(`<b>${teamStats.refLabel}:</b> ${teamStats.refCompleted}`);
+    cells.push(`<b>Avg cycle:</b> ${teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—'}`);
     cells.push(`<b>Open WIP:</b> ${teamStats.wip}`);
     cells.push(`<b>Unscheduled:</b> ${teamStats.unscheduled}`);
   } else {
-    cells.push('<b>Week to date:</b> —','<b>Yesterday:</b> —','<b>Open WIP:</b> —','<b>Unscheduled:</b> —');
+    cells.push('<b>Week to date:</b> —','<b>Avg cycle:</b> —','<b>Open WIP:</b> —','<b>Unscheduled:</b> —');
   }
-  const html=`<p><b>☀️ Good morning, Site Survey Team</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
+  const html=`<p><b>${title}</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
   await copyRenderedHTML(html);
   flash('Rich text copied — paste into Teams');
 }
