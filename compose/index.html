@@ -1680,7 +1680,11 @@ function buildTeamCardPNG(){
   });
   ctx.restore();
 
-  ctx.strokeStyle='#c2c2c2'; ctx.lineWidth=1.5;
+  // Teams' dark theme surface color, not a light card-edge gray — a light
+  // border reads as a bright ring against a dark chat background; matching
+  // it lets only the shadow separate the card, so it blends instead of
+  // sitting inside a stray outline.
+  ctx.strokeStyle='#1f1f1f'; ctx.lineWidth=1.5;
   roundRect(0.75,0.75,W-1.5,H-1.5,R-0.75);
   ctx.stroke();
 
