@@ -106,14 +106,20 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .tc-title{color:#fff;font-size:16px;font-weight:600;line-height:1.35;}
 .tc-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:3px;}
 .tc-body{padding:16px 20px;}
-.tc-opener{font-size:13px;line-height:1.7;color:#292929;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #efefef;min-height:44px;}
-.tc-opener-ph{color:#bbb;font-style:italic;}
-.tc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #efefef;}
+.tc-stats{display:grid;border-top:1px solid #efefef;}
 .tc-stat{padding:14px 8px;text-align:center;border-right:1px solid #efefef;}
 .tc-stat:last-child{border-right:none;}
 .tc-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:6px;}
-.tc-stat-val{font-size:30px;font-weight:700;line-height:1;}
+.tc-stat-val{font-size:26px;font-weight:700;line-height:1;}
 .tc-val-good{color:#107C10;}.tc-val-neutral{color:#292929;}.tc-val-warn{color:#D83B01;}
+/* ── Team card: noteworthy / world panels ──────────────── */
+.tw-note-list{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;}
+.tw-note-list>li{margin-bottom:9px;}
+.tw-note-list>li:last-child{margin-bottom:0;}
+.tw-acct-list{margin:5px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted);}
+.tw-acct-list li{margin-bottom:3px;}
+.tw-world-note{font-size:11px;color:var(--faint);line-height:1.6;margin-bottom:8px;}
+.tw-world-text{font-size:12.5px;line-height:1.7;white-space:pre-line;color:var(--text);}
 
 /* ── Huddle ─────────────────────────────────────────── */
 .huddle-wrap{max-width:680px;margin:0 auto;padding:20px 22px 48px;}
@@ -156,6 +162,33 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .hd-points{margin:0;padding-left:16px;font-size:12.5px;line-height:1.65;}
 .hd-points li{margin-bottom:7px;}
 .hd-points li:last-child{margin-bottom:0;}
+
+/* ── Escalations ────────────────────────────────────────── */
+.esc-wrap{max-width:1280px;margin:0 auto;padding:18px 22px 48px;display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;}
+@media(max-width:960px){.esc-wrap{grid-template-columns:1fr;}}
+.esc-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:5px 9px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;margin:0 6px 6px 0;user-select:none;}
+.esc-chip:hover{border-color:#999;}
+.esc-chip.on{background:#141414;color:#fff;border-color:#141414;}
+.esc-chip .n{font-variant-numeric:tabular-nums;opacity:.7;}
+.esc-chip.on .n{opacity:.85;}
+.esc-collabel{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin:12px 0 6px;}
+.esc-collabel:first-child{margin-top:0;}
+.esc-col-item{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 0;cursor:pointer;}
+.esc-col-item input{cursor:pointer;}
+.esc-search{width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;margin-bottom:4px;}
+.esc-search:focus{border-color:#999;}
+.esc-count{font-size:11px;color:var(--muted);}
+.esc-table-wrap{overflow-x:auto;max-height:640px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);}
+.esc-table{width:100%;border-collapse:collapse;font-size:11.5px;}
+.esc-table th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;z-index:1;}
+.esc-table th:hover{color:var(--text);}
+.esc-table th.cb,.esc-table td.cb{padding-left:10px;padding-right:2px;width:20px;}
+.esc-table td{padding:6px 8px;border-bottom:1px solid var(--border-lt,#f0efe9);vertical-align:top;max-width:260px;}
+.esc-table td.note{white-space:normal;color:var(--muted);line-height:1.5;}
+.esc-table tr.off td{color:var(--faint);}
+.esc-table tr:hover td{background:var(--bg);}
+.esc-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;white-space:nowrap;}
+.esc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 2px 0;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -166,6 +199,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
   <button class="nav-mode" id="btn-monday" onclick="setMode('monday')">Monday recap</button>
   <button class="nav-mode" id="btn-daily" onclick="setMode('daily')">Daily (Tue–Fri)</button>
   <button class="nav-mode" id="btn-team" onclick="setMode('team')">Team card</button>
+  <button class="nav-mode" id="btn-escalations" onclick="setMode('escalations')">Escalations</button>
   <span class="nav-date" id="nav-date"></span>
 </nav>
 
@@ -242,15 +276,12 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       <div id="team-stats-body"></div>
     </div>
     <div class="panel section-gap">
-      <div class="ptitle">Opener</div>
-      <div id="team-opener-body">
-        <textarea id="opener-ta" rows="4" placeholder="Type your own, or click Generate…"
-          oninput="teamOpener=this.value;renderTCPreview();"
-          style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);resize:vertical;font-family:inherit;outline:none;line-height:1.5;"></textarea>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="opener-btn" onclick="generateOpener()">Generate opener</button>
-        </div>
-      </div>
+      <div class="ptitle">Noteworthy from WIP</div>
+      <div id="team-noteworthy-body"></div>
+    </div>
+    <div class="panel section-gap">
+      <div class="ptitle">What's going on</div>
+      <div id="world-context-body"></div>
     </div>
   </div>
   <div>
@@ -263,6 +294,45 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       </div>
       <div style="padding:28px;background:#f0f0f0;display:flex;justify-content:center;">
         <div id="tc-preview" style="width:100%;max-width:480px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ESCALATIONS — build a rep follow-up list off the live WIP queue: bulk
+     select by status, fine-tune individual rows, choose the columns, then
+     copy a table for an email or for Excel. -->
+<div class="esc-wrap" id="esc-wrap" style="display:none;">
+  <div>
+    <div class="panel">
+      <div class="ptitle">Status <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);">— click to select/clear all of that status</span></div>
+      <div id="esc-status-body"></div>
+    </div>
+    <div class="panel section-gap">
+      <div class="ptitle">Columns</div>
+      <div id="esc-cols-body"></div>
+    </div>
+    <div class="panel section-gap">
+      <div class="ptitle">Rows</div>
+      <input type="text" class="esc-search" id="esc-search" placeholder="Search project, contact, rep, office…" oninput="escSearch=this.value;renderEscTable();">
+      <div class="btn-row">
+        <button class="btn" onclick="escSelectVisible(true)">Select visible</button>
+        <button class="btn" onclick="escSelectVisible(false)">Clear visible</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="preview-wrap">
+      <div class="preview-bar">
+        <span class="preview-label">Escalation list</span>
+        <div class="preview-actions">
+          <button class="btn" onclick="copyEscExcel(this)">Copy for Excel</button>
+          <button class="btn btn-primary" onclick="copyEscEmail(this)">Copy for email</button>
+        </div>
+      </div>
+      <div style="padding:14px 16px;">
+        <div id="esc-table-body"><div class="empty-state">No data loaded.</div></div>
       </div>
     </div>
   </div>
@@ -319,7 +389,8 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, everCompleted, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
+const {DATA_CUTOFF, isComplete, everCompleted, isWIP, isOpenResurvey, isOpenQueue, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
+       QS, QS_ORDER, QS_REP_ACTIONABLE, wipSchedDate, wipQueueStatus,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, projectWeek, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
 // The cycle-time anchor, read from the same ops_settings the dashboard writes
@@ -899,13 +970,15 @@ function buildSubject(){
 // ─── UI ───────────────────────────────────────────────────
 function setMode(m){
   mode=m;
-  ['huddle','monday','daily','team'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',m===x));
-  document.getElementById('email-wrap').style.display=(m==='team'||m==='huddle')?'none':'';
+  ['huddle','monday','daily','team','escalations'].forEach(x=>document.getElementById('btn-'+x).classList.toggle('active',m===x));
+  document.getElementById('email-wrap').style.display=(m==='team'||m==='huddle'||m==='escalations')?'none':'';
   document.getElementById('team-wrap').style.display=m==='team'?'':'none';
   document.getElementById('huddle-wrap').style.display=m==='huddle'?'':'none';
+  document.getElementById('esc-wrap').style.display=m==='escalations'?'':'none';
   selectedCommentary='';
-  if(m==='team'){ teamStats=computeTeamStats(); renderTeamStats(); renderTCPreview(); }
+  if(m==='team'){ teamStats=computeTeamStats(); renderTeamStats(); renderNoteworthy(); renderWorldContext(); renderTCPreview(); }
   else if(m==='huddle'){ stats=computeStats(); renderHuddle(); }
+  else if(m==='escalations'){ renderEscalations(); }
   else render();
 }
 
@@ -970,31 +1043,24 @@ function onObsToggle(i){
 
 function onWipSnapToggle(){ refreshPreview(); }
 
-// Open WIP grouped by queue status — mirrors the dashboard WIP queue Status column
+// Open WIP grouped by queue status — reads wipQueueStatus from lib/metrics.cjs,
+// the same classifier the dashboard's WIP queue Status column uses (and the
+// Escalations mode below), so the three never drift into disagreeing about
+// what a given row is waiting on. Used to carry its own copy of these rules;
+// that copy had fallen behind the dashboard's (missing Pending photo upload,
+// Blocked, the prose-matched Missing UB/Radicl/at-risk phrasing, the
+// reopened-by-design stale-schedule guard…), so a status here could read
+// differently than the same row on the dashboard.
 function computeWipSnapshot(){
   // Anchor ages and schedule status to the export date, not the wall clock —
   // otherwise a stale export inflates every age and mislabels scheduled rows.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):todayISO();
   const dd=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);
-  const wipSched=r=>(r.resurvey_requested&&!r.resurvey_complete)?(r.resurvey_scheduled||''):(r.scheduled||r.resurvey_scheduled||'');
-  const status=r=>{
-    const sched=wipSched(r);
-    if(sched&&sched>=today) return 'Scheduled';
-    if(sched&&sched<today) return 'Past due';
-    const subj=(r.last_reviewed_subject||'').toUpperCase();
-    const comm=(r.last_comment||'').toUpperCase();
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')) return 'Likely Cancel';
-    if(subj.includes('MISSING UB')||comm.includes('MISSING UB')) return 'Missing UB';
-    if(subj.includes('RADICL SCHEDULING')||comm.includes('RADICL SCHEDULING')) return 'Radicl scheduling';
-    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')) return 'Awaiting rep';
-    if(!r.last_reviewed_date) return 'New';
-    return 'Unscheduled';
-  };
   const IN_MOTION=['Scheduled','Radicl scheduling'];
-  const wip=ROWS.filter(r=>r.start&&!isComplete(r));
+  const wip=ROWS.filter(isOpenQueue);
   const groups={};
   wip.forEach(r=>{
-    const s=status(r);
+    const s=wipQueueStatus(r,today).label;
     if(!groups[s]) groups[s]=[];
     groups[s].push(ssDaysOpen(r,today));
   });
@@ -1215,28 +1281,90 @@ function flash(msg){
 }
 
 // ─── TEAM CARD ────────────────────────────────────────────
-let teamStats=null, teamOpener='';
+let teamStats=null;
 
+// Monday has no "yesterday" worth showing (Sunday) and no meaningful week-to-
+// date yet (the week just started) — it recaps last week's total instead.
+// Every other day shows both week-to-date and yesterday's count.
 function computeTeamStats(){
   if(!ROWS.length) return null;
-  const today=new Date(), dow=today.getDay();
-  // Monday → show Friday; otherwise show yesterday
-  const daysBack=dow===1?3:1;
-  const refDate=toISO(addDays(today,-daysBack));
-  const refLabel=dow===1?'Friday':'Yesterday';
+  const today=new Date(), isMonday=today.getDay()===1;
   const wip=ROWS.filter(r=>r.start&&!isComplete(r));
   const wtdFrom=getThisWeekMon();
   const projHour=(typeof DATA_TS!=='undefined'&&DATA_TS&&DATA_TS.length>=13)?parseInt(DATA_TS.slice(11,13),10):8;
   const projAsOf=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):toISO(today);
   let projected=null,projMed=null;
   try{ const pr=projectWeek(ALL_ROWS,wtdFrom,projAsOf,{asOfHour:projHour,cacheKey:(DATA_TS||'')+'|team'}); projected=pr.point; projMed=pr.recentMed; }catch(e){}
+
+  let periodLabel, periodCompleted, refLabel=null, refCompleted=null;
+  if(isMonday){
+    const period=getLastWeekRange();
+    periodLabel='Last week';
+    periodCompleted=ROWS.filter(r=>everCompleted(r)&&r.complete>=period.from&&r.complete<=period.to).length;
+  } else {
+    const yesterday=getYesterday();
+    periodLabel='Week to date';
+    periodCompleted=ROWS.filter(r=>isComplete(r)&&r.complete>=wtdFrom&&r.complete<=yesterday).length;
+    refLabel='Yesterday';
+    refCompleted=ROWS.filter(r=>isComplete(r)&&r.complete===yesterday).length;
+  }
+
   return{
-    refDate, refLabel,
-    completed: ROWS.filter(r=>isComplete(r)&&r.complete===refDate).length,
+    isMonday, periodLabel, periodCompleted, refLabel, refCompleted,
     wip: wip.length,
     unscheduled: wip.filter(r=>!r.scheduled).length,
     projected, projMed,
+    noteworthy: computeNoteworthy(),
   };
+}
+
+// ─── NOTEWORTHY FROM WIP ────────────────────────────────────
+// Talking points for the daily/weekly team touchpoint — specific accounts
+// worth a check-in plus population-level trends. Reads the same queue-status
+// classifier the dashboard's WIP table uses (lib/metrics.cjs), so a status
+// named here matches what the team sees if they open the dashboard.
+function computeNoteworthy(){
+  const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):todayISO();
+  const wip=ROWS.filter(isOpenQueue);
+  const truncNote=n=>n&&n.length>80?n.slice(0,77)+'…':n;
+  const items=[];
+
+  // Down to the rep or customer to move — a trend, not an account list.
+  const repRows=wip.filter(r=>QS_REP_ACTIONABLE.includes(wipQueueStatus(r,today).key));
+  if(repRows.length){
+    const byKey={};
+    repRows.forEach(r=>{ const k=wipQueueStatus(r,today).key; byKey[k]=(byKey[k]||0)+1; });
+    const parts=QS_REP_ACTIONABLE.filter(k=>byKey[k]).map(k=>`${QS[k].label.toLowerCase()} ${byKey[k]}`).join(', ');
+    items.push({kind:'trend', text:`${repRows.length} open survey${repRows.length===1?'':'s'} ${repRows.length===1?'is':'are'} waiting on the rep or customer to move (${parts}) — worth a nudge to sales.`});
+  }
+
+  // Likely-cancel — small population, worth naming.
+  const lc=wip.filter(r=>wipQueueStatus(r,today).key==='likelyCancel');
+  if(lc.length) items.push({kind:'accounts', text:`Reading likely cancel:`, accounts:lc.map(r=>r.project)});
+
+  // Aged past 10 days and not already scheduled — the specific ones to check in on.
+  const aged=wip.map(r=>({r,days:ssDaysOpen(r,today)??0,qs:wipQueueStatus(r,today)}))
+    .filter(x=>x.days>10 && x.qs.key!=='scheduled')
+    .sort((a,b)=>b.days-a.days);
+  if(aged.length){
+    items.push({kind:'accounts', text:`${aged.length} open survey${aged.length===1?'':'s'} past 10 days in SS — oldest:`,
+      accounts:aged.slice(0,4).map(x=>`${x.r.project} — ${x.days}d, ${x.qs.label}${x.r.last_comment?`: "${truncNote(x.r.last_comment)}"`:''}`)});
+  }
+
+  // Open resurveys aging past two weeks since the request date.
+  const dd=(a,b)=>a&&b?Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000):null;
+  const openRs=ROWS.filter(isOpenResurvey);
+  if(openRs.length){
+    const agedRs=openRs.map(r=>({r,days:dd(r.resurvey_requested,today)})).filter(x=>x.days!=null&&x.days>14).sort((a,b)=>b.days-a.days);
+    if(agedRs.length){
+      items.push({kind:'accounts', text:`${agedRs.length} of ${openRs.length} open resurveys have been waiting 2+ weeks:`,
+        accounts:agedRs.slice(0,3).map(x=>`${x.r.project} — ${x.days}d since requested`)});
+    } else {
+      items.push({kind:'trend', text:`${openRs.length} open resurvey${openRs.length===1?'':'s'}, none waiting more than two weeks.`});
+    }
+  }
+
+  return items;
 }
 
 // ─── HUDDLE ───────────────────────────────────────────────
@@ -1367,10 +1495,56 @@ function renderTeamStats(){
   const el=document.getElementById('team-stats-body');
   if(!teamStats){el.innerHTML='<div class="empty-state">No data.</div>';return;}
   el.innerHTML=`
-    <div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.completed}</span></div>
+    <div class="stat-row"><span class="stat-label">${teamStats.periodLabel}</span><span class="stat-val">${teamStats.periodCompleted}</span></div>
+    ${teamStats.refLabel?`<div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.refCompleted}</span></div>`:''}
     <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
     <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>
     ${teamStats.projected!=null?`<div class="stat-row"><span class="stat-label">Projected this week</span><span class="stat-val">${teamStats.projected}${teamStats.projMed!=null?` <span style="font-size:10px;font-weight:400;color:var(--muted);">(usually ±${teamStats.projMed})</span>`:''}</span></div>`:''}`;
+}
+
+// Noteworthy items are for Doug's own reference on the call — never shipped
+// in the Teams card or the copied rich text, the way the Huddle's "If the
+// call goes wider" points stay off the report copy.
+function renderNoteworthy(){
+  const el=document.getElementById('team-noteworthy-body');
+  if(!teamStats){el.innerHTML='<div class="empty-state">No data.</div>';return;}
+  const items=teamStats.noteworthy||[];
+  if(!items.length){el.innerHTML='<div style="font-size:11px;color:var(--faint);padding:4px 0;">Nothing flagged — queue looks clean.</div>';return;}
+  el.innerHTML='<ul class="tw-note-list">'+items.map(it=>{
+    const accts=it.kind==='accounts'?`<ul class="tw-acct-list">${it.accounts.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:'';
+    return `<li>${esc(it.text)}${accts}</li>`;
+  }).join('')+'</ul>';
+}
+
+let worldContext='';
+async function fetchWorldContext(){
+  const btn=document.getElementById('world-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Checking…'; }
+  try{
+    const res=await fetch('/api/team-context',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'API error');
+    worldContext=data.context;
+  }catch(err){
+    flash('Error: '+err.message);
+  }finally{
+    renderWorldContext();
+  }
+}
+function copyWorldContext(){
+  if(!worldContext) return;
+  navigator.clipboard.writeText(worldContext).then(()=>flash('Copied')).catch(()=>flash('Copy failed'));
+}
+function renderWorldContext(){
+  const el=document.getElementById('world-context-body');
+  if(!el) return;
+  el.innerHTML=`
+    <div class="tw-world-note">Not on the card — for your own message only.</div>
+    ${worldContext?`<div class="tw-world-text">${esc(worldContext)}</div>`:''}
+    <div class="btn-row">
+      <button class="btn" id="world-btn" onclick="fetchWorldContext()">${worldContext?'Check again':"Check what's going on"}</button>
+      ${worldContext?`<button class="btn btn-primary" onclick="copyWorldContext()">Copy</button>`:''}
+    </div>`;
 }
 
 function renderTCPreview(){
@@ -1378,8 +1552,16 @@ function renderTCPreview(){
   if(!el) return;
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  const goodCls=teamStats&&teamStats.completed>=10?'tc-val-good':'tc-val-neutral';
   const warnCls=teamStats&&teamStats.unscheduled>20?'tc-val-warn':'tc-val-neutral';
+  const cells=[];
+  if(teamStats){
+    cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,cls:teamStats.periodCompleted>=10?'tc-val-good':'tc-val-neutral'});
+    if(teamStats.refLabel) cells.push({lbl:teamStats.refLabel.toUpperCase(),val:teamStats.refCompleted,cls:teamStats.refCompleted>=10?'tc-val-good':'tc-val-neutral'});
+    cells.push({lbl:'OPEN WIP',val:teamStats.wip,cls:'tc-val-neutral'});
+    cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,cls:warnCls});
+  } else {
+    cells.push({lbl:'WEEK TO DATE',val:'—',cls:'tc-val-neutral'},{lbl:'YESTERDAY',val:'—',cls:'tc-val-neutral'},{lbl:'OPEN WIP',val:'—',cls:'tc-val-neutral'},{lbl:'UNSCHEDULED',val:'—',cls:'tc-val-neutral'});
+  }
   el.innerHTML=`
     <div class="tc">
       <div class="tc-header">
@@ -1387,11 +1569,8 @@ function renderTCPreview(){
         <div class="tc-sub">${esc(dayStr)} · from Doug</div>
       </div>
       <div class="tc-body">
-        <div class="tc-opener">${teamOpener?esc(teamOpener):'<span class="tc-opener-ph">Generate an opener to preview it here…</span>'}</div>
-        <div class="tc-stats">
-          <div class="tc-stat"><div class="tc-stat-lbl">${teamStats?teamStats.refLabel.toUpperCase():'YESTERDAY'}</div><div class="tc-stat-val ${goodCls}">${teamStats?teamStats.completed:'—'}</div></div>
-          <div class="tc-stat"><div class="tc-stat-lbl">OPEN WIP</div><div class="tc-stat-val tc-val-neutral">${teamStats?teamStats.wip:'—'}</div></div>
-          <div class="tc-stat"><div class="tc-stat-lbl">UNSCHEDULED</div><div class="tc-stat-val ${warnCls}">${teamStats?teamStats.unscheduled:'—'}</div></div>
+        <div class="tc-stats" style="grid-template-columns:repeat(${cells.length},1fr);">
+          ${cells.map(c=>`<div class="tc-stat"><div class="tc-stat-lbl">${esc(c.lbl)}</div><div class="tc-stat-val ${c.cls}">${c.val}</div></div>`).join('')}
         </div>
       </div>
     </div>`;
@@ -1401,6 +1580,15 @@ function buildAdaptiveCard(){
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   const warnColor=teamStats&&teamStats.unscheduled>20?'Attention':'Default';
+  const cells=[];
+  if(teamStats){
+    cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,color:'Good'});
+    if(teamStats.refLabel) cells.push({lbl:teamStats.refLabel.toUpperCase(),val:teamStats.refCompleted,color:'Default'});
+    cells.push({lbl:'OPEN WIP',val:teamStats.wip,color:'Default'});
+    cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,color:warnColor});
+  } else {
+    cells.push({lbl:'WEEK TO DATE',val:'—',color:'Default'},{lbl:'YESTERDAY',val:'—',color:'Default'},{lbl:'OPEN WIP',val:'—',color:'Default'},{lbl:'UNSCHEDULED',val:'—',color:'Default'});
+  }
   return{
     '$schema':'http://adaptivecards.io/schemas/adaptive-card.json',
     type:'AdaptiveCard', version:'1.4',
@@ -1409,48 +1597,29 @@ function buildAdaptiveCard(){
         {type:'TextBlock',text:'☀️ Good morning, Site Survey Team',weight:'Bolder',size:'Large',wrap:true},
         {type:'TextBlock',text:`${dayStr} · from Doug`,spacing:'None',isSubtle:true,size:'Small'},
       ]},
-      ...(teamOpener?[{type:'TextBlock',text:teamOpener,wrap:true,spacing:'Medium'}]:[]),
-      {type:'ColumnSet',separator:true,spacing:'Medium',columns:[
-        {type:'Column',width:'stretch',items:[
-          {type:'TextBlock',text:teamStats?teamStats.refLabel.toUpperCase():'YESTERDAY',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
-          {type:'TextBlock',text:String(teamStats?teamStats.completed:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:'Good',spacing:'Small'},
-        ]},
-        {type:'Column',width:'stretch',separator:true,items:[
-          {type:'TextBlock',text:'OPEN WIP',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
-          {type:'TextBlock',text:String(teamStats?teamStats.wip:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',spacing:'Small'},
-        ]},
-        {type:'Column',width:'stretch',separator:true,items:[
-          {type:'TextBlock',text:'UNSCHEDULED',size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
-          {type:'TextBlock',text:String(teamStats?teamStats.unscheduled:'—'),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:warnColor,spacing:'Small'},
-        ]},
-      ]},
+      {type:'ColumnSet',separator:true,spacing:'Medium',columns:cells.map((c,i)=>({
+        type:'Column',width:'stretch',separator:i>0,items:[
+          {type:'TextBlock',text:c.lbl,size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
+          {type:'TextBlock',text:String(c.val),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:c.color,spacing:'Small'},
+        ],
+      }))},
     ],
   };
-}
-
-async function generateOpener(){
-  const btn=document.getElementById('opener-btn');
-  btn.disabled=true; btn.textContent='Generating…';
-  try{
-    const res=await fetch('/api/team-opener',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stats:teamStats})});
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'API error');
-    teamOpener=data.opener;
-    const ta=document.getElementById('opener-ta');
-    if(ta){ta.value=teamOpener;}
-    renderTCPreview();
-  }catch(err){
-    flash('Error: '+err.message);
-  }finally{
-    btn.disabled=false; btn.textContent='Generate opener';
-  }
 }
 
 async function copyTeamsText(){
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  const ref=teamStats?.refLabel??'Yesterday';
-  const html=`<p><b>☀️ Good morning, Site Survey Team</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p>${teamOpener?`<p>${teamOpener}</p>`:''}<p><b>${ref}:</b> ${teamStats?.completed??'—'} &nbsp;&nbsp; <b>Open WIP:</b> ${teamStats?.wip??'—'} &nbsp;&nbsp; <b>Unscheduled:</b> ${teamStats?.unscheduled??'—'}</p>`;
+  const cells=[];
+  if(teamStats){
+    cells.push(`<b>${teamStats.periodLabel}:</b> ${teamStats.periodCompleted}`);
+    if(teamStats.refLabel) cells.push(`<b>${teamStats.refLabel}:</b> ${teamStats.refCompleted}`);
+    cells.push(`<b>Open WIP:</b> ${teamStats.wip}`);
+    cells.push(`<b>Unscheduled:</b> ${teamStats.unscheduled}`);
+  } else {
+    cells.push('<b>Week to date:</b> —','<b>Yesterday:</b> —','<b>Open WIP:</b> —','<b>Unscheduled:</b> —');
+  }
+  const html=`<p><b>☀️ Good morning, Site Survey Team</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
   await copyRenderedHTML(html);
   flash('Rich text copied — paste into Teams');
 }
@@ -1468,6 +1637,232 @@ async function sendToTeams(){
   }finally{
     btn.disabled=false; btn.textContent='Send to Teams';
   }
+}
+
+// ─── ESCALATIONS ──────────────────────────────────────────
+// Build a rep follow-up list off the live WIP queue for the sales-leader
+// email — the same job Doug was doing by hand, pasting from the dashboard's
+// WIP table into a spreadsheet, then adding Sales Rep/Office columns by
+// re-looking each row up. Reads the same isOpenQueue/wipQueueStatus
+// lib/metrics.cjs shares with the dashboard, so a status here always matches
+// the WIP page.
+//
+// Selection model: escSel holds the ids of every row currently INCLUDED,
+// seeded once (escInit) from the rep-actionable statuses (Awaiting rep,
+// Missing UB, Awaiting customer, Likely cancel — QS_REP_ACTIONABLE, the
+// statuses a rep push can actually move). Status chips are a bulk action —
+// "select all of this status" / "clear all of this status" — not a filter,
+// so unlike the WIP page's status chips these never hide a row; every open
+// row stays in the table with its own checkbox, and a status chip is just a
+// fast way to check or uncheck a whole group of them at once. The search box
+// only narrows which rows are visible to click, same reason.
+let escSel=null, escCols=null, escSearch='', escSort={key:'daysOpen',asc:false};
+// Columns available and their default state. Project is the identifier and
+// is always shown, so it isn't in this list. Defaults mirror the exact set
+// Doug was building by hand: identity, who to push, where, why, how urgent.
+const ESC_COLS=[
+  {key:'contact',     label:'Contact',       on:true},
+  {key:'sales_rep',   label:'Sales rep',     on:true},
+  {key:'sales_office',label:'Sales office',  on:true},
+  {key:'region',      label:'Region',        on:true},
+  {key:'status',      label:'Status',        on:true},
+  {key:'scheduled',   label:'Scheduled',     on:false},
+  {key:'last_reviewed',label:'Last reviewed',on:true},
+  {key:'reviewed_by', label:'Reviewed by',   on:false},
+  {key:'proj_age',    label:'Proj age',      on:true},
+  {key:'days_open',   label:'Days open in SS',on:false},
+  {key:'note',        label:'Last review note',on:true},
+];
+
+function escToday(){ return (typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):todayISO(); }
+
+// Live queue, one row object per open survey with everything the table or
+// the status chips need. Rebuilt on every render — the queue is small (tens
+// of rows) and this runs only when the Escalations tab is visible.
+function escRows(){
+  const today=escToday();
+  return ROWS.filter(isOpenQueue).map(r=>{
+    const qs=wipQueueStatus(r,today);
+    return {
+      id:r.project||r.id,
+      r, qs,
+      project:r.project||r.address||'',
+      contact:r.contact||'',
+      sales_rep:r.sales_rep||'',
+      sales_office:r.sales_office||'',
+      region:r.region||'',
+      status:qs.label, qsKey:qs.key, qsSort:qs.sort,
+      scheduled:wipSchedDate(r)||'',
+      last_reviewed:r.last_reviewed_date||'',
+      last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
+      reviewed_by:r.reviewed_by||'',
+      proj_age:r.start?Math.round((new Date(today+'T12:00:00')-new Date(r.start+'T12:00:00'))/86400000):null,
+      daysOpen:ssDaysOpen(r,today)??0,
+      note:r.last_comment||'',
+    };
+  });
+}
+
+function escInit(all){
+  if(escSel) return;
+  escSel=new Set(all.filter(x=>QS_REP_ACTIONABLE.includes(x.qsKey)).map(x=>x.id));
+  escCols=new Set(ESC_COLS.filter(c=>c.on).map(c=>c.key));
+}
+
+function renderEscalations(){
+  const all=escRows();
+  escInit(all);
+  renderEscStatusChips(all);
+  renderEscCols();
+  renderEscTable();
+}
+
+function renderEscStatusChips(all){
+  const el=document.getElementById('esc-status-body');
+  const counts={}; all.forEach(x=>{ counts[x.qsKey]=(counts[x.qsKey]||0)+1; });
+  const order=QS_ORDER.filter(k=>counts[k]);
+  el.innerHTML=order.map(k=>{
+    const ids=all.filter(x=>x.qsKey===k).map(x=>x.id);
+    const allOn=ids.every(id=>escSel.has(id));
+    return `<span class="esc-chip${allOn?' on':''}" role="button" tabindex="0" onclick="escToggleStatus('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();escToggleStatus('${k}')}">${esc(QS[k].label)} <span class="n">${counts[k]}</span></span>`;
+  }).join('');
+}
+
+function escToggleStatus(key){
+  const all=escRows();
+  const ids=all.filter(x=>x.qsKey===key).map(x=>x.id);
+  const allOn=ids.every(id=>escSel.has(id));
+  ids.forEach(id=>allOn?escSel.delete(id):escSel.add(id));
+  renderEscalations();
+}
+
+function renderEscCols(){
+  const el=document.getElementById('esc-cols-body');
+  el.innerHTML=ESC_COLS.map(c=>`<label class="esc-col-item"><input type="checkbox"${escCols.has(c.key)?' checked':''} onchange="escToggleCol('${c.key}')"><span>${esc(c.label)}</span></label>`).join('');
+}
+
+function escToggleCol(key){
+  if(escCols.has(key)) escCols.delete(key); else escCols.add(key);
+  renderEscTable();
+}
+
+function escSelectVisible(on){
+  const rows=escVisibleRows();
+  rows.forEach(x=>on?escSel.add(x.id):escSel.delete(x.id));
+  renderEscalations();
+}
+
+function escVisibleRows(){
+  const q=escSearch.trim().toLowerCase();
+  let rows=escRows();
+  if(q) rows=rows.filter(x=>[x.project,x.contact,x.sales_rep,x.sales_office,x.region].join(' ').toLowerCase().includes(q));
+  const sk=escSort.key;
+  rows.sort((a,b)=>{
+    const va=a[sk]??'', vb=b[sk]??'';
+    const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
+    return escSort.asc?cmp:-cmp;
+  });
+  return rows;
+}
+
+function escSortBy(k){
+  if(escSort.key===k) escSort.asc=!escSort.asc; else escSort={key:k,asc:false};
+  renderEscTable();
+}
+
+function escToggleRow(id){
+  if(escSel.has(id)) escSel.delete(id); else escSel.add(id);
+  renderEscStatusChips(escRows());
+  renderEscTable();
+}
+
+// {key, label, get(row)->text, cell(row)->html}. `get` is what copy uses;
+// `cell` is what the on-screen table renders (adds the status pill's color).
+const ESC_COL_DEFS={
+  contact:      {label:'Contact',        get:x=>x.contact,       cell:x=>esc(x.contact)||'—'},
+  sales_rep:    {label:'Sales Rep',      get:x=>x.sales_rep,     cell:x=>esc(x.sales_rep)||'—'},
+  sales_office: {label:'Sales Office',   get:x=>x.sales_office,  cell:x=>esc(x.sales_office)||'—'},
+  region:       {label:'Region',         get:x=>x.region,        cell:x=>esc(x.region)||'—'},
+  status:       {label:'Status',         get:x=>x.status,        cell:x=>`<span class="esc-pill" style="background:${x.qs.bg};color:${x.qs.fg};">${esc(x.status)}</span>`},
+  scheduled:    {label:'Scheduled',      get:x=>x.scheduled?fmtShort(x.scheduled):'', cell:x=>x.scheduled?fmtShort(x.scheduled):'—'},
+  last_reviewed:{label:'Last Reviewed',  get:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'', cell:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'—'},
+  reviewed_by:  {label:'Reviewed By',    get:x=>x.reviewed_by,   cell:x=>esc(x.reviewed_by)||'—'},
+  proj_age:     {label:'Proj Age',       get:x=>x.proj_age!=null?x.proj_age+'d':'', cell:x=>x.proj_age!=null?x.proj_age+'d':'—'},
+  days_open:    {label:'Days Open in SS',get:x=>x.daysOpen+'d',  cell:x=>x.daysOpen+'d'},
+  note:         {label:'Last Review Note',get:x=>x.note,         cell:x=>esc(x.note)||'—'},
+};
+function fmtReviewDate(s){ try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; } }
+
+function renderEscTable(){
+  const el=document.getElementById('esc-table-body');
+  const rows=escVisibleRows();
+  const cols=ESC_COLS.filter(c=>escCols.has(c.key));
+  const selCount=escSel.size;
+  if(!rows.length){ el.innerHTML='<div class="empty-state">No open surveys match.</div>'; return; }
+  const arr=k=>escSort.key===k?(escSort.asc?'▲':'▼'):'';
+  const head=`<th class="cb"><input type="checkbox" title="Select/clear all visible" ${rows.every(x=>escSel.has(x.id))?'checked':''} onchange="escSelectVisible(this.checked)"></th>`
+    +`<th onclick="escSortBy('project')">Project ${arr('project')}</th>`
+    +cols.map(c=>`<th onclick="escSortBy('${c.key}')">${esc(c.label)} ${arr(c.key)}</th>`).join('');
+  const body=rows.map(x=>{
+    const on=escSel.has(x.id);
+    return `<tr class="${on?'':'off'}">
+      <td class="cb"><input type="checkbox" ${on?'checked':''} onchange="escToggleRow('${escAttr(x.id)}')"></td>
+      <td><strong>${esc(x.project)}</strong></td>
+      ${cols.map(c=>`<td class="${c.key==='note'?'note':''}">${ESC_COL_DEFS[c.key].cell(x)}</td>`).join('')}
+    </tr>`;
+  }).join('');
+  el.innerHTML=`
+    <div class="esc-table-wrap"><table class="esc-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="esc-foot">
+      <span class="esc-count">${selCount} of ${escRows().length} open surveys selected</span>
+    </div>`;
+}
+
+function escSelectedSorted(){
+  return escVisibleRowsAll().filter(x=>escSel.has(x.id));
+}
+// Copy reads every selected row regardless of the search box, sorted the
+// same way the table currently is — a filtered search must not silently
+// drop rows from what gets copied.
+function escVisibleRowsAll(){
+  const rows=escRows();
+  const sk=escSort.key;
+  rows.sort((a,b)=>{
+    const va=a[sk]??'', vb=b[sk]??'';
+    const cmp=typeof va==='number'&&typeof vb==='number'?va-vb:String(va).localeCompare(String(vb));
+    return escSort.asc?cmp:-cmp;
+  });
+  return rows;
+}
+
+function copyEscExcel(btn){
+  const cols=ESC_COLS.filter(c=>escCols.has(c.key));
+  const rows=escSelectedSorted();
+  if(!rows.length){ flash('Nothing selected'); return; }
+  const headers=['Project',...cols.map(c=>ESC_COL_DEFS[c.key].label)];
+  const tsv=[headers.join('\t'),...rows.map(x=>[x.project,...cols.map(c=>ESC_COL_DEFS[c.key].get(x))]
+    .map(v=>String(v??'').replace(/[\t\n\r]+/g,' ')).join('\t'))].join('\n');
+  navigator.clipboard.writeText(tsv).then(()=>{ if(btn) _flashBtn(btn,'Copied'); flash(`Copied ${rows.length} row${rows.length!==1?'s':''} — paste into Excel`); }).catch(()=>flash('Copy failed'));
+}
+
+async function copyEscEmail(btn){
+  const cols=ESC_COLS.filter(c=>escCols.has(c.key));
+  const rows=escSelectedSorted();
+  if(!rows.length){ flash('Nothing selected'); return; }
+  const th=c=>`<th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666;">${c}</th>`;
+  const td=(v,note)=>`<td style="padding:6px 10px;border-bottom:1px solid #e5e5e5;font-size:12.5px;${note?'color:#444;':''}">${esc(String(v??''))||'&nbsp;'}</td>`;
+  const headHtml=`<tr>${th('Project')}${cols.map(c=>th(ESC_COL_DEFS[c.key].label)).join('')}</tr>`;
+  const bodyHtml=rows.map(x=>`<tr>${td(x.project)}${cols.map(c=>td(ESC_COL_DEFS[c.key].get(x),c.key==='note')).join('')}</tr>`).join('');
+  const html=`<table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;width:100%;"><thead>${headHtml}</thead><tbody>${bodyHtml}</tbody></table>`;
+  const rich=await copyRenderedHTML(html);
+  if(btn) _flashBtn(btn,'Copied');
+  flash(rich?`Copied ${rows.length} row${rows.length!==1?'s':''} — paste into the email body`:'HTML source copied (browser limitation)');
+}
+
+function _flashBtn(btn,text){
+  const orig=btn.textContent;
+  btn.textContent=text;
+  setTimeout(()=>{ btn.textContent=orig; },1400);
 }
 
 // ─── INIT ─────────────────────────────────────────────────
