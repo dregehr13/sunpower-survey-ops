@@ -1616,12 +1616,19 @@ function renderTCPreview(){
 const TC_COLORS={'tc-val-good':'#107C10','tc-val-mid':'#B25E09','tc-val-warn':'#D83B01','tc-val-neutral':'#292929'};
 function buildTeamCardPNG(){
   const {title,dayStr,cells}=teamCardModel();
-  const dpr=2, W=480, HEADER_H=74, CELL_H=72, H=HEADER_H+CELL_H, R=10;
+  // Rendered well above the 480px on-screen size and with a transparent
+  // margin around the card: Teams stretches a pasted image to fill the
+  // message width, and a thin low-res source went soft and edge-to-edge.
+  // A high-res source plus a drop shadow and real margin keeps it crisp and
+  // reads as a contained card rather than a stretched flat rectangle.
+  const dpr=3, M=18, W=480, HEADER_H=74, CELL_H=72, H=HEADER_H+CELL_H, R=10;
+  const CW=W+M*2, CH=H+M*2;
   const FN='"Segoe UI",Arial,Helvetica,sans-serif';
   const canvas=document.createElement('canvas');
-  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.width=CW*dpr; canvas.height=CH*dpr;
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
+  ctx.translate(M,M);
 
   const roundRect=(x,y,w,h,r)=>{
     ctx.beginPath();
@@ -1632,6 +1639,14 @@ function buildTeamCardPNG(){
     ctx.arcTo(x,y,x+w,y,r);
     ctx.closePath();
   };
+
+  // Drop shadow, painted before the clip so it isn't cropped by it.
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.22)'; ctx.shadowBlur=18; ctx.shadowOffsetY=5;
+  ctx.fillStyle='#fff';
+  roundRect(0,0,W,H,R);
+  ctx.fill();
+  ctx.restore();
 
   roundRect(0,0,W,H,R);
   ctx.save(); ctx.clip();
@@ -1665,8 +1680,8 @@ function buildTeamCardPNG(){
   });
   ctx.restore();
 
-  ctx.strokeStyle='#d8d8d8'; ctx.lineWidth=1;
-  roundRect(0.5,0.5,W-1,H-1,R-0.5);
+  ctx.strokeStyle='#c2c2c2'; ctx.lineWidth=1.5;
+  roundRect(0.75,0.75,W-1.5,H-1.5,R-0.75);
   ctx.stroke();
 
   return canvas.toDataURL('image/png');
