@@ -1616,32 +1616,21 @@ function renderTCPreview(){
 const TC_COLORS={'tc-val-good':'#107C10','tc-val-mid':'#B25E09','tc-val-warn':'#D83B01','tc-val-neutral':'#292929'};
 function buildTeamCardPNG(){
   const {title,dayStr,cells}=teamCardModel();
-  // Full-bleed — no margin, shadow, or border baked in. Teams wraps every
-  // pasted image in its own attachment frame (white in the message list,
-  // gray in the full-size viewer), so anything we draw around the card
-  // sits INSIDE that frame as a redundant second border rather than
-  // blending with the chat background. The card should just be the whole
-  // image, rendered well above its 480px on-screen size so Teams stretching
-  // it to fill the message width doesn't go soft.
-  const dpr=3, W=480, HEADER_H=74, CELL_H=72, H=HEADER_H+CELL_H, R=10;
+  // Full-bleed, plain rectangle — no margin, shadow, border, or corner
+  // rounding baked in. Rounding meant clipping the corners, which left
+  // those pixels transparent; Teams flattens that transparency to white on
+  // render, and its own attachment frame applies its own (differently
+  // sized) rounding on top, so our corners showed as stray white slivers.
+  // A fully opaque rectangle has nothing to flatten oddly, and Teams'
+  // frame is the only rounding left to see. dpr=2 (not 3) keeps it closer
+  // to its original footprint — a taller dpr changed the aspect ratio
+  // enough that Teams was scaling the whole image up bigger on screen.
+  const dpr=2, W=400, HEADER_H=74, CELL_H=72, H=HEADER_H+CELL_H;
   const FN='"Segoe UI",Arial,Helvetica,sans-serif';
   const canvas=document.createElement('canvas');
   canvas.width=W*dpr; canvas.height=H*dpr;
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
-
-  const roundRect=(x,y,w,h,r)=>{
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-  };
-
-  roundRect(0,0,W,H,R);
-  ctx.save(); ctx.clip();
 
   ctx.fillStyle='#4a4844'; ctx.fillRect(0,0,W,HEADER_H);
   ctx.textAlign='left';
@@ -1670,7 +1659,6 @@ function buildTeamCardPNG(){
       ctx.beginPath(); ctx.moveTo(i*cw+0.5,HEADER_H); ctx.lineTo(i*cw+0.5,H); ctx.stroke();
     }
   });
-  ctx.restore();
 
   return canvas.toDataURL('image/png');
 }
