@@ -292,7 +292,8 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
       <div class="preview-bar">
         <span class="preview-label">Teams card preview</span>
         <div class="preview-actions">
-          <button class="btn btn-primary" onclick="copyTeamsText()">Copy rich text</button>
+          <button class="btn" onclick="copyTeamsText()">Copy rich text</button>
+          <button class="btn btn-primary" onclick="copyTeamCardImage(this)">Copy image</button>
         </div>
       </div>
       <div style="padding:28px;background:#f0f0f0;display:flex;justify-content:center;">
@@ -1570,22 +1571,30 @@ function cycleBand(v){
   return {cls:'tc-val-neutral',color:'Default'};
 }
 
-function renderTCPreview(){
-  const el=document.getElementById('tc-preview');
-  if(!el) return;
+// One definition of what the card shows, read by the HTML preview and the
+// PNG export below — so a screenshot pasted into Teams can never drift from
+// what's on screen.
+function teamCardModel(){
   const today=new Date();
   const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   const warnCls=teamStats&&teamStats.unscheduled>20?'tc-val-warn':'tc-val-neutral';
   const cells=[];
   if(teamStats){
-    cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,cls:teamStats.periodCompleted>=10?'tc-val-good':'tc-val-neutral'});
+    cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:String(teamStats.periodCompleted),cls:teamStats.periodCompleted>=10?'tc-val-good':'tc-val-neutral'});
     cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',cls:cycleBand(teamStats.periodAvgCycle).cls});
-    cells.push({lbl:'OPEN WIP',val:teamStats.wip,cls:'tc-val-neutral'});
-    cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,cls:warnCls});
+    cells.push({lbl:'OPEN WIP',val:String(teamStats.wip),cls:'tc-val-neutral'});
+    cells.push({lbl:'UNSCHEDULED',val:String(teamStats.unscheduled),cls:warnCls});
   } else {
     cells.push({lbl:'WEEK TO DATE',val:'—',cls:'tc-val-neutral'},{lbl:'AVG CYCLE',val:'—',cls:'tc-val-neutral'},{lbl:'OPEN WIP',val:'—',cls:'tc-val-neutral'},{lbl:'UNSCHEDULED',val:'—',cls:'tc-val-neutral'});
   }
   const title=teamStats&&teamStats.isMonday?'Weekly recap':'Daily recap';
+  return {title,dayStr,cells};
+}
+
+function renderTCPreview(){
+  const el=document.getElementById('tc-preview');
+  if(!el) return;
+  const {title,dayStr,cells}=teamCardModel();
   el.innerHTML=`
     <div class="tc">
       <div class="tc-header">
@@ -1600,36 +1609,82 @@ function renderTCPreview(){
     </div>`;
 }
 
-function buildAdaptiveCard(){
-  const today=new Date();
-  const dayStr=today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  const warnColor=teamStats&&teamStats.unscheduled>20?'Attention':'Default';
-  const title=teamStats&&teamStats.isMonday?'Weekly recap':'Daily recap';
-  const cells=[];
-  if(teamStats){
-    cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,color:'Good'});
-    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',color:cycleBand(teamStats.periodAvgCycle).color});
-    cells.push({lbl:'OPEN WIP',val:teamStats.wip,color:'Default'});
-    cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,color:warnColor});
-  } else {
-    cells.push({lbl:'WEEK TO DATE',val:'—',color:'Default'},{lbl:'AVG CYCLE',val:'—',color:'Default'},{lbl:'OPEN WIP',val:'—',color:'Default'},{lbl:'UNSCHEDULED',val:'—',color:'Default'});
-  }
-  return{
-    '$schema':'http://adaptivecards.io/schemas/adaptive-card.json',
-    type:'AdaptiveCard', version:'1.4',
-    body:[
-      {type:'Container',style:'emphasis',bleed:true,items:[
-        {type:'TextBlock',text:title,weight:'Bolder',size:'Large',wrap:true},
-        {type:'TextBlock',text:dayStr,spacing:'None',isSubtle:true,size:'Small'},
-      ]},
-      {type:'ColumnSet',separator:true,spacing:'Medium',columns:cells.map((c,i)=>({
-        type:'Column',width:'stretch',separator:i>0,items:[
-          {type:'TextBlock',text:c.lbl,size:'Small',weight:'Bolder',horizontalAlignment:'Center',isSubtle:true},
-          {type:'TextBlock',text:String(c.val),size:'ExtraLarge',weight:'Bolder',horizontalAlignment:'Center',color:c.color,spacing:'Small'},
-        ],
-      }))},
-    ],
+// The card as a tight, exact PNG (no manual screenshot, no stray background
+// around the edges) — drawn with the same canvas-primitives approach as
+// buildCardsImage() above, since foreignObject SVG rendering of live DOM+CSS
+// is unreliable across browsers for rounded-corner clipping.
+const TC_COLORS={'tc-val-good':'#107C10','tc-val-mid':'#B25E09','tc-val-warn':'#D83B01','tc-val-neutral':'#292929'};
+function buildTeamCardPNG(){
+  const {title,dayStr,cells}=teamCardModel();
+  const dpr=2, W=480, HEADER_H=74, CELL_H=72, H=HEADER_H+CELL_H, R=10;
+  const FN='"Segoe UI",Arial,Helvetica,sans-serif';
+  const canvas=document.createElement('canvas');
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  const roundRect=(x,y,w,h,r)=>{
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
   };
+
+  roundRect(0,0,W,H,R);
+  ctx.save(); ctx.clip();
+
+  ctx.fillStyle='#4a4844'; ctx.fillRect(0,0,W,HEADER_H);
+  ctx.textAlign='left';
+  ctx.fillStyle='#fff';
+  ctx.font=`600 16px ${FN}`;
+  ctx.fillText(title,20,36);
+  ctx.fillStyle='rgba(255,255,255,.65)';
+  ctx.font=`11px ${FN}`;
+  ctx.fillText(dayStr,20,55);
+
+  ctx.fillStyle='#fff'; ctx.fillRect(0,HEADER_H,W,CELL_H);
+  const n=cells.length, cw=W/n;
+  cells.forEach((c,i)=>{
+    const cx=i*cw+cw/2;
+    ctx.textAlign='center';
+    ctx.fillStyle='#999';
+    ctx.font=`700 9px ${FN}`;
+    try{ctx.letterSpacing='0.6px';}catch(e){}
+    ctx.fillText(c.lbl,cx,HEADER_H+27);
+    try{ctx.letterSpacing='0px';}catch(e){}
+    ctx.fillStyle=TC_COLORS[c.cls]||'#292929';
+    ctx.font=`700 26px ${FN}`;
+    ctx.fillText(c.val,cx,HEADER_H+56);
+    if(i>0){
+      ctx.strokeStyle='#efefef'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(i*cw+0.5,HEADER_H); ctx.lineTo(i*cw+0.5,H); ctx.stroke();
+    }
+  });
+  ctx.restore();
+
+  ctx.strokeStyle='#d8d8d8'; ctx.lineWidth=1;
+  roundRect(0.5,0.5,W-1,H-1,R-0.5);
+  ctx.stroke();
+
+  return canvas.toDataURL('image/png');
+}
+
+async function copyTeamCardImage(btn){
+  const label=btn?btn.textContent:null;
+  if(btn){ btn.disabled=true; btn.textContent='Copying…'; }
+  try{
+    const dataUrl=buildTeamCardPNG();
+    const blob=await (await fetch(dataUrl)).blob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    flash('Card image copied — paste into Teams');
+  }catch(err){
+    flash('Error: '+err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=label; }
+  }
 }
 
 async function copyTeamsText(){
@@ -1648,21 +1703,6 @@ async function copyTeamsText(){
   const html=`<p><b>${title}</b> &nbsp;·&nbsp; ${dayStr}</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
   await copyRenderedHTML(html);
   flash('Rich text copied — paste into Teams');
-}
-
-async function sendToTeams(){
-  const btn=document.getElementById('send-btn');
-  btn.disabled=true; btn.textContent='Sending…';
-  try{
-    const res=await fetch('/api/send-teams',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card:buildAdaptiveCard()})});
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Send failed');
-    flash('Sent to Teams!');
-  }catch(err){
-    flash('Error: '+err.message);
-  }finally{
-    btn.disabled=false; btn.textContent='Send to Teams';
-  }
 }
 
 // ─── ESCALATIONS ──────────────────────────────────────────

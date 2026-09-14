@@ -18,9 +18,8 @@
 // one file that no metric reads. Weighed against a password prompt on every
 // two-word judgement, on a page one person opens, he chose the prompt goes.
 //
-// It is now in the same class as /api/send-teams and /api/team-opener, which
-// have never had auth (audit finding A1). The honest fix for all three is
-// Vercel Deployment Protection in front of the deployment, not a secret in a
+// It has never had auth (audit finding A1). The honest fix is Vercel
+// Deployment Protection in front of the deployment, not a secret in a
 // static page — which is public by definition and would only look like one.
 // The other two writers, api/update.js and api/update-billing.js, KEEP their
 // password: those commit the dataset and the invoice history.

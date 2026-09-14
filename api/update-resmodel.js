@@ -21,12 +21,12 @@
 // file that changes one page's capacity estimate and no survey metric — and
 // Reset in the UI undoes it in a click.
 //
-// It joins /api/send-teams, /api/team-opener and /api/update-outlook in having
-// no auth (audit finding A1). api/update.js and api/update-billing.js KEEP
-// their password: those commit the dataset and the invoice history, which is
-// real data rather than an assumption. The honest fix for the unauthenticated
-// four is Vercel Deployment Protection in front of the deployment, not a secret
-// in a static page — which is public by definition and would only look like one.
+// It joins /api/update-outlook in having no auth (audit finding A1).
+// api/update.js and api/update-billing.js KEEP their password: those commit
+// the dataset and the invoice history, which is real data rather than an
+// assumption. The honest fix for the unauthenticated two is Vercel
+// Deployment Protection in front of the deployment, not a secret in a
+// static page — which is public by definition and would only look like one.
 //
 // Requires GITHUB_TOKEN, the same var api/update.js uses. No new configuration.
 
