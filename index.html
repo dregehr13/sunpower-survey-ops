@@ -1593,7 +1593,7 @@ Chart.register(window['chartjs-plugin-annotation']);
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2249,12 +2249,12 @@ function wipScoped(){
 // cards all describe. They used to disagree: only the table read this, so
 // filtering to one region left 1 row in the queue under a 113-open KPI row and
 // a 113-row age bar whose bands, when clicked, filtered a 1-row table.
-// The open queue: open initial-survey WIP plus open resurveys. isWIP is
-// initial-only (a reopened row carries a completion date), so the resurvey
-// backlog has to be unioned in — the lens then splits the two apart. inScope
-// keeps open Change Orders out of the initial half (they re-enter WIP when the
-// CO resolves back to In Progress).
-const isOpenQueue=r=>(isWIP(r)&&inScope(r))||isOpenResurvey(r);
+// The open queue: open initial-survey WIP plus open resurveys — isOpenQueue,
+// shared with compose (lib/metrics.cjs). isWIP is initial-only (a reopened
+// row carries a completion date), so the resurvey backlog has to be unioned
+// in — the lens then splits the two apart. inScope keeps open Change Orders
+// out of the initial half (they re-enter WIP when the CO resolves back to In
+// Progress).
 function wipFiltered(){ return wipScoped().filter(isOpenQueue); }
 
 function onWipF(key,value){
@@ -4992,7 +4992,6 @@ function renderAgingWIP(){
   // Anchor all WIP ages and schedule status to the export date, not the wall
   // clock — a stale export otherwise inflates every age and mislabels schedules.
   const today=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):localISO(new Date());
-  const wipSchedDate=r=>isOpenResurvey(r)?r.resurvey_scheduled:(r.scheduled||r.resurvey_scheduled);
   // projectedCt: anchor (start or resurvey_requested) → scheduled date if future, else today.
   // Resurveys reset the clock at resurvey_requested so the initial survey time doesn't count.
   const projCt=r=>{const anchor=wipAgeFrom(r);const sched=wipSchedDate(r);return dDiff(anchor,(sched&&sched>=today)?sched:today)??0;};
@@ -5007,152 +5006,11 @@ function renderAgingWIP(){
     const est=_isoAdd(wipAgeFrom(r),Math.round(_expCt(r)));
     return est>today?est:today;
   };
-  // The queue-status vocabulary. One entry per pill, shared by the status
-  // column and the counts strip so a colour or wording change lands on both.
-  // `sort` is the table's status sort order, not display order.
-  // `bar` is the solid fill in the status bar, `bg`/`fg` the badge and chip.
-  // Scheduled and Past due carry the only judgement here (blue = neutral
-  // state, red = over threshold); the waiting-reasons are categories of
-  // waiting, not severities, so they stay unsaturated except where the reason
-  // itself is the problem. Awaiting rep takes slate rather than the Scheduled
-  // blue so two different statuses never share a fill. Awaiting customer is a
-  // lighter slate — same "someone still has to book" family as Awaiting rep,
-  // but a different someone, which is the whole reason it is its own status.
-  // `sort` is the table's status sort order, and QS_ORDER is schedule order:
-  // booked, overdue, then everything still waiting.
-  const QS={
-    scheduled:   {key:'scheduled',   label:'Scheduled',            bg:'#eef2f6', fg:'#4f7fae',     bar:'#4f7fae', sort:0},
-    pastdue:     {key:'pastdue',     label:'Past due',             bg:'#f9e7e4', fg:'#b3402e',     bar:'#b3402e', sort:1},
-    pendingPhoto:{key:'pendingPhoto',label:'Pending photo upload', bg:'#e9f0f0', fg:'#3d6566',     bar:'#5f8a8b', sort:2},
-    radicl:      {key:'radicl',      label:'Radicl scheduling',    bg:'#eeecf7', fg:'#5c4d99',     bar:'#5c4d99', sort:3},
-    missingUb:   {key:'missingUb',   label:'Missing UB',           bg:'#f7efd9', fg:'#8a6413',     bar:'#c0912e', sort:4},
-    awaitingRep: {key:'awaitingRep', label:'Awaiting rep',         bg:'#eef2f6', fg:'#4f7fae',     bar:'#64748b', sort:5},
-    awaitingCust:{key:'awaitingCust',label:'Awaiting customer',    bg:'#eef1f4', fg:'#5b6b7d',     bar:'#7c8ba0', sort:6},
-    likelyCancel:{key:'likelyCancel',label:'Likely cancel',        bg:'#fdeee2', fg:'#a85a24',     bar:'#a85a24', sort:7},
-    blocked:     {key:'blocked',     label:'Blocked',              bg:'#f1eef2', fg:'#6b5d75',     bar:'#8a7d94', sort:8},
-    new:         {key:'new',         label:'New',                  bg:'#faf9f6', fg:'var(--muted)',bar:'#c5c1b5', sort:9},
-    unscheduled: {key:'unscheduled', label:'Unclassified',         bg:'#f3f1ea', fg:'var(--muted)',bar:'#a9a390', sort:10},
-  };
-  const QS_ORDER=['scheduled','pastdue','pendingPhoto','radicl','missingUb','awaitingRep','awaitingCust','likelyCancel','blocked','new','unscheduled'];
-  // Everything from Radicl scheduling down is a survey with no booking — the
-  // old Schedule row's "Unscheduled" segment, reachable in one click from the
-  // legend. Anchored on the key rather than a slice count: Pending photo
-  // upload sits above it because that survey was performed and needs a file,
-  // not a booking, and counting it as unscheduled would put 14 rows into the
-  // rail cell and the bracket that nobody needs to schedule.
-  const QS_UNSCHED=QS_ORDER.slice(QS_ORDER.indexOf('radicl'));
-
-  // Queue status: what is this survey waiting on?
-  // Returns one of QS below, rendered as a pill in the WIP table status column
-  // and counted in the strip above the table. Order of the tests is the
-  // priority order — a Radicl job whose review says the utility bill is
-  // missing is blocked on the bill, not on Radicl.
-  const wipQueueStatus=r=>{
-    const openRs=isOpenResurvey(r);
-    let sched=wipSchedDate(r);
-    const subj=(r.last_reviewed_subject||'').toUpperCase();
-    const comm=(r.last_comment||'').toUpperCase();
-    const any=re=>re.test(subj)||re.test(comm);
-    // A row design has kicked back for rework (reopened_by_design, or List
-    // Reopened) that has no open-resurvey object yet: its r.scheduled is the
-    // ORIGINAL visit, weeks or months stale, and must not drive Scheduled /
-    // Past due — the note is the current truth. Only a PAST date is dropped; a
-    // future one on such a row is a genuine new booking. Same reasoning the
-    // Pending photo rule already applies to its stale booking dates. Fixed
-    // four live rows (195RLAND at 195d, 1944BROT, 226SBARN, 133SNAGI) that
-    // were reading Past due off a schedule nobody was waiting on.
-    if(!openRs&&(r.reopened_by_design==='1'||r.list==='Reopened')&&sched&&sched<today) sched='';
-    // Tested ahead of the schedule date on purpose. The rep performed the
-    // survey and the SF automation failed to attach the photos, so the job is
-    // waiting on an internal upload, not on a visit — and its booking date,
-    // where it has one, is the past visit that already happened. Four of the
-    // 14 live rows carried such a date and read Past due beside ten identical
-    // twins reading a follow-up. Distinct from Awaiting rep's NO PHOTOS /
-    // MISSING PHOTOS, which is the rep not having taken any.
-    if(any(/PENDING PHOTO UPLOAD/)) return QS.pendingPhoto;
-    // A rep chase — missing photos, or "schedule with field" — beats a STALE
-    // (past) schedule date, which on a rep self-survey is only the rep's own
-    // nominal visit date. Not a future booking: that stays Scheduled.
-    if(sched&&sched<today&&(subj.includes('MISSING PHOTOS')||subj.includes('SCHEDULE WITH FIELD')||comm.includes('NO PHOTOS'))) return QS.awaitingRep;
-    if(sched&&sched>=today) return QS.scheduled;
-    if(sched&&sched<today) return QS.pastdue;
-    // Unscheduled — classify by last review subject
-    // The at-risk state is also written only in the note: "the account is
-    // marked at risk and he needs retentions to reactivate it" under a subject
-    // reading just "REP EMAIL". Matched on the specific past-tense phrasing
-    // ("marked at risk", "retentions to reactivate") rather than a bare "at
-    // risk" — a rep-chase note saying "the customer does not want to cancel"
-    // must not read as likely-cancel. History-wide the phrasing sits on 40
-    // rows, 38 of them already Canceled.
-    if(r.project_status==='At-Risk'||subj.includes('AT RISK')||subj.includes('AT-RISK')
-       ||/RETENTIONS TO REACTIVATE|NEEDS? RETENTIONS|MARKED AT.?RISK|ACCOUNT IS (MARKED )?AT.?RISK/.test(comm)) return QS.likelyCancel;
-    // Reviewers write both "MISSING UB" and "MISSING UTILITY BILL"; matching
-    // only the abbreviation left four of these reading Unscheduled. The same
-    // ask written as prose is tested lower down, below Awaiting rep.
-    if(any(/MISSING (UB|UTILITY BILL)/)) return QS.missingUb;
-    // "RADICL RESCHEDULING WITH CUSTOMER" is the same waiting state as
-    // "RADICL SCHEDULING", and "INITIAL SITE SURVEY - RADICL" is the subject
-    // used when a job is handed to Radicl for booking — its comments read
-    // "Submitted to Radicl for scheduling". All three are waiting on Radicl.
-    // A handoff to Radicl is also written as prose in the note — "submitted
-    // their information to radicl", "it was sent to radicl" — under subjects
-    // like CUSTOMER CALL and REP CALL that say nothing themselves. Same waiting
-    // state as RADICL SCHEDULING; without this they fell through unclassified.
-    if(any(/RADICL (RE)?SCHEDULING/)||(subj.includes('INITIAL SITE SURVEY')&&subj.includes('RADICL'))
-       ||any(/(SENT|SUBMITTED|ASSIGNED|OVER)[\s\S]{0,40}?TO RADICL/)) return QS.radicl;
-    // A bare "ATTEMPT n" subject (not "REP ATTEMPT") whose note reads "called,
-    // texted, and emailed the customer in an attempt to schedule the site
-    // survey" is SS chasing the CUSTOMER for a booking — a different bottleneck
-    // from the rep chase below. The "RESCHEDULE NEEDED - " prefix rides along
-    // (rep cancelled, now the customer won't rebook). Six live rows were
-    // reading Awaiting rep. Tested before the rep catch, which "ATTEMPT" alone
-    // would otherwise sweep them into.
-    if(/^(RESCHEDULE NEEDED\s*-\s*)?ATTEMPT \d/.test(subj.trim())&&!subj.includes('REP ATTEMPT')
-       &&/EMAILED THE CUSTOMER|CUSTOMER IN AN ATTEMPT|ATTEMPT TO SCHEDULE THE SITE SURVEY/.test(subj+' '+comm)) return QS.awaitingCust;
-    // "FOLLOW UP WITH REP 8/17" is the rep-chasing state spelled out.
-    // "RESCHEDULE NEEDED" is the rep cancelling a booked visit; SS offers a new
-    // date and waits on them. Tested after Radicl, so the same subject ending
-    // in RADICL SCHEDULING WITH CUSTOMER stays with Radicl.
-    if(subj.includes('ATTEMPT')||comm.includes('REP ATTEMPT')||subj.includes('HOLDING')||comm.includes('NO PHOTOS')||subj.includes('MISSING PHOTOS')
-       ||subj.includes('RESCHEDULE NEEDED')
-       ||any(/FOLLOW.?UP WITH (THE )?REP/)||any(/\bFUP WITH (THE )?REP/)) return QS.awaitingRep;
-    // The bill asked for in prose, under a subject that says nothing about it:
-    // "REP EMAIL - FOLLOW UP 9/2" over a note reading "we need a full and
-    // current utility bill before a site survey can be scheduled". It used to
-    // sit inside the generic FOLLOW UP catch that Pending photo upload
-    // replaced, and fell to Unclassified when that went.
-    // Tested BELOW Awaiting rep on purpose. On a rep-chase note the bill is one
-    // ask among several — "we also needed the UB and Welcome call completed" —
-    // and the row is waiting on the rep, not on the bill; matching it ahead of
-    // Awaiting rep pulled two such rows out of it. The gap is tempered against
-    // UPLOAD so the resolved phrasing ("NO LONGER NEEDED ... I uploaded the UB")
-    // drops out while "will need correct UB photos uploaded", which is a real
-    // ask, stays. Adds exactly two rows across the whole history, both from
-    // Unclassified.
-    if(any(/(MISSING|NEEDS?|WAITING ON|REQUIRES?)((?!UPLOAD)[\s\S]){0,40}?(UTILITY BILL|\bUB\b)/)) return QS.missingUb;
-    // Parked on work outside Site Survey — a reroof, mostly ("two week wait for
-    // the customer to get a new roof … resubmit to Radicl when it's done").
-    // Nobody in SS can move it and there is nothing to schedule until the
-    // outside work lands. This is what the retired "Follow-up set" status
-    // covered; the shape came back. 9 rows across history, 1 live (10CHMCCO).
-    if(any(/NEW ROOF|REROOF|RE-?ROOF|ROOF (IS )?BEING (INSTALLED|REPLACED)|WAITING ON .{0,15}ROOF/)) return QS.blocked;
-    // A COMPLETE note on a row that is not complete describes work that has
-    // already finished — the initial survey — and says nothing about what the
-    // row is waiting on now. Six open resurveys requested 8/26 carried
-    // "COMPLETE / I uploaded the radicl pdf" as their last note and fell to
-    // Unclassified on it, which classified the wrong event. "RESURVEY REQUIRED"
-    // is the subject design writes when it kicks a survey back before the
-    // resurvey object exists — nothing has been done on it yet. Both read New.
-    if(/^(SITE SURVEY )?COMPLETE\b/.test(subj.trim())||subj.trim().startsWith('RESURVEY REQUIRED')) return QS.new;
-    if(!r.last_reviewed_date) return QS.new;
-    // Deliberately kept though it reads 0 today: a review subject nobody has
-    // seen before must land somewhere visible rather than be forced into a
-    // reason it does not belong to. Empty statuses do not render a chip, so an
-    // empty catch-all costs nothing and a non-empty one is a prompt to add a
-    // rule. Labelled "Unclassified", not "Unscheduled" — every status from
-    // Radicl scheduling down is unscheduled, so that name named the group.
-    return QS.unscheduled;
-  };
+  // QS / QS_ORDER / QS_UNSCHED / wipSchedDate / wipQueueStatus are shared with
+  // compose now (lib/metrics.cjs) — see the destructure at the top of the
+  // file. wipQueueStatus takes `today` explicitly since it no longer closes
+  // over this function's local.
+  const qStat=r=>wipQueueStatus(r,today);
 
   let wip=wipFiltered().map(r=>({
     ...r,
@@ -5162,7 +5020,7 @@ function renderAgingWIP(){
     schedEff:wipSchedDate(r)||'',
     projectAge:r.start?dDiff(r.start,today)??0:null,
     last_reviewed_ts:r.last_reviewed_date?new Date(r.last_reviewed_date).getTime():0,
-    qsSort:wipQueueStatus(r).sort,
+    qsSort:qStat(r).sort,
   }));
   // The view is the outermost cut: every count on the page — rail, bands,
   // chips, footer — is computed within it, not against the national queue.
@@ -5180,11 +5038,11 @@ function renderAgingWIP(){
   // whole queue instead advertised combinations that filter to nothing —
   // "<5d" alongside "Missing UB · 2" produced an empty table.
   const ageOK=r=>wipAgeSel.size===0||[...wipAgeSel].some(i=>inAgeBand(r.projectAge,i));
-  const qsOK=r=>wipQsSel.size===0||wipQsSel.has(wipQueueStatus(r).key);
+  const qsOK=r=>wipQsSel.size===0||wipQsSel.has(qStat(r).key);
 
   const agePool=viewPool.filter(qsOK);
   const qsPool=viewPool.filter(ageOK);
-  const qsCounts={}; qsPool.forEach(r=>{const k=wipQueueStatus(r).key;qsCounts[k]=(qsCounts[k]||0)+1;});
+  const qsCounts={}; qsPool.forEach(r=>{const k=qStat(r).key;qsCounts[k]=(qsCounts[k]||0)+1;});
   // A status that just left the selection takes its chip with it, so drop the
   // selection too rather than stranding the table on an unreachable filter.
   [...wipQsSel].forEach(k=>{ if(!qsCounts[k]) wipQsSel.delete(k); });
@@ -5210,7 +5068,7 @@ function renderAgingWIP(){
     project:r.project||r.address||'',
     contact:r.contact||'',
     region:r.region||'',
-    status:wipQueueStatus(r).label,
+    status:qStat(r).label,
     scheduled:wipSchedDate(r)||'',
     last_reviewed:r.last_reviewed_date||'',
     reviewed_by:r.reviewed_by||'',
@@ -5240,7 +5098,7 @@ function renderAgingWIP(){
   // cell applies are the same set of rows by construction.
   const OVER_MIN=PA_MINS[WIP_OVER_BANDS[0]];
   const railOverAge=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=OVER_MIN).length;
-  const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(wipQueueStatus(r).key)).length;
+  const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(qStat(r).key)).length;
   // The whole dim-filtered queue split into its two halves — not lens-scoped,
   // so the "Open resurveys" cell and the All-view subtitle read the same
   // whichever lens is active. isWIP and isOpenResurvey partition the union.
@@ -5352,7 +5210,7 @@ function renderAgingWIP(){
     return p.length<2?(p[0]||''):p[0][0]+'. '+p[p.length-1];
   };
   const tableRows=wip.map((r,i)=>{
-    const qs=wipQueueStatus(r);
+    const qs=qStat(r);
     const by=reviewedBy(r.reviewed_by);
     // Rows are white. The old page tinted at-risk rows amber and red, but the
     // Days Open figure and the status badge already carry that signal twice —
