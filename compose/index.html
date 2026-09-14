@@ -332,6 +332,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
         <span class="preview-label">Escalation list</span>
         <div class="preview-actions">
           <button class="btn" onclick="copyEscExcel(this)">Copy for Excel</button>
+          <button class="btn" onclick="downloadEscCSV(this)">Download CSV</button>
           <button class="btn btn-primary" onclick="copyEscEmail(this)">Copy for email</button>
         </div>
       </div>
@@ -1924,6 +1925,30 @@ function copyEscExcel(btn){
   const tsv=[headers.join('\t'),...rows.map(x=>[x.project,...cols.map(c=>ESC_COL_DEFS[c.key].get(x))]
     .map(v=>String(v??'').replace(/[\t\n\r]+/g,' ')).join('\t'))].join('\n');
   navigator.clipboard.writeText(tsv).then(()=>{ if(btn) _flashBtn(btn,'Copied'); flash(`Copied ${rows.length} row${rows.length!==1?'s':''} — paste into Excel`); }).catch(()=>flash('Copy failed'));
+}
+
+// A real file, for when the destination is an attachment rather than a
+// pasted table — a browser can't attach a file to another site's email
+// draft on its own (no cross-origin API for that), so this is the file half
+// of "download it, then drag it into the email yourself". CSV rather than
+// .xlsx: Excel opens it natively and it costs no new dependency in an app
+// that otherwise ships with none.
+function downloadEscCSV(btn){
+  const cols=ESC_COLS.filter(c=>escCols.has(c.key));
+  const rows=escSelectedSorted();
+  if(!rows.length){ flash('Nothing selected'); return; }
+  const csvField=v=>{ const s=String(v??''); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const headers=['Project',...cols.map(c=>ESC_COL_DEFS[c.key].label)];
+  const csv='﻿'+[headers,...rows.map(x=>[x.project,...cols.map(c=>ESC_COL_DEFS[c.key].get(x))])]
+    .map(row=>row.map(csvField).join(',')).join('\r\n');
+  const day=(typeof DATA_TS!=='undefined'&&DATA_TS)?DATA_TS.slice(0,10):todayISO();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`escalations-${day}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  if(btn) _flashBtn(btn,'Downloaded');
+  flash(`Downloaded ${rows.length} row${rows.length!==1?'s':''} — attach it to your email`);
 }
 
 // A `width:100%` table looked fine tested wide, but Outlook (web and
