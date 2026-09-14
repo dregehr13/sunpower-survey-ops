@@ -111,7 +111,7 @@ textarea:focus,.subject-row input:focus{border-color:#a9a390;}
 .tc-stat:last-child{border-right:none;}
 .tc-stat-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:6px;}
 .tc-stat-val{font-size:26px;font-weight:700;line-height:1;}
-.tc-val-good{color:#107C10;}.tc-val-neutral{color:#292929;}.tc-val-warn{color:#D83B01;}
+.tc-val-good{color:#107C10;}.tc-val-neutral{color:#292929;}.tc-val-mid{color:#B25E09;}.tc-val-warn{color:#D83B01;}
 /* ── Team card: noteworthy / world panels ──────────────── */
 .tw-note-list{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;}
 .tw-note-list>li{margin-bottom:9px;}
@@ -392,7 +392,7 @@ function getThisWeekMon(){
 function getYesterday(){ return toISO(addDays(new Date(),-1)); }
 
 // Metric definitions shared with the dashboard and the API — see lib/metrics.cjs
-const {DATA_CUTOFF, isComplete, everCompleted, isWIP, isOpenResurvey, isOpenQueue, wipAgeFrom, ssDaysOpen, ssRatioForWeek, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
+const {DATA_CUTOFF, isComplete, everCompleted, isWIP, isOpenResurvey, isOpenQueue, wipAgeFrom, ssDaysOpen, ssRatioForWeek, ssRatioLive, avgWeeklyCompletions, ssRatioBand, meanWipForWeek, avg, med,
        QS, QS_ORDER, QS_REP_ACTIONABLE, wipSchedDate, wipQueueStatus,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, projectWeek, bandFor, TREND_BAND_MED, trendLabel} = OpsMetrics;
@@ -1333,6 +1333,14 @@ function computeNoteworthy(){
   const truncNote=n=>n&&n.length>80?n.slice(0,77)+'…':n;
   const items=[];
 
+  // SS ratio — "what's on my desk right now." Only surfaced when it's in the
+  // real alarm band (≥2×, two weeks of backlog); 1–2× is the normal weekend
+  // intake rhythm and would fire on most days, so it stays quiet.
+  const liveRatio=ssRatioLive(ROWS,today);
+  if(liveRatio!=null&&ssRatioBand(liveRatio)==='bad'){
+    items.push({kind:'trend', text:`SS ratio is ${liveRatio.toFixed(1)}× — two weeks of backlog, worth flagging.`});
+  }
+
   // Down to the rep or customer to move — a trend, not an account list.
   const repRows=wip.filter(r=>QS_REP_ACTIONABLE.includes(wipQueueStatus(r,today).key));
   if(repRows.length){
@@ -1500,7 +1508,7 @@ function renderTeamStats(){
   if(!teamStats){el.innerHTML='<div class="empty-state">No data.</div>';return;}
   el.innerHTML=`
     <div class="stat-row"><span class="stat-label">${teamStats.periodLabel}</span><span class="stat-val">${teamStats.periodCompleted}</span></div>
-    <div class="stat-row"><span class="stat-label">Avg cycle</span><span class="stat-val">${teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—'}</span></div>
+    <div class="stat-row"><span class="stat-label">Avg cycle</span><span class="stat-val ${{good:'good',mid:'warn',bad:'bad'}[bandFor(teamStats.periodAvgCycle,4)]||''}">${teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—'}</span></div>
     ${teamStats.refLabel?`<div class="stat-row"><span class="stat-label">Completed ${teamStats.refLabel.toLowerCase()}</span><span class="stat-val">${teamStats.refCompleted}</span></div>`:''}
     <div class="stat-row"><span class="stat-label">Open WIP</span><span class="stat-val">${teamStats.wip}</span></div>
     <div class="stat-row"><span class="stat-label">Unscheduled</span><span class="stat-val ${teamStats.unscheduled>20?'warn':''}">${teamStats.unscheduled}</span></div>
@@ -1552,6 +1560,16 @@ function renderWorldContext(){
     </div>`;
 }
 
+// Avg-cycle band, shared by all three renders — same target (4d, Spec 12744
+// average) and thresholds as the dashboard's cycle-time cards (bandFor).
+function cycleBand(v){
+  const band=bandFor(v,4);
+  if(band==='good') return {cls:'tc-val-good',color:'Good'};
+  if(band==='mid')  return {cls:'tc-val-mid',color:'Warning'};
+  if(band==='bad')  return {cls:'tc-val-warn',color:'Attention'};
+  return {cls:'tc-val-neutral',color:'Default'};
+}
+
 function renderTCPreview(){
   const el=document.getElementById('tc-preview');
   if(!el) return;
@@ -1561,7 +1579,7 @@ function renderTCPreview(){
   const cells=[];
   if(teamStats){
     cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,cls:teamStats.periodCompleted>=10?'tc-val-good':'tc-val-neutral'});
-    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',cls:'tc-val-neutral'});
+    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',cls:cycleBand(teamStats.periodAvgCycle).cls});
     cells.push({lbl:'OPEN WIP',val:teamStats.wip,cls:'tc-val-neutral'});
     cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,cls:warnCls});
   } else {
@@ -1572,7 +1590,7 @@ function renderTCPreview(){
     <div class="tc">
       <div class="tc-header">
         <div class="tc-title">${esc(title)}</div>
-        <div class="tc-sub">${esc(dayStr)} · from Doug</div>
+        <div class="tc-sub">${esc(dayStr)}</div>
       </div>
       <div class="tc-body">
         <div class="tc-stats" style="grid-template-columns:repeat(${cells.length},1fr);">
@@ -1590,7 +1608,7 @@ function buildAdaptiveCard(){
   const cells=[];
   if(teamStats){
     cells.push({lbl:teamStats.periodLabel.toUpperCase(),val:teamStats.periodCompleted,color:'Good'});
-    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',color:'Default'});
+    cells.push({lbl:'AVG CYCLE',val:teamStats.periodAvgCycle!=null?teamStats.periodAvgCycle.toFixed(1)+'d':'—',color:cycleBand(teamStats.periodAvgCycle).color});
     cells.push({lbl:'OPEN WIP',val:teamStats.wip,color:'Default'});
     cells.push({lbl:'UNSCHEDULED',val:teamStats.unscheduled,color:warnColor});
   } else {
@@ -1602,7 +1620,7 @@ function buildAdaptiveCard(){
     body:[
       {type:'Container',style:'emphasis',bleed:true,items:[
         {type:'TextBlock',text:title,weight:'Bolder',size:'Large',wrap:true},
-        {type:'TextBlock',text:`${dayStr} · from Doug`,spacing:'None',isSubtle:true,size:'Small'},
+        {type:'TextBlock',text:dayStr,spacing:'None',isSubtle:true,size:'Small'},
       ]},
       {type:'ColumnSet',separator:true,spacing:'Medium',columns:cells.map((c,i)=>({
         type:'Column',width:'stretch',separator:i>0,items:[
@@ -1627,7 +1645,7 @@ async function copyTeamsText(){
   } else {
     cells.push('<b>Week to date:</b> —','<b>Avg cycle:</b> —','<b>Open WIP:</b> —','<b>Unscheduled:</b> —');
   }
-  const html=`<p><b>${title}</b> &nbsp;·&nbsp; ${dayStr} &nbsp;·&nbsp; from Doug</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
+  const html=`<p><b>${title}</b> &nbsp;·&nbsp; ${dayStr}</p><p>${cells.join(' &nbsp;&nbsp; ')}</p>`;
   await copyRenderedHTML(html);
   flash('Rich text copied — paste into Teams');
 }
