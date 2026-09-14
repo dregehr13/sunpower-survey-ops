@@ -1840,20 +1840,39 @@ function escToggleRow(id){
 
 // {key, label, get(row)->text, cell(row)->html}. `get` is what copy uses;
 // `cell` is what the on-screen table renders (adds the status pill's color).
+// `w` is the column's target width in the emailed table (copyEscEmail only —
+// the on-screen table sizes itself). Kept here beside the label so the two
+// never drift apart when a column is added.
+// `nowrap` is reserved for genuinely short, fixed-shape values (a day count,
+// a short date) — everything else wraps within its column. Outlook's web
+// editor doesn't reliably wrap normal (non-nowrap) text inside a fixed-width
+// pasted cell either — in testing it kept "Sep 14, 2026, 10:36 AM" on one
+// line and let it bleed into the next column rather than breaking at the
+// spaces — so the safe pattern is nowrap PLUS a width generous enough that
+// the value never needs to wrap, not "let it wrap and hope".
 const ESC_COL_DEFS={
-  contact:      {label:'Contact',        get:x=>x.contact,       cell:x=>esc(x.contact)||'—'},
-  sales_rep:    {label:'Sales Rep',      get:x=>x.sales_rep,     cell:x=>esc(x.sales_rep)||'—'},
-  sales_office: {label:'Sales Office',   get:x=>x.sales_office,  cell:x=>esc(x.sales_office)||'—'},
-  region:       {label:'Region',         get:x=>x.region,        cell:x=>esc(x.region)||'—'},
-  status:       {label:'Status',         get:x=>x.status,        cell:x=>`<span class="esc-pill" style="background:${x.qs.bg};color:${x.qs.fg};">${esc(x.status)}</span>`},
-  scheduled:    {label:'Scheduled',      get:x=>x.scheduled?fmtShort(x.scheduled):'', cell:x=>x.scheduled?fmtShort(x.scheduled):'—'},
-  last_reviewed:{label:'Last Reviewed',  get:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'', cell:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'—'},
-  reviewed_by:  {label:'Reviewed By',    get:x=>x.reviewed_by,   cell:x=>esc(x.reviewed_by)||'—'},
-  proj_age:     {label:'Proj Age',       get:x=>x.proj_age!=null?x.proj_age+'d':'', cell:x=>x.proj_age!=null?x.proj_age+'d':'—'},
-  days_open:    {label:'Days Open in SS',get:x=>x.daysOpen+'d',  cell:x=>x.daysOpen+'d'},
-  note:         {label:'Last Review Note',get:x=>x.note,         cell:x=>esc(x.note)||'—'},
+  contact:      {label:'Contact',        w:95,  get:x=>x.contact,       cell:x=>esc(x.contact)||'—'},
+  sales_rep:    {label:'Sales Rep',      w:95,  get:x=>x.sales_rep,     cell:x=>esc(x.sales_rep)||'—'},
+  sales_office: {label:'Sales Office',   w:150, get:x=>x.sales_office,  cell:x=>esc(x.sales_office)||'—'},
+  region:       {label:'Region',         w:85,  get:x=>x.region,        cell:x=>esc(x.region)||'—'},
+  status:       {label:'Status',         w:110, get:x=>x.status, cell:x=>`<span style="background:${x.qs.bg};color:${x.qs.fg};padding:2px 7px;border-radius:99px;font-size:10.5px;font-weight:600;white-space:nowrap;">${esc(x.status)}</span>`},
+  scheduled:    {label:'Scheduled',      w:65,  nowrap:true, get:x=>x.scheduled?fmtShort(x.scheduled):'', cell:x=>x.scheduled?fmtShort(x.scheduled):'—'},
+  // `emailGet` drops the year (fmtReviewDateShort) — "Sep 14, 10:42 AM" fits
+  // a nowrap column without bleeding. `get` (Excel) and `cell` (on-screen)
+  // keep the full timestamp; only the emailed table needs the shorter form.
+  last_reviewed:{label:'Last Reviewed',  w:135, nowrap:true, get:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'', emailGet:x=>x.last_reviewed?fmtReviewDateShort(x.last_reviewed):'', cell:x=>x.last_reviewed?fmtReviewDate(x.last_reviewed):'—'},
+  reviewed_by:  {label:'Reviewed By',    w:90,  get:x=>x.reviewed_by,   cell:x=>esc(x.reviewed_by)||'—'},
+  proj_age:     {label:'Proj Age',       w:50,  nowrap:true, get:x=>x.proj_age!=null?x.proj_age+'d':'', cell:x=>x.proj_age!=null?x.proj_age+'d':'—'},
+  days_open:    {label:'Days Open in SS',w:60,  nowrap:true, get:x=>x.daysOpen+'d',  cell:x=>x.daysOpen+'d'},
+  // Roughly twice a typical text column on purpose — this is the field the
+  // reader actually needs to read, and it's the one an email client's own
+  // percentage-width table layout squeezes first once the compose window is
+  // narrower than the un-widthed table wants to be.
+  note:         {label:'Last Review Note',w:300,get:x=>x.note,         cell:x=>esc(x.note)||'—'},
 };
+const ESC_PROJECT_W=85;
 function fmtReviewDate(s){ try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; } }
+function fmtReviewDateShort(s){ try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return s; } }
 
 function renderEscTable(){
   const el=document.getElementById('esc-table-body');
@@ -1907,15 +1926,30 @@ function copyEscExcel(btn){
   navigator.clipboard.writeText(tsv).then(()=>{ if(btn) _flashBtn(btn,'Copied'); flash(`Copied ${rows.length} row${rows.length!==1?'s':''} — paste into Excel`); }).catch(()=>flash('Copy failed'));
 }
 
+// A `width:100%` table looked fine tested wide, but Outlook (web and
+// especially the Word rendering engine behind desktop/classic Outlook)
+// shrinks a percentage-width table to whatever the compose pane happens to
+// be — a narrower window or a reply/forward pane squeezes every column, and
+// the note column (by far the longest text) is the one that reads as
+// wrapping after two or three words. Fixed pixel widths, on both the HTML
+// `width` attribute and the CSS style (the attribute is what the Word
+// engine actually honors), keep every column — note included, deliberately
+// the widest — the same size regardless of the window it lands in.
 async function copyEscEmail(btn){
   const cols=ESC_COLS.filter(c=>escCols.has(c.key));
   const rows=escSelectedSorted();
   if(!rows.length){ flash('Nothing selected'); return; }
-  const th=c=>`<th style="text-align:left;padding:6px 10px;border-bottom:2px solid #ccc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666;">${c}</th>`;
-  const td=(v,note)=>`<td style="padding:6px 10px;border-bottom:1px solid #e5e5e5;font-size:12.5px;${note?'color:#444;':''}">${esc(String(v??''))||'&nbsp;'}</td>`;
-  const headHtml=`<tr>${th('Project')}${cols.map(c=>th(ESC_COL_DEFS[c.key].label)).join('')}</tr>`;
-  const bodyHtml=rows.map(x=>`<tr>${td(x.project)}${cols.map(c=>td(ESC_COL_DEFS[c.key].get(x),c.key==='note')).join('')}</tr>`).join('');
-  const html=`<table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;width:100%;"><thead>${headHtml}</thead><tbody>${bodyHtml}</tbody></table>`;
+  const totalW=ESC_PROJECT_W+cols.reduce((s,c)=>s+ESC_COL_DEFS[c.key].w,0);
+  // box-sizing:border-box so the declared width already includes the cell's
+  // own padding — otherwise every cell renders ~20px wider than specified
+  // (content-box is the default) and the table blows past its own declared
+  // total, which is what let it overflow the compose pane sideways the first
+  // time this was tried.
+  const th=(label,w)=>`<th width="${w}" style="box-sizing:border-box;width:${w}px;text-align:left;padding:6px 10px;border-bottom:2px solid #ccc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666;">${label}</th>`;
+  const td=(v,w,def)=>`<td width="${w}" style="box-sizing:border-box;width:${w}px;padding:6px 10px;border-bottom:1px solid #e5e5e5;font-size:12.5px;${def&&def.key==='note'?'color:#444;':''}${def&&def.nowrap?'white-space:nowrap;':''}">${esc(String(v??''))||'&nbsp;'}</td>`;
+  const headHtml=`<tr>${th('Project',ESC_PROJECT_W)}${cols.map(c=>th(ESC_COL_DEFS[c.key].label,ESC_COL_DEFS[c.key].w)).join('')}</tr>`;
+  const bodyHtml=rows.map(x=>`<tr>${td(x.project,ESC_PROJECT_W,{nowrap:true})}${cols.map(c=>{const d=ESC_COL_DEFS[c.key];return td((d.emailGet||d.get)(x),d.w,{key:c.key,nowrap:d.nowrap});}).join('')}</tr>`).join('');
+  const html=`<table width="${totalW}" style="border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;width:${totalW}px;"><thead>${headHtml}</thead><tbody>${bodyHtml}</tbody></table>`;
   const rich=await copyRenderedHTML(html);
   if(btn) _flashBtn(btn,'Copied');
   flash(rich?`Copied ${rows.length} row${rows.length!==1?'s':''} — paste into the email body`:'HTML source copied (browser limitation)');
