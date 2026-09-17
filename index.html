@@ -775,9 +775,13 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    and stack to one below it. */
 .res-cols{display:grid;grid-template-columns:repeat(3,1fr);
   border-top:1px solid var(--border);margin-top:14px;}
-.res-col{padding:0 18px 8px 0;border-right:1px solid var(--border);}
+/* Right/left inset is 17px, matching .sec's own 15px/17px padding exactly —
+   the first and last columns rely on that outer padding instead of their own
+   (no divider to draw there), so the two have to be the same value or the
+   outer columns read 1px tighter/looser than the two internal dividers. */
+.res-col{padding:0 17px 8px 0;border-right:1px solid var(--border);}
 .res-col:last-child{border-right:none;padding-right:0;}
-.res-col:not(:first-child){padding-left:18px;}
+.res-col:not(:first-child){padding-left:17px;}
 /* No colour cap on the column. One was tried and removed the same day: a 3px
    bar directly beneath a full-width segmented bar reads as a doubled bar, and
    the share numeral below is already drawn in the resource's own hue, which
