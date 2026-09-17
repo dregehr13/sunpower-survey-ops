@@ -10,7 +10,9 @@
 //
 // Formatting is matched to the template's own runs rather than to its styles,
 // because the template formats directly: Arial everywhere, bold labels, tab
-// stops at 1800/8640/12240, justified body at 276 line spacing. Read the
+// stops at 1800/8640/12240, left-aligned body at 276 line spacing (was
+// justified, matching the template, until Doug asked for left alignment
+// 2026-09-16). Read the
 // template's XML before changing any of the constants below.
 //
 // The memo number comes from memos/register.json and is APPENDED there on a
@@ -111,18 +113,22 @@ const tabRun = () => `<w:r><w:rPr>${FONT}<w:b/></w:rPr><w:tab/></w:r>`;
 // text, so they are not decoration.
 const RULE = '<w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="auto"/></w:pBdr>';
 function metaRow(label, value, { hanging = false, boldValue = false, rule = false } = {}) {
-  const ind = hanging ? '<w:ind w:left="720" w:hanging="720"/>' : '';
+  // Left and hanging both match the label's tab stop (pos 1800) so a wrapped
+  // second line lands under the value's first word, not under the label.
+  const ind = hanging ? '<w:ind w:left="1800" w:hanging="1800"/>' : '';
   return `<w:p><w:pPr>${rule ? RULE : ''}${TABS}${ind}<w:rPr>${FONT}<w:bCs/></w:rPr></w:pPr>`
     + run(label, { b: true }) + tabRun()
     + (value ? run(value, { b: boldValue }) : '') + '</w:p>';
 }
 const spacer = (rule = false) => `<w:p><w:pPr>${rule ? RULE : ''}<w:rPr>${FONT}</w:rPr></w:pPr></w:p>`;
-// Body copy: justified, 276 line spacing — both taken off the template.
+// Body copy: left-aligned, 276 line spacing. Was justified (matching the
+// template's own body style) until Doug asked for left alignment instead
+// (2026-09-16) — ragged right edge, no stretched word spacing.
 const para = text =>
-  `<w:p><w:pPr><w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr>${FONT}</w:rPr></w:pPr>`
+  `<w:p><w:pPr><w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr>${FONT}</w:rPr></w:pPr>`
   + inline(text) + '</w:p>';
 const heading = text =>
-  `<w:p><w:pPr><w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr>${FONT}<w:b/><w:bCs/></w:rPr></w:pPr>`
+  `<w:p><w:pPr><w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr>${FONT}<w:b/><w:bCs/></w:rPr></w:pPr>`
   + `<w:r><w:rPr>${FONT}<w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
 // numId 1 is the template's own bullet list, numId 6 its decimal list —
 // read out of word/numbering.xml. Using them keeps Word's real list
@@ -130,7 +136,7 @@ const heading = text =>
 const listItem = (text, ordered) =>
   `<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/>`
   + `<w:numId w:val="${ordered ? 6 : 1}"/></w:numPr>`
-  + `<w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="both"/><w:rPr>${FONT}</w:rPr></w:pPr>`
+  + `<w:spacing w:line="276" w:lineRule="auto"/><w:jc w:val="left"/><w:rPr>${FONT}</w:rPr></w:pPr>`
   + inline(text) + '</w:p>';
 
 // A markdown table becomes a real Word table on the template's TableGrid
@@ -210,15 +216,25 @@ function imageXml(caption, file) {
       : '');
 }
 
-// **bold** is the only inline markup a memo needs; it is how a figure is
-// carried in a sentence. Anything else is left as literal text.
+// **bold** carries a figure in a sentence; `[text](url)` is a real Word
+// hyperlink — blue, underlined, and backed by an external relationship (see
+// the rels-writing step below). Anything else is left as literal text.
+const links = [];   // { rid, url }
+function hyperlinkRun(text, url) {
+  const rid = `rIdLink${links.length + 1}`;
+  links.push({ rid, url });
+  return `<w:hyperlink r:id="${rid}" w:history="1"><w:r><w:rPr>${FONT}`
+    + `<w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr>`
+    + `<w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:hyperlink>`;
+}
 function inline(text) {
   const out = [];
-  const re = /\*\*(.+?)\*\*/g;
+  const re = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
   let last = 0, m;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(run(text.slice(last, m.index)));
-    out.push(run(m[1], { b: true }));
+    if (m[1] !== undefined) out.push(run(m[1], { b: true }));
+    else out.push(hyperlinkRun(m[2], m[3]));
     last = m.index + m[0].length;
   }
   if (last < text.length) out.push(run(text.slice(last)));
@@ -270,7 +286,7 @@ const header = [
   metaRow('To:', meta.to || '', { hanging: true }),
   metaRow('Author:', meta.author || reg.author || '', { boldValue: true }),
   metaRow('Author File #:', number),
-  metaRow('CC:', meta.cc || ''),
+  metaRow('CC:', meta.cc || '', { hanging: true }),
   metaRow('Subject:', meta.subject || '', { rule: true }),
   metaRow('Attachments:', meta.attachments || '', { rule: true }),
   spacer(true),
@@ -327,22 +343,38 @@ fs.writeFileSync(path.join(stage, 'word', 'document.xml'), docXml);
 fs.writeFileSync(path.join(stage, 'docProps', 'core.xml'), core);
 const entries = ['word/document.xml', 'docProps/core.xml'];
 
-if (media.length) {
-  // Each picture needs its bytes under word/media and a relationship the
-  // drawing's r:embed points at. Ids are prefixed rather than numbered from
-  // the template's own rId16, so adding one can never collide with a part the
-  // template already relates to (the logo among them).
-  fs.mkdirSync(path.join(stage, 'word', 'media'), { recursive: true });
+if (media.length || links.length) {
+  // Both a picture and a hyperlink need a relationship in the same rels part,
+  // so they're written together here — writing them in two separate passes
+  // would have the second overwrite the first, since each starts from the
+  // template's own copy rather than the other's output.
   fs.mkdirSync(path.join(stage, 'word', '_rels'), { recursive: true });
-  media.forEach(mm => {
-    fs.copyFileSync(mm.abs, path.join(stage, 'word', 'media', mm.name));
-    entries.push(`word/media/${mm.name}`);
-  });
+  let inject = '';
+  if (media.length) {
+    // Each picture needs its bytes under word/media and a relationship the
+    // drawing's r:embed points at. Ids are prefixed rather than numbered from
+    // the template's own rId16, so adding one can never collide with a part
+    // the template already relates to (the logo among them).
+    fs.mkdirSync(path.join(stage, 'word', 'media'), { recursive: true });
+    media.forEach(mm => {
+      fs.copyFileSync(mm.abs, path.join(stage, 'word', 'media', mm.name));
+      entries.push(`word/media/${mm.name}`);
+    });
+    inject += media.map(mm =>
+      `<Relationship Id="${mm.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"`
+      + ` Target="media/${mm.name}"/>`).join('');
+  }
+  if (links.length) {
+    // External, so Target is the literal URL rather than a part inside the
+    // package — TargetMode="External" is what tells Word not to look for it
+    // in word/media.
+    inject += links.map(l =>
+      `<Relationship Id="${l.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"`
+      + ` Target="${esc(l.url)}" TargetMode="External"/>`).join('');
+  }
   const rels = execFileSync('unzip', ['-p', TEMPLATE, 'word/_rels/document.xml.rels'], { maxBuffer: 1 << 22 })
     .toString('utf8')
-    .replace('</Relationships>', media.map(mm =>
-      `<Relationship Id="${mm.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"`
-      + ` Target="media/${mm.name}"/>`).join('') + '</Relationships>');
+    .replace('</Relationships>', inject + '</Relationships>');
   fs.writeFileSync(path.join(stage, 'word', '_rels', 'document.xml.rels'), rels);
   entries.push('word/_rels/document.xml.rels');
 }
