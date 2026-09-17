@@ -8615,16 +8615,16 @@ function _resTeamTable(markets,bases){
         // it assumes, so the two columns describe one day rather than two.
         const veh=vehicleOf(b), miles=OpsCoverage.dailyMiles(RES_MODEL_MI,b.cfg);
         return `<tr>
-          <td>${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
-          <td style="color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
-          <td style="color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
-          <td style="color:var(--muted);">${RES_VEHICLES[veh]}
+          <td style="white-space:nowrap;">${esc(b.name)}${b.ll?'':' <span class="pill pr">ZIP not placed</span>'}</td>
+          <td style="white-space:nowrap;color:var(--muted);">${esc(b.market)} <span style="color:var(--faint);">${esc(b.zip)}</span></td>
+          <td style="white-space:nowrap;color:var(--muted);">${b.days}<div class="cmeta">${off?'off '+esc(off):''}</div></td>
+          <td style="white-space:nowrap;color:var(--muted);">${RES_VEHICLES[veh]}
             <div class="cmeta">${veh==='own'
               ? Math.round(miles)+'mi/day &middot; '+_rmoney(resVehicleWeekly(b))+'/wk'
               : _rmoney(resVehicleWeekly(b))+'/wk'}</div></td>
-          <td class="r">${_r1(cap)}</td>
-          <td class="r">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
-          <td class="r">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
+          <td class="r" style="white-space:nowrap;">${_r1(cap)}</td>
+          <td class="r" style="white-space:nowrap;">${inRange.length}<div class="cmeta">${_r1(inRange.reduce((a,m)=>a+m.recentPerWeek,0))}/wk of work</div></td>
+          <td class="r" style="white-space:nowrap;">${_r1(load)}${shared?'<div class="cmeta">shared range</div>':''}</td>
           <td>${((b.constraints||[]).map(c=>`<span class="pill pn">${esc((_roster.constraintLabels||{})[c]||c)}</span>`).join(' '))||'<span class="pna">—</span>'}</td>
           <td style="color:var(--faint);white-space:nowrap;">${esc(b.phone||'')}</td>
         </tr>`;
