@@ -822,7 +822,12 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .res-m{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
   padding:7px 0;border-top:1px solid var(--border-lt);font-size:11px;}
 .res-m-l{color:var(--muted);}
-.res-m-v{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+/* text-align:right on the span itself, not just the <small> below it — the
+   span's own width is set by whichever line is wider, so without this the
+   bold value floats left inside that box (by a variable amount, since the box
+   width varies per row) while only the small subtext actually reaches the
+   right edge. */
+.res-m-v{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;text-align:right;}
 .res-m-v.good{color:var(--green);}
 .res-m-v.warn{color:var(--amber);}
 .res-m-v.bad{color:var(--red);}
