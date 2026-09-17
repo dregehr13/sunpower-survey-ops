@@ -87,13 +87,15 @@ test('overrides.json is well-formed', () => {
 
 test('parse-sf.js applies the anchor override before the cycle math', () => {
   // The swap has to land before ct_total/ct_open are computed, or the row keeps
-  // its dead-gap cycle. Structural check: the OVERRIDES read sits above the
-  // first dDiff(r.start, ...) in the row builder.
-  const src = read('parse-sf.js');
-  const applied = src.indexOf('OVERRIDES[r.task_id]');
+  // its dead-gap cycle. Structural check: the overrides read sits above the
+  // first dDiff(r.start, ...) in the row builder. Both parse-sf.js (manual
+  // .xls export) and the API refresh path share this logic via
+  // lib/parse-sf-core.cjs, so that's the file the check follows.
+  const src = read('lib/parse-sf-core.cjs');
+  const applied = src.indexOf('overrides[r.task_id]');
   const firstCt = src.indexOf('r.ct_total    = dDiff(r.start');
   assert.ok(applied > -1 && firstCt > -1 && applied < firstCt,
-    'the OVERRIDES swap must precede the ct_total computation');
+    'the overrides swap must precede the ct_total computation');
 });
 
 test('lib/metrics.cjs never reads the raw Open date', () => {

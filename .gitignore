@@ -1,8 +1,14 @@
 .env
 .vercel
 node_modules
+.DS_Store
 .sfconfig.json
 .downloads/
+
+# Salesforce JWT Bearer flow keypair (api/refresh-sf) — private key never
+# committed; the .crt is uploaded once to the Connected App and can live
+# outside git too, kept alongside the key for convenience.
+sf-keys/
 
 # Cached upstream geo sources (re-downloaded by scripts/build-geo.cjs)
 geo/.src/
