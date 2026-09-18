@@ -2729,7 +2729,8 @@ const TIP={
   mapVolume:'Job density by town.',
   mapCycle:'Average project start to survey complete, per market. Hollow means too few completions to rate.',
   mapResurvey:'Share of a market\'s completions that came back. Hollow means too few completions to rate.',
-  mapWip:'Surveys started and not yet complete, as of the last export. Ignores the date range.',
+  mapWip:'Surveys started and not yet complete, as of the last export. Colour is the share with no scheduled date. Ignores the date range.',
+  mapUnsched:'Open surveys with no scheduled date yet — waiting on Radicl, the rep, or the customer to get on the calendar.',
   mapReach:'Each surveyor\'s base and the ground they can cover as a day trip. Radius comes from Settings.',
   mapAbsorb:'Vendor surveys per week in markets a surveyor could already reach, and what they were billed.',
   mapSite:'Click anywhere to price a surveyor based there: work in range, what it costs, break-even against the vendor.',
@@ -6426,11 +6427,14 @@ function mapGroup(pts){
     // resMarketFacts() — the map names a market and the Resource page prices
     // it, and neither should be re-clustering the other's work.
     const e={key,city,st,ci,towns:ranked,states:[...states.keys()],mem:c.members,
-      zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],_la:0,_ln:0};
+      zips:new Set(),n:0,rows:[],cts:[],comps:0,defects:0,opens:[],schedN:0,unschedN:0,_la:0,_ln:0};
     c.members.forEach(p=>{
       e.n++; e.rows.push(p.r); e.zips.add(p.zip);
       e._la+=p.ll[0]; e._ln+=p.ll[1];
-      if(isWIP(p.r)){ const d=ssDaysOpen(p.r,_mapToday()); if(d!=null) e.opens.push(d); }
+      if(isWIP(p.r)){
+        const d=ssDaysOpen(p.r,_mapToday()); if(d!=null) e.opens.push(d);
+        if(wipSchedDate(p.r)) e.schedN++; else e.unschedN++;
+      }
       if(isComplete(p.r)){
         e.comps++;
         if(p.r.ct_total!=null&&p.r.ct_total>=0) e.cts.push(p.r.ct_total);
@@ -6676,7 +6680,7 @@ function mapDraw(){
   const zips=mapIsRes()?mapCovGroup(vis):mapGroup(vis);
   _mapPlaces=zips;
 
-  if(mapMetric==='vol'||mapMetric==='wip'){
+  if(mapMetric==='vol'){
     // Additive density, colour-mapped after compositing. Only honest for counts.
     const heat=document.createElement('canvas');
     heat.width=cv.width; heat.height=cv.height;
@@ -6806,6 +6810,11 @@ function mapMarkerColor(z,cs){
   const c=k=>cs.getPropertyValue(k).trim();
   if(mapMetric==='cov'){ const lead=mapResLead(z); return lead?c(lead.cssFill):null; }
   if(mapMetric==='rec'){ const k=MAP_REC_C[z.advice&&z.advice.k]; return k?c(k):null; }
+  if(mapMetric==='wip'){
+    const n=z.schedN+z.unschedN; if(!n) return null;
+    const pct=z.unschedN/n*100;
+    return pct>=50?c('--red'):pct>0?c('--amber'):c('--green');
+  }
   const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
   return v==null?null:mapBandColor(v,cs);
 }
@@ -6905,10 +6914,12 @@ function mapPaintMeta(vis,zips){
       ? `<div class="srail-cell"><div class="klabel">Reachable, outsourced${kinfo(TIP.mapAbsorb)}</div><div class="srail-val ${cov.absorbPerWeek>=OpsCoverage.DEPLOY_WEEKLY?'ka-c':''}">${_r1(cov.absorbPerWeek)}<span class="srail-sub">a week${cov.absorbUsd?' · '+_rmoney(cov.absorbUsd)+' billed':''}</span></div></div>`
       : mapMetric==='wip'
       // A resurvey rate over open surveys is 0 of 0 by construction — nothing
-      // in this view has completed. Show what can actually be acted on.
-      ? (()=>{ const over=vis.filter(p=>(ssDaysOpen(p.r,_mapToday())??0)>S.targetAvg).length;
-          const pc=vis.length?Math.round(over/vis.length*100):null;
-          return `<div class="srail-cell"><div class="klabel">Past ${S.targetAvg}d${kinfo(TIP.ssDaysOpen)}</div><div class="srail-val ${pc!=null?(pc>=40?'kr-c':pc>=20?'ka-c':'kg-c'):''}">${over}<span class="srail-sub">${pc!=null?pc+'% of the open queue':'—'}</span></div></div>`; })()
+      // in this view has completed. Show what can actually be acted on: how
+      // much of the open queue has no booking yet, which is what the map's
+      // colour now shows market by market.
+      ? (()=>{ const uns=vis.filter(p=>!wipSchedDate(p.r)).length;
+          const pc=vis.length?Math.round(uns/vis.length*100):null;
+          return `<div class="srail-cell"><div class="klabel">Unscheduled${kinfo(TIP.mapUnsched)}</div><div class="srail-val ${pc!=null?(pc>=50?'kr-c':pc>0?'ka-c':'kg-c'):''}">${uns}<span class="srail-sub">${pc!=null?pc+'% of the open queue':'—'}</span></div></div>`; })()
       : `<div class="srail-cell"><div class="klabel">Resurvey rate${kinfo(TIP.mapResurvey)}</div><div class="srail-val ${rate!=null?(rate>=20?'kr-c':rate>=10?'ka-c':'kg-c'):''}">${rate!=null?rate+'%':'—'}<span class="srail-sub">${defects} of ${comps.length}</span></div></div>`)
     +`</div>`;
 
@@ -6946,7 +6957,7 @@ function mapPaintMeta(vis,zips){
       const val=mapCovVal(z)
               ??(mapMetric==='cycle'?(z.avgCt!=null?z.avgCt.toFixed(1)+'d avg cycle':'under '+MAP_MIN_N+' completions')
               :mapMetric==='rs'?(z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
-              :mapMetric==='wip'?(z.avgOpen!=null?z.avgOpen.toFixed(1)+'d avg open':'open')
+              :mapMetric==='wip'?(mapWipSplit(z)||'open')
               :(z.comps+' completed'));
       const towns=z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town';
       const meta=[(mapMarket==='US'?(MAP_STATE_NAMES[z.st]||z.st):towns),val].join(' · ');
@@ -6971,16 +6982,25 @@ function mapPaintMeta(vis,zips){
     : mapMetric==='rec'
     ? Object.entries(MAP_REC_C).map(([k,c])=>sw(c,Object.values(OpsCoverage.RECOMMENDATIONS).find(r=>r.k===k).label)).join('')
       +`<span style="color:var(--faint);">Hollow = gone quiet · a recommendation is a case to consider, not a decision</span>`+teamKey
-    : ((mapMetric==='vol'||mapMetric==='wip')
-    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(mapMetric==='wip'?TIP.mapWip:TIP.mapVolume)}</span><span style="color:var(--faint);">${mapMetric==='wip'?'Open surveys only, as of the latest export. Hover a market for its average days open.':'Blob size follows job count; overlaps add.'}</span>`
+    : mapMetric==='vol'
+    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(TIP.mapVolume)}</span><span style="color:var(--faint);">Blob size follows job count; overlaps add.</span>`+teamKey
+    : mapMetric==='wip'
+    ? `${sw('--green','Fully scheduled')}${sw('--amber','Some unscheduled')}${sw('--red','Mostly unscheduled')}<span style="color:var(--faint);">Hollow = nothing open · circle size follows open count${kinfo(TIP.mapWip)}</span>`+teamKey
     : mapMetric==='cycle'
-      ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`
-      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`)+teamKey;
+      ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey
+      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey;
 }
 
 // The one line a coverage market is summarised by, shared by the list below the
 // map and the hover tooltip so the two can never say different things. Returns
 // null in the other four modes, which each have their own.
+// The one line an open-queue market is summarised by in WIP mode, shared by
+// the tooltip and the list below the map so the two never disagree.
+function mapWipSplit(z){
+  const n=z.schedN+z.unschedN; if(!n) return null;
+  return `${z.unschedN} of ${n} unscheduled`+(z.avgOpen!=null?' · '+z.avgOpen.toFixed(1)+'d avg open':'');
+}
+
 function mapCovVal(z){
   if(mapMetric==='cov'){
     const lead=mapResLead(z);
@@ -7200,7 +7220,7 @@ document.addEventListener('mousemove',e=>{
       : mapMetric==='rs'
         ? (z.rsRate!=null?z.rsRate+'% resurveyed':'under '+MAP_MIN_N+' completions')
         : mapMetric==='wip'
-          ? (z.avgOpen!=null?z.avgOpen.toFixed(1)+'d average in the queue':'')
+          ? (mapWipSplit(z)||'')
           : '');
   tip.innerHTML=`<b>${esc(z.city)}</b> <span class="mz">${z.towns.length>1?'+'+(z.towns.length-1)+' town'+(z.towns.length>2?'s':''):'1 town'}${mapMarket==='US'?' &middot; '+z.states.join('/'):''}</span><br>`
     +`${z.n} job${z.n!==1?'s':''} in view`
