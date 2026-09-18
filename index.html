@@ -9778,11 +9778,11 @@ function renderDefinitions(){
       {t:'Open resurveys (queue)',eq:[{f:'resurvey_requested'},'set AND',{f:'resurvey_complete'},'blank AND',{f:'project_status'},'= In Progress'],extra:['list'],d:TIP.rsOpen},
     ]],
     ['map','Map',[
-      {t:'WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],extra:['list','address'],d:TIP.mapWip},
       {t:'Volume',eq:['count(rows), grouped by town'],extra:['address'],d:TIP.mapVolume},
+      {t:'Open WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],extra:['list','address'],d:TIP.mapWip},
       {t:'Cycle',eq:[{f:'complete'},'−',{f:'start'},'per market'],extra:['address'],d:TIP.mapCycle},
       {t:'Resurvey',eq:['Defects','÷','Completions','per market'],extra:['address','complete','resurvey_requested','resurvey_complete','resurvey_reason','reopened_by_design'],d:TIP.mapResurvey},
-      {t:'Resource',eq:['Radicl',{f:'complete'},'count','÷ weeks, per market'],extra:['address','resource'],d:TIP.mapAbsorb},
+      {t:'Coverage',eq:['Radicl',{f:'complete'},'count','÷ weeks, per market'],extra:['address','resource'],d:TIP.mapAbsorb},
       {t:'Top market',eq:['max(count by state)'],extra:['address'],d:TIP.mapTopMarket},
       {t:'Top location',eq:['max(count by market)'],extra:['address'],d:TIP.mapTopLocation},
     ]],
