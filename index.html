@@ -7211,6 +7211,8 @@ let resGroup = 'state';
 // | 'rep'. One at a time — the drawer is a full-width panel under the three
 // columns, not three drawers under three narrow columns.
 let resExpand = null;
+let fieldRegOpen = false;
+function toggleFieldReg(){ fieldRegOpen = !fieldRegOpen; renderSettings(); }
 // Which groups and markets are expanded, and whether the quiet tail is shown.
 // Sets rather than a single key: closing one group should not close the others.
 let resOpen = new Set(), resMktOpen = new Set(), resInsOpen = new Set();
@@ -9596,11 +9598,15 @@ function renderSettings(){
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
-        <div class="set-title">Field Registry Status</div>
+        <div class="set-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:${fieldRegOpen?'14px':'0'};" onclick="toggleFieldReg()">
+          <span>Field Registry Status</span>
+          <span style="font-size:10px;color:var(--faint);transform:rotate(${fieldRegOpen?'0':'-90'}deg);transition:transform .15s;">▾</span>
+        </div>
+        ${fieldRegOpen?`
         <div style="margin-bottom:8px;font-size:10px;color:var(--muted);font-weight:600;">${activeFields.length} active · no pending fields</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
           ${activeFields.map(f=>`<div style="display:flex;align-items:center;gap:5px;background:var(--surface-2,var(--border));border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;"><span style="font-weight:500;">${f.label}</span><span style="color:var(--faint);font-size:10px;">${f.sfCol}</span></div>`).join('')}
-        </div>
+        </div>`:''}
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
