@@ -31,14 +31,14 @@
   --c3:#c0912e;--target:#d94f4e;
   --accent:#f59e0b;
   /* One hue per resource — text tier (WCAG-safe, matches status-color
-     contrast) and fill tier (chart-vivid, for bars/lines/swatches). SPWR is
-     the SunPower brand orange (same hue as --accent, the nav's active-state
-     colour) — Doug's call: SPWR is our own team, not a neutral vendor-style
-     identity, so it gets the brand colour rather than the flat grey the other
-     two resources use. This is also the categorical palette for the rest of
-     the app (folds in the old --c1/--c2 general-purpose blue/green tokens,
-     which duplicated it exactly). */
-  --res-spwr:oklch(56% 0.15 63);--res-spwr-fill:#f7941d;--res-spwr-bg:#fdf1e0;
+     contrast) and fill tier (chart-vivid, for bars/lines/swatches). SPWR
+     takes the SunPower brand's hue (same as --accent, the nav's active-state
+     colour) rather than the flat grey the other two resources use — Doug's
+     call: SPWR is our own team, not a neutral vendor-style identity. Chroma
+     is brought down to the same ~0.13 the blue/purple fills use, not the
+     accent's full 0.165 — the raw brand orange read as shouting next to
+     them, breaking "charts deliberately muted so status stays loudest". */
+  --res-spwr:oklch(56% 0.13 63);--res-spwr-fill:oklch(70% 0.13 63);--res-spwr-bg:#fdf1e0;
   --res-vendor:oklch(55% 0.12 294);--res-vendor-fill:oklch(66% 0.13 294);--res-vendor-bg:#f1eef7;
   --res-rep:oklch(58% 0.13 249);--res-rep-fill:oklch(70% 0.14 249);--res-rep-bg:#e9f0f7;
   --navy1:#1e3a5f;--navy2:#0f2440;
@@ -1298,7 +1298,7 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   --blue:#4f7fae;--blue-bg:#e9f0f7;--blue-dk:#33608c;
   --c3:#c0912e;--target:#c9542f;
   --accent:#f7941d;
-  --res-spwr:oklch(56% 0.15 63);--res-spwr-fill:#f7941d;--res-spwr-bg:#fdf1e0;
+  --res-spwr:oklch(56% 0.13 63);--res-spwr-fill:oklch(70% 0.13 63);--res-spwr-bg:#fdf1e0;
   --res-vendor:oklch(55% 0.12 294);--res-vendor-fill:oklch(66% 0.13 294);--res-vendor-bg:#f0edf5;
   --res-rep:oklch(58% 0.13 249);--res-rep-fill:oklch(70% 0.14 249);--res-rep-bg:#e9f0f7;
   --navy1:#ffffff;--navy2:#ffffff;
