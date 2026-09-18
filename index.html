@@ -367,6 +367,16 @@ tr:hover td{background:var(--bg);}
 .spec-ref{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:12px;color:#1e40af;line-height:1.8;}
 .spec-ref strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;color:#3b82f6;}
 
+.def-jump{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.def-jump a{font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;text-decoration:none;}
+.def-jump a:hover{color:var(--text);border-color:#8f8f98;}
+.def-grid{display:grid;gap:14px;}
+.def-item{padding:9px 0;border-bottom:1px solid #f5f5f2;}
+.def-item:last-child{border-bottom:none;padding-bottom:0;}
+.def-term{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.def-val{font-weight:400;color:var(--muted);}
+.def-body{font-size:11.5px;color:var(--muted);line-height:1.6;}
+
 /* MODAL */
 .mback{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:500;display:flex;align-items:center;justify-content:center;}
 .mback.hidden{display:none;}
@@ -1433,6 +1443,7 @@ body{padding-left:180px;}
 <div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
+<div id="page-definitions" class="page">     <div id="definitions-content"></div></div>
 
 
 <!-- UPDATE MODAL -->
@@ -1856,7 +1867,7 @@ function saveFilterState(){
 // never read back: #map round-tripped into the URL while applyURLState()
 // rejected it, so a reload — and the /va-map redirect in vercel.json — landed
 // on whatever page localStorage had saved instead.
-const URL_PAGES=['week','performance','trends','wip','resurvey','map','data','settings'];
+const URL_PAGES=['week','performance','trends','wip','resurvey','map','data','settings','definitions'];
 function syncURL(){
   const f=pageF[currentPage];
   const q=new URLSearchParams();
@@ -2551,6 +2562,7 @@ function renderPage(p){
   if(p==='billing')     renderBilling();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
+  if(p==='definitions') renderDefinitions();
   requestAnimationFrame(()=>animateSections('page-'+p));
 }
 
@@ -9552,6 +9564,10 @@ function renderSettings(){
           <div><div class="set-label">Data cutoff date</div><div class="set-desc">Earliest project start included in all metrics and charts — currently ${DATA_CUTOFF}</div></div>
           <div class="set-control"><input type="date" value="${S.dataCutoff}" onchange="setSetting('dataCutoff',this.value)"></div>
         </div>
+        <div class="set-row">
+          <div><div class="set-label">Data definitions</div><div class="set-desc">What every metric on the dashboard actually measures, page by page</div></div>
+          <div class="set-control"><button class="fbtn" onclick="nav('definitions')" style="font-size:12px;">View definitions ↗</button></div>
+        </div>
       </div>
 
       <div class="set-sec" style="grid-column:1/-1;">
@@ -9626,6 +9642,106 @@ function renderSettings(){
       </div>
 
     </div>`;
+}
+
+// Data definitions page (Settings → Data → View definitions). Reuses the same
+// TIP strings the hover icons show on each page rather than a second copy —
+// one definition, read in two places. Only the entries with no TIP twin
+// (scope tests, live setting values) are written fresh here.
+function _defSec(id,title,items){
+  const rows=items.map(it=>`<div class="def-item"><div class="def-term">${esc(it.t)}${it.v!=null?` <span class="def-val">— ${esc(it.v)}</span>`:''}</div><div class="def-body">${esc(typeof it.d==='function'?it.d():it.d)}</div></div>`).join('');
+  return `<div class="sec" id="def-${id}"><div class="shead"><div><div class="stitle">${esc(title)}</div></div></div><div class="def-grid">${rows}</div></div>`;
+}
+function renderDefinitions(){
+  const anchorLbl = S.anchor==='opened'?'Task Opened (when the Site Survey task was created)':'Project Start Date (Spec 12744)';
+  const sections=[
+    ['scope','Scope & classification',[
+      {t:'Data cutoff',v:DATA_CUTOFF,d:'Earliest project start included anywhere in the app — surveys before this date are dropped at load.'},
+      {t:'Cycle time anchor',v:anchorLbl,d:'What every cycle time and queue age measures from. Set in Settings → Data.'},
+      {t:'In scope',d:'Started on or after the data cutoff, and either complete or an active In Progress project. A parked row (Inactive / Not Required) or an open Change Order is out until it resolves back to In Progress; a completed survey counts regardless of what became of the deal.'},
+      {t:'Complete',d:TIP.complete},
+      {t:'WIP',d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
+      {t:'Open resurvey',d:'A resurvey has been requested, has no Resurvey Complete date yet, and the project is In Progress.'},
+    ]],
+    ['targets','Targets (configurable in Settings)',[
+      {t:'Median target',v:S.targetMedian+'d',d:'Green threshold for cycle time — Spec 12744.'},
+      {t:'Average target',v:S.targetAvg+'d',d:'Chart annotation line and the "On target" cutoff — Spec 12744.'},
+      {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Quality table, Resource markets, Map colouring.'},
+      {t:'Outlier threshold',v:S.outlierDays+'d',d:'Cycle time above this counts as an outlier for the filter bar\'s "Hide outliers" toggle.'},
+    ]],
+    ['current','Current',[
+      {t:'Cycle time',d:TIP.cycle},
+      {t:'On target',d:TIP.onTarget},
+      {t:'Scheduled remaining',d:TIP.schedRem},
+    ]],
+    ['wip','WIP',[
+      {t:'Open now',d:TIP.wip},
+      {t:'Avg age',d:TIP.avgAge},
+      {t:'Days open in SS',d:TIP.ssDaysOpen},
+      {t:'Project age',d:TIP.projAge},
+      {t:'Days column (table)',d:TIP.drillDays},
+      {t:'SS ratio (live)',d:TIP.ssRatioLive},
+      {t:'Initial (lens)',d:TIP.wipInitial},
+    ]],
+    ['performance','Performance',[
+      {t:'Avg / median cycle time',d:'Mean and middle cycle time for the grouping and range selected, ignoring null, negative and NaN values.'},
+      {t:'On target',d:TIP.onTarget},
+      {t:'Cycle time colour bands',d:`≤${S.targetMedian}d green (or ≤${S.targetAvg}d for a display banded on the average) · up to +2d amber · beyond that red — on the number actually shown, not a fixed scale.`},
+    ]],
+    ['trends','Trends',[
+      {t:'SS ratio (weekly)',d:TIP.ssRatioWeek},
+      {t:'Clearance',d:TIP.clearance},
+      {t:'Weekly floor',d:TIP.weeklyFloor},
+      {t:'Trend (3wk)',d:TIP.trend3wk},
+      {t:'Pace',d:TIP.pace},
+      {t:'Best week',d:TIP.bestWeek},
+      {t:'p75',d:TIP.p75},
+      {t:'p90',d:TIP.p90},
+      {t:'Resource mix',d:TIP.resourceMix},
+      {t:'Survey resource mix (chart)',d:TIP.trResMix},
+    ]],
+    ['quality','Quality',[
+      {t:'First pass yield (FPY)',d:TIP.fpy},
+      {t:'FPY trend',d:TIP.fpyTrend},
+      {t:'Why they come back',d:TIP.rsCat},
+      {t:'Cost of a resurvey',d:TIP.rsPenalty},
+      {t:'Time to flag',d:TIP.rsFlag},
+      {t:'Resurvey cycle',d:TIP.rsCycle},
+      {t:'Open resurvey age',d:TIP.rsOpenDays},
+      {t:'Open resurveys (queue)',d:TIP.rsOpen},
+    ]],
+    ['map','Map',[
+      {t:'Volume',d:TIP.mapVolume},
+      {t:'Cycle',d:TIP.mapCycle},
+      {t:'Resurvey',d:TIP.mapResurvey},
+      {t:'Open WIP',d:TIP.mapWip},
+      {t:'Team reach',d:TIP.mapReach},
+      {t:'Coverage',d:TIP.mapAbsorb},
+      {t:'Siting',d:TIP.mapSite},
+      {t:'Top market',d:TIP.mapTopMarket},
+      {t:'Top location',d:TIP.mapTopLocation},
+    ]],
+    ['resource','Resource',[
+      {t:'Resource split',d:TIP.resSplit},
+      {t:'Modelled capacity',d:TIP.resCapacity},
+      {t:'Recommendation',d:TIP.resRec},
+    ]],
+    ['billing','Billing',[
+      {t:'Total invoiced',d:TIP.billSpend},
+      {t:'Cost per survey',d:TIP.billPerSurvey},
+      {t:'To review',d:TIP.billReview},
+      ...((typeof OpsBilling!=='undefined'&&OpsBilling.EXCEPTIONS)?OpsBilling.EXCEPTIONS.map(e=>({t:e.label,d:e.why})):[]),
+    ]],
+  ];
+  document.getElementById('definitions-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:16px;font-weight:600;">Data definitions</span>
+      <span style="font-size:12px;color:var(--faint);margin-left:4px;">What every metric on the dashboard actually measures</span>
+      <div style="margin-left:auto;"><button class="fbtn" onclick="nav('settings')" style="font-size:12px;">← Back to Settings</button></div>
+    </div>
+    <div class="def-jump">${sections.map(([id,title])=>`<a href="#def-${id}">${esc(title)}</a>`).join('')}</div>
+    ${sections.map(([id,title,items])=>_defSec(id,title,items)).join('')}
+  `;
 }
 
 // The anchor-override panel on the Data page. Lists the active overrides and
