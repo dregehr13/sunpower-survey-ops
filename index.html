@@ -15,21 +15,29 @@
   /* Base — cool graphite. The page's temperature lives in these six values. */
   --bg:#f6f6f7;--surface:#fff;--border:#e3e3e7;--border-lt:#ededf0;
   --text:#17171b;--muted:#5c5c66;--faint:#9a9aa3;
-  /* Status — the only saturated hues on the page; they alone mean good/bad */
-  --green-bg:#e5f4e9;--green:#177245;
+  /* --faint fails WCAG (~2.6:1) for anything a reader is meant to read —
+     it's fine for decorative marks (a bare em-dash) but not informational
+     text. --faint-info is the same role, darkened to 4.5:1. */
+  --faint-info:#71717c;
+  /* Status — the only saturated hues on the page; they alone mean good/bad.
+     Green also has a chart-vivid fill tier for "Completed/Out/Complete" —
+     the text tier reads dull as a bar fill, so charts get the brighter one. */
+  --green-bg:#e5f4e9;--green:#177245;--green-fill:oklch(72% 0.16 155);
   --amber-bg:#fdf1dc;--amber:#9a5b13;
   --red-bg:#fdeaea;--red:#b42323;
   --blue:#2563eb;--sf:#0070d2;
   --blue-bg:#e8effa;--blue-dk:#1d4ed8;
   /* Charts + categorical — deliberately muted so status stays loudest */
-  --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#d94f4e;
+  --c3:#c0912e;--target:#d94f4e;
   --accent:#f59e0b;
-  /* The three resources. Already hardcoded in four charts as RES_COLORS; named
-     here so the Resource page's hero can tint a whole column from one token
-     instead of a fifth copy of the same three hex values. */
-  --res-spwr:#64748b;--res-spwr-bg:#eff1f4;
-  --res-vendor:#8677b8;--res-vendor-bg:#f1eef7;
-  --res-rep:#4f7fae;--res-rep-bg:#e9f0f7;
+  /* One hue per resource — text tier (WCAG-safe, matches status-color
+     contrast) and fill tier (chart-vivid, for bars/lines/swatches). Gray/SPWR
+     is deliberately chroma 0 — identity, not a verdict. This is also the
+     categorical palette for the rest of the app (folds in the old --c1/--c2
+     general-purpose blue/green tokens, which duplicated it exactly). */
+  --res-spwr:oklch(50% 0 0);--res-spwr-fill:oklch(64% 0 0);--res-spwr-bg:#eff1f4;
+  --res-vendor:oklch(55% 0.12 294);--res-vendor-fill:oklch(66% 0.13 294);--res-vendor-bg:#f1eef7;
+  --res-rep:oklch(58% 0.13 249);--res-rep-fill:oklch(70% 0.14 249);--res-rep-bg:#e9f0f7;
   --navy1:#1e3a5f;--navy2:#0f2440;
   --radius:8px;--radius-lg:12px;
   --shadow:0 1px 2px rgba(20,20,25,.05),0 2px 8px rgba(20,20,25,.05);
@@ -71,8 +79,8 @@ html,body{overflow-x:clip;}
    level rather than nested inside the button. */
 .nmenu-more,.nmenu-dropdown{display:none;}
 .nav-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.nav-ts{font-size:10px;color:#8f8f98;white-space:nowrap;padding:3px 8px;background:#1e1e1e;border-radius:4px;border:1px solid #333;}
-.nbadge{font-size:12px;color:#666;white-space:nowrap;}
+.nav-ts{font-size:10px;color:#a3a3aa;white-space:nowrap;padding:3px 8px;background:#1e1e1e;border-radius:4px;border:1px solid #333;}
+.nbadge{font-size:12px;color:#a3a3aa;white-space:nowrap;}
 .nsf{font-size:12px;padding:4px 10px;border:1px solid #0070d2;border-radius:5px;color:#4da6ff;background:transparent;cursor:pointer;}
 .nsf:hover{background:#0070d220;}
 .nload{font-size:12px;padding:4px 10px;border:1px solid #444;border-radius:5px;color:#8f8f98;background:transparent;cursor:pointer;}
@@ -143,12 +151,12 @@ select:focus,input[type=date]:focus,input[type=text]:focus{border-color:#8f8f98;
 .kcard{background:var(--surface);border-radius:var(--radius-lg);padding:13px 15px;border:1px solid var(--border);box-shadow:var(--shadow);}
 .klabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
 .kval{font-size:24px;font-weight:600;line-height:1.1;}
-.ksub{font-size:10px;color:var(--faint);margin-top:3px;}
+.ksub{font-size:10px;color:var(--faint-info);margin-top:3px;}
 .ktgt{font-size:10px;color:var(--faint);margin-top:4px;padding-top:4px;border-top:1px solid #f0f0ec;}
 .kg-c{color:var(--green);} .ka-c{color:var(--amber);} .kr-c{color:var(--red);}
 
 /* METRIC INFO TOOLTIP */
-.kinfo{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;opacity:.4;font-size:10px;font-weight:600;font-style:normal;cursor:help;margin-left:5px;vertical-align:-1px;position:relative;text-transform:lowercase;letter-spacing:0;}
+.kinfo{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid currentColor;opacity:.55;font-size:10px;font-weight:600;font-style:normal;cursor:help;margin-left:5px;vertical-align:-1px;position:relative;text-transform:lowercase;letter-spacing:0;}
 .kinfo:hover,.kinfo:focus-visible{opacity:.85;outline:none;}
 /* The bubble is portalled to <body> at hover time (showKtip) instead of being
    an ::after on .kinfo. As a child of the icon it was subject to every
@@ -197,23 +205,23 @@ tr:hover td{background:var(--bg);}
    indented plain text; three call sites had already worked around that with
    their own inline greys. */
 .pn{background:var(--bg);color:var(--muted);}
-.pna{color:var(--faint);font-size:12px;}
+.pna{color:var(--faint-info);font-size:12px;}
 /* --faint measures 2.5:1 on the card surface, which is fine for a bare em-dash
    but not for a sample size — in the Resurveys breakdowns "n=4" IS the value in
    most rows. --muted is 5.7:1 and clears AA. */
 .pna-n{color:var(--muted);font-size:12px;}
 /* Second line inside a table cell — the address under an account, the town
    count under a market. Footnote rank on the label scale: 10px/400/--faint. */
-.cmeta{font-size:10px;color:var(--faint);margin-top:2px;}
+.cmeta{font-size:10px;color:var(--faint-info);margin-top:2px;}
 /* Qualifier under a column head — axis-tick rank, not a second header. */
-.th-sub{display:block;font-weight:400;color:var(--faint);}
+.th-sub{display:block;font-weight:400;color:var(--faint-info);}
 .rs-idle{font-size:10px;font-weight:400;color:var(--faint);white-space:nowrap;}
 .wip-rs-why{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:0;}
 .wip-rs-why b{color:var(--text);font-weight:600;}
 .wip-rs-items{margin:8px 0 0;padding-left:16px;font-size:12px;color:var(--muted);line-height:1.6;}
 .wip-rs-items li{margin-bottom:3px;}
 .wip-rs-items li:last-child{margin-bottom:0;}
-.note{font-size:10px;color:var(--faint);margin-top:8px;line-height:1.6;}
+.note{font-size:10px;color:var(--faint-info);margin-top:8px;line-height:1.6;}
 .sarr{font-size:10px;opacity:.3;margin-left:2px;}
 .sarr-up::after{content:"↑";opacity:.8;}
 .sarr-dn::after{content:"↓";opacity:.8;}
@@ -495,7 +503,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .upd-drophere strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px;}
 .drag-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(37,99,235,.08);border:2px solid #2563eb;pointer-events:none;z-index:300;animation:dragPulse .9s ease infinite;display:none;}
 .drag-overlay.active{display:block;}
-.sf-link{color:inherit;text-decoration:none;}.sf-link:hover{text-decoration:underline;color:var(--c1);}
+.sf-link{color:inherit;text-decoration:none;}.sf-link:hover{text-decoration:underline;color:var(--res-rep);}
 .toast{position:fixed;bottom:16px;right:16px;background:#1a1a1a;color:#fff;padding:8px 13px;border-radius:7px;font-size:12px;z-index:999;opacity:0;transform:translateY(5px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px;}
 .toast.on{opacity:1;transform:translateY(0);}
 
@@ -522,7 +530,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .attr-legend-count{font-size:13px;font-weight:600;color:var(--text);}
 .attr-legend-pct{font-size:10px;color:var(--faint);}
 .rs-region-bar{height:3px;border-radius:2px;background:var(--border);margin-top:4px;overflow:hidden;}
-.rs-region-fill{height:100%;border-radius:2px;background:var(--c1);}
+.rs-region-fill{height:100%;border-radius:2px;background:var(--res-rep-fill);}
 .rs-open-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);}
 .rswk-rows{display:flex;flex-direction:column;}
 .rswk-row{display:grid;grid-template-columns:112px 1fr 28px;grid-template-areas:"wk bar n" ". meta meta";gap:2px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-lt);}
@@ -628,6 +636,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
 .map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
+@media(max-width:480px){.map-ticks span:nth-child(even){display:none;}}
 /* The two scope pickers — which state to zoom to, and how wide a market is.
    Both are definitions rather than views, which is why the radius sits here
    and not in the mode toggle: as a twin segmented control it rhymed with the
@@ -653,7 +662,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);gap:12px;background:var(--glass-strong);}
 .drill-title{font-size:14px;font-weight:600;color:var(--text);}
 .drill-sub{font-size:12px;color:var(--muted);margin-top:3px;}
-.drill-count{font-size:12px;color:var(--faint);padding:8px 16px;background:var(--glass-strong);border-bottom:1px solid var(--border);}
+.drill-count{font-size:12px;color:var(--faint-info);padding:8px 16px;background:var(--glass-strong);border-bottom:1px solid var(--border);}
 .drill-seg{display:flex;gap:6px;padding:9px 16px 0;background:var(--glass-strong);flex-wrap:wrap;}
 .drill-seg:empty{display:none;}
 .drill-seg-btn{font-size:11px;font-weight:600;padding:4px 10px;border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;}
@@ -682,7 +691,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .drill-tgt{cursor:pointer;}
 /* Drillable KPI cards get a corner arrow so they read as clickable */
 .kcard.drill-tgt{position:relative;}
-.kcard.drill-tgt::after{content:'↗';position:absolute;top:9px;right:11px;font-size:12px;color:var(--faint);opacity:.5;transition:opacity .15s,transform .15s;}
+.kcard.drill-tgt::after{content:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%239a978c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>');position:absolute;top:9px;right:11px;opacity:.5;transition:opacity .15s,transform .15s;}
 .kcard.drill-tgt:hover::after{opacity:1;transform:translate(1px,-1px);}
 
 /* The resurvey table is seven columns; 520px forces a horizontal scroll on
@@ -1042,6 +1051,7 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   .kcard.drill-tgt:hover{transform:none;}
 }
 
+@media(max-width:1100px){.kg5,.kg4{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:860px){
   .kg5,.kg4{grid-template-columns:repeat(2,1fr);}
   .settings-grid{grid-template-columns:1fr;}
@@ -1281,16 +1291,16 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
 /* ═══════════ REDESIGN SKIN — warm light body · dark sidebar · blue/slate data ═══════════ */
 :root{
   --bg:#faf9f6;--surface:#ffffff;--border:#e4e1d8;--border-lt:#eeece5;
-  --text:#141414;--muted:#6b665a;--faint:#a9a390;
-  --green-bg:#e6f2ea;--green:#2e7a52;
+  --text:#141414;--muted:#6b665a;--faint:#a9a390;--faint-info:#77715f;
+  --green-bg:#e6f2ea;--green:#2e7a52;--green-fill:oklch(72% 0.16 155);
   --amber-bg:#f7efd9;--amber:#8a6413;
   --red-bg:#f9e7e4;--red:#b3402e;
   --blue:#4f7fae;--blue-bg:#e9f0f7;--blue-dk:#33608c;
-  --c1:#4f7fae;--c2:#3f9d6c;--c3:#c0912e;--target:#c9542f;
+  --c3:#c0912e;--target:#c9542f;
   --accent:#f7941d;
-  --res-spwr:#64748b;--res-spwr-bg:#eff0f2;
-  --res-vendor:#8677b8;--res-vendor-bg:#f0edf5;
-  --res-rep:#4f7fae;--res-rep-bg:#e9f0f7;
+  --res-spwr:oklch(50% 0 0);--res-spwr-fill:oklch(64% 0 0);--res-spwr-bg:#eff0f2;
+  --res-vendor:oklch(55% 0.12 294);--res-vendor-fill:oklch(66% 0.13 294);--res-vendor-bg:#f0edf5;
+  --res-rep:oklch(58% 0.13 249);--res-rep-fill:oklch(70% 0.14 249);--res-rep-bg:#e9f0f7;
   --navy1:#ffffff;--navy2:#ffffff;
   --radius:6px;--radius-lg:10px;
   --shadow:0 1px 2px rgba(20,20,25,.04);
@@ -1308,6 +1318,10 @@ body{padding-left:180px;}
 .nav{position:fixed;left:0;top:0;bottom:0;width:180px;height:100vh;flex-direction:column;align-items:stretch;padding:18px 0 14px;gap:2px;overflow:visible;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:inset -1px 0 0 var(--glass-dark-edge);}
 .brand{padding:0 18px 14px;margin:0 10px 8px 0;border-bottom:1px solid var(--glass-dark-edge);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding-left:18px;}
 .brand span{color:var(--accent);font-weight:700;}
+/* Groups the same tabs into "which page answers 'is everything okay'" —
+   Status / Analysis / Ops — with no change to order or active-state styling. */
+.nav-group-label{padding:10px 18px 4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#777;}
+.nav-group-div{margin-top:6px;border-top:1px solid var(--glass-dark-edge);}
 .ntab{height:auto;padding:8px 13px;margin:0 10px;border-bottom:none;border-left:3px solid transparent;border-radius:0 5px 5px 0;font-size:12.5px;color:#999;}
 .ntab:hover{color:#ddd;}
 /* Translucent white, not #2c2c2c: the nav's effective background is now lighter
@@ -1316,7 +1330,7 @@ body{padding-left:180px;}
    whatever it lands on, so this holds at both breakpoints. */
 .ntab.active{color:#fff;background:rgba(255,255,255,.13);border-left-color:var(--accent);border-bottom:none;font-weight:600;padding-left:10px;}
 .nav-r{margin:auto 0 0 0;flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px 0;border-top:1px solid var(--glass-dark-edge);}
-.nbadge{font-size:10px;color:#888;letter-spacing:.06em;}
+.nbadge{font-size:10px;color:#a3a3aa;letter-spacing:.06em;}
 .nav-ts{background:transparent;border:none;padding:0;}
 .nload,.nsf{text-align:center;}
 .nsettings{width:100%;justify-content:flex-start;gap:8px;padding:0 4px;}
@@ -1365,6 +1379,9 @@ body{padding-left:180px;}
      (the fixed 180px sidebar) stays solid: content sits beside it, never under
      it, so there is nothing for glass to reveal. */
   .nav{position:sticky;top:0;left:auto;bottom:auto;width:auto;height:46px;flex-direction:row;align-items:center;padding:0 12px;gap:0;overflow-x:auto;overflow-y:hidden;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:inset 0 -1px 0 var(--glass-dark-edge);}
+  /* The group labels are a vertical-sidebar affordance — in the horizontal
+     scrolling bar they'd break up the tab row, so they drop out here. */
+  .nav-group-label{display:none;}
   /* Fades to the glass fill, not to solid #111 — against a translucent nav an
      opaque stop reads as a black smudge on the right edge. */
   .nav::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,rgba(17,17,17,0),var(--glass-dark));pointer-events:none;z-index:10;}
@@ -1404,19 +1421,22 @@ body{padding-left:180px;}
 
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
+  <div class="nav-group-label">Status</div>
   <div class="ntab active" data-page="week" role="button" tabindex="0" aria-current="page">Current</div>
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
+  <div class="nav-group-label nav-group-div">Analysis</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
+  <div class="nav-group-label nav-group-div">Ops</div>
   <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
-  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More ▼</div>
+  <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><polyline points="6 9 12 16 18 9"/></svg></div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge"></span>
     <span class="nav-ts" id="nav-ts"></span>
-    <button class="nload" onclick="openUpdateModal()" title="Update data">↑ Update data</button>
+    <button class="nload" onclick="openUpdateModal()" title="Update data"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:2px;"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Update data</button>
     <input type="file" id="fileInput" accept=".xls,.html,.htm" style="display:none;">
     <button class="nsettings" id="settings-btn" onclick="nav('settings')" title="Settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1469,7 +1489,7 @@ body{padding-left:180px;}
         <div class="upd-title">Open your Salesforce report</div>
         <div class="upd-desc">Click the button below to go directly to your report.</div>
         <div class="upd-action">
-          <button class="upd-sfbtn" onclick="openSFFromUpdate()">⬡ Open report in Salesforce ↗</button>
+          <button class="upd-sfbtn" onclick="openSFFromUpdate()">⬡ Open report in Salesforce <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-left:3px;"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></button>
         </div>
       </div>
     </div>
@@ -1614,6 +1634,7 @@ body{padding-left:180px;}
   throw new Error('Failed to load: ' + missing.join(', '));
 })();
 Chart.register(window['chartjs-plugin-annotation']);
+Chart.defaults.font.family = "'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
 
 const VERSION = 'v6.9 · 2026-06-10';
 
@@ -2700,6 +2721,7 @@ const TIP={
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
+  mapModes:'Volume: job density. Open WIP: surveys started, not yet complete. Cycle: avg start to complete. Resurvey: share that came back. Coverage: who\'s closest. Recommend: staffing case by market.',
   mapVolume:'Job density by town.',
   mapCycle:'Average project start to survey complete, per market. Hollow means too few completions to rate.',
   mapResurvey:'Share of a market\'s completions that came back. Hollow means too few completions to rate.',
@@ -2739,9 +2761,13 @@ function drillCur(k,title,sub,opts){ openDrill(title,sub,_curD[k]||[],opts||{});
 // were clickable with no cue that they were.
 const drillHover=(e,els,ch)=>{ const c=ch&&ch.canvas; if(c) c.style.cursor=els.length?'pointer':'default'; };
 function drillFPYDefects(){ openDrill('FPY Defects','Attributed resurveys · '+drillScopeNote('filter'),rsDefectPool(),{groupBy:'resource'}); }
-const _DRILL_RES_COL={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
+// One hue per resource, read off the --res-* tokens instead of a hardcoded hex
+// per chart. tier '' = WCAG text color, '-fill' = chart-vivid fill.
+function _resVar(res,tier){ return res==='Sales Rep'?'--res-rep'+tier:res==='Radicl Services'?'--res-vendor'+tier:res==='SunPower Surveyor'?'--res-spwr'+tier:null; }
+function _resColor(res,tier){ const v=_resVar(res,tier); return v?getComputedStyle(document.documentElement).getPropertyValue(v).trim():'#83838c'; }
+function resColorMap(tier){ return {'SunPower Surveyor':_resColor('SunPower Surveyor',tier),'Sales Rep':_resColor('Sales Rep',tier),'Radicl Services':_resColor('Radicl Services',tier)}; }
 const _DRILL_RES_SHORT={'Sales Rep':'Sales Rep','Radicl Services':'Radicl','SunPower Surveyor':'SPWR'};
-function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const c=_DRILL_RES_COL[res]||'#aaa',s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0;"></span><span style="color:${c};font-weight:600;">${esc(s)}</span></span>`; }
+function _drillResSpan(res){ if(!res) return '<span style="color:var(--faint);">—</span>'; const fill=_resColor(res,'-fill'),text=_resColor(res,''),s=_DRILL_RES_SHORT[res]||res; return `<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;"><span style="width:7px;height:7px;border-radius:50%;background:${fill};flex-shrink:0;"></span><span style="color:${text};font-weight:600;">${esc(s)}</span></span>`; }
 // Who actually did the initial survey: the rep by name when they self-surveyed,
 // otherwise the vendor/team short name (SPWR / Radicl).
 function _drillSurveyor(r){ return r.resource==='Sales Rep' ? (r.sales_rep||'Sales Rep') : (_DRILL_RES_SHORT[r.resource]||r.resource||''); }
@@ -2826,6 +2852,11 @@ const DRILL_ATTR_C={'Surveyor':'var(--red)','Customer':'var(--green)','Design':'
 // font's glyph design.
 const ICON_PHONE='<svg class="wip-person-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5c-.8 0-1.5.7-1.4 1.5.3 2.8 1.6 5.4 3.7 7.5s4.7 3.4 7.5 3.7c.8.1 1.5-.6 1.5-1.4v-1.6c0-.7-.5-1.3-1.2-1.4l-2-.4c-.5-.1-1 .1-1.3.5l-.6.8c-1.6-.8-2.9-2.1-3.7-3.7l.8-.6c.4-.3.6-.8.5-1.3l-.4-2c-.1-.7-.7-1.2-1.4-1.2H4.5z"/></svg>';
 const ICON_MAIL='<svg class="wip-person-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3.25" width="13" height="9.5" rx="1.5"/><path d="M2 4.25l6 4.75 6-4.75"/></svg>';
+// Shared stroke icons — same convention as the settings gear (currentColor, stroke-width 2).
+const ICON_CHEVRON='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><polyline points="9 6 16 12 9 18"/></svg>';
+const ICON_CHECK='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>';
+const ICON_UP='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:2px;"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+const ICON_EXTLINK='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-left:3px;"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>';
 // "Survey Incomplete" is two thirds of all resurveys and says nothing about what
 // was actually wrong. Resurvey Request Details does, on 92% of them.
 const drillDetText=r=>(r.resurvey_details||'')
@@ -3071,12 +3102,13 @@ function _renderDrill(){
     tbody.innerHTML=order.map(k=>{
       const gr=groups[k];
       const isRes=mode==='groupBy';
-      const c=isRes?(_DRILL_RES_COL[k]||'#83838c'):null;
+      const c=isRes?_resColor(k,''):null;
+      const cFill=isRes?_resColor(k,'-fill'):null;
       const lbl=isRes?(_DRILL_RES_SHORT[k]||k)
         :(k!=='—'?DAY[new Date(k+'T12:00:00').getDay()]+' '+fmtDateShort(k):k);
       gr.forEach(r=>pushCopy(r,lbl));
       const head=isRes
-        ? `<tr class="drill-grp"><td colspan="${cols.length}" style="background:${c}18;color:${c};font-weight:700;font-size:12px;padding:7px 10px;border-bottom:2px solid ${c}40;">${esc(lbl)} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`
+        ? `<tr class="drill-grp"><td colspan="${cols.length}" style="background:color-mix(in oklch,${cFill} 15%,transparent);color:${c};font-weight:700;font-size:12px;padding:7px 10px;border-bottom:2px solid color-mix(in oklch,${cFill} 35%,transparent);">${esc(lbl)} · ${gr.length} defect${gr.length!==1?'s':''}</td></tr>`
         : `<tr class="drill-grp"><td colspan="${cols.length}" style="background:var(--bg);color:var(--muted);font-weight:600;font-size:10px;padding:6px 10px;border-bottom:2px solid var(--border);">${esc(lbl)} · ${gr.length} survey${gr.length!==1?'s':''}</td></tr>`;
       return head+gr.map(rowHtml).join('');
     }).join('');
@@ -3390,7 +3422,7 @@ function _rsWeekCells(from,to,key){
   const cyc=avg(done.map(r=>r.ct_resurvey).filter(x=>x!=null&&x>=0));
   _curD[key+'RsDone']=done; _curD[key+'RsReq']=req;
   const wk=key==='tw'?'this week':'last week';
-  const tgl=`<button class="rs-fold-tgl${curIncludeRs?' on':''}" onclick="toggleCurIncludeRs(event)" title="${curIncludeRs?'Showing initial + resurvey completions together — click to split them back out':'Fold these into Completions and cycle time above'}">${curIncludeRs?'✓ in totals':'+ fold in'}</button>`;
+  const tgl=`<button class="rs-fold-tgl${curIncludeRs?' on':''}" onclick="toggleCurIncludeRs(event)" title="${curIncludeRs?'Showing initial + resurvey completions together — click to split them back out':'Fold these into Completions and cycle time above'}">${curIncludeRs?ICON_CHECK+' in totals':'+ fold in'}</button>`;
   const cell=(k,label,n,sub,extra)=>`<div class="srail-cell${n?' rail-d':''}"${extra?' style="position:relative;"':''} ${n?`role="button" tabindex="0" ${drillAttrs(`drillCur('${key}Rs${k}','${label}','${n} resurvey${n===1?'':'s'}',{sort:'days'})`)}`:''}>
       <div class="klabel">${label}</div>
       <div class="srail-val">${n}<span class="srail-sub">${sub}</span></div>
@@ -3474,7 +3506,7 @@ function renderLastWeek(){
       <div class="srail-val ${onTgt==null?'':(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c')}">${onTgt!=null?onTgt+'%':'—'}<span class="srail-sub">${tots.length} with data</span></div>
     </div>
     ${_rsWeekCells(lw.from,lw.to,'lw')}`;
-  const TYPE_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
+  const TYPE_COLORS=resColorMap('-fill');
   const typeData=['SunPower Surveyor','Sales Rep','Radicl Services']
     .map(t=>{ const rSrc=src.filter(r=>r.resource===t); const rTots=rSrc.map(r=>r.ct_total).filter(x=>x!=null&&x>=0); return {t,n:rSrc.length,avgCyc:avg(rTots)}; })
     .filter(td=>td.n>0).sort((a,b)=>b.n-a.n);
@@ -3739,7 +3771,7 @@ function renderThisWeek(){
   const twYMax=Math.max(1,...dayCounts.map((c,i)=>c+schedExtra[i]),...projByDay.filter(v=>v!=null))+1;
 
   const RES3=['SunPower Surveyor','Sales Rep','Radicl Services'];
-  const RES_COLORS={'SunPower Surveyor':'#64748b','Sales Rep':'#4f7fae','Radicl Services':'#8677b8'};
+  const RES_COLORS=resColorMap('-fill');
   const RES_SHORT={'SunPower Surveyor':'SPWR','Sales Rep':'Sales Rep','Radicl Services':'Radicl'};
   const resCycle=RES3.map(t=>{
     const rSrc=completedTW.filter(r=>r.resource===t);
@@ -4074,7 +4106,7 @@ function renderRsReq(){
                                 ...(un?[`${un} unattributed`]:[])].join(' · '):'';
           return `<div class="rsreq-day${open?' open':''}">
             <div class="rswk-row${gr.length?' drill-tgt':''}" ${gr.length?`role="button" tabindex="0" onclick="toggleRsReqDay('${d}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRsReqDay('${d}');}"`:''}>
-              <div class="rswk-wk"><span class="rsreq-cr">${gr.length?(open?'▾':'▸'):''}</span>${DAY[new Date(d+'T12:00:00').getDay()]} ${fmtDateShort(d)}${relLabel(d)?`<span class="rsreq-rel">${relLabel(d)}</span>`:''}</div>
+              <div class="rswk-wk"><span class="rsreq-cr" style="${gr.length&&open?'display:inline-block;transform:rotate(90deg);':''}">${gr.length?ICON_CHEVRON:''}</span>${DAY[new Date(d+'T12:00:00').getDay()]} ${fmtDateShort(d)}${relLabel(d)?`<span class="rsreq-rel">${relLabel(d)}</span>`:''}</div>
               <div class="rswk-barwrap">${gr.length?`<div class="rswk-bar" style="width:${Math.max(gr.length/dayMax*100,4)}%;"></div>`:''}</div>
               <div class="rswk-n">${gr.length||'<span class="pna">0</span>'}</div>
               ${meta?`<div class="rswk-meta">${meta}</div>`:''}
@@ -4173,7 +4205,7 @@ function renderPerformance(){
   // silently, so they fell off the page entirely; they get their own row now.
   const pBlank={region:'(no region)',sales_office:'(no office)',sales_rep:'(no rep)',resource:'(no resource)'}[pKey];
   const RES3=['Sales Rep','Radicl Services','SunPower Surveyor'];
-  const RES_C={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
+  const RES_C=resColorMap('-fill');
   // No floor anywhere. A rep with two deals still did those two surveys, and
   // the sample size sits in the Projects column on the same row, so a thin
   // average can be read as thin without hiding it or dimming it.
@@ -4262,8 +4294,8 @@ function renderPerformance(){
       </div>
       <div class="srail-cell">
         <div class="klabel">Resource mix${kinfo(TIP.resourceMix)}</div>
-        ${resTotal>0?`<div class="srail-mix">${srCount>0?`<div style="flex:${srCount};background:#4f7fae;"></div>`:''}${rdCount>0?`<div style="flex:${rdCount};background:#8677b8;"></div>`:''}${spCount>0?`<div style="flex:${spCount};background:#64748b;"></div>`:''}</div>
-        <div class="srail-mixleg"><span style="color:#4f7fae;">${srCount} Sales</span><span style="color:#8677b8;">${rdCount} Radicl</span><span style="color:#64748b;">${spCount} SPWR</span></div>`
+        ${resTotal>0?`<div class="srail-mix">${srCount>0?`<div style="flex:${srCount};background:var(--res-rep-fill);"></div>`:''}${rdCount>0?`<div style="flex:${rdCount};background:var(--res-vendor-fill);"></div>`:''}${spCount>0?`<div style="flex:${spCount};background:var(--res-spwr-fill);"></div>`:''}</div>
+        <div class="srail-mixleg"><span style="color:var(--res-rep);">${srCount} Sales</span><span style="color:var(--res-vendor);">${rdCount} Radicl</span><span style="color:var(--res-spwr);">${spCount} SPWR</span></div>`
         :'<div class="srail-val" style="color:var(--faint);font-size:13px;font-weight:400;">no resource data</div>'}
       </div>
     </div>
@@ -4296,9 +4328,9 @@ function renderPerformance(){
         ${pth('count','Projects','r')}
         ${pth('median','Median','r')}
         ${pth('pctOnTgt','On target','r')}
-        ${pShowRes?pth('sr','<span style="color:#4f7fae;">Self-done</span>','r')
-          +pth('rd','<span style="color:#8677b8;">Radicl</span>','r')
-          +pth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
+        ${pShowRes?pth('sr','<span style="color:var(--res-rep);">Self-done</span>','r')
+          +pth('rd','<span style="color:var(--res-vendor);">Radicl</span>','r')
+          +pth('sp','<span style="color:var(--res-spwr);">SPWR</span>','r'):''}
       </tr></thead><tbody>
         ${pShown.map(d=>`<tr class="drill-tgt" ${drillAttrs(pDrill(d.g))}>
           <td style="font-weight:500;font-size:12px;">${esc(d.g)}</td>
@@ -4386,6 +4418,12 @@ function setTrFlowView(v){ trFlowView=v; renderTrends(); }
 let trResMixMode='share';
 function setTrResMixMode(v){ trResMixMode=v; renderTrends(); }
 function renderTrends(){
+  // Chart-vivid fill tier, resolved once — every chart in this function reads
+  // these instead of a one-off hex, so Blue/Purple/Green cannot drift between
+  // charts the way #60a5fa/#5570a8/#4f7fae and #34d399/#3a9e6a once did.
+  const _fillBlue=getComputedStyle(document.documentElement).getPropertyValue('--res-rep-fill').trim();
+  const _fillPurple=getComputedStyle(document.documentElement).getPropertyValue('--res-vendor-fill').trim();
+  const _fillGreen=getComputedStyle(document.documentElement).getPropertyValue('--green-fill').trim();
   const trendSrc=rows.filter(gfDim); // global region/resource/type filters apply
   if(!trendSrc.length){
     document.getElementById('tr-content').innerHTML=`<div style="padding:48px;text-align:center;color:#aaa;font-size:13px;">No surveys match the current filters.</div>`;
@@ -4460,7 +4498,7 @@ function renderTrends(){
   // Survey resource mix — completions per week bucketed by who ran them. Same
   // colours as the Performance "Resource mix" cell, stack order rep→Radicl→SPWR.
   const RESM3=['Sales Rep','Radicl Services','SunPower Surveyor'];
-  const RESM_C={'Sales Rep':'#4f7fae','Radicl Services':'#8677b8','SunPower Surveyor':'#64748b'};
+  const RESM_C=resColorMap('-fill'), RESM_TEXT=resColorMap('');
   const mixMap={};
   trendDone.forEach(r=>{ const wk=weekOf(r.complete); if(!wk) return;
     (mixMap[wk]||(mixMap[wk]={}))[r.resource]=(mixMap[wk]?.[r.resource]||0)+1; });
@@ -4509,10 +4547,10 @@ function renderTrends(){
       </div>
       <div id="tr-floor" style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#60a5fa;"></span>${trFlowView==='daily'?'In':'New In'}</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>${trFlowView==='daily'?'Out':'Completed'}${trFlowView==='weekly'?kinfo(TIP.complete):''}</span>
+        <span class="li"><span class="ld" style="background:var(--res-rep-fill);"></span>${trFlowView==='daily'?'In':'New In'}</span>
+        <span class="li"><span class="ld" style="background:var(--green-fill);"></span>${trFlowView==='daily'?'Out':'Completed'}${trFlowView==='weekly'?kinfo(TIP.complete):''}</span>
         ${trFlowView==='daily'?'<span class="li"><span class="ld" style="background:#cbd5e1;"></span>Weekend</span>':''}
-        <span class="li" style="color:#d97706;"><span class="ldash" style="background:#d97706;"></span>WIP</span>
+        <span class="li" style="color:var(--res-vendor-fill);"><span class="ldash" style="background:var(--res-vendor-fill);"></span>WIP</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 52px;height:260px;"><canvas id="tr-flow-yL" width="52" height="260"></canvas></div>
@@ -4524,7 +4562,7 @@ function renderTrends(){
       <div class="shead"><div><div class="stitle">Weekly avg cycle time${kinfo(TIP.cycle)}</div><div class="ssub">Surveys completed that week · Mon–Sun · current week is partial</div></div></div>
       <div class="leg">
         <span class="li"><span class="ld" style="background:#e2e8f0;"></span>Weekly avg</span>
-        <span class="li" style="color:#2563eb;"><span class="ldash" style="background:#2563eb;"></span>SS ratio${kinfo(TIP.ssRatioWeek)}</span>
+        <span class="li" style="color:var(--res-rep-fill);"><span class="ldash" style="background:var(--res-rep-fill);"></span>SS ratio${kinfo(TIP.ssRatioWeek)}</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 48px;height:290px;"><canvas id="tr-wf-yL" width="48" height="290"></canvas></div>
@@ -4535,11 +4573,11 @@ function renderTrends(){
     <div class="sec">
       <div class="shead"><div><div class="stitle">Pipeline cohorts</div><div class="ssub">Surveys grouped by start week · current state: Complete · Resurvey pending · Scheduled · Unscheduled · current week is partial</div></div></div>
       <div class="leg">
-        <span class="li" style="color:#3a9e6a;"><span class="ld" style="background:rgba(46,185,120,0.8);"></span>Complete</span>
-        <span class="li" style="color:#5570a8;"><span class="ld" style="background:rgba(59,130,246,0.8);"></span>Scheduled</span>
+        <span class="li" style="color:var(--green-fill);"><span class="ld" style="background:color-mix(in oklch,var(--green-fill) 80%,transparent);"></span>Complete</span>
+        <span class="li" style="color:var(--res-rep-fill);"><span class="ld" style="background:color-mix(in oklch,var(--res-rep-fill) 80%,transparent);"></span>Scheduled</span>
         <span class="li" style="color:#64748b;"><span class="ld" style="background:rgba(148,163,184,0.8);"></span>Unscheduled</span>
         <span class="li" style="color:#c94040;"><span class="ld" style="background:rgba(226,75,74,0.8);"></span>Resurvey pending</span>
-        <span class="li" style="color:#3a9e6a;"><span class="ldash" style="background:#3a9e6a;"></span>Complete %</span>
+        <span class="li" style="color:var(--green-fill);"><span class="ldash" style="background:var(--green-fill);"></span>Complete %</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 40px;height:230px;"><canvas id="tr-vol-yL" width="40" height="230"></canvas></div>
@@ -4556,8 +4594,8 @@ function renderTrends(){
         </div>
       </div>
       <div class="leg">
-        ${RESM3.map(r=>`<span class="li" style="color:${RESM_C[r]};"><span class="ld" style="background:${RESM_C[r]};"></span>${r}</span>`).join('')}
-        ${trResMixMode==='count'?`<span class="li" style="color:#4f7fae;"><span class="ldash" style="background:#4f7fae;"></span>Sales rep %</span>`:''}
+        ${RESM3.map(r=>`<span class="li" style="color:${RESM_TEXT[r]};"><span class="ld" style="background:${RESM_C[r]};"></span>${r}</span>`).join('')}
+        ${trResMixMode==='count'?`<span class="li" style="color:var(--res-rep-fill);"><span class="ldash" style="background:var(--res-rep-fill);"></span>Sales rep %</span>`:''}
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 40px;height:230px;"><canvas id="tr-mix-yL" width="40" height="230"></canvas></div>
@@ -4572,9 +4610,9 @@ function renderTrends(){
            them. -->
       <div class="shead"><div><div class="stitle">Weekly rhythm</div><div class="ssub">Avg surveys in vs out by weekday · trailing 8 weeks · ignores the date filter</div></div></div>
       <div class="leg">
-        <span class="li"><span class="ld" style="background:#60a5fa;"></span>In</span>
-        <span class="li"><span class="ld" style="background:#34d399;"></span>Out</span>
-        <span class="li" style="color:#8677b8;"><span class="ldash" style="background:#8677b8;"></span>Bucket level (cumulative)</span>
+        <span class="li"><span class="ld" style="background:var(--res-rep-fill);"></span>In</span>
+        <span class="li"><span class="ld" style="background:var(--green-fill);"></span>Out</span>
+        <span class="li" style="color:var(--res-vendor-fill);"><span class="ldash" style="background:var(--res-vendor-fill);"></span>Bucket level (cumulative)</span>
       </div>
       <div style="display:flex;align-items:stretch;">
         <div style="flex:0 0 48px;height:200px;"><canvas id="tr-dow-yL" width="48" height="200"></canvas></div>
@@ -4676,9 +4714,9 @@ function renderTrends(){
     CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
       type:'bar',
       data:{labels:flowDays,datasets:[
-        {label:'In',data:flowIn,backgroundColor:flowDays.map(d=>isWknd(d)?'#cbd5e1':'#60a5fa'),borderRadius:2,yAxisID:'y',order:3},
-        {label:'Out',data:flowOut,backgroundColor:flowDays.map(d=>isWknd(d)?'#e2e8f0':'#34d399'),borderRadius:2,yAxisID:'y',order:3},
-        {label:'WIP',data:flowWip,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
+        {label:'In',data:flowIn,backgroundColor:flowDays.map(d=>isWknd(d)?'#cbd5e1':_fillBlue),borderRadius:2,yAxisID:'y',order:3},
+        {label:'Out',data:flowOut,backgroundColor:flowDays.map(d=>isWknd(d)?'#e2e8f0':_fillGreen),borderRadius:2,yAxisID:'y',order:3},
+        {label:'WIP',data:flowWip,type:'line',borderColor:_fillPurple,backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
@@ -4709,9 +4747,9 @@ function renderTrends(){
     CH['tr-flow']=new Chart(document.getElementById('tr-flow'),{
       type:'bar',
       data:{labels:inOutLabels,datasets:[
-        {label:'New In',data:inOutNewIn,backgroundColor:'#60a5fa',borderRadius:3,yAxisID:'y',order:2},
-        {label:'Completed',data:inOutCompleted,backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
-        {label:'WIP',data:wipLine,type:'line',borderColor:'#d97706',backgroundColor:'transparent',
+        {label:'New In',data:inOutNewIn,backgroundColor:_fillBlue,borderRadius:3,yAxisID:'y',order:2},
+        {label:'Completed',data:inOutCompleted,backgroundColor:_fillGreen,borderRadius:3,yAxisID:'y',order:2},
+        {label:'WIP',data:wipLine,type:'line',borderColor:_fillPurple,backgroundColor:'transparent',
          tension:.25,borderWidth:2,pointRadius:0,spanGaps:false,yAxisID:'y1',order:1},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
@@ -4729,7 +4767,7 @@ function renderTrends(){
     });
   }
   _drawAxis('tr-flow-yL',CH['tr-flow'].scales.y,true,'#a9a390',v=>v);
-  _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,'#d97706',v=>v,'WIP','#d97706');
+  _drawAxis('tr-flow-yR',CH['tr-flow'].scales.y1,false,_fillPurple,v=>v,'WIP',_fillPurple);
 
   // ── tr-dow: structural weekly rhythm ──────────────────────
   const DOWL=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -4747,9 +4785,9 @@ function renderTrends(){
   CH['tr-dow']=new Chart(document.getElementById('tr-dow'),{
     type:'bar',
     data:{labels:DOWL,datasets:[
-      {label:'In',data:dInAvg,backgroundColor:'#60a5fa',borderRadius:3,yAxisID:'y',order:2},
-      {label:'Out',data:dOutAvg,backgroundColor:'#34d399',borderRadius:3,yAxisID:'y',order:2},
-      {label:'Bucket level (cumulative)',data:cumLine,type:'line',borderColor:'#8677b8',backgroundColor:'transparent',
+      {label:'In',data:dInAvg,backgroundColor:_fillBlue,borderRadius:3,yAxisID:'y',order:2},
+      {label:'Out',data:dOutAvg,backgroundColor:_fillGreen,borderRadius:3,yAxisID:'y',order:2},
+      {label:'Bucket level (cumulative)',data:cumLine,type:'line',borderColor:_fillPurple,backgroundColor:'transparent',
        tension:.25,borderWidth:2,pointRadius:0,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
@@ -4760,7 +4798,7 @@ function renderTrends(){
         y1:{position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
   _drawAxis('tr-dow-yL',CH['tr-dow'].scales.y,true,'#a9a390',v=>v);
-  _drawAxis('tr-dow-yR',CH['tr-dow'].scales.y1,false,'#8677b8',v=>(v>0?'+':'')+v);
+  _drawAxis('tr-dow-yR',CH['tr-dow'].scales.y1,false,_fillPurple,v=>(v>0?'+':'')+v);
   const netEl=document.getElementById('tr-dow-net');
   if(netEl) netEl.innerHTML=DOWL.map((d,i)=>{const n=+(dInAvg[i]-dOutAvg[i]).toFixed(1);
     return `${d} <strong style="color:${n>0?'var(--red)':'var(--green)'};">${n>0?'+':''}${n}</strong>`;}).join(' &nbsp;·&nbsp; ')+' &nbsp;— net surveys added per day';
@@ -4782,9 +4820,9 @@ function renderTrends(){
        data:weeklyC.map(w=>w.start_to_complete),
        backgroundColor:weeklyC.map(w=>{ const v=w.start_to_complete; if(v==null) return 'rgba(226,232,240,1)'; if(v<=S.targetAvg) return 'rgba(29,158,117,1)'; if(v<=(S.targetAvg+3)) return 'rgba(186,117,23,1)'; return 'rgba(226,75,74,1)'; }),
        borderRadius:3,yAxisID:'y',order:2},
-      {label:'SS ratio',data:pipeRatioWf,type:'line',borderColor:'#5570a8',
+      {label:'SS ratio',data:pipeRatioWf,type:'line',borderColor:_fillBlue,
        backgroundColor:'transparent',tension:.3,borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#5570a8',spanGaps:false,yAxisID:'y1',order:1},
+       pointRadius:3,pointBackgroundColor:_fillBlue,spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
       onHover:drillHover,
@@ -4800,12 +4838,12 @@ function renderTrends(){
         y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
   _drawAxis('tr-wf-yL',CH['tr-wf'].scales.y,true,'#a9a390',v=>v+'d');
-  _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,'#5570a8',v=>v.toFixed(1)+'×');
+  _drawAxis('tr-wf-yR',CH['tr-wf'].scales.y1,false,_fillBlue,v=>v.toFixed(1)+'×');
 
   // ── tr-vol: state cohorts stacked by start week ───────────────
   const COHORT_CATS=['Complete','Scheduled','Unscheduled','Resurvey pending'];
-  const COHORT_COLORS={'Complete':'rgba(34,197,94,0.8)','Resurvey pending':'rgba(226,75,74,0.8)',
-    'Scheduled':'rgba(59,130,246,0.8)','Unscheduled':'rgba(148,163,184,0.8)'};
+  const COHORT_COLORS={'Complete':`color-mix(in oklch,${_fillGreen} 80%,transparent)`,'Resurvey pending':'rgba(226,75,74,0.8)',
+    'Scheduled':`color-mix(in oklch,${_fillBlue} 80%,transparent)`,'Unscheduled':'rgba(148,163,184,0.8)'};
   const cohortMap={};
   trendSrc.filter(r=>r.start).forEach(r=>{
     const [y,mo,d]=r.start.split('-').map(Number);
@@ -4843,9 +4881,9 @@ function renderTrends(){
         yAxisID:'y',
         order:2,
       })),
-      {label:'Complete %',data:completePct,type:'line',borderColor:'#3a9e6a',
+      {label:'Complete %',data:completePct,type:'line',borderColor:_fillGreen,
        backgroundColor:'transparent',tension:.3,borderWidth:2,
-       pointRadius:3,pointBackgroundColor:'#3a9e6a',spanGaps:false,yAxisID:'y1',order:1},
+       pointRadius:3,pointBackgroundColor:_fillGreen,spanGaps:false,yAxisID:'y1',order:1},
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
         onHover:drillHover,
@@ -4863,7 +4901,7 @@ function renderTrends(){
             ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
   _drawAxis('tr-vol-yL',CH['tr-vol'].scales.y,true,'#a9a390',v=>String(Math.round(v)));
-  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,'#3a9e6a',v=>Math.round(v)+'%');
+  _drawAxis('tr-vol-yR',CH['tr-vol'].scales.y1,false,_fillGreen,v=>Math.round(v)+'%');
 
   // ── tr-mix: resource composition of completions, by week ──────
   const mixShare=trResMixMode==='share';
@@ -4879,9 +4917,9 @@ function renderTrends(){
         backgroundColor:RESM_C[res], borderWidth:0, borderRadius:3,
         stack:'mix', yAxisID:'y', order:2,
       })),
-      ...(mixShare?[]:[{label:'Sales rep %',data:repPctLine,type:'line',borderColor:'#4f7fae',
+      ...(mixShare?[]:[{label:'Sales rep %',data:repPctLine,type:'line',borderColor:_fillBlue,
         backgroundColor:'transparent',tension:.3,borderWidth:2,
-        pointRadius:3,pointBackgroundColor:'#4f7fae',spanGaps:false,yAxisID:'y1',order:1}]),
+        pointRadius:3,pointBackgroundColor:_fillBlue,spanGaps:false,yAxisID:'y1',order:1}]),
     ]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:8}},
       onHover:drillHover,
@@ -4909,7 +4947,7 @@ function renderTrends(){
             ticks:{display:false},border:{display:false},afterFit(s){s.width=0;}}}}
   });
   _drawAxis('tr-mix-yL',CH['tr-mix'].scales.y,true,'#a9a390',mixShare?(v=>Math.round(v)+'%'):(v=>String(Math.round(v))));
-  if(!mixShare) _drawAxis('tr-mix-yR',CH['tr-mix'].scales.y1,false,'#4f7fae',v=>Math.round(v)+'%');
+  if(!mixShare) _drawAxis('tr-mix-yR',CH['tr-mix'].scales.y1,false,_fillBlue,v=>Math.round(v)+'%');
   else { const yr=document.getElementById('tr-mix-yR'); if(yr){const c=yr.getContext('2d');c.clearRect(0,0,yr.width,yr.height);} }
 
   document.getElementById('tr-tbody').innerHTML=[...allWks].reverse().map(wk=>{
@@ -4933,7 +4971,7 @@ function renderTrends(){
       <td>${wkLbl}${isPartial?' <span style="font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 6px;margin-left:4px;">partial</span>':''}</td>
       <td${dc('in',newIn)}>${newIn}</td>
       <td${dc('out',compl)}>${compl}<span style="font-size:10px;color:var(--muted);margin-left:4px;">${diffStr}</span></td>
-      <td${dc('wip',wipSnap)} style="color:#d97706;font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
+      <td${dc('wip',wipSnap)} style="color:var(--res-vendor-fill);font-weight:500;">${wipSnap!=null?wipSnap:'—'}</td>
       <td class="r">${vs}</td>
       <td class="r">${wc?.median_total!=null?wc.median_total.toFixed(1)+'d':'—'}</td>
       <td class="r" style="color:var(--blue);font-weight:500;">${r3!=null?r3.toFixed(1)+'d':'—'}</td>
@@ -5243,7 +5281,7 @@ function renderAgingWIP(){
     // a third copy made the whole table look uniformly alarmed.
     return `
     <tr class="wip-row" role="button" tabindex="0" aria-expanded="false" aria-controls="wip-detail-${i}" onclick="toggleWipRow(this,event)" onkeydown="wipRowKey(this,event)">
-      <td data-c="Project"><span class="wip-expand">&#9658;</span><strong>${projLink(r)}</strong></td>
+      <td data-c="Project"><span class="wip-expand">${ICON_CHEVRON}</span><strong>${projLink(r)}</strong></td>
       <td data-c="Contact" style="color:var(--muted);">${esc(r.contact)||'—'}</td>
       <td data-c="Region">${r.region?`<span class="sbadge">${getState(r.region)}</span>${(r.region||'').split(' ').slice(1).join(' ')}`:'<span class="pna">—</span>'}</td>
       <td data-c="Status" style="white-space:nowrap;"><span class="pill" style="background:${qs.bg};color:${qs.fg};">${qs.label}</span></td>
@@ -5776,8 +5814,8 @@ function renderResurvey(){
     </div>
     <div class="leg">
       ${rsChartMode==='bars'
-        ? `<span class="li"><span class="ld" style="background:var(--c1);"></span>Settled</span>
-           <span class="li"><span class="ld" style="background:var(--surface);border:1.5px solid var(--c1);"></span>Still landing</span>`
+        ? `<span class="li"><span class="ld" style="background:var(--res-rep-fill);"></span>Settled</span>
+           <span class="li"><span class="ld" style="background:var(--surface);border:1.5px solid var(--res-rep-fill);"></span>Still landing</span>`
         : `<span class="li"><span class="ld" style="background:var(--green);height:3px;border-radius:2px;"></span>4-week rolling</span>
            <span class="li"><span class="ld" style="background:var(--muted);height:2px;border-radius:2px;"></span>Weekly</span>
            <span class="li" style="color:var(--faint);"><span class="ld" style="background:var(--faint);height:2px;border-radius:2px;"></span>Provisional &mdash; last ${RS_MATURE_DAYS} days</span>`}
@@ -5805,9 +5843,9 @@ function renderResurvey(){
       ${gth('rate','Came back','r')}
       ${gth('count','Resurveys','r')}
       ${gth('cycle','Cycle','r')}
-      ${showResCols?gth('sr','<span style="color:#4f7fae;">Sales Rep</span>','r')
-        +gth('rd','<span style="color:#8677b8;">Radicl</span>','r')
-        +gth('sp','<span style="color:#64748b;">SPWR</span>','r'):''}
+      ${showResCols?gth('sr','<span style="color:var(--res-rep);">Sales Rep</span>','r')
+        +gth('rd','<span style="color:var(--res-vendor);">Radicl</span>','r')
+        +gth('sp','<span style="color:var(--res-spwr);">SPWR</span>','r'):''}
     </tr></thead><tbody>
       ${shownGroups.map(d=>`<tr class="drill-tgt" ${drillAttrs(drillGrp(d.g))}>
         <td><div style="font-weight:500;font-size:12px;">${esc(d.g)}${idleTag(d)}</div></td>
@@ -5868,7 +5906,7 @@ function renderResurvey(){
     dc('rs-fpy');
     const cs=getComputedStyle(document.documentElement);
     const green=cs.getPropertyValue('--green').trim(), faint=cs.getPropertyValue('--faint').trim();
-    const surface=cs.getPropertyValue('--surface').trim(), c1=cs.getPropertyValue('--c1').trim();
+    const surface=cs.getPropertyValue('--surface').trim(), c1=cs.getPropertyValue('--res-rep-fill').trim();
     const weekly=cs.getPropertyValue('--muted').trim();
     const drillWeek=i=>{ const w=fpyWeeks[i];
       const dr=completions.filter(r=>weekOf(r.complete)===w.wk&&isResurveyDefect(r));
@@ -6263,7 +6301,7 @@ function renderMap(){
               ${OpsCoverage.RADIUS_CHOICES.map(r=>`<option value="${r}"${mapRadius===r?' selected':''}>${r}mi</option>`).join('')}
             </select></label>
           <div class="toggle-group" role="group" aria-label="What the map shows">
-            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Plan')}
+            ${mTgl('vol','Volume')}${mTgl('wip','Open WIP')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Coverage')}${mTgl('rec','Recommend')}${kinfo(TIP.mapModes)}
           </div>
           <div class="map-layers">
           <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
@@ -6762,7 +6800,7 @@ function mapBandColor(v,cs){
 // market with no work in the recent window at all.
 function mapMarkerColor(z,cs){
   const c=k=>cs.getPropertyValue(k).trim();
-  if(mapMetric==='cov'){ const lead=mapResLead(z); return lead?c(lead.css):null; }
+  if(mapMetric==='cov'){ const lead=mapResLead(z); return lead?c(lead.cssFill):null; }
   if(mapMetric==='rec'){ const k=MAP_REC_C[z.advice&&z.advice.k]; return k?c(k):null; }
   const v=mapMetric==='cycle'?z.avgCt:z.rsRate;
   return v==null?null:mapBandColor(v,cs);
@@ -6924,7 +6962,7 @@ function mapPaintMeta(vis,zips){
   const teamKey=(mapTeam||mapSiteMode)
     ? `<span><span class="map-ring"></span>${OpsCoverage.surveyorConfig().maxOneWayMi}mi day trip from a base</span>`:'';
   lg.innerHTML=mapMetric==='cov'
-    ? RES_TRIO.map(t=>sw(t.css,t.full)).join('')
+    ? RES_TRIO.map(t=>sw(t.cssFill,t.full)).join('')
       +`<span style="color:var(--faint);">Hollow = no work in view · circle size follows job count · colour = the resource doing most of the work here</span>`+teamKey
     : mapMetric==='rec'
     ? Object.entries(MAP_REC_C).map(([k,c])=>sw(c,Object.values(OpsCoverage.RECOMMENDATIONS).find(r=>r.k===k).label)).join('')
@@ -7602,11 +7640,12 @@ const _r1 = n => n==null?'—':(Math.round(n*10)/10).toFixed(1);
 
 // The three resources, in the order the page reads them: ours, bought, the
 // reps'. Colours come from the --res-* tokens so the hero, the mix bars and the
-// four existing charts cannot drift apart.
+// four existing charts cannot drift apart. `css` is the WCAG text tier (labels,
+// numerals); `cssFill` is the chart-vivid tier (swatches, bars, map dots).
 const RES_TRIO = [
-  { k:'SunPower Surveyor', id:'spwr',   label:'SPWR',       full:'SPWR surveyors',      css:'--res-spwr' },
-  { k:'Radicl Services',   id:'vendor', label:'Outsourced', full:'Outsourced',          css:'--res-vendor' },
-  { k:'Sales Rep',         id:'rep',    label:'Sales reps', full:'Sales reps',          css:'--res-rep' },
+  { k:'SunPower Surveyor', id:'spwr',   label:'SPWR',       full:'SPWR surveyors',      css:'--res-spwr',   cssFill:'--res-spwr-fill' },
+  { k:'Radicl Services',   id:'vendor', label:'Outsourced', full:'Outsourced',          css:'--res-vendor', cssFill:'--res-vendor-fill' },
+  { k:'Sales Rep',         id:'rep',    label:'Sales reps', full:'Sales reps',          css:'--res-rep',    cssFill:'--res-rep-fill' },
 ];
 
 // Surveyor bases, placed by the ZIP on the roster. A surveyor whose ZIP is not
@@ -8082,7 +8121,7 @@ function renderResource(){
   // rather than as three separate facts.
   const cost=[perSurveyNow, perVendor, null];
   const leads=[
-    `<div class="res-gauge"><span style="width:${Math.min(Math.round((util||0)*100),100)}%;background:var(--res-spwr);"></span></div>`
+    `<div class="res-gauge"><span style="width:${Math.min(Math.round((util||0)*100),100)}%;background:var(--res-spwr-fill);"></span></div>`
       +`<b style="color:var(--text);">${_r1(inhouseNow)}</b> of ${_r1(teamCap)} modelled${kinfo(TIP.resCapacity)} &middot; ${_rpct(util)} used`,
     `<b style="color:var(--text);">No ceiling.</b> Capacity is whatever is invoiced &mdash; `
       +`${billSum?_rpct(billSum.travelShare)+' of the bill is travel':'import a statement to price it'}.`,
@@ -8134,7 +8173,7 @@ function renderResource(){
           i===0?'at today’s throughput':i===1?'all-in, flat':'not billed')}
       <div class="res-col-note">${notes[i]}</div>
       <button class="res-col-more" aria-expanded="${open}" aria-controls="res-drawer" onclick="setResExpand('${r.id}')">
-        <span class="wip-expand"${open?' style="transform:rotate(90deg);"':''}>&#9656;</span>${esc(opens[i])}</button>
+        <span class="wip-expand"${open?' style="transform:rotate(90deg);"':''}>${ICON_CHEVRON}</span>${esc(opens[i])}</button>
     </div>`;
   };
 
@@ -8151,7 +8190,7 @@ function renderResource(){
         ${split.res.map(r=>`<span><span class="ld" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(${r.css});margin-right:6px;"></span>${esc(r.label)} <b>${r.share==null?'—':Math.round(r.share*100)+'%'}</b></span>`).join('')}
       </div>
       <div class="res-split-bar">
-        ${split.res.filter(r=>r.recentN>0).map(r=>`<span style="width:${(r.share||0)*100}%;background:var(${r.css});" title="${esc(r.label)}: ${r.recentN}"></span>`).join('')}
+        ${split.res.filter(r=>r.recentN>0).map(r=>`<span style="width:${(r.share||0)*100}%;background:var(${r.cssFill});" title="${esc(r.label)}: ${r.recentN}"></span>`).join('')}
       </div>
       ${_resMixStrip()}
       <div class="res-cols">${split.res.map(col).join('')}</div>
@@ -8205,7 +8244,7 @@ function renderResource(){
       <div class="res-ins">${insights.map((i,ix)=>`
         <div class="res-ins-row sev-${i.sev}${resInsOpen.has(ix)?' open':''}" id="res-ins-${ix}">
           <button class="res-ins-h" aria-expanded="${resInsOpen.has(ix)}" onclick="resToggleIns(${ix})">
-            <span class="wip-expand">&#9656;</span><span>${esc(i.headline)}</span></button>
+            <span class="wip-expand">${ICON_CHEVRON}</span><span>${esc(i.headline)}</span></button>
           <div class="res-ins-d">${i.detail}</div>
         </div>`).join('')}</div>
     </div>`;
@@ -8350,7 +8389,7 @@ const _resRecTag = a => `<span class="res-rec res-rec-${a.k}">${esc(a.label)}</s
 
 function _resMixCell(m){
   const tot=Math.max(m.rep+m.vendor+m.inhouse,1);
-  const bar=[['rep',m.rep,'var(--res-rep)'],['vendor',m.vendor,'var(--res-vendor)'],['SPWR',m.inhouse,'var(--res-spwr)']]
+  const bar=[['rep',m.rep,'var(--res-rep-fill)'],['vendor',m.vendor,'var(--res-vendor-fill)'],['SPWR',m.inhouse,'var(--res-spwr-fill)']]
     .filter(x=>x[1]>0)
     .map(x=>`<span class="res-seg" style="width:${x[1]/tot*100}%;background:${x[2]};" title="${x[1]} ${x[0]}"></span>`).join('');
   return `<div class="res-mix">${bar}</div><div class="cmeta">${m.rep} rep &middot; ${m.vendor} vendor &middot; ${m.inhouse} SPWR</div>`;
@@ -8378,7 +8417,7 @@ function _resGroupRow(g,showRec,showOutlook,quiet){
   const out=[`<tr class="res-grp${quiet?' res-quiet':''}">
     <td><button class="res-out-btn" style="border:none;background:none;padding:0;font-size:inherit;text-align:left;"
         aria-expanded="${open}" onclick="resToggleGroup('${escAttrJs(g.key)}')">
-      <span class="wip-expand" style="${open?'transform:rotate(90deg);':''}">&#9656;</span>
+      <span class="wip-expand" style="${open?'transform:rotate(90deg);':''}">${ICON_CHEVRON}</span>
       <span class="res-grp-name">${esc(g.name)}</span></button>
       <div class="res-grp-sub">${sub}</div></td>
     ${showRec?`<td>${_resRecTag(g.advice)}</td>`:''}
@@ -8402,7 +8441,7 @@ function _resGroupRow(g,showRec,showOutlook,quiet){
     out.push(`<tr class="res-kid${m.recentN?'':' res-quiet'}">
       <td><button class="res-out-btn" style="border:none;background:none;padding:0;font-size:inherit;text-align:left;"
           aria-expanded="${mo}" onclick="resToggleMkt('${escAttrJs(m.key)}')">
-        <span class="wip-expand" style="${mo?'transform:rotate(90deg);':''}">&#9656;</span>
+        <span class="wip-expand" style="${mo?'transform:rotate(90deg);':''}">${ICON_CHEVRON}</span>
         <b>${esc(m.name)}</b>, ${esc(m.st)}</button>
         <div class="cmeta">${m.towns.length>1?'+'+(m.towns.length-1)+' town'+(m.towns.length>2?'s':''):'1 town'}${m.mobileShare>=0.3?' &middot; '+_rpct(m.mobileShare)+' mobile crew':''}</div></td>
       ${showRec?`<td>${_resRecTag(m.advice)}</td>`:''}
@@ -9550,7 +9589,7 @@ function renderSettings(){
         </div>
         <div class="set-row">
           <div style="font-size:10px;color:var(--faint);">Saved here, these pre-fill the Salesforce modal in the nav bar.</div>
-          <button class="fbtn" onclick="openUpdateModal()">↑ Update data</button>
+          <button class="fbtn" onclick="openUpdateModal()">${ICON_UP} Update data</button>
         </div>
       </div>
 
@@ -9621,7 +9660,7 @@ function renderSettings(){
       <div class="set-sec" style="grid-column:1/-1;">
         <div class="set-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:${fieldRegOpen?'14px':'0'};" onclick="toggleFieldReg()">
           <span>Field Registry Status</span>
-          <span style="font-size:10px;color:var(--faint);transform:rotate(${fieldRegOpen?'0':'-90'}deg);transition:transform .15s;">▾</span>
+          <span style="display:inline-block;color:var(--faint);transform:rotate(${fieldRegOpen?'90':'0'}deg);transition:transform .15s;">${ICON_CHEVRON}</span>
         </div>
         ${fieldRegOpen?`
         <div style="margin-bottom:8px;font-size:10px;color:var(--muted);font-weight:600;">${activeFields.length} active · no pending fields</div>
