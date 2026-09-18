@@ -9681,7 +9681,7 @@ function renderDefinitions(){
       {t:'Cycle time anchor',v:anchorLbl,f:['start','opened'],d:'What every cycle time and queue age measures from. Set in Settings → Data.'},
       {t:'In scope',f:['start','project_status','list'],d:'Started on or after the data cutoff, and either complete or an active In Progress project. A parked row (Inactive / Not Required) or an open Change Order is out until it resolves back to In Progress; a completed survey counts regardless of what became of the deal.'},
       {t:'Complete',f:['complete'],d:TIP.complete},
-      {t:'WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
+      {t:'WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank AND',{f:'list'},'not parked'],d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
       {t:'Open resurvey',f:['resurvey_requested','resurvey_complete','project_status'],d:'A resurvey has been requested, has no Resurvey Complete date yet, and the project is In Progress.'},
     ]],
     ['targets','Targets',[
@@ -9696,7 +9696,7 @@ function renderDefinitions(){
       {t:'Scheduled remaining',f:['scheduled','complete'],d:TIP.schedRem},
     ]],
     ['wip','WIP',[
-      {t:'Open now',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],d:TIP.wip},
+      {t:'Open now',eq:[{f:'start'},'set AND',{f:'complete'},'blank AND',{f:'list'},'not parked'],d:TIP.wip},
       {t:'Avg age',f:['start','requested','resurvey_requested'],d:TIP.avgAge},
       {t:'Days open in SS',eq:['TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'},'− 1 grace day'],d:TIP.ssDaysOpen},
       {t:'Project age',eq:['TODAY','−',{f:'start'}],d:TIP.projAge},
