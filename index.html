@@ -2726,7 +2726,6 @@ const TIP={
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
-  mapModes:'WIP: surveys started, not yet complete. Volume: job density. Cycle: avg start to complete. Resurvey: share that came back. Resource: who\'s closest. Recommend: staffing case by market.',
   mapVolume:'Job density by town.',
   mapCycle:'Average project start to survey complete, per market. Hollow means too few completions to rate.',
   mapResurvey:'Share of a market\'s completions that came back. Hollow means too few completions to rate.',
@@ -6306,7 +6305,7 @@ function renderMap(){
               ${OpsCoverage.RADIUS_CHOICES.map(r=>`<option value="${r}"${mapRadius===r?' selected':''}>${r}mi</option>`).join('')}
             </select></label>
           <div class="toggle-group" role="group" aria-label="What the map shows">
-            ${mTgl('wip','WIP')}${mTgl('vol','Volume')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Resource')}${mTgl('rec','Recommend')}${kinfo(TIP.mapModes)}
+            ${mTgl('wip','WIP')}${mTgl('vol','Volume')}${mTgl('cycle','Cycle')}${mTgl('rs','Resurvey')}${mTgl('cov','Resource')}${mTgl('rec','Recommend')}
           </div>
           <div class="map-layers">
           <label class="map-layer${mapTeam?' on':''}" title="Draw each surveyor's base and the ${teamCfg.maxOneWayMi}mi they can work as a day trip, over whatever the map is showing">
