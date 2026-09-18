@@ -379,6 +379,8 @@ tr:hover td{background:var(--bg);}
 .def-fields{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 7px;}
 .def-fields-lbl{font-size:9px;font-weight:700;color:#0176d3;text-transform:uppercase;letter-spacing:.07em;}
 .def-field{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:600;color:#0855a3;background:#e6f2fd;border:1px solid #a9d3f5;border-radius:4px;padding:3px 8px;white-space:nowrap;}
+.def-eq{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.def-eq-op{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;}
 
 /* MODAL */
 .mback{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:500;display:flex;align-items:center;justify-content:center;}
@@ -9651,15 +9653,23 @@ function renderSettings(){
 // TIP strings the hover icons show on each page rather than a second copy —
 // one definition, read in two places. Only the entries with no TIP twin
 // (scope tests, live setting values) are written fresh here.
-// `f:[...]` names the FIELDS keys a definition is built from; _sfField()
-// resolves each to the literal column header the Salesforce export ships —
-// what Doug actually sees when he opens the .xls — not our internal key.
+// `f:[...]` names the FIELDS keys a definition draws on, shown as a bag of
+// chips. `eq:[...]` is the same idea ordered as an actual formula — a mix of
+// field-key tokens (rendered as chips) and literal operator/word strings
+// (TODAY, −, ≤ …) — for the metrics that are literally one field minus
+// another. _sfField() resolves a key to the literal column header the
+// Salesforce export ships, not our internal key.
 const _FIELDS_BY_KEY=Object.fromEntries(FIELDS.map(f=>[f.key,f]));
 function _sfField(key){ const f=_FIELDS_BY_KEY[key]; return f?(f.sfCol||f.label):key; }
+function _defEq(toks){
+  return toks.map(t=>typeof t==='string'?`<span class="def-eq-op">${esc(t)}</span>`:`<span class="def-field">${esc(_sfField(t.f))}</span>`).join('');
+}
 function _defSec(id,title,items){
   const rows=items.map(it=>{
-    const chips=(it.f&&it.f.length)?`<div class="def-fields"><span class="def-fields-lbl">SF export</span>${it.f.map(k=>`<span class="def-field">${esc(_sfField(k))}</span>`).join('')}</div>`:'';
-    return `<div class="def-item"><div class="def-term">${esc(it.t)}${it.v!=null?` <span class="def-val">— ${esc(it.v)}</span>`:''}</div>${chips}<div class="def-body">${esc(typeof it.d==='function'?it.d():it.d)}</div></div>`;
+    let fields='';
+    if(it.eq&&it.eq.length) fields=`<div class="def-fields"><span class="def-fields-lbl">Salesforce</span><span class="def-eq">${_defEq(it.eq)}</span></div>`;
+    else if(it.f&&it.f.length) fields=`<div class="def-fields"><span class="def-fields-lbl">Salesforce</span>${it.f.map(k=>`<span class="def-field">${esc(_sfField(k))}</span>`).join('')}</div>`;
+    return `<div class="def-item"><div class="def-term">${esc(it.t)}${it.v!=null?` <span class="def-val">— ${esc(it.v)}</span>`:''}</div>${fields}<div class="def-body">${esc(typeof it.d==='function'?it.d():it.d)}</div></div>`;
   }).join('');
   return `<div class="sec" id="def-${id}"><div class="shead"><div><div class="stitle">${esc(title)}</div></div></div><div class="def-grid">${rows}</div></div>`;
 }
@@ -9671,7 +9681,7 @@ function renderDefinitions(){
       {t:'Cycle time anchor',v:anchorLbl,f:['start','opened'],d:'What every cycle time and queue age measures from. Set in Settings → Data.'},
       {t:'In scope',f:['start','project_status','list'],d:'Started on or after the data cutoff, and either complete or an active In Progress project. A parked row (Inactive / Not Required) or an open Change Order is out until it resolves back to In Progress; a completed survey counts regardless of what became of the deal.'},
       {t:'Complete',f:['complete'],d:TIP.complete},
-      {t:'WIP',f:['start','complete','list'],d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
+      {t:'WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
       {t:'Open resurvey',f:['resurvey_requested','resurvey_complete','project_status'],d:'A resurvey has been requested, has no Resurvey Complete date yet, and the project is In Progress.'},
     ]],
     ['targets','Targets (configurable in Settings)',[
@@ -9681,22 +9691,22 @@ function renderDefinitions(){
       {t:'Outlier threshold',v:S.outlierDays+'d',d:'Cycle time above this counts as an outlier for the filter bar\'s "Hide outliers" toggle.'},
     ]],
     ['current','Current',[
-      {t:'Cycle time',f:['start','complete'],d:TIP.cycle},
-      {t:'On target',f:['start','complete'],d:TIP.onTarget},
+      {t:'Cycle time',eq:[{f:'complete'},'−',{f:'start'}],d:TIP.cycle},
+      {t:'On target',eq:[{f:'complete'},'−',{f:'start'},'≤',S.targetAvg+'d'],d:TIP.onTarget},
       {t:'Scheduled remaining',f:['scheduled','complete'],d:TIP.schedRem},
     ]],
     ['wip','WIP',[
-      {t:'Open now',f:['start','complete'],d:TIP.wip},
+      {t:'Open now',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],d:TIP.wip},
       {t:'Avg age',f:['start','requested','resurvey_requested'],d:TIP.avgAge},
-      {t:'Days open in SS',f:['start','requested','resurvey_requested'],d:TIP.ssDaysOpen},
-      {t:'Project age',f:['start'],d:TIP.projAge},
+      {t:'Days open in SS',eq:['TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'},'− 1 grace day'],d:TIP.ssDaysOpen},
+      {t:'Project age',eq:['TODAY','−',{f:'start'}],d:TIP.projAge},
       {t:'Days column (table)',f:['start','complete'],d:TIP.drillDays},
       {t:'SS ratio (live)',f:['start','complete'],d:TIP.ssRatioLive},
       {t:'Initial (lens)',f:['start','complete','resurvey_requested'],d:TIP.wipInitial},
     ]],
     ['performance','Performance',[
-      {t:'Avg / median cycle time',f:['start','complete'],d:'Mean and middle cycle time for the grouping and range selected, ignoring null, negative and NaN values.'},
-      {t:'On target',f:['start','complete'],d:TIP.onTarget},
+      {t:'Avg / median cycle time',eq:[{f:'complete'},'−',{f:'start'}],d:'Mean and middle cycle time for the grouping and range selected, ignoring null, negative and NaN values.'},
+      {t:'On target',eq:[{f:'complete'},'−',{f:'start'},'≤',S.targetAvg+'d'],d:TIP.onTarget},
       {t:'Cycle time colour bands',f:['start','complete'],d:`≤${S.targetMedian}d green (or ≤${S.targetAvg}d for a display banded on the average) · up to +2d amber · beyond that red — on the number actually shown, not a fixed scale.`},
     ]],
     ['trends','Trends',[
@@ -9715,15 +9725,15 @@ function renderDefinitions(){
       {t:'First pass yield (FPY)',f:['complete','resurvey_requested','resurvey_reason'],d:TIP.fpy},
       {t:'FPY trend',f:['complete','resurvey_requested'],d:TIP.fpyTrend},
       {t:'Why they come back',f:['resurvey_details'],d:TIP.rsCat},
-      {t:'Cost of a resurvey',f:['complete','resurvey_requested','resurvey_complete','agreement_signed'],d:TIP.rsPenalty},
-      {t:'Time to flag',f:['complete','resurvey_requested'],d:TIP.rsFlag},
-      {t:'Resurvey cycle',f:['resurvey_requested','resurvey_complete'],d:TIP.rsCycle},
-      {t:'Open resurvey age',f:['resurvey_requested'],d:TIP.rsOpenDays},
+      {t:'Cost of a resurvey',eq:[{f:'resurvey_complete'},'−',{f:'complete'}],d:TIP.rsPenalty},
+      {t:'Time to flag',eq:[{f:'resurvey_requested'},'−',{f:'complete'}],d:TIP.rsFlag},
+      {t:'Resurvey cycle',eq:[{f:'resurvey_complete'},'−',{f:'resurvey_requested'}],d:TIP.rsCycle},
+      {t:'Open resurvey age',eq:['TODAY','−',{f:'resurvey_requested'}],d:TIP.rsOpenDays},
       {t:'Open resurveys (queue)',f:['resurvey_requested','resurvey_complete','project_status'],d:TIP.rsOpen},
     ]],
     ['map','Map',[
       {t:'Volume',f:['address'],d:TIP.mapVolume},
-      {t:'Cycle',f:['address','start','complete'],d:TIP.mapCycle},
+      {t:'Cycle',eq:[{f:'complete'},'−',{f:'start'}],d:TIP.mapCycle},
       {t:'Resurvey',f:['address','resurvey_requested','resurvey_complete'],d:TIP.mapResurvey},
       {t:'Open WIP',f:['address','start','complete'],d:TIP.mapWip},
       {t:'Coverage',f:['address','resource'],d:TIP.mapAbsorb},
