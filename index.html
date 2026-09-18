@@ -9684,7 +9684,7 @@ function renderDefinitions(){
       {t:'WIP',eq:[{f:'start'},'set AND',{f:'complete'},'blank'],d:TIP.wip+' Initial surveys only — a reopened resurvey carries a completion date, so it is out.'},
       {t:'Open resurvey',f:['resurvey_requested','resurvey_complete','project_status'],d:'A resurvey has been requested, has no Resurvey Complete date yet, and the project is In Progress.'},
     ]],
-    ['targets','Targets (configurable in Settings)',[
+    ['targets','Targets',[
       {t:'Median target',v:S.targetMedian+'d',d:'Green threshold for cycle time — Spec 12744.'},
       {t:'Average target',v:S.targetAvg+'d',d:'Chart annotation line and the "On target" cutoff — Spec 12744.'},
       {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Quality table, Resource markets, Map colouring.'},
