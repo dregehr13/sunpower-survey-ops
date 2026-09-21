@@ -119,6 +119,24 @@
       "subject": "Site Survey Quality Controls Framework",
       "to": "DJF, AEP",
       "file": "DRR-5A_SS_QA_Framework.docx"
+    },
+    {
+      "number": "DRR-6A",
+      "n": 6,
+      "revision": "A",
+      "date": "9/21/2026",
+      "subject": "2026 Contract Attrition by Pipeline Stage",
+      "to": "DFS",
+      "file": "DRR-6A_2026_Contract_Attrition.docx"
+    },
+    {
+      "number": "DRR-6A",
+      "n": 6,
+      "revision": "A",
+      "date": "9/21/2026",
+      "subject": "2026 Contract Attrition by Pipeline Stage",
+      "to": "DFS",
+      "file": "DRR-6A_2026_Contract_Attrition.docx"
     }
   ],
   "firstNumber": 4
