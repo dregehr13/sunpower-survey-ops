@@ -1,6 +1,6 @@
 {
  "asOf": "2026-09-24",
- "generatedFrom": "2026-09-24 08:07",
+ "generatedFrom": "2026-09-24 08:38",
  "rowCount": 175,
  "coverage": {
   "holding": {
@@ -12,11 +12,11 @@
    "taken": 6
   },
   "atRiskComplete": {
-   "available": 128,
+   "available": 130,
    "taken": 6
   },
   "atRiskOpen": {
-   "available": 29,
+   "available": 28,
    "taken": 6
   },
   "blankRegion": {
@@ -24,11 +24,11 @@
    "taken": 6
   },
   "blankResource": {
-   "available": 583,
+   "available": 581,
    "taken": 6
   },
   "repWip": {
-   "available": 48,
+   "available": 47,
    "taken": 6
   },
   "straightToField": {
@@ -56,11 +56,11 @@
    "taken": 1
   },
   "plainComplete": {
-   "available": 3462,
+   "available": 3464,
    "taken": 40
   },
   "recentComplete": {
-   "available": 216,
+   "available": 218,
    "taken": 60
   },
   "recentStart": {
@@ -124,7 +124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "2026-01-05",
    "m1a_approved": "2025-12-29",
-   "gross_price": 15136
+   "gross_price": 15136,
+   "dealer_fee": 0
   },
   {
    "id": 1,
@@ -173,7 +174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "2026-01-05",
    "m1a_approved": "2025-12-29",
-   "gross_price": 18321.6
+   "gross_price": 18321.6,
+   "dealer_fee": 0
   },
   {
    "id": 10,
@@ -222,7 +224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 32718.4
+   "gross_price": 32718.4,
+   "dealer_fee": 0
   },
   {
    "id": 100,
@@ -271,7 +274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-02",
-   "gross_price": 21049.6
+   "gross_price": 21049.6,
+   "dealer_fee": 0
   },
   {
    "id": 1000,
@@ -320,7 +324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 48281.6
+   "gross_price": 48281.6,
+   "dealer_fee": 0
   },
   {
    "id": 1001,
@@ -369,7 +374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 17908.8
+   "gross_price": 17908.8,
+   "dealer_fee": 0
   },
   {
    "id": 1002,
@@ -418,7 +424,8 @@
    "field_survey_scheduled": "2026-04-17",
    "field_survey_complete": "2026-04-17",
    "m1a_approved": "2026-03-13",
-   "gross_price": 33734.8
+   "gross_price": 33734.8,
+   "dealer_fee": 0
   },
   {
    "id": 1003,
@@ -467,7 +474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 29702
+   "gross_price": 29702,
+   "dealer_fee": 0
   },
   {
    "id": 1004,
@@ -516,7 +524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-05",
-   "gross_price": 127551
+   "gross_price": 127551,
+   "dealer_fee": 0
   },
   {
    "id": 1005,
@@ -565,7 +574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-13",
-   "gross_price": 30169.8
+   "gross_price": 30169.8,
+   "dealer_fee": 0
   },
   {
    "id": 1006,
@@ -614,7 +624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 42355
+   "gross_price": 42355,
+   "dealer_fee": 0
   },
   {
    "id": 1007,
@@ -663,7 +674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-27",
-   "gross_price": 68724.2
+   "gross_price": 68724.2,
+   "dealer_fee": 0
   },
   {
    "id": 1008,
@@ -712,7 +724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-17",
-   "gross_price": 37785.6
+   "gross_price": 37785.6,
+   "dealer_fee": 0
   },
   {
    "id": 1009,
@@ -761,7 +774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 23616
+   "gross_price": 23616,
+   "dealer_fee": 0
   },
   {
    "id": 101,
@@ -810,7 +824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-02-28",
-   "gross_price": 45862.6
+   "gross_price": 45862.6,
+   "dealer_fee": 0
   },
   {
    "id": 1010,
@@ -859,7 +874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 84690.08
+   "gross_price": 84690.08,
+   "dealer_fee": 0
   },
   {
    "id": 1011,
@@ -908,7 +924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 27183
+   "gross_price": 27183,
+   "dealer_fee": 0
   },
   {
    "id": 1012,
@@ -957,7 +974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 35010.5
+   "gross_price": 35010.5,
+   "dealer_fee": 0
   },
   {
    "id": 1013,
@@ -1006,7 +1024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 35899.6
+   "gross_price": 35899.6,
+   "dealer_fee": 0
   },
   {
    "id": 1014,
@@ -1055,7 +1074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-22",
-   "gross_price": 18843.6
+   "gross_price": 18843.6,
+   "dealer_fee": 0
   },
   {
    "id": 1015,
@@ -1104,7 +1124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 41328
+   "gross_price": 41328,
+   "dealer_fee": 0
   },
   {
    "id": 1016,
@@ -1153,7 +1174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 25017
+   "gross_price": 25017,
+   "dealer_fee": 0
   },
   {
    "id": 1017,
@@ -1202,7 +1224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 13054.4
+   "gross_price": 13054.4,
+   "dealer_fee": 0
   },
   {
    "id": 1018,
@@ -1251,7 +1274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 21477.09
+   "gross_price": 21477.09,
+   "dealer_fee": 0
   },
   {
    "id": 1019,
@@ -1300,7 +1324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-14",
-   "gross_price": 67957.5
+   "gross_price": 67957.5,
+   "dealer_fee": 0
   },
   {
    "id": 102,
@@ -1349,7 +1374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 28438
+   "gross_price": 28438,
+   "dealer_fee": 0
   },
   {
    "id": 1020,
@@ -1398,7 +1424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 54845.7
+   "gross_price": 54845.7,
+   "dealer_fee": 0
   },
   {
    "id": 1021,
@@ -1447,7 +1474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-17",
-   "gross_price": 29360.1
+   "gross_price": 29360.1,
+   "dealer_fee": 0
   },
   {
    "id": 1022,
@@ -1496,7 +1524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-12",
-   "gross_price": 42847
+   "gross_price": 42847,
+   "dealer_fee": 0
   },
   {
    "id": 1023,
@@ -1545,7 +1574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 30668
+   "gross_price": 30668,
+   "dealer_fee": 0
   },
   {
    "id": 1024,
@@ -1594,7 +1624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-15",
-   "gross_price": 37195.2
+   "gross_price": 37195.2,
+   "dealer_fee": 0
   },
   {
    "id": 1025,
@@ -1643,7 +1674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 27092.8
+   "gross_price": 27092.8,
+   "dealer_fee": 0
   },
   {
    "id": 1026,
@@ -1692,7 +1724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 22172.8
+   "gross_price": 22172.8,
+   "dealer_fee": 0
   },
   {
    "id": 1027,
@@ -1741,7 +1774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-12",
-   "gross_price": 29946.4
+   "gross_price": 29946.4,
+   "dealer_fee": 0
   },
   {
    "id": 1028,
@@ -1790,7 +1824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 46991.14
+   "gross_price": 46991.14,
+   "dealer_fee": 0
   },
   {
    "id": 1029,
@@ -1839,7 +1874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-15",
-   "gross_price": 28618
+   "gross_price": 28618,
+   "dealer_fee": 0
   },
   {
    "id": 103,
@@ -1888,7 +1924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 20445.61
+   "gross_price": 20445.61,
+   "dealer_fee": 0
   },
   {
    "id": 1030,
@@ -1937,7 +1974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-23",
-   "gross_price": 54997.4
+   "gross_price": 54997.4,
+   "dealer_fee": 0
   },
   {
    "id": 1031,
@@ -1986,7 +2024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 43726.5
+   "gross_price": 43726.5,
+   "dealer_fee": 0
   },
   {
    "id": 1032,
@@ -2035,7 +2074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 25789
+   "gross_price": 25789,
+   "dealer_fee": 0
   },
   {
    "id": 1033,
@@ -2084,7 +2124,8 @@
    "field_survey_scheduled": "2026-04-01",
    "field_survey_complete": "2026-04-01",
    "m1a_approved": "2026-03-16",
-   "gross_price": 12999
+   "gross_price": 12999,
+   "dealer_fee": 0
   },
   {
    "id": 1034,
@@ -2133,7 +2174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-15",
-   "gross_price": 59726.7
+   "gross_price": 59726.7,
+   "dealer_fee": 0
   },
   {
    "id": 1035,
@@ -2182,7 +2224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-20",
-   "gross_price": 31842.6
+   "gross_price": 31842.6,
+   "dealer_fee": 0
   },
   {
    "id": 1036,
@@ -2231,7 +2274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-19",
-   "gross_price": 54017.5
+   "gross_price": 54017.5,
+   "dealer_fee": 0
   },
   {
    "id": 1037,
@@ -2280,7 +2324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-16",
-   "gross_price": 13000
+   "gross_price": 13000,
+   "dealer_fee": 0
   },
   {
    "id": 1038,
@@ -2329,7 +2374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-23",
-   "gross_price": 65079.3
+   "gross_price": 65079.3,
+   "dealer_fee": 0
   },
   {
    "id": 1039,
@@ -2378,7 +2424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-23",
-   "gross_price": 27490.5
+   "gross_price": 27490.5,
+   "dealer_fee": 0
   },
   {
    "id": 1040,
@@ -2427,7 +2474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-19",
-   "gross_price": 17904.7
+   "gross_price": 17904.7,
+   "dealer_fee": 0
   },
   {
    "id": 1041,
@@ -2476,7 +2524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-13",
-   "gross_price": 13130.3
+   "gross_price": 13130.3,
+   "dealer_fee": 121.3
   },
   {
    "id": 1076,
@@ -2525,7 +2574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-18",
-   "gross_price": 63996.9
+   "gross_price": 63996.9,
+   "dealer_fee": 0
   },
   {
    "id": 1087,
@@ -2574,7 +2624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-18",
-   "gross_price": 39852
+   "gross_price": 39852,
+   "dealer_fee": 0
   },
   {
    "id": 1127,
@@ -2623,7 +2674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-19",
-   "gross_price": 41754.4
+   "gross_price": 41754.4,
+   "dealer_fee": 0
   },
   {
    "id": 1139,
@@ -2672,7 +2724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-20",
-   "gross_price": 22213.8
+   "gross_price": 22213.8,
+   "dealer_fee": 0
   },
   {
    "id": 1148,
@@ -2721,7 +2774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-26",
-   "gross_price": 92647.7
+   "gross_price": 92647.7,
+   "dealer_fee": 0
   },
   {
    "id": 1150,
@@ -2770,7 +2824,8 @@
    "field_survey_scheduled": "2026-04-07",
    "field_survey_complete": "2026-04-07",
    "m1a_approved": "2026-03-20",
-   "gross_price": 21586.5
+   "gross_price": 21586.5,
+   "dealer_fee": 0
   },
   {
    "id": 1157,
@@ -2819,7 +2874,8 @@
    "field_survey_scheduled": "2026-04-06",
    "field_survey_complete": "2026-04-06",
    "m1a_approved": "2026-03-20",
-   "gross_price": 13660.61
+   "gross_price": 13660.61,
+   "dealer_fee": 126.61
   },
   {
    "id": 116,
@@ -2868,7 +2924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "2026-01-14",
    "m1a_approved": "2026-07-15",
-   "gross_price": 107823.8
+   "gross_price": 107823.8,
+   "dealer_fee": 0
   },
   {
    "id": 123,
@@ -2917,7 +2974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "2026-01-16",
    "m1a_approved": "2026-02-06",
-   "gross_price": 23773.94
+   "gross_price": 23773.94,
+   "dealer_fee": 0
   },
   {
    "id": 1230,
@@ -2966,7 +3024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-24",
-   "gross_price": 12356.06
+   "gross_price": 12356.06,
+   "dealer_fee": 113.56
   },
   {
    "id": 1237,
@@ -3015,7 +3074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-24",
-   "gross_price": 31816
+   "gross_price": 31816,
+   "dealer_fee": 0
   },
   {
    "id": 1252,
@@ -3064,7 +3124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-25",
-   "gross_price": 16149.9
+   "gross_price": 16149.9,
+   "dealer_fee": 0
   },
   {
    "id": 1256,
@@ -3113,7 +3174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-08",
-   "gross_price": 28089.1
+   "gross_price": 28089.1,
+   "dealer_fee": 0
   },
   {
    "id": 1271,
@@ -3162,7 +3224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-25",
-   "gross_price": 40417.8
+   "gross_price": 40417.8,
+   "dealer_fee": 0
   },
   {
    "id": 1278,
@@ -3211,7 +3274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-26",
-   "gross_price": 66124.8
+   "gross_price": 66124.8,
+   "dealer_fee": 0
   },
   {
    "id": 1327,
@@ -3260,7 +3324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-31",
-   "gross_price": 33234.6
+   "gross_price": 33234.6,
+   "dealer_fee": 0
   },
   {
    "id": 1369,
@@ -3309,7 +3374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-30",
-   "gross_price": 30303.1
+   "gross_price": 30303.1,
+   "dealer_fee": 0
   },
   {
    "id": 1386,
@@ -3358,7 +3424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 38540
+   "gross_price": 38540,
+   "dealer_fee": 0
   },
   {
    "id": 1416,
@@ -3407,7 +3474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-03-31",
-   "gross_price": 36977.9
+   "gross_price": 36977.9,
+   "dealer_fee": 0
   },
   {
    "id": 1434,
@@ -3456,7 +3524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "2026-04-10",
    "m1a_approved": "2026-04-09",
-   "gross_price": 41400
+   "gross_price": 41400,
+   "dealer_fee": 12622.86
   },
   {
    "id": 1463,
@@ -3505,7 +3574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-02",
-   "gross_price": 28745.1
+   "gross_price": 28745.1,
+   "dealer_fee": 0
   },
   {
    "id": 1465,
@@ -3554,7 +3624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-06",
-   "gross_price": 26863.2
+   "gross_price": 26863.2,
+   "dealer_fee": 0
   },
   {
    "id": 1484,
@@ -3603,7 +3674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-10",
-   "gross_price": 52398
+   "gross_price": 52398,
+   "dealer_fee": 0
   },
   {
    "id": 1506,
@@ -3652,7 +3724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-06",
-   "gross_price": 15198.7
+   "gross_price": 15198.7,
+   "dealer_fee": 0
   },
   {
    "id": 1541,
@@ -3701,7 +3774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-07",
-   "gross_price": 19362.2
+   "gross_price": 19362.2,
+   "dealer_fee": 0
   },
   {
    "id": 1588,
@@ -3750,7 +3824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 50512
+   "gross_price": 50512,
+   "dealer_fee": 0
   },
   {
    "id": 1690,
@@ -3799,7 +3874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-23",
-   "gross_price": 16416.4
+   "gross_price": 16416.4,
+   "dealer_fee": 0
   },
   {
    "id": 1741,
@@ -3848,7 +3924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-20",
-   "gross_price": 29298.6
+   "gross_price": 29298.6,
+   "dealer_fee": 0
   },
   {
    "id": 1836,
@@ -3897,7 +3974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-22",
-   "gross_price": 36506.4
+   "gross_price": 36506.4,
+   "dealer_fee": 0
   },
   {
    "id": 1900,
@@ -3946,7 +4024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-05-15",
-   "gross_price": 24231
+   "gross_price": 24231,
+   "dealer_fee": 0
   },
   {
    "id": 2028,
@@ -3995,7 +4074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 45001.6
+   "gross_price": 45001.6,
+   "dealer_fee": 0
   },
   {
    "id": 2032,
@@ -4044,7 +4124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 25518.4
+   "gross_price": 25518.4,
+   "dealer_fee": 0
   },
   {
    "id": 2057,
@@ -4093,7 +4174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-04-30",
-   "gross_price": 17679.2
+   "gross_price": 17679.2,
+   "dealer_fee": 0
   },
   {
    "id": 2200,
@@ -4142,7 +4224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-05-05",
-   "gross_price": 32562.2
+   "gross_price": 32562.2,
+   "dealer_fee": 0
   },
   {
    "id": 2217,
@@ -4191,7 +4274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-05-11",
-   "gross_price": 32465.6
+   "gross_price": 32465.6,
+   "dealer_fee": 0
   },
   {
    "id": 2223,
@@ -4240,7 +4324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 45365
+   "gross_price": 45365,
+   "dealer_fee": 0
   },
   {
    "id": 2292,
@@ -4289,7 +4374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 35325.6
+   "gross_price": 35325.6,
+   "dealer_fee": 0
   },
   {
    "id": 2312,
@@ -4338,7 +4424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 47095.38
+   "gross_price": 47095.38,
+   "dealer_fee": 14359.38
   },
   {
    "id": 2339,
@@ -4387,7 +4474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-05-13",
-   "gross_price": 20336
+   "gross_price": 20336,
+   "dealer_fee": 0
   },
   {
    "id": 235,
@@ -4436,7 +4524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-01-19",
-   "gross_price": 36327.8
+   "gross_price": 36327.8,
+   "dealer_fee": 0
   },
   {
    "id": 2848,
@@ -4485,7 +4574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-05-29",
-   "gross_price": 16993.6
+   "gross_price": 16993.6,
+   "dealer_fee": 0
   },
   {
    "id": 3052,
@@ -4534,7 +4624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-06-05",
-   "gross_price": 69711.6
+   "gross_price": 69711.6,
+   "dealer_fee": 0
   },
   {
    "id": 3058,
@@ -4583,7 +4674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-06-05",
-   "gross_price": 38571
+   "gross_price": 38571,
+   "dealer_fee": 0
   },
   {
    "id": 3080,
@@ -4632,7 +4724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-06-06",
-   "gross_price": 63029.4
+   "gross_price": 63029.4,
+   "dealer_fee": 0
   },
   {
    "id": 3110,
@@ -4681,7 +4774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-06-06",
-   "gross_price": 31734
+   "gross_price": 31734,
+   "dealer_fee": 0
   },
   {
    "id": 3123,
@@ -4730,7 +4824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 18500
+   "gross_price": 18500,
+   "dealer_fee": 175
   },
   {
    "id": 3474,
@@ -4779,7 +4874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 12640
+   "gross_price": 12640,
+   "dealer_fee": 0
   },
   {
    "id": 3705,
@@ -4828,7 +4924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-07-08",
-   "gross_price": 23529.6
+   "gross_price": 23529.6,
+   "dealer_fee": 0
   },
   {
    "id": 3930,
@@ -4877,7 +4974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-07-23",
-   "gross_price": 17142.8
+   "gross_price": 17142.8,
+   "dealer_fee": 0
   },
   {
    "id": 4266,
@@ -4926,7 +5024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-07-31",
-   "gross_price": 35380.4
+   "gross_price": 35380.4,
+   "dealer_fee": 0
   },
   {
    "id": 4330,
@@ -4975,7 +5074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-04",
-   "gross_price": 50787.3
+   "gross_price": 50787.3,
+   "dealer_fee": 0
   },
   {
    "id": 4356,
@@ -5024,7 +5124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-07",
-   "gross_price": 36206.6
+   "gross_price": 36206.6,
+   "dealer_fee": 0
   },
   {
    "id": 4411,
@@ -5073,7 +5174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-10",
-   "gross_price": 23736
+   "gross_price": 23736,
+   "dealer_fee": 0
   },
   {
    "id": 4412,
@@ -5122,7 +5224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-29",
-   "gross_price": 29369.6
+   "gross_price": 29369.6,
+   "dealer_fee": 0
   },
   {
    "id": 4495,
@@ -5171,7 +5274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-13",
-   "gross_price": 115414
+   "gross_price": 115414,
+   "dealer_fee": 0
   },
   {
    "id": 4499,
@@ -5220,7 +5324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-14",
-   "gross_price": 24291.92
+   "gross_price": 24291.92,
+   "dealer_fee": 232.92
   },
   {
    "id": 4514,
@@ -5269,7 +5374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-15",
-   "gross_price": 42320
+   "gross_price": 42320,
+   "dealer_fee": 0
   },
   {
    "id": 4525,
@@ -5318,7 +5424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-15",
-   "gross_price": 36370
+   "gross_price": 36370,
+   "dealer_fee": 0
   },
   {
    "id": 4541,
@@ -5367,7 +5474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 80017
+   "gross_price": 80017,
+   "dealer_fee": 0
   },
   {
    "id": 4545,
@@ -5416,7 +5524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-17",
-   "gross_price": 42108.4
+   "gross_price": 42108.4,
+   "dealer_fee": 0
   },
   {
    "id": 4557,
@@ -5465,7 +5574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-31",
-   "gross_price": 35355.2
+   "gross_price": 35355.2,
+   "dealer_fee": 0
   },
   {
    "id": 4561,
@@ -5514,7 +5624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-19",
-   "gross_price": 53621.6
+   "gross_price": 53621.6,
+   "dealer_fee": 0
   },
   {
    "id": 4570,
@@ -5563,7 +5674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-20",
-   "gross_price": 109369
+   "gross_price": 109369,
+   "dealer_fee": 0
   },
   {
    "id": 4571,
@@ -5612,7 +5724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-20",
-   "gross_price": 42954.8
+   "gross_price": 42954.8,
+   "dealer_fee": 0
   },
   {
    "id": 4573,
@@ -5661,7 +5774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-15",
-   "gross_price": 54644.4
+   "gross_price": 54644.4,
+   "dealer_fee": 0
   },
   {
    "id": 4574,
@@ -5710,7 +5824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-20",
-   "gross_price": 15150.51
+   "gross_price": 15150.51,
+   "dealer_fee": 141.51
   },
   {
    "id": 4577,
@@ -5759,7 +5874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-02",
-   "gross_price": 48300
+   "gross_price": 48300,
+   "dealer_fee": 0
   },
   {
    "id": 4580,
@@ -5808,7 +5924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 50301
+   "gross_price": 50301,
+   "dealer_fee": 0
   },
   {
    "id": 4586,
@@ -5857,7 +5974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-10",
-   "gross_price": 23570.4
+   "gross_price": 23570.4,
+   "dealer_fee": 0
   },
   {
    "id": 4587,
@@ -5906,7 +6024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-22",
-   "gross_price": 38860.8
+   "gross_price": 38860.8,
+   "dealer_fee": 0
   },
   {
    "id": 4595,
@@ -5955,7 +6074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-23",
-   "gross_price": 15049
+   "gross_price": 15049,
+   "dealer_fee": 0
   },
   {
    "id": 4597,
@@ -6004,7 +6124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-23",
-   "gross_price": 60354
+   "gross_price": 60354,
+   "dealer_fee": 0
   },
   {
    "id": 4598,
@@ -6053,7 +6174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-23",
-   "gross_price": 16652
+   "gross_price": 16652,
+   "dealer_fee": 0
   },
   {
    "id": 4600,
@@ -6102,7 +6224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 24291.92
+   "gross_price": 24291.92,
+   "dealer_fee": 232.92
   },
   {
    "id": 4601,
@@ -6151,7 +6274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-24",
-   "gross_price": 14999
+   "gross_price": 14999,
+   "dealer_fee": 0
   },
   {
    "id": 4607,
@@ -6200,7 +6324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 27477.2
+   "gross_price": 27477.2,
+   "dealer_fee": 0
   },
   {
    "id": 4610,
@@ -6249,7 +6374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-25",
-   "gross_price": 46690
+   "gross_price": 46690,
+   "dealer_fee": 0
   },
   {
    "id": 4612,
@@ -6298,7 +6424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 46423.2
+   "gross_price": 46423.2,
+   "dealer_fee": 0
   },
   {
    "id": 4614,
@@ -6347,7 +6474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-25",
-   "gross_price": 48879.6
+   "gross_price": 48879.6,
+   "dealer_fee": 0
   },
   {
    "id": 4616,
@@ -6396,7 +6524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-01",
-   "gross_price": 29601.8
+   "gross_price": 29601.8,
+   "dealer_fee": 0
   },
   {
    "id": 4617,
@@ -6445,7 +6574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-02",
-   "gross_price": 20014.57
+   "gross_price": 20014.57,
+   "dealer_fee": 0
   },
   {
    "id": 4619,
@@ -6494,7 +6624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-25",
-   "gross_price": 24922.8
+   "gross_price": 24922.8,
+   "dealer_fee": 0
   },
   {
    "id": 4620,
@@ -6543,7 +6674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 29640.06
+   "gross_price": 29640.06,
+   "dealer_fee": 0
   },
   {
    "id": 4621,
@@ -6592,7 +6724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 14750
+   "gross_price": 14750,
+   "dealer_fee": 137.5
   },
   {
    "id": 4622,
@@ -6641,7 +6774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-25",
-   "gross_price": 40518.9
+   "gross_price": 40518.9,
+   "dealer_fee": 0
   },
   {
    "id": 4623,
@@ -6690,7 +6824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 18354
+   "gross_price": 18354,
+   "dealer_fee": 0
   },
   {
    "id": 4624,
@@ -6739,7 +6874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 64533
+   "gross_price": 64533,
+   "dealer_fee": 0
   },
   {
    "id": 4625,
@@ -6788,7 +6924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-02",
-   "gross_price": 30622.62
+   "gross_price": 30622.62,
+   "dealer_fee": 0
   },
   {
    "id": 4626,
@@ -6837,7 +6974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-01",
-   "gross_price": 29698
+   "gross_price": 29698,
+   "dealer_fee": 0
   },
   {
    "id": 4627,
@@ -6886,7 +7024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-05",
-   "gross_price": 16955.29
+   "gross_price": 16955.29,
+   "dealer_fee": 0
   },
   {
    "id": 4629,
@@ -6935,7 +7074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 21130.2
+   "gross_price": 21130.2,
+   "dealer_fee": 0
   },
   {
    "id": 4630,
@@ -6984,7 +7124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 26169.8
+   "gross_price": 26169.8,
+   "dealer_fee": 0
   },
   {
    "id": 4631,
@@ -7033,7 +7174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-26",
-   "gross_price": 22153.6
+   "gross_price": 22153.6,
+   "dealer_fee": 0
   },
   {
    "id": 4632,
@@ -7082,7 +7224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 89551.8
+   "gross_price": 89551.8,
+   "dealer_fee": 0
   },
   {
    "id": 4633,
@@ -7131,7 +7274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-06",
-   "gross_price": 27864
+   "gross_price": 27864,
+   "dealer_fee": 0
   },
   {
    "id": 4634,
@@ -7180,7 +7324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 42780
+   "gross_price": 42780,
+   "dealer_fee": 0
   },
   {
    "id": 4635,
@@ -7229,7 +7374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 54670
+   "gross_price": 54670,
+   "dealer_fee": 0
   },
   {
    "id": 4636,
@@ -7278,7 +7424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-02",
-   "gross_price": 33049.8
+   "gross_price": 33049.8,
+   "dealer_fee": 0
   },
   {
    "id": 4637,
@@ -7327,7 +7474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 25292.6
+   "gross_price": 25292.6,
+   "dealer_fee": 0
   },
   {
    "id": 4638,
@@ -7376,7 +7524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 19412
+   "gross_price": 19412,
+   "dealer_fee": 0
   },
   {
    "id": 4639,
@@ -7425,7 +7574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 80062.4
+   "gross_price": 80062.4,
+   "dealer_fee": 0
   },
   {
    "id": 4640,
@@ -7474,7 +7624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 29808
+   "gross_price": 29808,
+   "dealer_fee": 0
   },
   {
    "id": 4641,
@@ -7523,7 +7674,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 36799.4
+   "gross_price": 36799.4,
+   "dealer_fee": 0
   },
   {
    "id": 4642,
@@ -7572,7 +7724,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-20",
-   "gross_price": 64326.4
+   "gross_price": 64326.4,
+   "dealer_fee": 0
   },
   {
    "id": 4643,
@@ -7621,7 +7774,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-27",
-   "gross_price": 30147.3
+   "gross_price": 30147.3,
+   "dealer_fee": 0
   },
   {
    "id": 4644,
@@ -7670,7 +7824,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-03",
-   "gross_price": 48955.5
+   "gross_price": 48955.5,
+   "dealer_fee": 0
   },
   {
    "id": 4645,
@@ -7719,7 +7874,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 25456
+   "gross_price": 25456,
+   "dealer_fee": 0
   },
   {
    "id": 4646,
@@ -7768,7 +7924,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-28",
-   "gross_price": 45796.8
+   "gross_price": 45796.8,
+   "dealer_fee": 0
   },
   {
    "id": 4647,
@@ -7817,7 +7974,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-28",
-   "gross_price": 57017
+   "gross_price": 57017,
+   "dealer_fee": 0
   },
   {
    "id": 4648,
@@ -7866,7 +8024,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 32103.07
+   "gross_price": 32103.07,
+   "dealer_fee": 0
   },
   {
    "id": 4649,
@@ -7915,7 +8074,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-10",
-   "gross_price": 56166
+   "gross_price": 56166,
+   "dealer_fee": 0
   },
   {
    "id": 4650,
@@ -7964,7 +8124,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-28",
-   "gross_price": 22356
+   "gross_price": 22356,
+   "dealer_fee": 0
   },
   {
    "id": 4651,
@@ -8013,7 +8174,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 24148.8
+   "gross_price": 24148.8,
+   "dealer_fee": 0
   },
   {
    "id": 4652,
@@ -8062,7 +8224,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 59818.73
+   "gross_price": 59818.73,
+   "dealer_fee": 18238.73
   },
   {
    "id": 4653,
@@ -8111,7 +8274,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 20810.4
+   "gross_price": 20810.4,
+   "dealer_fee": 0
   },
   {
    "id": 4654,
@@ -8160,7 +8324,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-28",
-   "gross_price": 17484
+   "gross_price": 17484,
+   "dealer_fee": 0
   },
   {
    "id": 4655,
@@ -8209,7 +8374,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-31",
-   "gross_price": 27646
+   "gross_price": 27646,
+   "dealer_fee": 0
   },
   {
    "id": 4656,
@@ -8258,7 +8424,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-29",
-   "gross_price": 39465.9
+   "gross_price": 39465.9,
+   "dealer_fee": 0
   },
   {
    "id": 4657,
@@ -8307,7 +8474,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-09-02",
-   "gross_price": 38804.42
+   "gross_price": 38804.42,
+   "dealer_fee": 0
   },
   {
    "id": 4658,
@@ -8356,7 +8524,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 43534.4
+   "gross_price": 43534.4,
+   "dealer_fee": 0
   },
   {
    "id": 4659,
@@ -8405,7 +8574,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "2026-08-28",
-   "gross_price": 25686.4
+   "gross_price": 25686.4,
+   "dealer_fee": 0
   },
   {
    "id": 4919,
@@ -8454,7 +8624,8 @@
    "field_survey_scheduled": "",
    "field_survey_complete": "",
    "m1a_approved": "",
-   "gross_price": 17155
+   "gross_price": 17155,
+   "dealer_fee": 0
   },
   {
    "ct_s2r": null,
