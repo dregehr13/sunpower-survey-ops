@@ -1637,7 +1637,7 @@ Chart.defaults.font.family = "'Archivo',-apple-system,BlinkMacSystemFont,'Segoe 
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, grossValue,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2724,6 +2724,8 @@ const TIP={
   rsCycle:'Resurvey Requested → Resurvey Complete, in calendar days. The part of the cost this team controls directly.',
   rsOpenDays:'Calendar days since the resurvey was requested, for one still open. Amber from 7 days, red past the point 90% of past resurveys had already resolved by.',
   wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now.',
+  wipRevenue:'Sum of Opportunity: Gross Price across the open WIP queue shown above — revenue still sitting with Site Survey, not yet moved through.',
+  perfRevenue:'Sum of Opportunity: Gross Price across the completed surveys in view — revenue Site Survey has moved through in the current filter/date range.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
@@ -4287,6 +4289,10 @@ function renderPerformance(){
         <div class="srail-val">${src.length.toLocaleString()}<span class="srail-sub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</span></div>
       </div>
       <div class="srail-cell">
+        <div class="klabel">Revenue surveyed${kinfo(TIP.perfRevenue)}</div>
+        <div class="srail-val">$${Math.round(grossValue(src)).toLocaleString()}</div>
+      </div>
+      <div class="srail-cell">
         <div class="klabel">Avg total${kinfo(TIP.cycle)}</div>
         <div class="srail-val ${kclsAvg(avgT)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
       </div>
@@ -5042,18 +5048,6 @@ function toggleWipUnscheduled(keys){
   ks.forEach(k=>allOn?wipQsSel.delete(k):wipQsSel.add(k));
   renderAgingWIP();
 }
-// The rail's aging cell selects the age bands at or above its threshold, so the
-// number and the filter cannot disagree: the cell counts projectAge >=
-// PA_MINS[WIP_OVER_BANDS[0]] and the click selects exactly those bands. Moving
-// the threshold means moving this list to another band boundary — a cell
-// reading "over 20 days" would have no band to select and would filter to
-// something other than what it counted.
-const WIP_OVER_BANDS=[2,3,4,5];   // 15–30, 30–60, 60–90, >90
-function toggleWipOverAge(){
-  const allOn=WIP_OVER_BANDS.every(i=>wipAgeSel.has(i));
-  WIP_OVER_BANDS.forEach(i=>allOn?wipAgeSel.delete(i):wipAgeSel.add(i));
-  renderAgingWIP();
-}
 function clearWipFilters(){ wipAgeSel.clear(); wipQsSel.clear(); renderAgingWIP(); }
 function renderAgingWIP(){
   const fbEl=document.getElementById('fb-wip');
@@ -5161,13 +5155,9 @@ function renderAgingWIP(){
   // chip directly below. Avg age describes the whole queue instead.
   const railAges=allWip.map(r=>r.daysOpen).filter(x=>x>=0);
   const avgAge=railAges.length?Math.round(railAges.reduce((a,b)=>a+b,0)/railAges.length*10)/10:null;
-  // Project age, the same clock the age bar runs on — not Days Open in SS.
-  // The two answer different questions and the bar directly below this rail is
-  // the one a reader will check the number against. The threshold is read off
-  // the band table rather than written twice, so the count and the filter the
-  // cell applies are the same set of rows by construction.
-  const OVER_MIN=PA_MINS[WIP_OVER_BANDS[0]];
-  const railOverAge=allWip.filter(r=>r.projectAge!=null&&r.projectAge>=OVER_MIN).length;
+  // Revenue still sitting in the open queue shown above — same population as
+  // Open now, so the two read off the same set of rows by construction.
+  const wipRevenue=grossValue(allWip);
   const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(qStat(r).key)).length;
   // The whole dim-filtered queue split into its two halves — not lens-scoped,
   // so the "Open resurveys" cell and the All-view subtitle read the same
@@ -5313,7 +5303,6 @@ function renderAgingWIP(){
         // Three filter cells. Each mirrors a control that already exists below
         // — the age bands, the Unscheduled bracket, the view toggle — so the
         // rail is a shortcut into the queue rather than a fourth vocabulary.
-        const overOn=WIP_OVER_BANDS.every(i=>wipAgeSel.has(i));
         // Only the unscheduled statuses that actually have rows, which is the
         // same list the bracket under the status bar drives — and the list
         // line 3958 prunes wipQsSel down to. Testing all of QS_UNSCHED meant
@@ -5332,8 +5321,10 @@ function renderAgingWIP(){
         <div class="klabel">${label}${tip}<span class="rail-cue"></span></div>
         <div class="srail-val"${color?` style="color:${color};"`:''}>${val}</div>
       </div>`;
-        return cell(overOn,'toggleWipOverAge()','Over '+OVER_MIN+' days',kinfo(TIP.projAge),railOverAge,
-                    railOverAge?'var(--amber)':'var(--text)','Filter the queue to surveys '+OVER_MIN+' days old and over')
+        return `<div class="srail-cell">
+        <div class="klabel">WIP revenue${kinfo(TIP.wipRevenue)}</div>
+        <div class="srail-val">$${Math.round(wipRevenue).toLocaleString()}</div>
+      </div>`
           +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
                     'Filter the queue to everything with no booking')
           +cell(rsOn,`setWipView('${rsOn?'initial':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,

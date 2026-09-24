@@ -1,49 +1,49 @@
 {
  "fixture": {
-  "rows": 150,
-  "asOf": "2026-08-03"
+  "rows": 175,
+  "asOf": "2026-09-24"
  },
  "scope": {
-  "rawRows": 150,
-  "inScope": 144,
-  "droppedByScope": 6,
-  "complete": 118,
-  "wip": 26,
-  "reopenedForResurvey": 5,
-  "withResurveySig": 23,
-  "blankRegion": 22
+  "rawRows": 175,
+  "inScope": 151,
+  "droppedByScope": 24,
+  "complete": 146,
+  "wip": 5,
+  "reopenedForResurvey": 1,
+  "withResurveySig": 40,
+  "blankRegion": 13
  },
  "cycle": {
-  "count": 118,
-  "avg": 2.92,
-  "med": 1,
-  "p75": 2,
-  "p90": 4
+  "count": 146,
+  "avg": 5.06,
+  "med": 3,
+  "p75": 7,
+  "p90": 11
  },
  "age": {
-  "hasRepGrace": 129,
-  "noRepGrace": 15,
-  "inGraceNow": 1,
+  "hasRepGrace": 132,
+  "noRepGrace": 19,
+  "inGraceNow": 2,
   "ssDaysOpen": {
-   "avg": 3,
-   "med": 4,
+   "avg": 1.4,
+   "med": 0,
    "max": 4
   },
   "projectAge": {
-   "avg": 3.92,
-   "med": 5,
+   "avg": 1.8,
+   "med": 1,
    "max": 5
   },
   "anchorsUnmovedByGrace": true
  },
  "ratio": {
-  "weekEnd": "2026-08-02",
-  "wipOnWeekEnd": 25,
-  "meanWipForWeek": 21.571,
-  "avgWeeklyCompletions": 20,
-  "forWeek": 1.08,
-  "live": 1.3,
-  "lastCompleteWeekEnd": "2026-08-02",
+  "weekEnd": "2026-09-20",
+  "wipOnWeekEnd": 1,
+  "meanWipForWeek": 1.143,
+  "avgWeeklyCompletions": 10.333,
+  "forWeek": 0.11,
+  "live": 0.48,
+  "lastCompleteWeekEnd": "2026-09-20",
   "bands": [
    "0.5:good",
    "1:good",
@@ -55,44 +55,45 @@
   ]
  },
  "flow": {
-  "rollingClearance4wk": 0.729,
+  "rollingClearance4wk": 1.455,
   "clearSeries": [
-   null,
-   null,
-   0.095,
-   0.729
+   0.524,
+   0.968,
+   1.07,
+   1.455
   ],
   "weeklyFloors": [
-   0,
-   0,
-   0,
-   14
+   25,
+   4,
+   3,
+   0
   ],
-  "clearanceAlarm": true
+  "clearanceAlarm": false
  },
  "projection": {
-  "recentCompletions": 53,
-  "showRateGlobal": 0.733,
+  "recentCompletions": 62,
+  "showRateGlobal": 0.982,
   "showRateResources": [
    "Radicl Services",
-   "Sales Rep"
+   "Sales Rep",
+   "SunPower Surveyor"
   ],
-  "segmentKeys": 15,
-  "expectedCtSample": 4.28,
+  "segmentKeys": 28,
+  "expectedCtSample": 7.63,
   "lookupFallback": 4,
   "businessDays": {
-   "elapsed": 1,
-   "remaining": 4
+   "elapsed": 4,
+   "remaining": 1
   },
-  "weekDaysRemaining": 6.5,
-  "weekdayShapeWed": 0.099,
+  "weekDaysRemaining": 3.5,
+  "weekdayShapeWed": 0.063,
   "projectWeek": {
-   "point": 23,
+   "point": 3,
    "completedSoFar": 0,
-   "pipeline": 9.9,
-   "intake": 6.7,
-   "wipOpen": 26,
-   "daysLeft": 6.5
+   "pipeline": 1.4,
+   "intake": 0.2,
+   "wipOpen": 5,
+   "daysLeft": 3.5
   }
  },
  "helpers": {

@@ -9,7 +9,7 @@ const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, grossValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
   bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
@@ -531,6 +531,12 @@ test('wipOn counts open initial WIP — a completion date is terminal', () => {
   assert.equal(wipOn(rows, '2026-07-05'), 1);
   assert.equal(wipOn(rows, '2026-07-02'), 4); // nothing completed yet
   assert.equal(wipOn(rows, '2026-06-30'), 0); // nothing started yet
+});
+
+test('grossValue sums gross_price, treating a missing price as 0', () => {
+  const rows = [{ gross_price: 15136 }, { gross_price: 18321.6 }, { gross_price: null }, {}];
+  assert.equal(grossValue(rows), 33457.6);
+  assert.equal(grossValue([]), 0);
 });
 
 test('meanWipForWeek averages the week, not the Sunday close', () => {
