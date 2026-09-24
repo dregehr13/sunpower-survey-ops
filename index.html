@@ -2727,6 +2727,7 @@ const TIP={
   wipInitial:'Open surveys that are not resurveys — the first visit to the property. The complement of Open resurveys: the two add up to Open now.',
   wipRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the open WIP queue shown above — revenue still sitting with Site Survey, not yet moved through.',
   perfRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the completed surveys in view — revenue Site Survey has moved through in the current filter/date range.',
+  curRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the Completions cell beside it — revenue that moved out of WIP this week.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
@@ -2753,6 +2754,19 @@ function projLink(r,cls=''){const name=esc(r.project||r.address||'—');const ur
 function fmtDate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}, ${y}`; }
 function fmtDateShort(s){ if(!s) return ''; const [y,m,d]=s.split('-'); const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(m)-1]} ${parseInt(d)}`; }
 function fmtWeekLabel(w){ return fmtDateShort(w.week)+' – '+fmtDateShort(w.weekEnd); }
+// Compact currency for the stat rail — a bare $ format runs $75,000–$150,000,000
+// across the surfaces that show it (a single week vs. Performance's all-time
+// total), and a full-precision string that long overflows a rail cell into its
+// neighbor at anything narrower than a wide desktop. K/M keeps every value
+// inside its cell at every width; the exact figure still shows on hover.
+function fmtRevenue(n){
+  if(n==null) return '—';
+  const sign=n<0?'-':'', abs=Math.abs(n);
+  if(abs>=1e6) return sign+'$'+(abs/1e6).toFixed(1)+'M';
+  if(abs>=1e3) return sign+'$'+(abs/1e3).toFixed(1)+'K';
+  return sign+'$'+Math.round(abs).toLocaleString();
+}
+function fmtRevenueExact(n){ return n==null?'—':'$'+Math.round(n).toLocaleString(); }
 function weekOf(ds){ if(!ds) return ''; const [y,mo,d]=ds.split('-').map(Number); const dt=new Date(y,mo-1,d); const mon=new Date(dt); mon.setDate(dt.getDate()-dt.getDay()+(dt.getDay()===0?-6:1)); return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; }
 function toast(msg){ const e=document.getElementById('toast'); e.textContent=msg; e.classList.add('on'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('on'),3400); }
 
@@ -3503,6 +3517,10 @@ function renderLastWeek(){
       <div class="srail-val">${src.length}<span class="srail-sub">${lwDead?lwDead+' since canceled':[...new Set(src.map(r=>r.region).filter(Boolean))].length+' regions'}</span></div>
     </div>
     <div class="srail-cell">
+      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(src))+'.')}</div>
+      <div class="srail-val">${fmtRevenue(revenueValue(src))}</div>
+    </div>
+    <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
       <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
     </div>
@@ -3748,6 +3766,10 @@ function renderThisWeek(){
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openDrill('This Week Completions','By day',_thisWeekSrc,{mode:'byDate'})")}>
       <div class="klabel">Completed so far${kinfo(TIP.complete)}</div>
       <div class="srail-val">${completedTW.length}<span class="srail-sub">${twDead?twDead+' since canceled':'through today'}</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(completedTW))+'.')}</div>
+      <div class="srail-val">${fmtRevenue(revenueValue(completedTW))}</div>
     </div>
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openProjModal()")}>
       <div class="klabel">Projected total${kinfo(projTip)}</div>
@@ -4290,8 +4312,8 @@ function renderPerformance(){
         <div class="srail-val">${src.length.toLocaleString()}<span class="srail-sub">${[...new Set(src.map(r=>r.region).filter(Boolean))].length} regions</span></div>
       </div>
       <div class="srail-cell">
-        <div class="klabel">Revenue surveyed${kinfo(TIP.perfRevenue)}</div>
-        <div class="srail-val">$${Math.round(revenueValue(src)).toLocaleString()}</div>
+        <div class="klabel">Revenue surveyed${kinfo(TIP.perfRevenue+' Exact: '+fmtRevenueExact(revenueValue(src))+'.')}</div>
+        <div class="srail-val">${fmtRevenue(revenueValue(src))}</div>
       </div>
       <div class="srail-cell">
         <div class="klabel">Avg total${kinfo(TIP.cycle)}</div>
@@ -5323,8 +5345,8 @@ function renderAgingWIP(){
         <div class="srail-val"${color?` style="color:${color};"`:''}>${val}</div>
       </div>`;
         return `<div class="srail-cell">
-        <div class="klabel">WIP revenue${kinfo(TIP.wipRevenue)}</div>
-        <div class="srail-val">$${Math.round(wipRevenue).toLocaleString()}</div>
+        <div class="klabel">WIP revenue${kinfo(TIP.wipRevenue+' Exact: '+fmtRevenueExact(wipRevenue)+'.')}</div>
+        <div class="srail-val">${fmtRevenue(wipRevenue)}</div>
       </div>`
           +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
                     'Filter the queue to everything with no booking')
