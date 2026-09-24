@@ -9,7 +9,7 @@ const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
-  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, grossValue,
+  wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
   bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
 } = OpsMetrics;
@@ -533,10 +533,15 @@ test('wipOn counts open initial WIP — a completion date is terminal', () => {
   assert.equal(wipOn(rows, '2026-06-30'), 0); // nothing started yet
 });
 
-test('grossValue sums gross_price, treating a missing price as 0', () => {
-  const rows = [{ gross_price: 15136 }, { gross_price: 18321.6 }, { gross_price: null }, {}];
-  assert.equal(grossValue(rows), 33457.6);
-  assert.equal(grossValue([]), 0);
+test('revenueValue sums gross_price minus dealer_fee, treating missing values as 0', () => {
+  const rows = [
+    { gross_price: 15136, dealer_fee: 0 },
+    { gross_price: 21436.8, dealer_fee: 976.54 },
+    { gross_price: null, dealer_fee: null },
+    {},
+  ];
+  assert.ok(Math.abs(revenueValue(rows) - 35596.26) < 1e-6);
+  assert.equal(revenueValue([]), 0);
 });
 
 test('meanWipForWeek averages the week, not the Sunday close', () => {
