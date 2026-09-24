@@ -3517,10 +3517,6 @@ function renderLastWeek(){
       <div class="srail-val">${src.length}<span class="srail-sub">${lwDead?lwDead+' since canceled':[...new Set(src.map(r=>r.region).filter(Boolean))].length+' regions'}</span></div>
     </div>
     <div class="srail-cell">
-      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(src))+'.')}</div>
-      <div class="srail-val">${fmtRevenue(revenueValue(src))}</div>
-    </div>
-    <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
       <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
     </div>
@@ -3531,6 +3527,10 @@ function renderLastWeek(){
     <div class="srail-cell${_curD.lwMiss.length?' rail-d':''}" ${_curD.lwMiss.length?'role="button" tabindex="0" '+drillAttrs(`drillCur('lwMiss','Missed target · last week','${_curD.lwMiss.length} of ${tots.length} took longer than ${S.targetAvg}d',{sort:'days'})`):''}>
       <div class="klabel">On target &le;${S.targetAvg}d${kinfo(TIP.onTarget())}</div>
       <div class="srail-val ${onTgt==null?'':(onTgt>=75?'kg-c':onTgt>=50?'ka-c':'kr-c')}">${onTgt!=null?onTgt+'%':'—'}<span class="srail-sub">${tots.length} with data</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(src))+'.')}</div>
+      <div class="srail-val">${fmtRevenue(revenueValue(src))}</div>
     </div>
     ${_rsWeekCells(lw.from,lw.to,'lw')}`;
   const TYPE_COLORS=resColorMap('-fill');
@@ -3767,10 +3767,6 @@ function renderThisWeek(){
       <div class="klabel">Completed so far${kinfo(TIP.complete)}</div>
       <div class="srail-val">${completedTW.length}<span class="srail-sub">${twDead?twDead+' since canceled':'through today'}</span></div>
     </div>
-    <div class="srail-cell">
-      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(completedTW))+'.')}</div>
-      <div class="srail-val">${fmtRevenue(revenueValue(completedTW))}</div>
-    </div>
     <div class="srail-cell rail-d" role="button" tabindex="0" ${drillAttrs("openProjModal()")}>
       <div class="klabel">Projected total${kinfo(projTip)}</div>
       <div class="srail-val">${daysRem>0?'~'+projTotal:String(projTotal)}<span class="srail-sub">${daysRem>0&&proj.recentMed!=null?('usually ±'+proj.recentMed):(daysRem>0?wip+' open':'week complete')}</span></div>
@@ -3782,6 +3778,10 @@ function renderThisWeek(){
     <div class="srail-cell">
       <div class="klabel">Avg cycle${kinfo(TIP.cycle)}</div>
       <div class="srail-val ${eks(avgT,S.targetAvg)}">${avgT!=null?avgT.toFixed(1)+'d':'—'}<span class="srail-sub">target ${S.targetAvg}d</span></div>
+    </div>
+    <div class="srail-cell">
+      <div class="klabel">Revenue${kinfo(TIP.curRevenue+' Exact: '+fmtRevenueExact(revenueValue(completedTW))+'.')}</div>
+      <div class="srail-val">${fmtRevenue(revenueValue(completedTW))}</div>
     </div>
     ${_rsWeekCells(tw.from,tw.to,'tw')}`;
 
