@@ -10067,7 +10067,12 @@ function parseImport(content){
   const parsed=allRows.slice(1).map((row,i)=>{
     const cells=Array.from(row.querySelectorAll('td')).map(c=>c.textContent.trim());
     const r={id:i,ct_s2r:null,ct_r2s:null,ct_total:null};
-    FIELDS.filter(f=>!f.computed).forEach(f=>{ r[f.key]=colIdx[f.key]!==undefined?(f.type==='date'?cleanDate(cells[colIdx[f.key]]):cells[colIdx[f.key]]||''):''; });
+    FIELDS.filter(f=>!f.computed).forEach(f=>{
+      const raw=colIdx[f.key]!==undefined?cells[colIdx[f.key]]:undefined;
+      if(f.type==='date') r[f.key]=raw!==undefined?cleanDate(raw):'';
+      else if(f.type==='number') r[f.key]=raw===undefined||raw===''?null:Number(raw);
+      else r[f.key]=raw||'';
+    });
     // Keep rows with blank Sales Region (parse-sf.js does too) — dropping them
     // silently undercounts completions vs Chelsea's report
     if(!r.project&&!r.contact) return null; // fully empty row
