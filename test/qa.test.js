@@ -354,3 +354,37 @@ test('the likely-to-review list skips reps and anything scheduled after today', 
 test('Start over asks before discarding an unsaved review', () => {
   assert.ok(/function qaStartOver\(\) \{\s*\n\s*if \(qaRun && !qaRun\.saved && !confirm\(/.test(pageSrc));
 });
+
+test('the photo zoom moves with the arrow keys', () => {
+  assert.ok(/function qaZoomStep\(d\)/.test(pageSrc));
+  assert.ok(/e\.key === 'ArrowRight' \|\| e\.key === 'ArrowLeft'/.test(pageSrc));
+});
+
+test('a Good or Bad call on a flagged item settles it: Good passes, Bad becomes a miss', () => {
+  const F = [{ id: 'roof_pitch', status: 'verify', severity: 'hard', detail: 'odd pitch' }, { id: 'dead_front', status: 'pass', verify: true, severity: 'hard', detail: '' }];
+  const src = pageSrc.match(/const qaIsFlagged[\s\S]*?\nconst qaFlagKey[^\n]*\n/)[0] + pageSrc.match(/function qaFindings\(\) \{[\s\S]*?\n\}\n/)[0];
+  const run = (decisions) => new Function('qaRun', src + 'return qaFindings();')({ R: { findings: F }, decisions, items: [], verdicts: {} });
+  const key = f => f.id + '|' + (f.detail || f.note || '');
+  const out = run({ [key(F[0])]: 'bad', [key(F[1])]: 'ok' });
+  assert.equal(out[0].status, 'miss'); assert.equal(out[0].severity, 'hard');
+  assert.equal(out[1].status, 'pass'); assert.ok(!out[1].verify);
+  assert.equal(run({})[0].status, 'verify');
+});
+
+test('the project ID is matched from the report address, and an unclear match is offered as a pick', () => {
+  const rows = [
+    { project: '2754BROT', address: '2754 Rue Sans Famille Raleigh, NC 27607' },
+    { project: '2754SMIT', address: '2754 Oak Street Durham, NC 27701' },
+    { project: '88ABCD', address: '88 Elm Drive Salem, OR 97301' }, { project: '88ABCD-1', address: '88 Elm Dr Salem, OR 97301' },
+  ];
+  const src = pageSrc.slice(pageSrc.indexOf('const QA_STREET_SKIP'), pageSrc.indexOf('// Fill the project ID from the report'));
+  const find = new Function('allRows', 'isOpenQueue', src + 'return qaFindProjects;')(rows, () => false);
+  assert.deepEqual(find('2754 Rue Sans Famille, Raleigh, NC 27607'), ['2754BROT']);
+  assert.deepEqual(find('88 Elm Drive, Salem, OR 97301').sort(), ['88ABCD', '88ABCD-1']);
+  assert.deepEqual(find('2754 Nowhere Road, Raleigh, NC 27607'), []);
+});
+
+test('the project box is highlighted, not explained, while it is empty', () => {
+  assert.ok(/qaNeedsProject = \(\) => !!qaRun/.test(pageSrc));
+  assert.ok(!/Required to save/.test(pageSrc));
+});

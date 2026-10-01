@@ -196,3 +196,11 @@ textarea.qa-in.short{min-height:54px;}
 .qa-lk-a{font-size:11px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .qa-lk-m{font-size:10px;color:var(--faint);}
 .qa-tplbar{margin-bottom:10px;}
+
+.qa-decide{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex:none;}
+.qa-decide button{font:inherit;font-size:11px;padding:3px 12px;border:0;background:var(--surface);color:var(--muted);cursor:pointer;transition:background .15s,color .15s;}
+.qa-decide button+button{border-left:1px solid var(--border);}
+.qa-decide button:hover{background:var(--bg);color:var(--text);}
+.qa-decide button.ok.on{background:var(--green-bg);color:var(--green);font-weight:600;}
+.qa-decide button.bad.on{background:var(--red-bg);color:var(--red);font-weight:600;}
+.qa-in.needs{border-color:var(--amber);background:var(--amber-bg);}
