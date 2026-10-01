@@ -82,19 +82,18 @@ timestamps; the pack is only for pixels. Radicl's Drive folder is not yet seen.
 `qa/page.js` + `qa/page.css`, loaded by index.html; it inherits the sidebar,
 tokens and shared classes (`.sec`, `.srail`, `.fbar`, `.tbl`, `.pill`) so it reads
 as part of the app. Three views:
-- **Review** — type the project ID (checked against Salesforce: address,
-  status, resource), drop the report PDF and, for Site Capture, the photo
-  export. Reads the PDF in the browser (pdf.js from cdnjs); nothing is uploaded.
-  Findings by group (Missing · Template gaps · Look at · Passed), the key-photo
-  check (each photo marked Readable / Not usable; "Not usable" becomes a hard
-  miss), and the Salesforce hand-off: the six fields with a Copy button each,
-  an editable summary, and an override reason when passing with an override.
-- **Log** — every saved review, with the review number per account, a By
-  account lens, search, Export (JSON/CSV) and Import. A report already reviewed
-  is caught by its SHA-256.
-- **Templates** — per template, the changes needed (what to add or fix, the
-  Enphase and resurvey evidence, how many saved reviews hit it) with Copy change
-  list.
+- **Review** — one compact intake card (SunPower survey / Radicl survey toggle,
+  project ID, report, photo export or Drive link), then **what we check** (the
+  current checklist, `OpsQA.checklist`, with what the template cannot capture
+  tagged "not in template") until a report is loaded. With a report, five steps:
+  **Findings → Photos → Report → Summary → Status & save**, a slim strip of
+  counts above them. Reads the PDF in the browser (pdf.js from cdnjs); nothing
+  is uploaded
+- **Log** — every saved review, the review number per account, a By account
+  lens, search, Export (JSON/CSV) and Import. A report already reviewed (by
+  anyone) is caught by its SHA-256
+- **Templates** — per template, the changes needed and how many saved reviews
+  hit each, with Copy change list
 
 Things not to undo:
 - **Password, not login** (Doug's call): the same `prompt()` and `ops_auth`
@@ -157,6 +156,33 @@ vercel integration add neon          # provisions the database; injects DATABASE
 vercel env add QA_USERS production      # {"<password>":"<name>", ...}, one per person
 git push                             # deploy
 ```
+
+### The review flow (2026-10-01, Doug's list)
+Things not to undo:
+- **Findings default to All** (first chip). Rows are two columns, check and what
+  we found; no "why it matters" and no template-fix line (both were removed on
+  purpose: the check says what it says, and the Templates view holds the fixes).
+  The chip is **Not in template**, not "template gaps": it means the template has
+  no field for it, so no survey on it can have it
+- **Photos show a few per check, on purpose**: the ones that decide the checks (a
+  report carries 250+). "Showing 7 of 249" says so, and "+ N more" on a check
+  opens the rest. Quality is measured on each photo cut from the report: size
+  (long edge under `QA_LOW_RES`, 1000px) and sharpness (Laplacian variance under
+  `QA_SOFT_BELOW`, 40). When most are small or several are soft and there is no
+  export, the page recommends adding it. The sharpness threshold was set from
+  real photos and artificially blurred copies; refine it on real bad photos
+- **The report opens in front of you** (`qaViewPdf`, blob URL in an iframe at the
+  page that raised a question). The PDF is not stored, so it is available only
+  during the review, not from a saved record
+- **Project ID is required to save**, here and on the server
+- **The Radicl "Drive link" is a reference only**: it is saved with the review and
+  opens the folder. Nothing in the app can read a Drive folder (that needs Google
+  API credentials and a folder shared with them), so Radicl photos still come
+  from the report, which carries them at 810x1080 or better
+- **Two functions once shared a name** (`qaRefresh`, for the status buttons and the
+  Log's Refresh button), so the later one silently replaced the first and the
+  status buttons did nothing. A test now fails on any duplicate top-level function
+  name in the page
 
 ## Not built yet
 

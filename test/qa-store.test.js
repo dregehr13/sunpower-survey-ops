@@ -76,6 +76,15 @@ test('a deleted review leaves the list but its number is never reused', async ()
   assert.equal((await save(db)).id, 'QA-2321LOPE-3');
 });
 
+test('a Radicl photo folder link is kept, and only a Drive link is accepted', async () => {
+  const db = await fresh();
+  const link = 'https://drive.google.com/drive/folders/1oARphFZ9aJkC1imYTjY_G8831pBWuCbx';
+  assert.equal((await save(db, { photoLink: link })).photoLink, link);
+  assert.equal((await save(db)).photoLink, '');
+  assert.match(Store.validate(review({ photoLink: 'https://evil.example/x' })).error, /Drive/);
+  assert.match(Store.validate(review({ photoLink: 'javascript:alert(1)' })).error, /Drive/);
+});
+
 test('the customer address is never stored', async () => {
   const db = await fresh();
   await save(db);

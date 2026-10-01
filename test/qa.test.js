@@ -162,6 +162,26 @@ test('Radicl: an inside panel is checked, and an outside panel the surveyor said
   assert.equal(get(R, 'main_breaker_rating').status, 'pass');
 });
 
+test('the checklist names every check once and marks what the template cannot capture', () => {
+  const sc = QA.checklist('sitecapture-v13'), rd = QA.checklist('radicl-v2');
+  assert.ok(sc.length > 20 && rd.length > 20);
+  assert.equal(new Set(sc.map(c => c.id)).size, sc.length);
+  const by = (l, id) => l.find(c => c.id === id);
+  assert.equal(by(sc, 'roof_overhang').inTemplate, false);          // Site Capture has no overhang field
+  assert.equal(by(rd, 'roof_overhang').inTemplate, true);
+  assert.equal(by(sc, 'main_breaker_rating').inTemplate, false);
+  assert.equal(by(rd, 'main_breaker_rating').inTemplate, true);
+  assert.equal(by(rd, 'plane_count').inTemplate, false);
+  assert.ok(by(sc, 'photos_deleted') && !by(rd, 'photos_deleted'));  // vendor-specific checks only appear for their vendor
+});
+
+test('keyPhotos shows a few per check unless asked for all', () => {
+  const ph = (ref, instance, n) => Array.from({ length: n }, () => ({ ref, instance, page: 1 }));
+  const S = survey('radicl', { photos: ph('Breaker Box — Dead Front', 'in1', 21) });
+  assert.equal(QA.keyPhotos(S, null).length, 2);
+  assert.equal(QA.keyPhotos(S, null, { all: true }).length, 21);
+});
+
 test('Radicl: a pitch with no number points at the pitch photos', () => {
   const S = survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: 'Unable to access roof', instance: null }], photos: [{ ref: 'Roof Pitch', instance: null }, { ref: 'Roof Pitch / Slope', instance: null }] });
   const f = get(QA.evaluate(S, specs), 'roof_pitch');
@@ -289,4 +309,22 @@ test('the QA page keeps reports in the browser: nothing posts a file anywhere', 
 test('qa/page.css redefines no colour token', () => {
   const css = readFileSync(new URL('../qa/page.css', import.meta.url), 'utf8');
   assert.equal(/--[a-z-]+\s*:/.test(css), false);
+});
+
+test('no function in the QA page is defined twice (a later one silently replaces the first)', () => {
+  const seen = new Map();
+  for (const m of pageSrc.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)) seen.set(m[1], (seen.get(m[1]) || 0) + 1);
+  const dups = [...seen].filter(([, n]) => n > 1).map(([f]) => f);
+  assert.deepEqual(dups, []);
+});
+
+test('the five review steps exist and each has a renderer', () => {
+  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaReportStep', '_qaSummaryStep', '_qaStatusStep', '_qaChecklist', '_qaIntake']) {
+    assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), fn);
+  }
+  assert.ok(/const QA_STEPS = \['Findings', 'Photos', 'Report', 'Summary', 'Status & save'\]/.test(pageSrc));
+});
+
+test('a review cannot be saved without a project ID', () => {
+  assert.ok(/if \(!qaProj\.trim\(\)\) return 'Add the project ID before saving';/.test(pageSrc));
 });
