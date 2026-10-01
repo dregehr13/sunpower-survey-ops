@@ -318,11 +318,33 @@ test('no function in the QA page is defined twice (a later one silently replaces
   assert.deepEqual(dups, []);
 });
 
-test('the five review steps exist and each has a renderer', () => {
-  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaReportStep', '_qaSummaryStep', '_qaStatusStep', '_qaChecklist', '_qaIntake']) {
+test('the three review steps exist and each has a renderer', () => {
+  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaVerdictStep', '_qaChecklist', '_qaIntake']) {
     assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), fn);
   }
-  assert.ok(/const QA_STEPS = \['Findings', 'Photos', 'Report', 'Summary', 'Status & save'\]/.test(pageSrc));
+  assert.ok(/const QA_STEPS = \['Summary of findings', 'Photo review', 'Verdict'\]/.test(pageSrc));
+  assert.ok(!/_qaReportStep|_qaSummaryStep|_qaStatusStep\b/.test(pageSrc));
+});
+
+test('the verdict step carries the summary help text and marks the suggested status', () => {
+  assert.ok(pageSrc.includes('Written from the findings. Edit here and then paste into Salesforce.'));
+  assert.ok(!/Looks like \$\{/.test(pageSrc));
+  assert.ok(/rec === s && run\.status !== s \? ' rec'/.test(pageSrc));
+});
+
+test('every example photo exists, and each key photo category has its example and description', () => {
+  const fs = require('node:fs');
+  const refs = pageSrc.match(/const QA_REFS = \{[\s\S]*?\n\};/)[0];
+  const cats = [...QA.KEY_PHOTOS.map(k => k.id)];
+  for (const c of cats) assert.ok(new RegExp('\\n  ' + c + ': \\{ what:').test(refs), c);
+  for (const m of refs.matchAll(/src: '([^']+)'/g)) assert.ok(fs.existsSync(new URL('../' + m[1], import.meta.url).pathname), m[1]);
+});
+
+test('photo marks are good or not usable, and the saved review keeps which photos were marked', () => {
+  assert.ok(/qaMarkBtns\(i, v\)/.test(pageSrc) && /qaVerdict\(\$\{i\},'ok'\)/.test(pageSrc) && /qaVerdict\(\$\{i\},'bad'\)/.test(pageSrc));
+  assert.ok(/function qaPhotoRec\(\)/.test(pageSrc) && /marks: marks/.test(pageSrc) || /marks,\s*\}|, marks \}/.test(pageSrc));
+  assert.ok(/function qaPrintRecord\(id\)/.test(pageSrc) && /w\.print\(\)/.test(pageSrc));
+  assert.ok(/not individually reviewed/.test(pageSrc));
 });
 
 test('a review cannot be saved without a project ID', () => {

@@ -1,6 +1,23 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8731"], "port": 8731 }
+    {
+      "name": "static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8731"
+      ],
+      "port": 8731
+    },
+    {
+      "name": "qa",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/qa-dev-server.mjs"
+      ],
+      "port": 8732
+    }
   ]
 }

@@ -224,14 +224,14 @@ function qaProjectCommit() {
   qaReeval(true);
   if (!run.edited) run.summary = qaSummaryText();
   _qaStrip();
-  if (run.step === 4) { const f = document.getElementById('qa-project-field'); if (f && qaProj.trim()) f.remove(); _qaSaveBtn(); }
-  else if ([0, 3].includes(run.step)) _qaStep();
+  if (run.step === 2) { const f = document.getElementById('qa-project-field'); if (f && qaProj.trim()) f.remove(); _qaSaveBtn(); }
+  else if (run.step === 0) _qaStep();
 }
 function qaSetReviewer(v) {
   if (qaMode === 'shared' && qaUser) return;
   qaReviewer = v;
   try { localStorage.setItem(QA_USER_KEY, v); } catch (e) {}
-  if (qaRun) { _qaSaveBtn(); if (qaRun.step === 4) _qaStep(); }
+  if (qaRun) { _qaSaveBtn(); if (qaRun.step === 2) _qaStep(); }
 }
 
 // ── Reading a report ───────────────────────────────
@@ -244,9 +244,11 @@ function qaDropState(kind) {
   const busy = qaBusy[kind], err = qaErr[kind];
   const have = kind === 'pdf' ? qaRun && qaRun.file : qaPack;
   const cls = busy ? ' busy' : err ? ' err' : have ? ' loaded' : '';
-  const title = kind === 'pdf' ? 'Drop the report (PDF)' : 'Drop the photo export (zip)';
-  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? qaRun.S.meta.pages + ' pages' : have.note)) : (kind === 'pdf' ? 'Stays in this browser' : 'Optional · original quality'));
-  return { cls, title: have && !busy && !err ? (kind === 'pdf' ? 'Report loaded' : 'Photos loaded') : title, sub };
+  // Before a report is loaded the report drop is the page's one call to action.
+  const big = kind === 'pdf' && !qaRun;
+  const title = big ? 'Upload a survey report to begin a review' : kind === 'pdf' ? 'Drop the report (PDF)' : 'Full-resolution photos (optional)';
+  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? qaRun.S.meta.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose. It stays in this browser.' : kind === 'pdf' ? 'Stays in this browser' : 'Drop the photo export (zip)'));
+  return { cls: cls + (big ? ' big' : ''), title: have && !busy && !err ? (kind === 'pdf' ? 'Report loaded' : 'Photos loaded') : title, sub };
 }
 function qaDropHtml(kind) {
   const d = qaDropState(kind), id = 'qa-file-' + kind;
@@ -275,8 +277,14 @@ function qaSetCheckVendor(v) {
 }
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
-  const clear = !qaRun && (qaProj.trim() || qaPack) ? `<button class="qa-link qa-clear" onclick="qaStartOver()">Start over</button>` : '';
-  host.innerHTML = `${clear}<div class="qa-form">
+  // No report yet: one field. A job picked from the list rides along and the report
+  // is matched to it; otherwise the report names the project itself.
+  if (!qaRun) {
+    host.innerHTML = `<div class="qa-hero"><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div>
+      ${qaProj.trim() ? `<div class="qa-picked">Starting with <b>${qaH(qaProj.trim().toUpperCase())}</b> <button class="qa-link" onclick="qaStartOver()">Clear</button></div><div id="qa-match">${qaMatchHtml()}</div>` : '<div id="qa-match"></div>'}</div>`;
+    return;
+  }
+  host.innerHTML = `<div class="qa-form">
     <div class="qa-field"><span class="klabel">Project ID</span>
       <input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"${qaRun && qaRun.saved ? ' readonly title="The project is fixed once a review is saved"' : ''}
         oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" aria-label="Project ID">
@@ -332,10 +340,11 @@ function qaFindings() {
   const run = qaRun; if (!run) return [];
   // A call made on a flagged item settles it: Good passes it, Bad is a miss at the check's own weight.
   const out = run.R.findings.map(f => {
-    const d = run.decisions[qaFlagKey(f)];
-    if (!d || !qaIsFlagged(f)) return f;
-    return d === 'ok' ? Object.assign({}, f, { status: 'pass', verify: false })
-      : Object.assign({}, f, { status: 'miss', verify: false, detail: 'Judged not good from the report' + (f.detail ? ': ' + f.detail : '') });
+    if (!qaIsFlagged(f)) return f;
+    const k = qaFlagKey(f), d = run.decisions[k];
+    if (!d) return Object.assign({}, f, { fk: k });
+    return d === 'ok' ? Object.assign({}, f, { status: 'pass', verify: false, fk: k, decision: d })
+      : Object.assign({}, f, { status: 'miss', verify: false, fk: k, decision: d, detail: 'Judged not good from the report' + (f.detail ? ': ' + f.detail : '') });
   });
   for (const it of run.items || []) {
     if (run.verdicts[qaPhotoKey(it)] === 'bad') {
@@ -366,7 +375,7 @@ function qaRefresh() {
   const run = qaRun; if (!run) return;
   if (!run.edited) run.summary = qaSummaryText();
   _qaStrip();
-  if ([0, 3, 4].includes(run.step)) _qaStep();
+  if ([0, 2].includes(run.step)) _qaStep();
 }
 
 // ── Photo pack (the export from Site Capture) ──────
@@ -399,27 +408,29 @@ function qaCrossCheckPack() {
 
 // ── Photos: from the export when there is one, otherwise cut out of the PDF ──
 const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 0, soft: false });
+// The checks that read each photo category. A photo needs a person's eye when one of
+// its category's checks could not be settled from the report, or the image looks soft.
+const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave' };
+const qaNeedsLook = it => !!(qaRun && (it.soft || qaRun.R.findings.some(f => qaIsFlagged(f) && QA_FIND_CAT[f.id] === it.id)));
+// Categories keep their order; inside one, the photos that need a look come first.
+function qaOrderItems() {
+  const run = qaRun, cats = []; run.items.forEach(it => { if (!cats.includes(it.id)) cats.push(it.id); });
+  const rank = it => cats.indexOf(it.id) * 2 + (qaNeedsLook(it) ? 0 : 1);
+  run.items = run.items.map((it, n) => [it, n]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+}
 async function qaLoadPhotos() {
   const run = qaRun; if (!run) return;
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   run.photosSettled = false;
   run.allKey = OpsQA.keyPhotos(run.S, run.spec, { all: true });
-  run.items = OpsQA.keyPhotos(run.S, run.spec).map(qaWrapPhoto);
-  run.expand = {};
-  if (run.step === 1) _qaStep();
+  run.items = run.allKey.map(qaWrapPhoto);
+  qaOrderItems();
+  if (run.step < 2) _qaStep();
   await qaFetchImages(run.items);
   run.photosSettled = true;
+  qaOrderItems();                                  // soft photos are known now
+  if (run.step < 2) _qaStep();
   _qaPhotoMeta();
-}
-async function qaMore(id) {
-  const run = qaRun; if (!run) return;
-  const have = new Set(run.items.map(qaPhotoKey));
-  const add = run.allKey.filter(i => i.id === id && !have.has(qaPhotoKey(i))).map(qaWrapPhoto);
-  run.items.push(...add); run.expand[id] = true;
-  run.photosSettled = false;
-  if (run.step === 1) _qaStep();
-  await qaFetchImages(add);
-  run.photosSettled = true; _qaPhotoMeta();
 }
 async function qaFetchImages(items) {
   const run = qaRun; if (!run) return;
@@ -496,8 +507,9 @@ function qaAddPack() { const f = document.getElementById('qa-file-zip'); if (f) 
 
 function qaPhotoSub() {
   const its = qaRun.items || [], loaded = its.filter(x => x.url).length;
-  const shown = `Showing ${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.`;
-  return loaded < its.length && !qaRun.photosSettled ? `Loading photos ${loaded} of ${its.length}…` : `${shown} Only mark the ones you can't use. “+ more” opens the rest of a check.`;
+  const need = its.filter(qaNeedsLook).length;
+  return loaded < its.length && !qaRun.photosSettled ? `Loading photos ${loaded} of ${its.length}…`
+    : `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${need ? ` ${need} with a yellow border need your call: ✓ if it does the job, ✕ if it doesn't.` : ' Mark one ✓ or ✕ only if you checked it.'}`;
 }
 function _qaPhotoMeta() {
   const sub = document.getElementById('qa-ph-sub'); if (sub) sub.textContent = qaPhotoSub();
@@ -510,6 +522,7 @@ function qaPhotoReady(it) {
     box.classList.remove('empty'); box.setAttribute('role', 'button'); box.tabIndex = 0; box.setAttribute('onclick', `qaZoom(${i})`);
     box.innerHTML = `<img src="${it.url}" alt="${qaH(it.label)}">`;
     card.querySelector('.qa-ph-cap').innerHTML = qaPhotoCap(it);
+    card.classList.toggle('need', !qaRun.verdicts[qaPhotoKey(it)] && qaNeedsLook(it));
   }
   _qaPhotoMeta();
 }
@@ -603,7 +616,7 @@ function _qaLikely() {
   const sel = qaProj.trim().toUpperCase();
   const reviews = p => log.filter(x => x.project === p.toUpperCase()).length;
   host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Likely to review</div>
-    <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one to start.</div></div></div>
+    <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
     <div class="qa-likely">${list.map(x => {
       const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase();
       return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
@@ -651,8 +664,8 @@ function qaStatusPill(s) {
   return `<span class="pill ${cls}">${qaH(s || 'Not started')}</span>`;
 }
 
-// ── The flow: findings, photos, report, summary, status ──
-const QA_STEPS = ['Findings', 'Photos', 'Report', 'Summary', 'Status & save'];
+// ── The flow: summary of findings, photo review, verdict ──
+const QA_STEPS = ['Summary of findings', 'Photo review', 'Verdict'];
 function _qaFlow() {
   const host = document.getElementById('qa-run'); if (!host) return;
   host.innerHTML = `<div class="sec qa-flow"><div class="qa-steps" id="qa-steps"></div><div class="qa-strip" id="qa-strip"></div><div class="qa-body" id="qa-step"></div><div class="qa-nav" id="qa-nav"></div></div>`;
@@ -685,43 +698,80 @@ function _qaStrip() {
 }
 function _qaStep() {
   const host = document.getElementById('qa-step'); if (!host || !qaRun) return;
-  [_qaFindings, _qaPhotosStep, _qaReportStep, _qaSummaryStep, _qaStatusStep][qaRun.step](host);
+  [_qaFindings, _qaPhotosStep, _qaVerdictStep][qaRun.step](host);
 }
 
 // Step 1 — what we found
 const QA_GROUPS = [
   { k: 'all', l: 'All', sw: '', f: x => x.status !== 'na' },
-  { k: 'miss', l: 'Missing', sw: 'hard', f: x => x.status === 'miss' },
+  { k: 'miss', l: 'Missing', sw: 'hard', f: x => x.status === 'miss' && !x.fk },
   { k: 'gap', l: 'Not in template', sw: 'gap', f: x => x.status === 'gap', note: 'The template has no field for these, so no survey on it can have them. They are not the surveyor’s miss.' },
-  { k: 'verify', l: 'Look at', sw: 'look', f: x => x.status === 'verify' || (x.status === 'pass' && x.verify) },
-  { k: 'pass', l: 'Passed', sw: 'pass', f: x => x.status === 'pass' && !x.verify },
+  { k: 'verify', l: 'Look at', sw: 'look', f: x => !!x.fk || x.status === 'verify' || (x.status === 'pass' && x.verify) },
+  { k: 'pass', l: 'Passed', sw: 'pass', f: x => x.status === 'pass' && !x.verify && !x.fk },
 ];
 function qaSortFindings(a, b) {
-  const rank = f => f.status === 'miss' ? (f.severity === 'hard' ? 0 : 1) : f.status === 'gap' ? 2 : f.status === 'verify' || f.verify ? 3 : 4;
+  const rank = f => f.fk ? 3 : f.status === 'miss' ? (f.severity === 'hard' ? 0 : 1) : f.status === 'gap' ? 2 : f.status === 'verify' || f.verify ? 3 : 4;
   return rank(a) - rank(b) || String(a.area).localeCompare(String(b.area));
 }
 function qaSetFlag(k) { qaFlag = k; _qaStep(); }
+// A photo or two the check was judged from, so a Pass can be seen as well as read.
+function qaEvidence(f) {
+  const cat = QA_FIND_CAT[f.id], its = qaRun.items; if (!cat || !its) return '';
+  const idx = []; its.forEach((it, i) => { if (it.id === cat && it.url && idx.length < 3) idx.push(i); });
+  return idx.length ? `<span class="qa-ev">${idx.map(i => `<button class="qa-ev-th" title="Open this photo" onclick="qaZoom(${i},true)"><img src="${its[i].url}" alt=""></button>`).join('')}</span>` : '';
+}
 function _qaFindings(host) {
-  const all = qaFindings();
+  const all = qaFindings(), run = qaRun;
   const counts = {}; QA_GROUPS.forEach(g => { counts[g.k] = all.filter(g.f).length; });
   if (!qaFlag || (qaFlag !== 'all' && !counts[qaFlag])) qaFlag = 'all';
   const g = QA_GROUPS.find(x => x.k === qaFlag);
   const rows = all.filter(g.f).sort(qaSortFindings);
-  const S = qaRun.S, det = qaRun.det;
+  const S = run.S, det = run.det;
+  const flagged = run.R.findings.filter(qaIsFlagged), left = flagged.filter(f => !run.decisions[qaFlagKey(f)]).length;
   const sub = [QA_TEMPLATE_NAMES[det.specId] || det.reason, S.meta.surveyor, S.meta.assessmentDate || S.meta.surveyDate].filter(Boolean).join(' · ');
   host.innerHTML = `<div class="qa-lede">${qaH(sub)}</div>
+    ${flagged.length ? `<div class="qa-lede" id="qa-rep-sub">${qaReportSub(flagged.length, left)}</div>` : ''}
     <div class="qa-chips">${QA_GROUPS.filter(x => x.k === 'all' || counts[x.k]).map(x => `<button class="qa-chip${qaFlag === x.k ? ' on' : ''}" aria-pressed="${qaFlag === x.k}" onclick="qaSetFlag('${x.k}')">${x.sw ? `<span class="qa-sw ${x.sw}"></span>` : ''}${x.l}<span class="qa-chip-n">${counts[x.k]}</span></button>`).join('')}</div>
     ${g.note ? `<div class="qa-lede">${qaH(g.note)}</div>` : ''}
     ${rows.length ? rows.map(f => {
       const sw = f.status === 'miss' ? (f.severity === 'hard' ? 'hard' : 'warn') : f.status === 'gap' ? 'gap' : f.status === 'verify' || f.verify ? 'look' : 'pass';
-      const pass = f.status === 'pass' && !f.verify;
-      return `<div class="qa-find${pass ? ' pass' : ''}"><span class="qa-sw ${sw}"></span>
+      const pass = f.status === 'pass' && !f.verify && !f.fk;
+      const fi = f.fk ? flagged.findIndex(x => qaFlagKey(x) === f.fk) : -1;
+      return `<div class="qa-find${pass ? ' pass' : ''}${fi >= 0 ? ' flag' : ''}" data-fi="${fi}"><span class="qa-sw ${sw}"></span>
         <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}</div>
-        <div class="d">${qaH(f.detail || (pass ? 'OK' : ''))}${f.page ? ` <button class="qa-link" onclick="qaViewPdf(${f.page})">p.${f.page}</button>` : ''}</div></div>`;
+        <div class="d">${qaH(f.detail || f.note || (pass ? 'OK' : ''))}${f.page ? ` <button class="qa-link" onclick="qaViewPdf(${f.page})">p.${f.page}</button>` : ''}${qaEvidence(f)}</div>
+        ${fi >= 0 ? qaDecideHtml(fi, run.decisions[f.fk]) : ''}</div>`;
     }).join('') : `<div class="qa-empty">Nothing here.</div>`}`;
+}
+const qaReportSub = (n, left) => left ? `${qaPlural(n, 'item')} to check against the report or photos. ${left} left to decide: ✓ if it is fine, ✕ if it is a miss.` : 'Every flagged item is decided. Anything marked ✕ is now a miss.';
+const qaDecideHtml = (i, d) => `<span class="qa-decide"><button class="ok${d === 'ok' ? ' on' : ''}" title="Good" aria-label="Good" onclick="qaDecide(${i},'ok')">✓</button><button class="bad${d === 'bad' ? ' on' : ''}" title="Bad" aria-label="Bad" onclick="qaDecide(${i},'bad')">✕</button></span>`;
+function qaDecide(i, v) {
+  const run = qaRun, f = run.R.findings.filter(qaIsFlagged)[i]; if (!f) return;
+  const k = qaFlagKey(f);
+  if (run.decisions[k] === v) delete run.decisions[k]; else run.decisions[k] = v;
+  if (!run.edited) run.summary = qaSummaryText();
+  const y = window.scrollY; _qaStep(); window.scrollTo(0, y);
+  _qaStrip(); _qaSaveBtn();
 }
 
 // Step 2 — the photos
+// A good example of each category, from Doug's Site Survey Guide (and, where the guide has
+// none, a clear photo from a past report). They sit beside the survey's photo in the zoom.
+const QA_REFS = {
+  breaker: { what: 'A picture of the main breaker, with its rating readable.', why: 'The main breaker is the largest breaker and shuts off the whole panel. Its rating tells Design how the solar system ties into the grid.',
+    imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Panel with the dead front on' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
+  label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
+    imgs: [{ src: 'qa/ref/label.jpg', cap: 'Panel label open and readable' }] },
+  meter: { what: 'A close-up of the meter face showing the numbers.', why: 'The plan reviewer matches the meter number to the utility bill so net metering lands on the right home. It also shows which utility owns the meter. Colorado Springs Utilities also needs a photo with a tape from the ground to the center of the glass.',
+    imgs: [{ src: 'qa/ref/meter.jpg', cap: 'Meter number readable' }] },
+  framing: { what: 'A measurement of the rafter size, and of how far apart the rafters are. The tape or the Measure app has to be in the shot.', why: 'The structural engineer needs 2x4, 2x6 or 2x8, and the spacing (12, 18, 24, 30 or 36 inches).',
+    imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Rafter spacing with a tape' }] },
+  pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', from: 'a past Radicl report',
+    imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Pitch readable in the photo' }] },
+  eave: { what: 'The overhang measured with a tape against the eave.', why: 'Design needs the overhang to place the array against the roof edge. The tape and the numbers have to be in frame.', from: 'a past Radicl report',
+    imgs: [{ src: 'qa/ref/eave.jpg', cap: 'Overhang measured with a tape' }] },
+};
+const qaMarkBtns = (i, v) => `<button class="ok${v === 'ok' ? ' on' : ''}" title="Good" aria-label="Mark good" onclick="qaVerdict(${i},'ok')">✓</button><button class="bad${v === 'bad' ? ' on' : ''}" title="Not usable" aria-label="Mark not usable" onclick="qaVerdict(${i},'bad')">✕</button>`;
 function _qaPhotosStep(host) {
   const items = qaRun.items;
   if (!items) { host.innerHTML = '<div class="qa-empty">Loading…</div>'; return; }
@@ -729,18 +779,15 @@ function _qaPhotosStep(host) {
   const groups = [];
   items.forEach((it, i) => { let g = groups.find(x => x.id === it.id); if (!g) groups.push(g = { id: it.id, label: it.label, items: [] }); g.items.push({ it, i }); });
   host.innerHTML = `<div class="qa-lede" id="qa-ph-sub">${qaPhotoSub()}</div><div id="qa-quality">${qaQualityHtml()}</div>
-    ${groups.map(g => {
-      const total = qaRun.allKey.filter(x => x.id === g.id).length, more = total - g.items.length;
-      return `<div class="qa-photos-h">${qaH(g.label)}</div><div class="qa-photos">
+    ${groups.map(g => `<div class="qa-photos-h"><span>${qaH(g.label)}</span>${QA_REFS[g.id] ? `<button class="qa-link" onclick="qaZoom(${g.items[0].i},true)">Compare with an example</button>` : ''}</div>
+      <div class="qa-photos">
         ${g.items.map(({ it, i }) => {
           const v = qaRun.verdicts[qaPhotoKey(it)];
-          return `<div class="qa-ph${v ? ' ' + v : ''}" data-i="${i}">
+          return `<div class="qa-ph${v ? ' ' + v : qaNeedsLook(it) ? ' need' : ''}" data-i="${i}">
             <div class="qa-ph-img${it.url ? '' : ' empty'}"${it.url ? ` onclick="qaZoom(${i})" role="button" tabindex="0"` : ''}>${it.url ? `<img src="${it.url}" alt="${qaH(it.label)}">` : 'Loading…'}</div>
             <div class="qa-ph-cap">${qaPhotoCap(it)}</div>
-            <div class="qa-ph-btns"><button class="bad${v === 'bad' ? ' on' : ''}" onclick="qaVerdict(${i},'bad')">${v === 'bad' ? 'Marked not usable' : 'Not usable'}</button></div></div>`;
-        }).join('')}
-        ${more > 0 ? `<button class="qa-more" onclick="qaMore('${g.id}')">+ ${more} more</button>` : ''}</div>`;
-    }).join('')}`;
+            <div class="qa-ph-btns">${qaMarkBtns(i, v)}</div></div>`;
+        }).join('')}</div>`).join('')}`;
 }
 function qaVerdict(i, v) {
   const it = qaRun.items[i], k = qaPhotoKey(it);
@@ -748,22 +795,38 @@ function qaVerdict(i, v) {
   // Update the card in place: rebuilding the grid reloads every image.
   const cur = qaRun.verdicts[k], card = document.querySelector(`.qa-ph[data-i="${i}"]`);
   if (card) {
-    card.className = 'qa-ph' + (cur ? ' ' + cur : '');
+    card.className = 'qa-ph' + (cur ? ' ' + cur : qaNeedsLook(it) ? ' need' : '');
     card.querySelectorAll('.qa-ph-btns button').forEach(b => b.classList.toggle('on', b.classList.contains(cur)));
   }
+  const mk = document.getElementById('qa-lb-marks'); if (mk && qaZoomAt === i) mk.innerHTML = qaMarkBtns(i, cur);
   if (!qaRun.edited) qaRun.summary = qaSummaryText();
   _qaStrip(); _qaSaveBtn();
 }
-let qaZoomAt = -1;
-function qaZoom(i) {
-  const items = qaRun && qaRun.items, it = items && items[i]; if (!it || !it.url) return;
+let qaZoomAt = -1, qaRefOn = true, qaRefAt = 0;
+function qaZoom(i, withExample) {
+  const run = qaRun, items = run && run.items, it = items && items[i]; if (!it || !it.url) return;
+  if (qaZoomAt >= 0 && items[qaZoomAt] && items[qaZoomAt].id !== it.id) qaRefAt = 0;
+  if (withExample) { qaRefOn = true; qaRefAt = 0; }
   qaZoomAt = i;
   let lb = document.getElementById('qa-lb');
   if (!lb) { lb = document.createElement('div'); lb.id = 'qa-lb'; lb.className = 'qa-lb hidden'; lb.onclick = qaZoomClose; document.body.appendChild(lb); }
   const ready = items.map((x, k) => x.url ? k : -1).filter(k => k >= 0), pos = ready.indexOf(i);
-  lb.innerHTML = `<img src="${it.url}" alt=""><div class="qa-lb-cap">${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}${ready.length > 1 ? ` · ${pos + 1} of ${ready.length} · ← → to move` : ''}</div>`;
+  const ref = QA_REFS[it.id], show = !!ref && qaRefOn, img = ref && ref.imgs[Math.min(qaRefAt, ref.imgs.length - 1)];
+  lb.innerHTML = `<div class="qa-lb-main" onclick="event.stopPropagation()">
+    <div class="qa-lb-panes${show ? ' two' : ''}">
+      <figure><img src="${it.url}" alt=""><figcaption>This survey · ${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}</figcaption></figure>
+      ${show ? `<figure class="ref"><img src="${qaH(img.src)}" alt=""><figcaption>Example · ${qaH(img.cap)}${ref.from ? ` (from ${qaH(ref.from)})` : ''}</figcaption>
+        ${ref.imgs.length > 1 ? `<div class="qa-lb-tabs">${ref.imgs.map((x, k) => `<button class="${k === Math.min(qaRefAt, ref.imgs.length - 1) ? 'on' : ''}" onclick="qaRefPick(${k})">${k + 1}</button>`).join('')}</div>` : ''}
+        <div class="qa-lb-desc"><b>What it should show</b>${qaH(ref.what)}<b>Why Design needs it</b>${qaH(ref.why)}</div></figure>` : ''}
+    </div>
+    <div class="qa-lb-bar"><span class="qa-decide qa-ph-btns" id="qa-lb-marks">${qaMarkBtns(i, run.verdicts[qaPhotoKey(it)])}</span>
+      ${ref ? `<button class="qa-lb-btn" onclick="qaRefToggle()">${qaRefOn ? 'Hide example' : 'Show example'}</button>` : ''}
+      <span class="qa-lb-hint">${ready.length > 1 ? `${pos + 1} of ${ready.length} · ← → to move · ` : ''}Esc to close</span>
+      <button class="qa-lb-btn" onclick="qaZoomClose()">Close</button></div></div>`;
   lb.classList.remove('hidden');
 }
+function qaRefToggle() { qaRefOn = !qaRefOn; qaZoom(qaZoomAt); }
+function qaRefPick(k) { qaRefAt = k; qaZoom(qaZoomAt); }
 // Step to the next or previous photo that has loaded, wrapping at the ends.
 function qaZoomStep(d) {
   const items = qaRun && qaRun.items; if (!items || qaZoomAt < 0) return;
@@ -790,39 +853,9 @@ document.addEventListener('keydown', e => {
   if (lb && !lb.classList.contains('hidden') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); qaZoomStep(e.key === 'ArrowRight' ? 1 : -1); }
 });
 
-// Step 3 — anything the checks could not settle
-function _qaReportStep(host) {
-  const run = qaRun, flagged = run.R.findings.filter(qaIsFlagged);
-  const left = flagged.filter(f => !run.decisions[qaFlagKey(f)]).length;
-  host.innerHTML = `<div class="qa-lede" id="qa-rep-sub">${qaReportSub(flagged.length, left)}</div>
-    ${flagged.map((f, i) => `<div class="qa-flag-row" data-i="${i}"><span class="t">${qaH(f.title)}</span><span class="d">${qaH(f.detail || f.note || '')}</span>
-      <button class="qa-link" onclick="qaViewPdf(${f.page || 1})">${f.page ? 'Open page ' + f.page : 'Open report'}</button>${qaDecideHtml(i, run.decisions[qaFlagKey(f)])}</div>`).join('')}
-    <div class="qa-actions"><button class="qa-navbtn" onclick="qaViewPdf(1)">Open the full report</button></div>`;
-}
-const qaReportSub = (n, left) => !n ? 'Nothing to double-check. Open the report if you want to skim it.'
-  : left ? `${qaPlural(n, 'item')} to check against the report. ${left} left to decide.` : 'All decided. Anything marked Bad is now a miss.';
-const qaDecideHtml = (i, d) => `<span class="qa-decide"><button class="ok${d === 'ok' ? ' on' : ''}" onclick="qaDecide(${i},'ok')">Good</button><button class="bad${d === 'bad' ? ' on' : ''}" onclick="qaDecide(${i},'bad')">Bad</button></span>`;
-function qaDecide(i, v) {
-  const run = qaRun, flagged = run.R.findings.filter(qaIsFlagged), f = flagged[i]; if (!f) return;
-  const k = qaFlagKey(f);
-  if (run.decisions[k] === v) delete run.decisions[k]; else run.decisions[k] = v;
-  // Update the row in place so the report step keeps its place on the page.
-  const row = document.querySelector(`.qa-flag-row[data-i="${i}"] .qa-decide`);
-  if (row) row.outerHTML = qaDecideHtml(i, run.decisions[k]);
-  const sub = document.getElementById('qa-rep-sub'); if (sub) sub.textContent = qaReportSub(flagged.length, flagged.filter(x => !run.decisions[qaFlagKey(x)]).length);
-  if (!run.edited) run.summary = qaSummaryText();
-  _qaStrip(); _qaSaveBtn();
-}
-
-// Step 4 — the summary Salesforce receives
+// Step 3 — the verdict: the summary Salesforce receives, and the status
 function qaSetSummary(v) { qaRun.summary = v; qaRun.edited = true; const n = document.getElementById('qa-sum-n'); if (n) n.textContent = v.length + ' characters'; _qaSaveBtn(); }
 function qaResetSummary() { qaRun.edited = false; qaRun.summary = qaSummaryText(); _qaStep(); }
-function _qaSummaryStep(host) {
-  const run = qaRun;
-  host.innerHTML = `<div class="qa-lede">Written from the findings. Edit anything before it goes to Salesforce.${run.edited ? ' <button class="qa-link" onclick="qaResetSummary()">Reset to the written version</button>' : ''}</div>
-    <textarea class="qa-in" id="qa-summary" style="min-height:170px;" oninput="qaSetSummary(this.value)" aria-label="Summary">${qaH(run.summary)}</textarea>
-    <div class="qa-sfhint" id="qa-sum-n" style="margin-top:4px;">${run.summary.length} characters</div>`;
-}
 
 // Step 5 — the status, then save, then the Salesforce fields
 function qaToday() { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`; }
@@ -831,10 +864,16 @@ function qaRecordLink(id) { return location.origin + location.pathname + '#qa?r=
 function qaSetStatus(s) { qaRun.status = qaRun.status === s ? null : s; qaRefresh(); }
 function qaSetOverride(v) { qaRun.override = v; if (!qaRun.edited) qaRun.summary = qaSummaryText(); _qaSaveBtn(); }
 
+// The photos a person marked: the rest were not individually reviewed.
+function qaPhotoRec() {
+  const run = qaRun, its = run.items || [];
+  const marks = its.filter(it => run.verdicts[qaPhotoKey(it)]).map(it => ({ k: it.id, label: it.label, unit: it.unit || '', n: it.n, m: run.verdicts[qaPhotoKey(it)] }));
+  return { total: its.length, ok: marks.filter(x => x.m === 'ok').length, bad: marks.filter(x => x.m === 'bad').length, marks };
+}
 // What a saved review is compared with to tell whether there is anything to save.
 function qaSnap() {
   const run = qaRun; if (!run) return '';
-  return JSON.stringify([run.status, run.status === 'Passed with Override' ? run.override.trim() : '', run.summary,
+  return JSON.stringify([run.status, run.status === 'Passed with Override' ? run.override.trim() : '', run.summary, run.verdicts,
     qaFindings().filter(f => f.status !== 'na').map(f => [f.id, f.status, f.detail || ''])]);
 }
 function qaSaveBlock() {
@@ -853,20 +892,26 @@ function _qaSaveBtn() {
   b.textContent = qaRun.saved ? 'Save changes' : 'Save review';
   const h = document.getElementById('qa-save-why'); if (h) h.textContent = why || (qaRun.saved && !dirty ? 'Up to date' : '');
 }
-function _qaStatusStep(host) {
+function _qaVerdictStep(host) {
   const run = qaRun, o = qaOutcome(), id = qaRecordId();
-  const hardMiss = o.counts.missHard > 0;
-  const stBtn = s => `<button class="tgl-btn${run.status === s ? ' active' : ''}"${s === 'Passed' && hardMiss ? ' disabled style="opacity:.4;cursor:default;" title="There are hard misses, so use Passed with Override"' : ''} onclick="qaSetStatus('${s}')">${s}</button>`;
-  const hint = o.suggestedStatus === 'Needs review' ? 'Only warnings, so it\'s your call.' : `Looks like ${o.suggestedStatus}.`;
+  const hardMiss = o.counts.missHard > 0, rec = o.suggestedStatus;
+  const stBtn = s => `<button class="qa-stbtn${run.status === s ? ' on' : ''}${rec === s && run.status !== s ? ' rec' : ''}"${s === 'Passed' && hardMiss ? ' disabled title="There are hard misses, so use Passed with Override"' : ''} onclick="qaSetStatus('${s}')"><b>${s}</b>${rec === s ? '<span>Suggested by the checks</span>' : ''}</button>`;
   const row = (label, val, key, wide) => `<div class="qa-sfrow${wide ? ' wide' : ''}"><div class="klabel">${label}</div><div class="qa-sfval">${val}</div>${key ? `<button class="copy-btn" onclick="qaCopy('${key}',this)">Copy</button>` : ''}</div>`;
-  host.innerHTML = `
-    ${qaProj.trim() ? '' : `<div class="qa-field" id="qa-project-field" style="max-width:260px;margin-bottom:12px;"><span class="klabel">Project ID (required)</span>
-      <input class="qa-in needs" id="qa-project2" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" oninput="qaSetProject(this.value,true)" onchange="qaProjectCommit()" aria-label="Project ID"></div>`}
-    <div class="qa-status"><div class="toggle-group">${QA_SF_STATUSES.map(stBtn).join('')}</div><span class="qa-sfhint">${qaH(hint)}</span></div>
-    ${run.status === 'Passed with Override' ? `<textarea class="qa-in short" id="qa-override" placeholder="Why this passes despite the gap or miss" oninput="qaSetOverride(this.value)" aria-label="Override reason">${qaH(run.override)}</textarea>` : ''}
-    <div class="qa-actions"><button class="qa-primary" id="qa-save" onclick="qaSave()">${run.saved ? 'Save changes' : 'Save review'}</button><span class="qa-sfhint warn" id="qa-save-why"></span>
-      ${run.saved ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="fbtn" style="margin-left:auto;" onclick="qaCopyAll(this)">Copy all</button>` : ''}</div>
-    ${run.saved ? `<div class="qa-sf">
+  host.innerHTML = `<div class="qa-verdict">
+    <div class="qa-vleft"><div class="klabel">Summary</div>
+      <div class="qa-lede">Written from the findings. Edit here and then paste into Salesforce.${run.edited ? ' <button class="qa-link" onclick="qaResetSummary()">Reset to the written version</button>' : ''}</div>
+      <textarea class="qa-in" id="qa-summary" style="min-height:230px;" oninput="qaSetSummary(this.value)" aria-label="Summary">${qaH(run.summary)}</textarea>
+      <div class="qa-sfhint" id="qa-sum-n" style="margin-top:4px;">${run.summary.length} characters</div></div>
+    <div class="qa-vright">
+      ${qaProj.trim() ? '' : `<div class="qa-field" id="qa-project-field" style="margin-bottom:12px;"><span class="klabel">Project ID (required)</span>
+        <input class="qa-in needs" id="qa-project2" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" oninput="qaSetProject(this.value,true)" onchange="qaProjectCommit()" aria-label="Project ID"></div>`}
+      <div class="klabel">Status</div>
+      <div class="qa-stlist">${QA_SF_STATUSES.map(stBtn).join('')}</div>
+      ${run.status === 'Passed with Override' ? `<textarea class="qa-in short" id="qa-override" placeholder="Why this passes despite the gap or miss" oninput="qaSetOverride(this.value)" aria-label="Override reason">${qaH(run.override)}</textarea>` : ''}
+      <div class="qa-actions"><button class="qa-primary" id="qa-save" onclick="qaSave()">${run.saved ? 'Save changes' : 'Save review'}</button><span class="qa-sfhint warn" id="qa-save-why"></span></div>
+      ${run.saved ? `<div class="qa-actions"><span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="qa-link" onclick="qaPrintRecord('${qaH(run.saved)}')">Export PDF</button></div>` : ''}
+    </div></div>
+    ${run.saved ? `<div class="qa-actions" style="justify-content:flex-end;margin-bottom:0;"><button class="fbtn" onclick="qaCopyAll(this)">Copy all</button></div><div class="qa-sf">
       ${row('Site Survey QA Review Status', qaH(run.status), 'status')}
       ${row('Site Survey QA Review Date', qaH(run.savedRec ? run.savedRec.date : qaToday()), 'date')}
       ${row('Site Survey QA Review Source', 'Coordinator', 'source')}
@@ -910,7 +955,7 @@ async function qaSave() {
     // the customer's address is not sent: the task id finds the account in Salesforce
     sf: row ? { task_id: row.task_id || '', resource: row.resource || '', status: row.project_status || '' } : null,
     pack: qaPack && qaPack.check && !qaPack.check.skipped ? { name: qaPack.name, matched: qaPack.check.matched, folders: qaPack.check.folders } : null,
-    photos: { total: (run.items || []).length, bad: Object.values(run.verdicts).filter(v => v === 'bad').length },
+    photos: qaPhotoRec(),
     findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, title: f.title, detail: f.detail || '' })),
     newToSpec: (run.R.templateReport.newToSpec || []).slice(0, 25),
   };
@@ -941,7 +986,7 @@ async function qaUpdate() {
   const changes = {
     status: run.status, override: run.status === 'Passed with Override' ? run.override.trim() : '', summary: run.summary,
     counts: o.counts, suggested: o.suggestedStatus,
-    photos: { total: (run.items || []).length, bad: Object.values(run.verdicts).filter(v => v === 'bad').length },
+    photos: qaPhotoRec(),
     findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, title: f.title, detail: f.detail || '' })),
   };
   run.saving = true; _qaSaveBtn();
@@ -969,7 +1014,7 @@ async function qaApplyChanges(id, changes) {
   if (qaMode !== 'shared') qaPersist();
   return rec;
 }
-function _qaStatusStepRefresh() { if (qaRun.step === 4) _qaStep(); }
+function _qaStatusStepRefresh() { if (qaRun.step === 2) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
@@ -1066,6 +1111,41 @@ function _qaLogTable() {
   </tbody></table></div>
   <div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('qa-rev-tbl',this,'reviews')">Copy table</button></div>` : `<div class="note" style="padding:10px 0;">Nothing matches.</div>`;
 }
+// Which photos were marked, by name. Anything not listed was not individually reviewed.
+function qaMarksHtml(r) {
+  const ph = r.photos; if (!ph || !ph.total) return '';
+  const marks = ph.marks || [], good = marks.filter(x => x.m === 'ok'), bad = marks.filter(x => x.m === 'bad');
+  const name = x => `${qaH(x.label)}${x.unit ? ' · ' + qaH(x.unit) : ''} · photo ${x.n}`;
+  const none = !marks.length && !ph.bad && !ph.ok;
+  return `<div class="klabel" style="margin-top:12px;">Photos</div><div class="qa-mini">
+    ${none ? 'None marked.' : `${good.length || ph.ok ? `<span class="qa-mk ok">✓</span> ${ph.ok} good` : ''}${(good.length || ph.ok) && (bad.length || ph.bad) ? ' · ' : ''}${bad.length || ph.bad ? `<span class="qa-mk bad">✕</span> ${ph.bad} not usable` : ''}`}
+    ${marks.map(x => `<div><span class="qa-mk ${x.m}">${x.m === 'ok' ? '✓' : '✕'}</span> ${name(x)}</div>`).join('')}
+    <div class="qa-sfhint">${ph.total} key photos shown; the others were not individually reviewed.</div></div>`;
+}
+// A printable page for one review. The browser's print dialog saves it as a PDF.
+function qaPrintRecord(id) {
+  const r = qaLoad().find(x => x.id === id); if (!r) return;
+  const live = qaRun && qaRun.saved === id ? qaRun : null;     // thumbnails only while the review is open
+  const ph = r.photos || { marks: [] }, marks = ph.marks || [];
+  const thumb = x => { const it = live && (live.items || []).find(i => i.id === x.k && (i.unit || '') === (x.unit || '') && i.n === x.n); return it && it.url ? `<img src="${it.url}" alt="">` : ''; };
+  const line = f => `<li><b>${qaH(f.title)}</b>${f.detail ? ' — ' + qaH(f.detail) : ''}</li>`;
+  const misses = r.findings.filter(f => f.status === 'miss'), gaps = r.findings.filter(f => f.status === 'gap' && !f.standing);
+  const css = `body{font:13px/1.5 -apple-system,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:32px auto;max-width:760px;padding:0 20px}h1{font-size:20px;margin:0 0 2px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#666;margin:22px 0 6px;border-bottom:1px solid #ddd;padding-bottom:3px}.meta{color:#555;font-size:12px}pre{white-space:pre-wrap;font:inherit;background:#f6f5f2;padding:10px 12px;border-radius:6px}ul{margin:4px 0;padding-left:18px}.st{display:inline-block;font-weight:700;padding:2px 10px;border:1.5px solid #1a1a1a;border-radius:99px;font-size:12px}.mk{display:flex;gap:10px;align-items:center;margin:4px 0}.mk img{height:54px;border-radius:4px}.ok{color:#1d7a46;font-weight:700}.bad{color:#b3261e;font-weight:700}.fine{color:#777;font-size:11px;margin-top:6px}@media print{body{margin:0}}`;
+  const html = `<!doctype html><meta charset="utf-8"><title>${qaH(r.id)}</title><style>${css}</style>
+    <h1>Site Survey QA review · ${qaH(r.project)}</h1>
+    <div class="meta">${qaH(r.id)} · ${qaH(qaDate(r))} · reviewed by ${qaH(r.reviewer)}${r.surveyor ? ' · surveyor ' + qaH(r.surveyor) : ''} · ${qaH(QA_TEMPLATE_NAMES[r.template] || r.template || '')}</div>
+    <p><span class="st">${qaH(r.status)}</span>${r.override ? ` &nbsp; Override: ${qaH(r.override)}` : ''}</p>
+    <h2>Summary</h2><pre>${qaH(r.summary)}</pre>
+    <h2>Photos marked</h2>
+    ${marks.length ? marks.map(x => `<div class="mk"><span class="${x.m}">${x.m === 'ok' ? '✓ Good' : '✕ Not usable'}</span>${thumb(x)}<span>${qaH(x.label)}${x.unit ? ' · ' + qaH(x.unit) : ''} · photo ${x.n}</span></div>`).join('') : '<div>No photos were marked.</div>'}
+    <div class="fine">${ph.total ? `${ph.total} key photos were shown. Photos not listed were not individually reviewed.` : ''}</div>
+    <h2>${misses.length === 1 ? '1 miss' : misses.length + ' misses'}</h2>${misses.length ? `<ul>${misses.map(line).join('')}</ul>` : '<div>None.</div>'}
+    ${gaps.length ? `<h2>Not in the template</h2><ul>${gaps.map(line).join('')}</ul>` : ''}
+    <div class="fine">Report ${qaH(r.file.name)} · SHA-256 ${qaH(r.file.hash.slice(0, 16))}…</div>`;
+  const w = window.open('', '_blank'); if (!w) { toast('Allow pop-ups to export the PDF'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400);
+}
 function qaRecordDetail(r) {
   const misses = r.findings.filter(f => f.status === 'miss'), gaps = r.findings.filter(f => f.status === 'gap');
   const line = f => `<div>${f.severity === 'hard' ? '<span class="qa-sw hard"></span> ' : '<span class="qa-sw warn"></span> '}<b>${qaH(f.title)}</b> · ${qaH(f.detail)}</div>`;
@@ -1074,6 +1154,7 @@ function qaRecordDetail(r) {
       ${r.editedAt ? `<div class="qa-sfhint" style="margin-top:8px;">Edited by ${qaH(r.editedBy || 'someone')} on ${qaH(new Date(r.editedAt).toLocaleDateString('en-US'))}</div>` : ''}
       <div class="qa-actions"><button class="copy-btn" onclick="qaCopyRecord('${qaH(r.id)}','summary',this)">Copy summary</button>
         <button class="copy-btn" onclick="qaCopyRecord('${qaH(r.id)}','link',this)">Copy link</button>
+        <button class="copy-btn" onclick="qaPrintRecord('${qaH(r.id)}')">Export PDF</button>
         <button class="qa-link" style="margin-left:auto;" onclick="qaEditRecord('${qaH(r.id)}')">Edit</button>
         <button class="qa-link" style="color:var(--red);" onclick="qaDelete('${qaH(r.id)}')">Delete</button></div>`;
   return `<div class="qa-expand-grid" onclick="event.stopPropagation()">
@@ -1082,7 +1163,8 @@ function qaRecordDetail(r) {
         <b>${qaH(r.id)}</b> · ${qaH(r.source)}<br>
         Report: ${qaH(r.file.name)}<br>${r.reportLink || r.photoLink ? `Files: <a href="${qaH(r.reportLink || r.photoLink)}" target="_blank" rel="noopener">Drive ↗</a><br>` : ''}
         <span style="font-size:10px;">SHA-256 ${qaH(r.file.hash.slice(0, 16))}…</span><br>
-        Checks pointed to ${qaH(r.suggested)}${r.photos && r.photos.total ? (r.photos.bad ? ` · ${r.photos.bad} of ${r.photos.total} photos marked not usable` : '') : ''}${r.pack ? `<br>Photo export: ${r.pack.matched} of ${r.pack.folders} folders matched` : ''}</div>
+        Checks pointed to ${qaH(r.suggested)}${r.pack ? `<br>Photo export: ${r.pack.matched} of ${r.pack.folders} folders matched` : ''}</div>
+      ${qaMarksHtml(r)}
       <div class="klabel" style="margin-top:12px;">${qaPlural(misses.length, 'miss')} · ${qaPlural(gaps.filter(g => !g.standing).length, 'applied gap')}</div>
       <div class="qa-mini">${misses.slice(0, 10).map(line).join('') || 'No misses.'}${misses.length > 10 ? `<div>+${misses.length - 10} more</div>` : ''}</div></div>
   </div>`;

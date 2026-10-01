@@ -231,3 +231,12 @@ test('PUT /api/qa-log revises a review as the person the password names', async 
   assert.equal((await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-password': 'bad' }, body: {} }, env, db)).status, 401);
   assert.equal((await Store.handle({ method: 'PUT', query: { id: 'QA-X-1' }, headers: { 'x-qa-password': 'pwk' }, body: { changes: {} } }, env, db)).status, 404);
 });
+
+test('the photos a reviewer marked are kept with the review, and nothing else about a photo', async () => {
+  const db = await fresh();
+  const a = await save(db, { photos: { total: 9, ok: 1, bad: 1, marks: [{ k: 'label', label: 'Panel label', unit: 'Panel #1', n: 1, m: 'ok' }, { k: 'meter', label: 'Meter', unit: '', n: 1, m: 'bad', url: 'blob:x' }] } });
+  const got = (await Store.list(db)).find(r => r.id === a.id);
+  assert.equal(got.photos.marks.length, 2);
+  assert.deepEqual(got.photos.marks[0], { k: 'label', label: 'Panel label', unit: 'Panel #1', n: 1, m: 'ok' });
+  assert.ok(!('url' in got.photos.marks[1]));
+});

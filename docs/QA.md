@@ -217,3 +217,24 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
   /api/qa-log?id=` takes `{changes}`; project, number, reviewer and report are
   fixed, and `edited_by` / `edited_at` record who changed it. **Start over** sits in
   the review's strip (and as a link on the intake card before a report is loaded).
+
+### 2026-10-01 — three steps, example photos, marked photos
+- **The review is three steps**: Summary of findings (flagged items get ✓ / ✕
+  inline; a Pass shows up to three thumbnails of the photos it was judged from),
+  Photo review, Verdict (summary left, status right, the suggested status gets a
+  coloured border instead of "Looks like…").
+- **Photo review lists every key photo**, a row per category that scrolls
+  sideways. Photos that need a call come first with a yellow border until marked
+  ✓ (green) or ✕ (red): one whose category has an unresolved flagged check
+  (`QA_FIND_CAT` maps check id → category), or that looks soft. Nobody has to
+  mark the rest.
+- **Example photos** (`qa/ref/`, `QA_REFS` in page.js) sit beside the survey's
+  photo in the zoom, with what it should show and why Design needs it. Breaker,
+  label, meter and rafter size come from the Site Survey Guide; pitch and eave
+  come from a past Radicl report because the guide has none. Swap a file in
+  `qa/ref/` to change an example.
+- **A saved review records which photos were marked** (`photos.marks`: category,
+  panel, photo number, good or not usable). Everything else is "not individually
+  reviewed", and the review says so. **Export PDF** (Verdict step and History)
+  opens a print page; thumbnails appear only while the review is open, since no
+  photo is stored.
