@@ -186,3 +186,13 @@ textarea.qa-in.short{min-height:54px;}
   .qa-find .d{grid-column:2;}
   .qa-flag-row{flex-wrap:wrap;}
 }
+
+/* likely-to-review list */
+.qa-likely{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;}
+.qa-lk{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;font:inherit;color:var(--text);min-width:0;}
+.qa-lk:hover{border-color:var(--text);}
+.qa-lk.on{border-color:var(--text);background:var(--bg);box-shadow:inset 0 0 0 1px var(--text);}
+.qa-lk-p{font-size:12.5px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qa-lk-a{font-size:11px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qa-lk-m{font-size:10px;color:var(--faint);}
+.qa-tplbar{margin-bottom:10px;}

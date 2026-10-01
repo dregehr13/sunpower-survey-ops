@@ -89,7 +89,7 @@ as part of the app. Three views:
   **Findings → Photos → Report → Summary → Status & save**, a slim strip of
   counts above them. Reads the PDF in the browser (pdf.js from cdnjs); nothing
   is uploaded
-- **Log** — every saved review, the review number per account, a By account
+- **History** (was Log) — every saved review, the review number per account, a By account
   lens, search, Export (JSON/CSV) and Import. A report already reviewed (by
   anyone) is caught by its SHA-256
 - **Templates** — per template, the changes needed and how many saved reviews
@@ -190,3 +190,16 @@ Vision checks (legible breaker rating, readable label, tape visible,
 blur/duplicates) through the Claude API,
 Radicl's images folder (Drive), storing the reports themselves (a private bucket), and a real login. `evaluate` already marks
 `verify` items for a model to take.
+
+## 2026-10-01 round
+- Tabs are Review / Templates / History. The Reviewer is read-only once a
+  password names them; the bar shows the total review count, not "shared log".
+- **Likely to review** lists Radicl and SunPower surveys booked today or earlier
+  and still open in Salesforce (`isOpenQueue` + `wipSchedDate`, reps excluded).
+  Picking one fills the project ID and the survey type.
+- **Start over** discards an in-progress review (asks first if unsaved).
+- Templates shows one template at a time (SunPower / Radicl). The pre-Sept Radicl
+  template is gone from the page; the engine still reads old Radicl reports.
+- The import-a-log feature is gone from the page (the endpoint still accepts it).
+- Project IDs may carry Salesforce's suffix (`350VPITT - Battery Only`) or a dot.
+- Claude API layer, when built: a Settings toggle, off by default.

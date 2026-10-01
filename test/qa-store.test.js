@@ -191,3 +191,10 @@ test('password comparison is exact', () => {
   assert.equal(Store.passwordOk(undefined, 'x'), false);
   assert.equal(Store.passwordOk('open-sesame ', 'open-sesame'), false);
 });
+
+test('Salesforce project names with a suffix or a dot are accepted', async () => {
+  for (const p of ['350VPITT - Battery Only', '5460S.OR - Battery Only', '2639REES-1']) {
+    const v = Store.validate(review({ project: p }));
+    assert.ok(!v.error, p + ' ' + v.error);
+  }
+});

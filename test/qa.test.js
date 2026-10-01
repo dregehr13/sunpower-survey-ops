@@ -328,3 +328,29 @@ test('the five review steps exist and each has a renderer', () => {
 test('a review cannot be saved without a project ID', () => {
   assert.ok(/if \(!qaProj\.trim\(\)\) return 'Add the project ID before saving';/.test(pageSrc));
 });
+
+test('the tabs read Review, Templates, History, and the page has no import or shared-log wording', () => {
+  assert.ok(/btn\('review', 'Review'\)\}\$\{btn\('templates', 'Templates'\)\}\$\{btn\('log', 'History'\)/.test(pageSrc));
+  assert.ok(!/qaImport|Shared log|shared log</.test(pageSrc.replace(/^\s*\/\/.*$/gm, '')));
+});
+
+test('the reviewer is read-only once a password has named them', () => {
+  assert.ok(/qaMode === 'shared' && qaUser\s*\n?\s*\? /.test(pageSrc));
+});
+
+test('the likely-to-review list skips reps and anything scheduled after today', () => {
+  const ctx = { allRows: [
+    { project: 'A1', resource: 'Radicl Services', sched: '2000-01-01', scheduled: '2000-01-01' },
+    { project: 'B2', resource: 'Sales Rep', scheduled: '2000-01-01' },
+    { project: 'C3', resource: 'SunPower Surveyor', scheduled: '2999-01-01' },
+    { project: 'D4', resource: 'SunPower Surveyor', scheduled: '2000-01-01' },
+    { project: 'E5', resource: 'SunPower Surveyor', scheduled: '' },
+  ], isOpenQueue: () => true, wipSchedDate: r => r.scheduled };
+  const src = pageSrc.match(/function qaLikely\(\) \{[\s\S]*?\n\}\n/)[0];
+  const out = new Function(...Object.keys(ctx), src + 'return qaLikely();')(...Object.values(ctx));
+  assert.deepEqual(out.map(x => x.r.project).sort(), ['A1', 'D4']);
+});
+
+test('Start over asks before discarding an unsaved review', () => {
+  assert.ok(/function qaStartOver\(\) \{\s*\n\s*if \(qaRun && !qaRun\.saved && !confirm\(/.test(pageSrc));
+});

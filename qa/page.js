@@ -15,8 +15,8 @@ const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
 const QA_TEMPLATE_SHORT = { 'sitecapture-v13': 'Site Capture V.13', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
 const QA_TEMPLATE_NAMES = {
-  'sitecapture-v13': 'Site Capture · Site Survey Form V.13',
-  'radicl-v2': 'Radicl · September 2026 template',
+  'sitecapture-v13': 'SunPower · Site Capture form V.13',
+  'radicl-v2': 'Radicl · current template',
   'radicl-v1': 'Radicl · August 2026 template',
 };
 
@@ -26,7 +26,7 @@ let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaDrive = '';      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
-let qaPendingRecord = null;
+let qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
 const qaUrls = [];
 
 // The hash that opened the page names a record (#qa?r=QA-...). Captured at load,
@@ -77,7 +77,7 @@ function qaLoad() {
 function qaPersist() {
   if (qaMode === 'shared') return true;                       // the server already has it
   try { localStorage.setItem(QA_LOG_KEY, JSON.stringify(qaLog)); return true; }
-  catch (e) { toast('Could not save: browser storage is full or blocked'); return false; }
+  catch (e) { toast('Couldn\'t save. Browser storage is full or blocked'); return false; }
 }
 
 async function qaApi(method, query, body) {
@@ -103,7 +103,7 @@ function qaSync() {
     } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
     else {
       qaMode = 'local';
-      qaNote = r.status === 503 ? (r.body && r.body.detail) || 'The shared log is not set up on the server yet.'
+      qaNote = r.status === 503 ? (r.body && r.body.detail) || 'The review database isn\'t set up on the server yet.'
         : 'No server here, so reviews stay in this browser.';
       if (qaPw() !== QA_LOCAL_PASSWORD) { qaBounce('Wrong password'); return false; }
       qaLog = qaLocalLog();
@@ -115,7 +115,7 @@ function qaSync() {
 function qaAfterSync() {
   if (currentPage !== 'qa') return;
   if (qaMode === 'shared' && qaUser) _qaBar();        // the Reviewer is now known and locked
-  _qaConn(); _qaDup();
+  _qaConn(); _qaDup(); if (qaView === 'review' && !qaRun) _qaLikely();
   if (qaView === 'log') _qaLog();
   else if (qaView === 'templates') _qaTemplates();
 }
@@ -125,7 +125,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && cu
 function qaDepsLoad() {
   if (qaDeps) return qaDeps;
   qaDeps = (async () => {
-    const specs = await Promise.all(QA_SPECS.map(n => fetch('qa/specs/' + n + '.json').then(r => { if (!r.ok) throw new Error('Could not load the ' + n + ' spec'); return r.json(); })));
+    const specs = await Promise.all(QA_SPECS.map(n => fetch('qa/specs/' + n + '.json').then(r => { if (!r.ok) throw new Error("Couldn't load the " + n + ' template'); return r.json(); })));
     const mod = await import('/qa/pdf-blocks.mjs');
     const pdfjs = await import(QA_PDFJS + 'pdf.min.mjs');
     // A worker cannot start from another origin, so it is fetched and run from a blob.
@@ -141,7 +141,7 @@ function qaJSZip() {
   return new Promise((res, rej) => {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    s.onload = () => res(window.JSZip); s.onerror = () => rej(new Error('Could not load the zip reader'));
+    s.onload = () => res(window.JSZip); s.onerror = () => rej(new Error('Couldn\'t load the zip reader'));
     document.head.appendChild(s);
   });
 }
@@ -154,7 +154,8 @@ async function qaHash(bytes) {
 function qaProjectRow(id) {
   id = String(id || '').trim().toUpperCase();
   if (!id) return null;
-  const hits = allRows.filter(r => (r.project || '').toUpperCase() === id);
+  // Salesforce appends " - Battery Only" to some projects; the bare ID finds them too.
+  const hits = allRows.filter(r => { const p = (r.project || '').toUpperCase(); return p === id || p.split(' - ')[0] === id; });
   return hits.find(r => r.task_id) || hits[0] || null;
 }
 function qaMatchHtml() {
@@ -172,6 +173,7 @@ function qaSetProject(v, fromStep) {
   qaProj = v;
   const el = document.getElementById('qa-match'); if (el) el.innerHTML = qaMatchHtml();
   const other = document.getElementById(fromStep ? 'qa-project' : 'qa-project2'); if (other) other.value = v;
+  _qaBar();
   _qaSaveBtn();
 }
 // Leaving the field re-runs the checks that read the project. It must not rebuild the
@@ -234,14 +236,14 @@ function qaDriveOk() { return /^https:\/\/(drive|docs)\.google\.com\//.test(qaDr
 function qaSetDrive(v) {
   qaDrive = v.trim();
   const a = document.getElementById('qa-drive-open'); if (a) { a.style.display = qaDriveOk() ? '' : 'none'; a.href = qaDriveOk() ? qaDrive : '#'; }
-  const w = document.getElementById('qa-drive-warn'); if (w) w.textContent = qaDrive && !qaDriveOk() ? 'That is not a Google Drive link.' : '';
+  const w = document.getElementById('qa-drive-warn'); if (w) w.textContent = qaDrive && !qaDriveOk() ? 'That\'s not a Google Drive link.' : '';
 }
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
   const vbtn = (v) => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetVendor('${v}')">${QA_VENDORS[v]}</button>`;
   const photos = qaVendor === 'sitecapture'
     ? `<span class="klabel">Photo export</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div>`
-    : `<span class="klabel" title="Opens the folder for a quick look. The app cannot read a Drive folder itself.">Photo folder link</span><div class="qa-drive"><input class="qa-in" id="qa-drive" type="text" autocomplete="off" spellcheck="false" placeholder="Drive folder link, for reference (optional)" value="${qaH(qaDrive)}" oninput="qaSetDrive(this.value)" aria-label="Google Drive folder link">
+    : `<span class="klabel" title="Opens the folder for a quick look. The app can't read a Drive folder itself.">Photo folder link</span><div class="qa-drive"><input class="qa-in" id="qa-drive" type="text" autocomplete="off" spellcheck="false" placeholder="Drive folder link, for reference (optional)" value="${qaH(qaDrive)}" oninput="qaSetDrive(this.value)" aria-label="Google Drive folder link">
         <a id="qa-drive-open" href="${qaDriveOk() ? qaH(qaDrive) : '#'}" target="_blank" rel="noopener" style="${qaDriveOk() ? '' : 'display:none;'}">Open ↗</a></div><div class="qa-match warn" id="qa-drive-warn"></div>`;
   host.innerHTML = `<div class="qa-form">
     <div class="qa-field"><span class="klabel">Survey</span><div class="toggle-group" role="group" aria-label="Survey type">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
@@ -262,7 +264,7 @@ async function qaOpenReport(file) {
     const hash = await qaHash(bytes);
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
-    if (det.vendor === 'unknown') throw new Error('Not a Site Capture or Radicl survey report');
+    if (det.vendor === 'unknown') throw new Error('That\'s not a Site Capture or Radicl survey report');
     const spec = deps.specs.find(s => s.id === det.specId) || null;
     const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId });
     if (!qaProj.trim() && S.meta.project) qaProj = S.meta.project;
@@ -280,7 +282,7 @@ async function qaOpenReport(file) {
     qaLoadPhotos();
   } catch (e) {
     console.error(e);
-    qaSetBusy('pdf', '', e.message || 'Could not read that file');
+    qaSetBusy('pdf', '', e.message || 'Couldn\'t read that file');
   }
 }
 
@@ -343,7 +345,7 @@ async function qaOpenPack(file) {
     else { const el = document.getElementById('qa-dz-zip'); if (el) el.innerHTML = qaDropHtml('zip'); }
   } catch (e) {
     console.error(e);
-    qaSetBusy('zip', '', e.message || 'Could not read that file');
+    qaSetBusy('zip', '', e.message || 'Couldn\'t read that file');
   }
 }
 function qaCrossCheckPack() {
@@ -486,7 +488,7 @@ function renderQA() {
       const id = qaPendingRecord; qaPendingRecord = null;
       qaView = 'log'; qaLens = 'reviews'; qaQ = ''; qaStatusF = 'all';
       if (qaLog.some(r => r.id === id)) qaOpen = id;
-      else toast(id + ' is not in the log. It was probably never saved.');
+      else toast(id + ' isn\'t in History. It probably never got saved.');
       qaRender(); requestAnimationFrame(() => { const el = document.getElementById('qa-row-' + id); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
       return;
     }
@@ -506,14 +508,17 @@ function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => anim
 function _qaBar() {
   const host = document.getElementById('qa-bar'); if (!host) return;
   const btn = (v, l) => `<button class="fbtn${qaView === v ? ' fbtn-active' : ''}" onclick="qaSetView('${v}')">${l}</button>`;
+  const who = qaMode === 'shared' && qaUser
+    ? `<span class="qa-conn" title="Set by your password"><span class="fsel-label">Reviewer</span> <b>${qaH(qaUser)}</b></span>`
+    : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
+      <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
+  const dirty = qaRun || qaProj.trim() || qaPack || qaDrive;
   host.innerHTML = `<div class="fbar">
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('log', 'Log')}${btn('templates', 'Templates')}</div>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
-      <span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
-      <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}"
-        oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;"${qaMode === 'shared' && qaUser ? ' readonly title="Signed in by your password"' : ''} aria-label="Reviewer name">
-      ${qaView === 'review' && qaRun ? `<button class="fbtn" onclick="qaNew()">New review</button>` : ''}
+      ${who}
+      ${qaView === 'review' && dirty ? `<button class="fbtn" onclick="qaStartOver()">${qaRun && qaRun.saved ? 'New review' : 'Start over'}</button>` : ''}
     </div>
   </div>`;
   _qaConn();
@@ -521,26 +526,67 @@ function _qaBar() {
 function _qaConn() {
   const el = document.getElementById('qa-conn'); if (!el) return;
   const n = qaLog ? qaLog.length : 0;
-  el.innerHTML = qaMode === 'shared' ? `<span class="qa-conn" title="Everyone with a password sees the same history"><span class="qa-sw pass"></span>Shared log · ${qaPlural(n, 'review')}</span>`
-    : qaMode === 'local' ? `<span class="qa-conn" title="${qaH(qaNote)}"><span class="qa-sw warn"></span>This browser only</span>`
-    : `<span class="qa-conn"><span class="qa-sw look"></span>Connecting…</span>`;
+  el.innerHTML = qaMode === 'checking' ? '' : `<span class="qa-conn" title="${qaMode === 'local' ? qaH(qaNote) : 'Reviews saved by the whole team'}">${qaMode === 'local' ? '<span class="qa-sw warn"></span>' : ''}${qaPlural(n, 'review')}${qaMode === 'local' ? ' · this browser only' : ''}</span>`;
 }
 
 // ── Review view ────────────────────────────────────
 function _qaReview() {
   const host = document.getElementById('qa-body'); if (!host) return;
-  host.innerHTML = `<div id="qa-dup"></div><div class="sec qa-intake" id="qa-intake"></div><div id="qa-run"></div>`;
+  host.innerHTML = `<div id="qa-dup"></div><div class="sec qa-intake" id="qa-intake"></div><div id="qa-likely"></div><div id="qa-run"></div>`;
   _qaIntake(); _qaDup();
-  if (qaRun) _qaFlow(); else _qaChecklist();
+  if (qaRun) _qaFlow(); else { _qaLikely(); _qaChecklist(); }
 }
 // A report someone has already reviewed — a colleague included — is flagged
 // before it is reviewed twice.
 function _qaDup() {
   const host = document.getElementById('qa-dup'); if (!host) return;
   const dup = qaRun && !qaRun.saved && qaLoad().find(r => r.file && r.file.hash === qaRun.file.hash);
-  const local = qaMode === 'local' ? `<div class="qa-banner qa-banner-info"><span>${qaH(qaNote)} Reviews you save appear only on this computer.</span></div>` : '';
+  const local = qaMode === 'local' ? `<div class="qa-banner qa-banner-info"><span>${qaH(qaNote)} Reviews you save stay on this computer.</span></div>` : '';
   host.innerHTML = local + (dup ? `<div class="qa-banner"><span>This exact report was already reviewed: review ${dup.n} of ${qaH(dup.project)} on ${qaH(qaDate(dup))} by ${qaH(dup.reviewer)}, ${qaH(dup.status)}.</span>
       <button onclick="qaOpenRecord('${qaH(dup.id)}')">Open it</button></div>` : '');
+}
+
+// Surveys that were booked for today or earlier and are not complete in Salesforce:
+// the ones most likely to have a report waiting. Rep surveys are phased out, so
+// only Radicl and SunPower surveyors are listed.
+function qaLikely() {
+  const d = new Date(), today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const out = [], seen = new Set();
+  for (const r of allRows) {
+    if (!isOpenQueue(r) || r.resource === 'Sales Rep' || !r.resource || seen.has(r.project)) continue;
+    const sched = wipSchedDate(r);
+    if (!sched || sched > today) continue;
+    seen.add(r.project); out.push({ r, sched, ago: Math.round((new Date(today) - new Date(sched)) / 864e5) });
+  }
+  return out.sort((a, b) => a.ago - b.ago || a.r.project.localeCompare(b.r.project));
+}
+function _qaLikely() {
+  const host = document.getElementById('qa-likely'); if (!host || qaRun) return;
+  const all = qaLikely(), list = qaLikelyAll ? all : all.slice(0, 12), log = qaLoad();
+  if (!all.length) { host.innerHTML = ''; return; }
+  const sel = qaProj.trim().toUpperCase();
+  const reviews = p => log.filter(x => x.project === p.toUpperCase()).length;
+  host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Likely to review</div>
+    <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one to start.</div></div></div>
+    <div class="qa-likely">${list.map(x => {
+      const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase();
+      return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
+        <span class="qa-lk-p">${qaH(x.r.project)}</span>
+        <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
+        <span class="qa-lk-m">${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'} · ${x.ago === 0 ? 'today' : x.ago === 1 ? 'yesterday' : x.ago + ' days ago'}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
+    }).join('')}</div>
+    ${all.length > 12 ? `<div class="tbl-foot"><button class="copy-btn" onclick="qaLikelyAll=!qaLikelyAll;_qaLikely()">${qaLikelyAll ? 'Show fewer' : 'Show all ' + all.length}</button></div>` : ''}</div>`;
+}
+function qaPickProject(p) {
+  if (qaRun) return;
+  if (qaProj.trim().toUpperCase() === p.toUpperCase()) { qaProj = ''; }
+  else {
+    qaProj = p;
+    const r = qaProjectRow(p);
+    if (r && r.resource) { qaVendor = r.resource === 'Radicl Services' ? 'radicl' : 'sitecapture'; try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {} }
+  }
+  _qaIntake(); _qaLikely(); _qaChecklist(); _qaBar();
+  if (qaProj) { const f = document.getElementById('qa-intake'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
 
 // What is checked, before there is anything to check.
@@ -556,7 +602,7 @@ function _qaChecklist() {
   const outside = list.filter(c => !c.inTemplate).length;
   host.innerHTML = `<div class="sec">
     <div class="shead"><div><div class="stitle">What we check · ${qaH(QA_VENDORS[qaVendor])}</div>
-      <div class="ssub">${list.length} checks, and every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} things Design needs that this template does not ask for.` : ''}</div></div></div>
+      <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div></div>
     <div class="qa-checks">${cols.map(cs => `<div class="qa-checks-col">${cs.map(a => `<div class="qa-checks-h">${qaH(a)}</div>
       ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
     <div class="note" style="margin-top:10px;"><span class="qa-sw hard"></span> stops a handoff &nbsp; <span class="qa-sw warn"></span> asks for a look</div>
@@ -696,7 +742,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { qaZoomClos
 // Step 3 — anything the checks could not settle
 function _qaReportStep(host) {
   const flagged = qaFindings().filter(f => f.status === 'verify' || (f.status === 'pass' && f.verify));
-  host.innerHTML = `<div class="qa-lede">${flagged.length ? 'The checks could not settle these. Look at the report and decide.' : 'Nothing was flagged for a second look. Open the report if you want to skim it.'}</div>
+  host.innerHTML = `<div class="qa-lede">${flagged.length ? "We couldn't tell on these. Check the report and decide." : 'Nothing to double-check. Open the report if you want to skim it.'}</div>
     ${flagged.map(f => `<div class="qa-flag-row"><span class="t">${qaH(f.title)}</span><span class="d">${qaH(f.detail || f.note || '')}</span>
       <button class="qa-link" onclick="qaViewPdf(${f.page || 1})">${f.page ? 'Open page ' + f.page : 'Open report'}</button></div>`).join('')}
     <div class="qa-actions"><button class="qa-navbtn" onclick="qaViewPdf(1)">Open the full report</button></div>`;
@@ -714,7 +760,7 @@ function _qaSummaryStep(host) {
 
 // Step 5 — the status, then save, then the Salesforce fields
 function qaToday() { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`; }
-function qaRecordId() { if (qaRun && qaRun.saved) return qaRun.saved; const p = qaProj.trim().toUpperCase() || 'REPORT'; return `QA-${p}-${qaReviewNumber()}`; }
+function qaRecordId() { if (qaRun && qaRun.saved) return qaRun.saved; const p = (qaProj.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'REPORT'); return `QA-${p}-${qaReviewNumber()}`; }
 function qaRecordLink(id) { return location.origin + location.pathname + '#qa?r=' + encodeURIComponent(id); }
 function qaSetStatus(s) { qaRun.status = qaRun.status === s ? null : s; qaRefresh(); }
 function qaSetOverride(v) { qaRun.override = v; if (!qaRun.edited) qaRun.summary = qaSummaryText(); _qaSaveBtn(); }
@@ -736,8 +782,8 @@ function _qaSaveBtn() {
 function _qaStatusStep(host) {
   const run = qaRun, o = qaOutcome(), id = qaRecordId();
   const hardMiss = o.counts.missHard > 0;
-  const stBtn = s => `<button class="tgl-btn${run.status === s ? ' active' : ''}"${s === 'Passed' && hardMiss ? ' disabled style="opacity:.4;cursor:default;" title="Hard misses are present: use Passed with Override"' : ''}${run.saved ? ' disabled' : ''} onclick="qaSetStatus('${s}')">${s}</button>`;
-  const hint = o.suggestedStatus === 'Needs review' ? 'Warnings only: choose the status you would sign.' : `The checks point to ${o.suggestedStatus}.`;
+  const stBtn = s => `<button class="tgl-btn${run.status === s ? ' active' : ''}"${s === 'Passed' && hardMiss ? ' disabled style="opacity:.4;cursor:default;" title="There are hard misses, so use Passed with Override"' : ''}${run.saved ? ' disabled' : ''} onclick="qaSetStatus('${s}')">${s}</button>`;
+  const hint = o.suggestedStatus === 'Needs review' ? 'Only warnings, so it\'s your call.' : `Looks like ${o.suggestedStatus}.`;
   const row = (label, val, key, wide) => `<div class="qa-sfrow${wide ? ' wide' : ''}"><div class="klabel">${label}</div><div class="qa-sfval">${val}</div>${key ? `<button class="copy-btn" onclick="qaCopy('${key}',this)">Copy</button>` : ''}</div>`;
   host.innerHTML = `
     ${qaProj.trim() ? '' : `<div class="qa-field" id="qa-project-field" style="max-width:260px;margin-bottom:12px;"><span class="klabel">Project ID (required)</span>
@@ -745,7 +791,7 @@ function _qaStatusStep(host) {
     <div class="qa-status"><div class="toggle-group">${QA_SF_STATUSES.map(stBtn).join('')}</div><span class="qa-sfhint">${qaH(hint)}</span></div>
     ${run.status === 'Passed with Override' ? `<textarea class="qa-in short" id="qa-override" placeholder="Why this passes despite the gap or miss" oninput="qaSetOverride(this.value)" aria-label="Override reason">${qaH(run.override)}</textarea>` : ''}
     <div class="qa-actions">${run.saved
-      ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in the log</button><button class="fbtn" style="margin-left:auto;" onclick="qaCopyAll(this)">Copy all</button>`
+      ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="fbtn" style="margin-left:auto;" onclick="qaCopyAll(this)">Copy all</button>`
       : `<button class="qa-primary" id="qa-save" onclick="qaSave()">Save review</button><span class="qa-sfhint warn" id="qa-save-why"></span>`}</div>
     ${run.saved ? `<div class="qa-sf">
       ${row('Site Survey QA Review Status', qaH(run.status), 'status')}
@@ -802,7 +848,7 @@ async function qaSave() {
     // that this browser cannot) and writes that number into the summary.
     const r = await qaApi('POST', '', { review: rec });
     if (r.status === 401) { run.saving = false; qaBounce('Wrong password'); return; }
-    if (r.status !== 201 || !r.body || !r.body.review) { run.saving = false; _qaSaveBtn(); toast((r.body && r.body.error) || 'Could not save. Check your connection and try again'); return; }
+    if (r.status !== 201 || !r.body || !r.body.review) { run.saving = false; _qaSaveBtn(); toast((r.body && r.body.error) || 'Couldn\'t save. Check your connection and try again'); return; }
     saved = r.body.review;
     qaLoad().unshift(saved);
   } else {
@@ -815,9 +861,10 @@ async function qaSave() {
   _qaStatusStepRefresh(); _qaConn();
 }
 function _qaStatusStepRefresh() { if (qaRun.step === 4) _qaStep(); }
-function qaNew() {
+function qaStartOver() {
+  if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaDrive = ''; qaFlag = null; qaErr = { pdf: '', zip: '' };
+  qaRun = null; qaPack = null; qaProj = ''; qaDrive = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }
@@ -828,15 +875,12 @@ function qaWeekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate
 function _qaLog() {
   const host = document.getElementById('qa-body'); if (!host) return;
   const log = qaLoad();
-  const where = qaMode === 'shared' ? 'Shared with everyone who has the password.' : 'Saved in this browser. Export to keep a copy.';
-  const mine = qaMode === 'shared' ? qaLocalLog().length : 0;
-  const migrate = mine ? `<div class="qa-banner qa-banner-info"><span>This browser holds ${qaPlural(mine, 'review')} saved before the shared log existed. Move them so the team can see them.</span>
-    <button onclick="qaMoveLocal()">Move to the shared log</button></div>` : '';
+  const where = qaMode === 'shared' ? '' : 'Saved in this browser only.';
+  const migrate = '';
   if (!log.length) {
     host.innerHTML = migrate + `<div class="sec"><div class="shead"><div><div class="stitle">No reviews yet</div>
-      <div class="ssub">Reviews you save appear here, with how many times each account has been reviewed</div></div>
-      <button class="fbtn" onclick="qaImportPick()">Import a log</button></div>
-      <div class="note" style="padding:6px 0 4px;">${where}</div></div>`;
+      <div class="ssub">Saved reviews appear here, with how many times each account has been reviewed.</div></div></div>
+      ${where ? `<div class="note" style="padding:6px 0 4px;">${where}</div>` : ''}</div>`;
     return;
   }
   const wk = qaWeekStart();
@@ -861,10 +905,10 @@ function _qaLog() {
         <input class="drill-search" id="qa-log-q" type="search" placeholder="Search project, surveyor, reviewer…" value="${qaH(qaQ)}" oninput="qaSetQ(this.value)" style="max-width:260px;">
         <span class="fselgrp${qaStatusF !== 'all' ? ' on' : ''}"><span class="fsel-label">Status</span><select onchange="qaSetStatusF(this.value)" aria-label="Filter by status">
           <option value="all">All</option>${QA_SF_STATUSES.map(s => `<option${qaStatusF === s ? ' selected' : ''}>${s}</option>`).join('')}</select></span>
-        <div class="fgroup" style="margin-left:auto;">${qaMode === 'shared' ? `<button class="fbtn" onclick="qaRefreshLog(this)">Refresh</button>` : ''}<button class="fbtn" onclick="qaExport('json')">Export</button><button class="fbtn" onclick="qaExport('csv')">CSV</button><button class="fbtn" onclick="qaImportPick()">Import</button></div>
+        <div class="fgroup" style="margin-left:auto;">${qaMode === 'shared' ? `<button class="fbtn" onclick="qaRefreshLog(this)">Refresh</button>` : ''}<button class="fbtn" onclick="qaExport()">Export CSV</button></div>
       </div>
       <div id="qa-log-table"></div>
-      <div class="note">${where}</div>
+      ${where ? `<div class="note">${where}</div>` : ''}
     </div>`;
   _qaLogTable();
 }
@@ -936,105 +980,49 @@ function qaCopyRecord(id, what, btn) {
   navigator.clipboard.writeText(what === 'link' ? qaRecordLink(id) : r.summary).then(() => qaCopied(btn)).catch(_copyFail);
 }
 async function qaDelete(id) {
-  if (!confirm('Delete review ' + id + '? It leaves the log for everyone.')) return;
+  if (!confirm('Delete review ' + id + '? It disappears for everyone.')) return;
   if (qaMode === 'shared') {
     const r = await qaApi('DELETE', '?id=' + encodeURIComponent(id));
     if (r.status === 401) return qaBounce('Wrong password');
-    if (r.status !== 200 && r.status !== 404) return toast('Could not delete. Try again');
+    if (r.status !== 200 && r.status !== 404) return toast('Couldn\'t delete. Try again');
   }
   qaLog = qaLoad().filter(r => r.id !== id); qaPersist(); qaOpen = null; _qaConn(); _qaLog();
 }
-function qaExport(kind) {
+function qaExport() {
   const log = qaLoad(); if (!log.length) return;
-  let body, type, name;
-  if (kind === 'csv') {
-    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const head = ['Review', 'Project', 'Review #', 'Date', 'Reviewed by', 'Source', 'Status', 'Template', 'Surveyor', 'Hard misses', 'Warnings', 'Applied gaps', 'Override', 'Summary', 'Report file', 'SHA-256'];
-    body = [head.map(q).join(',')].concat(log.map(r => [r.id, r.project, r.n, qaDate(r), r.reviewer, r.source, r.status, r.template, r.surveyor, r.counts.missHard, r.counts.missWarn, r.counts.gap, r.override, r.summary, r.file.name, r.file.hash].map(q).join(','))).join('\n');
-    type = 'text/csv'; name = 'qa-reviews.csv';
-  } else { body = JSON.stringify(log, null, 1); type = 'application/json'; name = 'qa-reviews.json'; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type })); a.download = name; a.click();
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const head = ['Review', 'Project', 'Review #', 'Date', 'Reviewed by', 'Source', 'Status', 'Template', 'Surveyor', 'Hard misses', 'Warnings', 'Applied gaps', 'Override', 'Summary', 'Report file', 'SHA-256'];
+  const body = [head.map(q).join(',')].concat(log.map(r => [r.id, r.project, r.n, qaDate(r), r.reviewer, r.source, r.status, r.template, r.surveyor, r.counts.missHard, r.counts.missWarn, r.counts.gap, r.override, r.summary, r.file.name, r.file.hash].map(q).join(','))).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type: 'text/csv' })); a.download = 'qa-reviews.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-// Bring reviews in from a file — an export, or the log a browser kept before the
-// shared log existed. Reviews the shared log already has are skipped; one whose
-// number was taken in the meantime is renumbered rather than lost.
-async function qaImportRows(rows) {
-  if (qaMode === 'shared') {
-    const r = await qaApi('POST', '', { import: rows });
-    if (r.status === 401) { qaBounce('Wrong password'); return null; }
-    if (r.status !== 200) { toast('Could not import. Try again'); return null; }
-    await qaSync(); return r.body;
-  }
-  const have = new Set(qaLoad().map(r => r.id));
-  const add = rows.filter(r => !have.has(r.id));
-  qaLog = qaLoad().concat(add).sort((a, b) => b.created.localeCompare(a.created));
-  qaPersist();
-  return { inserted: add.length, skipped: rows.length - add.length, renumbered: 0 };
-}
-function qaImportPick() {
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
-  inp.onchange = async () => {
-    let rows;
-    try {
-      rows = JSON.parse(await inp.files[0].text());
-      if (!Array.isArray(rows) || rows.some(r => !r.id || !r.project || !r.status)) throw new Error('Not a QA log');
-    } catch (e) { return toast('That file is not a QA log'); }
-    const out = await qaImportRows(rows); if (!out) return;
-    toast(out.inserted ? 'Imported ' + qaPlural(out.inserted, 'review') + (out.renumbered ? ` (${out.renumbered} renumbered)` : '') : 'Nothing new in that file');
-    _qaConn(); _qaLog();
-  };
-  inp.click();
-}
-// This browser's own log, from before there was a shared one.
-async function qaMoveLocal() {
-  const rows = qaLocalLog(); if (!rows.length) return;
-  const out = await qaImportRows(rows); if (!out) return;
-  try { localStorage.removeItem(QA_LOG_KEY); } catch (e) {}
-  toast(`Moved ${qaPlural(out.inserted, 'review')} to the shared log` + (out.skipped ? `, ${out.skipped} already there` : ''));
-  _qaConn(); _qaLog();
 }
 
 // ── Templates ──────────────────────────────────────
 function _qaTemplates() {
   const host = document.getElementById('qa-body'); if (!host) return;
-  qaDepsLoad().then(d => _qaTemplatesBody(d.specs), () => { host.innerHTML = `<div class="sec"><div class="note" style="padding:12px 0;">Could not load the template specs.</div></div>`; });
+  qaDepsLoad().then(d => _qaTemplatesBody(d.specs), () => { host.innerHTML = `<div class="sec"><div class="note" style="padding:12px 0;">Couldn't load the templates.</div></div>`; });
   host.innerHTML = `<div class="sec"><div class="note" style="padding:14px 0;">Loading the templates…</div></div>`;
 }
+function qaSetTplVendor(v) { qaTplVendor = v; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
 function _qaTemplatesBody(specs) {
   const host = document.getElementById('qa-body'); if (!host || qaView !== 'templates') return;
-  const log = qaLoad();
-  const ORDER = ['sitecapture-v13', 'radicl-v2', 'radicl-v1'];
-  const total = ORDER.reduce((a, id) => a + OpsQA.templateChanges(id).length, 0);
-  const hardN = ORDER.reduce((a, id) => a + OpsQA.templateChanges(id).filter(c => c.severity === 'hard').length, 0);
-  const hits = {}; log.forEach(r => r.findings.forEach(f => { if (f.status === 'gap') hits[f.id] = (hits[f.id] || 0) + 1; }));
-  const newSeen = new Set(); log.forEach(r => (r.newToSpec || []).forEach(x => newSeen.add(x)));
-  const cell = (label, val, sub, tip) => `<div class="srail-cell"><div class="klabel">${label}${tip ? kinfo(tip) : ''}</div><div class="srail-val">${val}${sub ? `<span class="srail-sub">${sub}</span>` : ''}</div></div>`;
-  host.innerHTML = `
-    <div class="srail">
-      ${cell('Changes needed', total, 'across 3 templates', 'Fields or photos Design needs that a template does not ask for, plus problems in how a template reports.')}
-      ${cell('Hard', hardN, 'stop a handoff', 'Changes whose absence leaves Design without something it cannot work around.')}
-      ${cell('New in reports', newSeen.size, 'not in the spec', 'Items seen in saved reviews that the template spec has never recorded. The template may have changed.')}
-    </div>
-    ${ORDER.map(id => {
-      const spec = specs.find(s => s.id === id); if (!spec) return '';
-      const ch = OpsQA.templateChanges(id);
-      const vendor = /^radicl/.test(id) ? 'radicl' : 'sitecapture';
-      const note = vendor === 'radicl'
-        ? (spec.inferredFrom >= 3 ? `Standard inferred from ${spec.inferredFrom} reference reports.` : `Standard inferred from ${spec.inferredFrom} reference report; completeness checks wait for three.`)
-        : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} photo fields.`;
-      const tid = 'qa-chg-' + id;
-      return `<div class="sec">
-        <div class="shead"><div><div class="stitle">${qaH(QA_TEMPLATE_NAMES[id])}${id === 'radicl-v1' ? ' <span class="pill qa-pill-mute" style="margin-left:6px;">previous</span>' : id === 'radicl-v2' ? ' <span class="pill pg" style="margin-left:6px;">current</span>' : ''}</div>
-          <div class="ssub">${qaH(note)} ${qaPlural(ch.length, 'change')} needed.</div></div>
-          <button class="fbtn" onclick="qaCopyChanges('${id}',this)">Copy change list</button></div>
-        ${ch.length ? `<div class="xscroll"><table class="tbl qa-tbl" id="${tid}"><thead><tr><th>Change</th><th>What to add or fix</th><th class="r">In reviews</th></tr></thead><tbody>
-          ${ch.map(c => `<tr><td class="qa-check"><span class="qa-sev"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}"></span></span> ${qaH(c.title)}</td>
-            <td class="qa-detail">${qaH(c.fix)}</td><td class="r">${hits[c.id] || 0}</td></tr>`).join('')}
-        </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${tid}',this,'changes')">Copy table</button></div>`
-          : `<div class="note" style="padding:10px 0;">Nothing to change.</div>`}
-      </div>`;
-    }).join('')}`;
+  const vendor = qaTplVendor || qaVendor, id = vendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13';
+  const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id);
+  const vbtn = v => `<button class="tgl-btn${vendor === v ? ' active' : ''}" onclick="qaSetTplVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`;
+  const note = !spec ? '' : vendor === 'radicl'
+    ? (spec.inferredFrom >= 3 ? `Standard built from ${spec.inferredFrom} reference reports.` : `Standard built from ${qaPlural(spec.inferredFrom, 'reference report')}. Completeness checks start at three.`)
+    : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} of them photos.`;
+  const tid = 'qa-chg-' + id;
+  host.innerHTML = `<div class="fbar qa-tplbar"><div class="toggle-group" role="group" aria-label="Template">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
+    <div class="sec">
+      <div class="shead"><div><div class="stitle">${qaH(QA_TEMPLATE_NAMES[id])}</div>
+        <div class="ssub">${qaH(note)} ${ch.length ? qaPlural(ch.length, 'change') + ' needed.' : ''}</div></div>
+        ${ch.length ? `<button class="fbtn" onclick="qaCopyChanges('${id}',this)">Copy change list</button>` : ''}</div>
+      ${ch.length ? `<div class="xscroll"><table class="tbl qa-tbl" id="${tid}"><thead><tr><th>Change</th><th>What to add or fix</th></tr></thead><tbody>
+        ${ch.map(c => `<tr><td class="qa-check"><span class="qa-sev"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}"></span></span> ${qaH(c.title)}</td><td class="qa-detail">${qaH(c.fix)}</td></tr>`).join('')}
+      </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${tid}',this,'changes')">Copy table</button></div>`
+        : `<div class="note" style="padding:10px 0;">Nothing to change.</div>`}
+    </div>`;
 }
 function qaCopyChanges(id, btn) {
   const ch = OpsQA.templateChanges(id);
