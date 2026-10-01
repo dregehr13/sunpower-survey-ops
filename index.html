@@ -1840,7 +1840,15 @@ function loadAll(src){
   return out;
 }
 const isActiveStatus = r => r.project_status==='In Progress' || r.project_status==='Change Order';
-const DEFAULT_STATUSES = ['In Progress','Change Order','Complete'];
+// Project status — the deal's state in Salesforce, not the survey's. Every value
+// ticked by default: a completed survey on a canceled project is still work this
+// team did (2026-08-26), so unticking Canceled is a deliberate narrowing.
+const PROJECT_STATUSES = ['In Progress','Change Order','At-Risk','Canceled','Complete'];
+const DEFAULT_STATUSES = [...PROJECT_STATUSES];
+const LIVE_STATUSES = ['In Progress','Change Order'];
+// The Resource page anchors on its own fixed scope (see resScope) and must not
+// move when the default above widens.
+const RES_SCOPE_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
@@ -1867,7 +1875,14 @@ function scopeRows(){
   // neither active work nor a finished survey — drop it from the scoped
   // population unless the survey genuinely completed (isComplete requires List
   // 'Complete', so a parked row can never satisfy the second clause).
-  rows = allRows.filter(r=>(s.includes(r.project_status)&&r.list!=='Inactive'&&r.list!=='Not Required')||(s.includes('Complete')&&OpsMetrics.isComplete(r)));
+  // Project status restricts: a row stays only if its project's status is ticked.
+  // (It used to ADD — a ticked 'Complete' kept every finished survey whatever the
+  // project had become — so ticking Canceled or At-Risk changed nothing on any
+  // page that counts finished surveys.)
+  // Unfinished work only counts while the deal is live: an open task on a
+  // canceled or at-risk project is not queue (inScope says the same), and
+  // letting it in swung the WIP SS ratio from 0.9 to 17.
+  rows = allRows.filter(r=>s.includes(r.project_status)&&(OpsMetrics.isComplete(r)||(LIVE_STATUSES.includes(r.project_status)&&r.list!=='Inactive'&&r.list!=='Not Required')));
 }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
@@ -1947,8 +1962,10 @@ function loadFilterState(){
     const pf = saved.pageF?.[saved.currentPage] || saved.pageF?.performance || {};
     Object.assign(GF, defaultF(), base, pf);
     // Upgrade saved state that exactly matched the old 2-item default to the current default
-    const _od=['In Progress','Change Order'];
-    if(GF.statuses?.length===_od.length&&_od.every(s=>GF.statuses.includes(s))) GF.statuses=[...DEFAULT_STATUSES];
+    // Both earlier defaults meant "everything finished plus live work"; the
+    // current default is every project status, which is that same population.
+    const _same=(a,b)=>Array.isArray(a)&&a.length===b.length&&b.every(s=>a.includes(s));
+    if(_same(GF.statuses,['In Progress','Change Order'])||_same(GF.statuses,RES_SCOPE_STATUSES)) GF.statuses=[...DEFAULT_STATUSES];
     migrateRegion(GF);
     if(saved.currentPage && PAGES.includes(saved.currentPage)) currentPage=saved.currentPage;
   }catch(e){}
@@ -2029,7 +2046,6 @@ function fbShow(page){
   // geography, so a third slice here only confuses the two. Doug, 2026-08-31.
   if(page==='map') on.region=false;
   if(page==='wip')      return {...on,dates:false,extras:true};   // a live queue has no date range
-  if(page==='resurvey') return {...on,status:false};              // every row here is already complete
   // The source editor reads `rows` and applies no gfDim() clause of its own, so
   // scopeRows() — the Status list — is the only global control that can narrow
   // it. Its own toolbar owns search, state and paging.
@@ -2138,11 +2154,12 @@ function buildFBar(page){
     </div>`:''}
     ${!show.status?'':`<div class="fsep"></div>
     ${(()=>{
-      const allStatuses=[...new Set(allRows.map(r=>r.project_status).filter(Boolean))].sort();
+      const _seen=new Set(allRows.map(r=>r.project_status).filter(Boolean));
+      const allStatuses=[...PROJECT_STATUSES.filter(x=>_seen.has(x)),...[..._seen].filter(x=>!PROJECT_STATUSES.includes(x)).sort()];
       const sel=Array.isArray(GF.statuses)?GF.statuses:[...DEFAULT_STATUSES];
       const isDefault=sel.length===DEFAULT_STATUSES.length&&DEFAULT_STATUSES.every(s=>sel.includes(s));
       return `<div class="status-drop rgdrop">
-        <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleStatusDrop(event)">Status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
+        <button class="rgdrop-btn${!isDefault?' active':''}" onclick="toggleStatusDrop(event)">Project status${!isDefault?' · '+sel.length:''}<span class="rg-caret">&#9660;</span></button>
         <div class="rgdrop-panel${statusDropOpen?' open':''}" id="status-panel">
           ${allStatuses.map(s=>`<label class="rgdrop-item"><input type="checkbox"${sel.includes(s)?' checked':''} onchange="onStatusF('${esc(s)}',this.checked,event)"><span>${esc(s)}</span></label>`).join('')}
         </div>
@@ -7711,7 +7728,7 @@ function resBases(){
 // set, whatever any other page's controls hold. Same rule scopeRows() applies,
 // against DEFAULT_STATUSES rather than GF.statuses.
 function resScope(){
-  return allRows.filter(r=>DEFAULT_STATUSES.includes(r.project_status)||isComplete(r));
+  return allRows.filter(r=>RES_SCOPE_STATUSES.includes(r.project_status)||isComplete(r));
 }
 
 // Every in-scope row that can be placed, carrying what the market maths needs.

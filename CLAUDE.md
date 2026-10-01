@@ -761,21 +761,39 @@ granularities ×2 completion bases, Map ×6 modes. Things not to undo:
   that precedes it, so a bar whose first control is dropped opened on a hairline
   dividing nothing from the edge — already visible on the Map in Coverage mode
 
-Two controls are **hidden and still bite**, both raised and neither changed —
-they are metric questions, not layout ones:
+One control is **hidden and still bites**, raised and unchanged — a metric
+question, not a layout one:
 - **Region on the Map.** No control, and `show.region` suppresses its chips too,
   yet `gfDim()` still applies it: **3,831 jobs / 214 markets / 23 states → 479 /
   5 / 1**. This is the `?type=` defect in the other direction, an invisible
   control that silently does something
-- **Status on Quality.** Dropped because every row there is already complete —
-  true only while `Complete` is ticked, since `scopeRows()` keeps a completed
-  survey through `s.includes('Complete') && isComplete(r)`. Untick it elsewhere
-  and FPY moves **87.0% → 83.1%** on a denominator of 3,748 → 1,883, with
-  nothing on the page saying so. Adding statuses does nothing; only removing
-  `Complete` bites. Current has the same shape with no bar at all
+- ~~**Status on Quality.**~~ Resolved 2026-10-01: the control is shown on Quality now (see *Project status* below).
 - `fbShow` still answers for the three pages that render no bar (Current,
   Resource, Billing) and nothing calls it there. Harmless, but it is not the
   whole truth about those pages
+
+### Project status filter (2026-10-01)
+Doug: ticking At-Risk / Canceled in the old Status control did nothing on
+Performance. Cause: `scopeRows()` was a union — a row stayed if its status was
+ticked **or** `Complete` was ticked and the survey finished — so every finished
+survey on a dead deal was in scope whatever else was ticked, and the extra
+ticks only added unfinished rows Performance discards. Things not to undo:
+- **Renamed Project status**, so it is not read as survey status. It restricts
+  now: a row stays only if `project_status` is ticked. `GF.statuses` holds
+  project statuses only (`PROJECT_STATUSES`); `Complete` is the real status
+- **Default is all five ticked**, which reproduces the old default population
+  exactly (measured: every page's text and canvas pixels identical before and
+  after). Unticking Canceled is a deliberate narrowing: Performance revenue
+  $150.8M → $83.2M
+- **Unfinished rows only count on a live deal** (`LIVE_STATUSES`: In Progress,
+  Change Order), whatever is ticked. Letting open canceled/at-risk tasks in
+  moved the WIP SS ratio 0.9 → 17.2 and Trends clearance 102% → 80%. Side
+  effect: the Data page can no longer show open rows on canceled/at-risk deals
+- **`resScope()` uses its own `RES_SCOPE_STATUSES`**, so the Resource page does
+  not move when the default widens
+- Saved filter state equal to either earlier default is migrated to the new one
+- Quality shows the control again (it was dropped as "every row is complete",
+  which stopped being a reason once status restricts)
 
 ## Resource page (added 2026-08-25, restructured 2026-08-26)
 Who should do the work, where, and what it costs. The other pages measure the
