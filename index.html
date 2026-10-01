@@ -2045,7 +2045,9 @@ function fbShow(page){
   // twice — the State picker and Office. Region is a sales territory, not a
   // geography, so a third slice here only confuses the two. Doug, 2026-08-31.
   if(page==='map') on.region=false;
-  if(page==='wip')      return {...on,dates:false,extras:true};   // a live queue has no date range
+  // A live queue has no date range, and its rows are open work on live deals by
+  // construction, so project status has nothing to cut.
+  if(page==='wip')      return {...on,dates:false,status:false,extras:true};
   // The source editor reads `rows` and applies no gfDim() clause of its own, so
   // scopeRows() — the Status list — is the only global control that can narrow
   // it. Its own toolbar owns search, state and paging.
@@ -6322,6 +6324,7 @@ function renderMap(){
   const mTgl=(v,l)=>`<button class="tgl-btn${mapMetric===v?' active':''}" data-mm="${v}" aria-pressed="${mapMetric===v}" onclick="setMapMetric('${v}')">${l}</button>`;
 
   el.innerHTML=`
+    <div id="fb-map"></div>
     <div id="map-kpis"></div>
     <div class="sec">
       <div class="shead map-head">
@@ -6349,7 +6352,6 @@ function renderMap(){
         </div>
       </div>
       <div class="ssub map-sub" id="map-sub">&nbsp;</div>
-      <div id="fb-map"></div>
       <div class="map-wrap mw-anim">
         <canvas id="map-cv" role="img" aria-label="Job density map. The Top locations table below carries the same figures as text."></canvas>
         <div class="map-tip" id="map-tip" role="status" aria-live="polite"></div>
