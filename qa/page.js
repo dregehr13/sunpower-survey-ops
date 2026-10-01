@@ -24,7 +24,7 @@ let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
-let qaDrive = '';      // 'checking' | 'shared' | 'local'
+let qaDrive = '', qaReportLink = '';      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
 let qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
 const qaUrls = [];
@@ -233,6 +233,12 @@ function qaSetVendor(v) {
   if (!qaRun) _qaChecklist();
 }
 function qaDriveOk() { return /^https:\/\/(drive|docs)\.google\.com\//.test(qaDrive); }
+function qaSetReportLink(v) {
+  qaReportLink = v.trim();
+  const ok = /^https:\/\/(drive|docs)\.google\.com\//.test(qaReportLink);
+  const w = document.getElementById('qa-rlink-warn'); if (w) w.textContent = qaReportLink && !ok ? "That's not a Google Drive link." : '';
+  _qaBar();
+}
 function qaSetDrive(v) {
   qaDrive = v.trim();
   const a = document.getElementById('qa-drive-open'); if (a) { a.style.display = qaDriveOk() ? '' : 'none'; a.href = qaDriveOk() ? qaDrive : '#'; }
@@ -251,7 +257,9 @@ function _qaIntake() {
       <input class="qa-in" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"
         oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" aria-label="Project ID">
       <div id="qa-match">${qaMatchHtml()}</div></div>
-    <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
+    <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div>
+      <input class="qa-in" id="qa-rlink" type="text" autocomplete="off" spellcheck="false" placeholder="Drive link to the report (optional)" value="${qaH(qaReportLink)}" oninput="qaSetReportLink(this.value)" aria-label="Drive link to the report" style="margin-top:6px;">
+      <div class="qa-match warn" id="qa-rlink-warn"></div></div>
     <div class="qa-field">${photos}</div>
   </div>`;
 }
@@ -512,7 +520,7 @@ function _qaBar() {
     ? `<span class="qa-conn" title="Set by your password"><span class="fsel-label">Reviewer</span> <b>${qaH(qaUser)}</b></span>`
     : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
-  const dirty = qaRun || qaProj.trim() || qaPack || qaDrive;
+  const dirty = qaRun || qaProj.trim() || qaPack || qaDrive || qaReportLink;
   host.innerHTML = `<div class="fbar">
     <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
     <div class="fgroup" style="margin-left:auto;">
@@ -834,6 +842,7 @@ async function qaSave() {
     surveyor: run.S.meta.surveyor || '', surveyDate: run.S.meta.assessmentDate || run.S.meta.surveyDate || '', reportCreated: run.S.meta.reportCreated || '',
     file: run.file, counts: o.counts, suggested: o.suggestedStatus,
     photoLink: run.det.vendor === 'radicl' && qaDriveOk() ? qaDrive : '',
+    reportLink: /^https:\/\/(drive|docs)\.google\.com\//.test(qaReportLink) ? qaReportLink : '',
     // the customer's address is not sent: the task id finds the account in Salesforce
     sf: row ? { task_id: row.task_id || '', resource: row.resource || '', status: row.project_status || '' } : null,
     pack: qaPack && qaPack.check && !qaPack.check.skipped ? { name: qaPack.name, matched: qaPack.check.matched, folders: qaPack.check.folders } : null,
@@ -864,7 +873,7 @@ function _qaStatusStepRefresh() { if (qaRun.step === 4) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaDrive = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
+  qaRun = null; qaPack = null; qaProj = ''; qaDrive = ''; qaReportLink = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }
@@ -968,7 +977,7 @@ function qaRecordDetail(r) {
         <button class="qa-link" style="margin-left:auto;color:var(--red);" onclick="qaDelete('${qaH(r.id)}')">Delete</button></div></div>
     <div><div class="klabel">Record</div><div class="qa-mini">
         <b>${qaH(r.id)}</b> · ${qaH(r.source)}<br>
-        Report: ${qaH(r.file.name)}<br>${r.photoLink ? `Photos: <a href="${qaH(r.photoLink)}" target="_blank" rel="noopener">Drive folder ↗</a><br>` : ''}
+        Report: ${r.reportLink ? `<a href="${qaH(r.reportLink)}" target="_blank" rel="noopener">${qaH(r.file.name)} ↗</a>` : qaH(r.file.name)}<br>${r.photoLink ? `Photos: <a href="${qaH(r.photoLink)}" target="_blank" rel="noopener">Drive folder ↗</a><br>` : ''}
         <span style="font-size:10px;">SHA-256 ${qaH(r.file.hash.slice(0, 16))}…</span><br>
         Checks pointed to ${qaH(r.suggested)}${r.photos && r.photos.total ? ` · photos ${r.photos.ok} readable, ${r.photos.bad} not usable of ${r.photos.total}` : ''}${r.pack ? `<br>Photo export: ${r.pack.matched} of ${r.pack.folders} folders matched` : ''}</div>
       <div class="klabel" style="margin-top:12px;">${qaPlural(misses.length, 'miss')} · ${qaPlural(gaps.filter(g => !g.standing).length, 'applied gap')}</div>

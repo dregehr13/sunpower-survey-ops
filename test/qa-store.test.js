@@ -198,3 +198,11 @@ test('Salesforce project names with a suffix or a dot are accepted', async () =>
     assert.ok(!v.error, p + ' ' + v.error);
   }
 });
+
+test('a report link is kept, and only a Drive link is accepted', async () => {
+  const db = await fresh();
+  const link = 'https://drive.google.com/file/d/1abcDEF/view';
+  assert.equal((await save(db, { reportLink: link })).reportLink, link);
+  assert.equal((await save(db)).reportLink, '');
+  assert.match(Store.validate(review({ reportLink: 'https://evil.example/x.pdf' })).error, /Drive/);
+});
