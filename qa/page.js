@@ -282,7 +282,7 @@ function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
   const vbtn = (v) => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetVendor('${v}')">${QA_VENDORS[v]}</button>`;
   const photos = qaVendor === 'sitecapture' ? `<div class="qa-field"><span class="klabel">Photo export</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>` : '';
-  const drive = `<div class="qa-field"><span class="klabel" title="Kept with the review so you can reopen the files. The app can't read a Drive folder itself.">Drive link</span><div class="qa-drive"><input class="qa-in" id="qa-drive" type="text" autocomplete="off" spellcheck="false" placeholder="Folder with the report and photos (optional)" value="${qaH(qaDrive)}" oninput="qaSetDrive(this.value)" aria-label="Google Drive link">
+  const drive = qaVendor !== 'radicl' ? '' : `<div class="qa-field"><span class="klabel" title="Kept with the review so you can reopen the files. The app can't read a Drive folder itself.">Drive link</span><div class="qa-drive"><input class="qa-in" id="qa-drive" type="text" autocomplete="off" spellcheck="false" placeholder="Folder with the report and photos (optional)" value="${qaH(qaDrive)}" oninput="qaSetDrive(this.value)" aria-label="Google Drive link">
         <a id="qa-drive-open" href="${qaDriveOk() ? qaH(qaDrive) : '#'}" target="_blank" rel="noopener" style="${qaDriveOk() ? '' : 'display:none;'}">Open ↗</a></div><div class="qa-match warn" id="qa-drive-warn"></div></div>`;
   host.innerHTML = `<div class="qa-form">
     <div class="qa-field"><span class="klabel">Survey</span><div class="toggle-group" role="group" aria-label="Survey type">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
@@ -910,7 +910,7 @@ async function qaSave() {
     summary: run.summary, template: run.det.specId, vendor: run.det.vendor,
     surveyor: run.S.meta.surveyor || '', surveyDate: run.S.meta.assessmentDate || run.S.meta.surveyDate || '', reportCreated: run.S.meta.reportCreated || '',
     file: run.file, counts: o.counts, suggested: o.suggestedStatus,
-    reportLink: qaDriveOk() ? qaDrive : '',
+    reportLink: run.det.vendor === 'radicl' && qaDriveOk() ? qaDrive : '',
     // the customer's address is not sent: the task id finds the account in Salesforce
     sf: row ? { task_id: row.task_id || '', resource: row.resource || '', status: row.project_status || '' } : null,
     pack: qaPack && qaPack.check && !qaPack.check.skipped ? { name: qaPack.name, matched: qaPack.check.matched, folders: qaPack.check.folders } : null,
