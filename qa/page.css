@@ -204,3 +204,8 @@ textarea.qa-in.short{min-height:54px;}
 .qa-decide button.ok.on{background:var(--green-bg);color:var(--green);font-weight:600;}
 .qa-decide button.bad.on{background:var(--red-bg);color:var(--red);font-weight:600;}
 .qa-in.needs{border-color:var(--amber);background:var(--amber-bg);}
+.qa-intake{position:relative;}
+.qa-clear{position:absolute;top:10px;right:16px;z-index:1;}
+.qa-strip .qa-startover{margin-left:10px;border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text);background:var(--surface);}
+.qa-strip .qa-startover:hover{text-decoration:none;border-color:var(--text);}
+.qa-edit{display:flex;flex-direction:column;gap:8px;}

@@ -31,7 +31,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/api/qa-log') {
     let body = null;
-    if (req.method === 'POST') { const chunks = []; for await (const c of req) chunks.push(c); try { body = JSON.parse(Buffer.concat(chunks).toString() || 'null'); } catch (e) {} }
+    if (req.method === 'POST' || req.method === 'PUT') { const chunks = []; for await (const c of req) chunks.push(c); try { body = JSON.parse(Buffer.concat(chunks).toString() || 'null'); } catch (e) {} }
     const out = await Store.handle({ method: req.method, query: Object.fromEntries(url.searchParams), headers: req.headers, body }, env, db);
     res.writeHead(out.status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     return res.end(JSON.stringify(out.body));

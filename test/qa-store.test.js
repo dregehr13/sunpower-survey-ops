@@ -175,7 +175,7 @@ test('the endpoint saves, lists and deletes', async () => {
   assert.equal((await call(db, 'DELETE', { query: { id: 'nope' } })).status, 404);
   assert.equal((await call(db, 'DELETE', { query: { id: 'QA-2321LOPE-1' } })).status, 200);
   assert.equal((await call(db, 'GET')).body.reviews.length, 0);
-  assert.equal((await call(db, 'PUT')).status, 405);
+  assert.equal((await call(db, 'PATCH')).status, 405);
 });
 
 test('the server stamps the time, not the browser', async () => {
@@ -205,4 +205,29 @@ test('a report link is kept, and only a Drive link is accepted', async () => {
   assert.equal((await save(db, { reportLink: link })).reportLink, link);
   assert.equal((await save(db)).reportLink, '');
   assert.match(Store.validate(review({ reportLink: 'https://evil.example/x.pdf' })).error, /Drive/);
+});
+
+test('a saved review can be revised, and only the revisable parts change', async () => {
+  const db = await fresh();
+  const a = await save(db);
+  const out = await Store.update(db, a.id, { status: 'Passed with Override', override: 'Template gap', summary: 'QA review 1\nRevised',
+    project: 'HACKED1', reviewer: 'Someone Else', n: 9, findings: [] }, 'Kendall Banks');
+  const r = out.review;
+  assert.equal(r.status, 'Passed with Override'); assert.equal(r.override, 'Template gap'); assert.equal(r.summary, 'QA review 1\nRevised');
+  assert.equal(r.findings.length, 0);
+  assert.equal(r.project, '2321LOPE'); assert.equal(r.reviewer, 'Doug Regehr'); assert.equal(r.n, 1);   // fixed
+  assert.equal(r.editedBy, 'Kendall Banks'); assert.ok(r.editedAt);
+  assert.equal((await Store.list(db))[0].status, 'Passed with Override');
+  assert.equal(await Store.update(db, 'QA-NOPE-1', { status: 'Passed' }, 'x'), null);
+  assert.match((await Store.update(db, a.id, { status: 'Done' }, 'x')).error, /status/);
+});
+
+test('PUT /api/qa-log revises a review as the person the password names', async () => {
+  const db = await fresh();
+  const env = { QA_USERS: JSON.stringify({ pwk: 'Kendall Banks' }) };
+  const a = await save(db);
+  const ok = await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-password': 'pwk' }, body: { changes: { status: 'Passed' } } }, env, db);
+  assert.equal(ok.status, 200); assert.equal(ok.body.review.status, 'Passed'); assert.equal(ok.body.review.editedBy, 'Kendall Banks');
+  assert.equal((await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-password': 'bad' }, body: {} }, env, db)).status, 401);
+  assert.equal((await Store.handle({ method: 'PUT', query: { id: 'QA-X-1' }, headers: { 'x-qa-password': 'pwk' }, body: { changes: {} } }, env, db)).status, 404);
 });

@@ -410,3 +410,12 @@ test('the intake no longer asks which survey type it is, and takes photos for ei
   assert.ok(!/Survey type|qaSetVendor|Drive/.test(intake));
   assert.ok(/Photos/.test(intake) && /qaDropHtml\('zip'\)/.test(intake));
 });
+
+test('Start over lives on the review itself, not in the top bar, and a saved review can be changed', () => {
+  const bar = pageSrc.match(/function _qaBar\(\) \{[\s\S]*?\n\}\n/)[0];
+  assert.ok(!/qaStartOver/.test(bar));
+  assert.ok(/class="qa-startover" onclick="qaStartOver\(\)"/.test(pageSrc));
+  assert.ok(/async function qaUpdate\(\)/.test(pageSrc) && /qaApi\('PUT'/.test(pageSrc));
+  assert.ok(!/run\.saved \? ' disabled'/.test(pageSrc));          // the status buttons stay live after a save
+  assert.ok(/function qaEditRecord\(id\)/.test(pageSrc));
+});

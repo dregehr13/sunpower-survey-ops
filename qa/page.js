@@ -26,7 +26,7 @@ let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
-let qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
+let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
 const qaUrls = [];
 
 // The hash that opened the page names a record (#qa?r=QA-...). Captured at load,
@@ -209,6 +209,7 @@ function qaMatchHtml() {
 // the project (address, resource) re-run when the field is left, so the page does
 // not rebuild under the cursor.
 function qaSetProject(v, fromStep) {
+  if (qaRun && qaRun.saved) return;                 // the project is fixed once saved
   qaProj = v;
   const el = document.getElementById('qa-match'); if (el) el.innerHTML = qaMatchHtml();
   const other = document.getElementById(fromStep ? 'qa-project' : 'qa-project2'); if (other) other.value = v;
@@ -274,9 +275,10 @@ function qaSetCheckVendor(v) {
 }
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
-  host.innerHTML = `<div class="qa-form">
+  const clear = !qaRun && (qaProj.trim() || qaPack) ? `<button class="qa-link qa-clear" onclick="qaStartOver()">Start over</button>` : '';
+  host.innerHTML = `${clear}<div class="qa-form">
     <div class="qa-field"><span class="klabel">Project ID</span>
-      <input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"
+      <input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"${qaRun && qaRun.saved ? ' readonly title="The project is fixed once a review is saved"' : ''}
         oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" aria-label="Project ID">
       <div id="qa-match">${qaMatchHtml()}</div></div>
     <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
@@ -349,6 +351,7 @@ function qaOutcome() { return OpsQA.outcomeOf(qaFindings()); }
 const qaPhotoKey = it => [it.id, it.unit || '', it.n].join('|');
 
 function qaReviewNumber() {
+  if (qaRun && qaRun.savedRec) return qaRun.savedRec.n;
   const id = qaProj.trim().toUpperCase();
   return qaLoad().filter(r => r.project === id).length + 1;
 }
@@ -547,13 +550,11 @@ function _qaBar() {
     ? `<span class="qa-conn" title="Set by your password"><span class="fsel-label">Reviewer</span> <b>${qaH(qaUser)}</b></span>`
     : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
-  const dirty = qaRun || qaProj.trim() || qaPack;
   host.innerHTML = `<div class="fbar">
     <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
-      ${qaView === 'review' && dirty ? `<button class="fbtn" onclick="qaStartOver()">${qaRun && qaRun.saved ? 'New review' : 'Start over'}</button>` : ''}
     </div>
   </div>`;
   _qaConn();
@@ -680,7 +681,7 @@ function _qaStrip() {
   const o = qaOutcome(), c = o.counts;
   host.innerHTML = `<span class="qa-outcome">${qaStatusPill(o.suggestedStatus)}</span>
     <span><b>${c.missHard}</b> hard ${c.missHard === 1 ? 'miss' : 'misses'}</span><span><b>${c.missWarn}</b> to review</span><span><b>${c.gap + c.standingGaps}</b> not in template</span><span><b>${qaRun.S.photos.length}</b> photos</span>
-    <span class="sp"><button onclick="qaViewPdf(1)">View report</button></span>`;
+    <span class="sp"><button onclick="qaViewPdf(1)">View report</button><button class="qa-startover" onclick="qaStartOver()">${qaRun.saved ? 'New review' : 'Start over'}</button></span>`;
 }
 function _qaStep() {
   const host = document.getElementById('qa-step'); if (!host || !qaRun) return;
@@ -751,7 +752,7 @@ function qaVerdict(i, v) {
     card.querySelectorAll('.qa-ph-btns button').forEach(b => b.classList.toggle('on', b.classList.contains(cur)));
   }
   if (!qaRun.edited) qaRun.summary = qaSummaryText();
-  _qaStrip();
+  _qaStrip(); _qaSaveBtn();
 }
 let qaZoomAt = -1;
 function qaZoom(i) {
@@ -810,7 +811,7 @@ function qaDecide(i, v) {
   if (row) row.outerHTML = qaDecideHtml(i, run.decisions[k]);
   const sub = document.getElementById('qa-rep-sub'); if (sub) sub.textContent = qaReportSub(flagged.length, flagged.filter(x => !run.decisions[qaFlagKey(x)]).length);
   if (!run.edited) run.summary = qaSummaryText();
-  _qaStrip();
+  _qaStrip(); _qaSaveBtn();
 }
 
 // Step 4 — the summary Salesforce receives
@@ -830,6 +831,12 @@ function qaRecordLink(id) { return location.origin + location.pathname + '#qa?r=
 function qaSetStatus(s) { qaRun.status = qaRun.status === s ? null : s; qaRefresh(); }
 function qaSetOverride(v) { qaRun.override = v; if (!qaRun.edited) qaRun.summary = qaSummaryText(); _qaSaveBtn(); }
 
+// What a saved review is compared with to tell whether there is anything to save.
+function qaSnap() {
+  const run = qaRun; if (!run) return '';
+  return JSON.stringify([run.status, run.status === 'Passed with Override' ? run.override.trim() : '', run.summary,
+    qaFindings().filter(f => f.status !== 'na').map(f => [f.id, f.status, f.detail || ''])]);
+}
 function qaSaveBlock() {
   const run = qaRun; if (!run) return '';
   if (!qaProj.trim()) return 'Add the project ID before saving';
@@ -841,13 +848,15 @@ function qaSaveBlock() {
 function _qaSaveBtn() {
   const b = document.getElementById('qa-save'); if (!b || !qaRun) return;
   const why = qaSaveBlock();
-  b.disabled = !!why || !!qaRun.saved || !!qaRun.saving; b.title = why;
-  const h = document.getElementById('qa-save-why'); if (h) h.textContent = qaRun.saved ? '' : why;
+  const dirty = !qaRun.saved || qaSnap() !== qaRun.snap;
+  b.disabled = !!why || !dirty || !!qaRun.saving; b.title = why;
+  b.textContent = qaRun.saved ? 'Save changes' : 'Save review';
+  const h = document.getElementById('qa-save-why'); if (h) h.textContent = why || (qaRun.saved && !dirty ? 'Up to date' : '');
 }
 function _qaStatusStep(host) {
   const run = qaRun, o = qaOutcome(), id = qaRecordId();
   const hardMiss = o.counts.missHard > 0;
-  const stBtn = s => `<button class="tgl-btn${run.status === s ? ' active' : ''}"${s === 'Passed' && hardMiss ? ' disabled style="opacity:.4;cursor:default;" title="There are hard misses, so use Passed with Override"' : ''}${run.saved ? ' disabled' : ''} onclick="qaSetStatus('${s}')">${s}</button>`;
+  const stBtn = s => `<button class="tgl-btn${run.status === s ? ' active' : ''}"${s === 'Passed' && hardMiss ? ' disabled style="opacity:.4;cursor:default;" title="There are hard misses, so use Passed with Override"' : ''} onclick="qaSetStatus('${s}')">${s}</button>`;
   const hint = o.suggestedStatus === 'Needs review' ? 'Only warnings, so it\'s your call.' : `Looks like ${o.suggestedStatus}.`;
   const row = (label, val, key, wide) => `<div class="qa-sfrow${wide ? ' wide' : ''}"><div class="klabel">${label}</div><div class="qa-sfval">${val}</div>${key ? `<button class="copy-btn" onclick="qaCopy('${key}',this)">Copy</button>` : ''}</div>`;
   host.innerHTML = `
@@ -855,14 +864,13 @@ function _qaStatusStep(host) {
       <input class="qa-in needs" id="qa-project2" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" oninput="qaSetProject(this.value,true)" onchange="qaProjectCommit()" aria-label="Project ID"></div>`}
     <div class="qa-status"><div class="toggle-group">${QA_SF_STATUSES.map(stBtn).join('')}</div><span class="qa-sfhint">${qaH(hint)}</span></div>
     ${run.status === 'Passed with Override' ? `<textarea class="qa-in short" id="qa-override" placeholder="Why this passes despite the gap or miss" oninput="qaSetOverride(this.value)" aria-label="Override reason">${qaH(run.override)}</textarea>` : ''}
-    <div class="qa-actions">${run.saved
-      ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="fbtn" style="margin-left:auto;" onclick="qaCopyAll(this)">Copy all</button>`
-      : `<button class="qa-primary" id="qa-save" onclick="qaSave()">Save review</button><span class="qa-sfhint warn" id="qa-save-why"></span>`}</div>
+    <div class="qa-actions"><button class="qa-primary" id="qa-save" onclick="qaSave()">${run.saved ? 'Save changes' : 'Save review'}</button><span class="qa-sfhint warn" id="qa-save-why"></span>
+      ${run.saved ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="fbtn" style="margin-left:auto;" onclick="qaCopyAll(this)">Copy all</button>` : ''}</div>
     ${run.saved ? `<div class="qa-sf">
       ${row('Site Survey QA Review Status', qaH(run.status), 'status')}
-      ${row('Site Survey QA Review Date', qaToday(), 'date')}
+      ${row('Site Survey QA Review Date', qaH(run.savedRec ? run.savedRec.date : qaToday()), 'date')}
       ${row('Site Survey QA Review Source', 'Coordinator', 'source')}
-      ${row('Site Survey QA Reviewed By', qaH(qaReviewer), 'by')}
+      ${row('Site Survey QA Reviewed By', qaH(run.savedRec ? run.savedRec.reviewer : qaReviewer), 'by')}
       ${row('Site Survey QA Report Link', `<span style="font-size:11px;">${qaH(qaRecordLink(id))}</span><div class="qa-sfhint">${qaH(id)} · ${qaMode === 'shared' ? 'opens this review for anyone on the team' : 'opens in this browser only'}</div>`, 'link', true)}
       ${row('Site Survey QA Summary', `<span style="white-space:pre-wrap;font-size:11.5px;">${qaH(run.summary)}</span>`, 'summary', true)}
     </div>` : ''}`;
@@ -871,7 +879,7 @@ function _qaStatusStep(host) {
 
 function qaFieldValue(k) {
   const run = qaRun, id = qaRecordId();
-  return ({ status: run.status || '', date: qaToday(), by: (qaReviewer || '').trim(), source: 'Coordinator', summary: run.summary, link: qaRecordLink(id) })[k];
+  return ({ status: run.status || '', date: run.savedRec ? run.savedRec.date : qaToday(), by: (run.savedRec ? run.savedRec.reviewer : (qaReviewer || '')).trim(), source: 'Coordinator', summary: run.summary, link: qaRecordLink(id) })[k];
 }
 function qaCopy(k, btn) {
   const text = qaFieldValue(k);
@@ -891,6 +899,7 @@ function qaCopied(btn) {
 // ── Save ───────────────────────────────────────────
 async function qaSave() {
   const run = qaRun; if (!run || run.saving || qaSaveBlock()) return;
+  if (run.saved) return qaUpdate();
   const o = qaOutcome(), id = qaRecordId(), row = qaProjectRow(qaProj);
   const rec = {
     id, project: qaProj.trim().toUpperCase(), n: qaReviewNumber(), created: new Date().toISOString(), date: qaToday(),
@@ -921,8 +930,44 @@ async function qaSave() {
   }
   run.saving = false; run.saved = saved.id; run.savedRec = saved;
   if (saved.summary !== run.summary) run.summary = saved.summary;
+  run.snap = qaSnap();
+  const pf = document.getElementById('qa-project'); if (pf) { pf.readOnly = true; pf.title = 'The project is fixed once a review is saved'; pf.classList.remove('needs'); }
   toast('Saved ' + saved.id);
-  _qaStatusStepRefresh(); _qaConn();
+  _qaStatusStepRefresh(); _qaConn(); _qaBar(); _qaStrip();
+}
+// Revise a saved review: the status and its reason, the summary, and the findings behind them.
+async function qaUpdate() {
+  const run = qaRun, o = qaOutcome();
+  const changes = {
+    status: run.status, override: run.status === 'Passed with Override' ? run.override.trim() : '', summary: run.summary,
+    counts: o.counts, suggested: o.suggestedStatus,
+    photos: { total: (run.items || []).length, bad: Object.values(run.verdicts).filter(v => v === 'bad').length },
+    findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, title: f.title, detail: f.detail || '' })),
+  };
+  run.saving = true; _qaSaveBtn();
+  const out = await qaApplyChanges(run.saved, changes);
+  run.saving = false;
+  if (!out) return _qaSaveBtn();
+  run.savedRec = out; run.snap = qaSnap();
+  toast('Changes saved');
+  _qaSaveBtn(); _qaStatusStepRefresh();
+}
+// Send changes for a saved review to the server, or apply them to this browser's own log.
+async function qaApplyChanges(id, changes) {
+  const log = qaLoad(), i = log.findIndex(r => r.id === id);
+  let rec;
+  if (qaMode === 'shared') {
+    const r = await qaApi('PUT', '?id=' + encodeURIComponent(id), { changes });
+    if (r.status === 401) { qaBounce('Wrong password'); return null; }
+    if (r.status !== 200 || !r.body || !r.body.review) { toast((r.body && r.body.error) || "Couldn't save the changes. Try again"); return null; }
+    rec = r.body.review;
+  } else {
+    if (i < 0) { toast('That review is no longer in this browser'); return null; }
+    rec = Object.assign({}, log[i], changes, { editedBy: qaReviewer || '', editedAt: new Date().toISOString() });
+  }
+  if (i >= 0) log[i] = rec; else log.unshift(rec);
+  if (qaMode !== 'shared') qaPersist();
+  return rec;
 }
 function _qaStatusStepRefresh() { if (qaRun.step === 4) _qaStep(); }
 function qaStartOver() {
@@ -984,7 +1029,7 @@ async function qaRefreshLog(btn) {
 function qaSetLens(l) { qaLens = l; qaOpen = null; _qaLog(); }
 function qaSetQ(v) { qaQ = v; _qaLogTable(); }
 function qaSetStatusF(v) { qaStatusF = v; _qaLogTable(); }
-function qaToggleOpen(id) { qaOpen = qaOpen === id ? null : id; _qaLogTable(); }
+function qaToggleOpen(id) { qaEditing = null; qaOpen = qaOpen === id ? null : id; _qaLogTable(); }
 function qaLogFiltered() {
   const q = qaQ.trim().toLowerCase();
   return qaLoad().filter(r => (qaStatusF === 'all' || r.status === qaStatusF)
@@ -1024,12 +1069,15 @@ function _qaLogTable() {
 function qaRecordDetail(r) {
   const misses = r.findings.filter(f => f.status === 'miss'), gaps = r.findings.filter(f => f.status === 'gap');
   const line = f => `<div>${f.severity === 'hard' ? '<span class="qa-sw hard"></span> ' : '<span class="qa-sw warn"></span> '}<b>${qaH(f.title)}</b> · ${qaH(f.detail)}</div>`;
-  return `<div class="qa-expand-grid" onclick="event.stopPropagation()">
-    <div><div class="klabel">Summary sent to Salesforce</div><pre class="qa-pre">${qaH(r.summary)}</pre>
+  const left = qaEditing === r.id ? qaEditForm(r) : `<div class="klabel">Summary sent to Salesforce</div><pre class="qa-pre">${qaH(r.summary)}</pre>
       ${r.override ? `<div class="klabel" style="margin-top:12px;">Override</div><div class="qa-mini">${qaH(r.override)}</div>` : ''}
+      ${r.editedAt ? `<div class="qa-sfhint" style="margin-top:8px;">Edited by ${qaH(r.editedBy || 'someone')} on ${qaH(new Date(r.editedAt).toLocaleDateString('en-US'))}</div>` : ''}
       <div class="qa-actions"><button class="copy-btn" onclick="qaCopyRecord('${qaH(r.id)}','summary',this)">Copy summary</button>
         <button class="copy-btn" onclick="qaCopyRecord('${qaH(r.id)}','link',this)">Copy link</button>
-        <button class="qa-link" style="margin-left:auto;color:var(--red);" onclick="qaDelete('${qaH(r.id)}')">Delete</button></div></div>
+        <button class="qa-link" style="margin-left:auto;" onclick="qaEditRecord('${qaH(r.id)}')">Edit</button>
+        <button class="qa-link" style="color:var(--red);" onclick="qaDelete('${qaH(r.id)}')">Delete</button></div>`;
+  return `<div class="qa-expand-grid" onclick="event.stopPropagation()">
+    <div>${left}</div>
     <div><div class="klabel">Record</div><div class="qa-mini">
         <b>${qaH(r.id)}</b> · ${qaH(r.source)}<br>
         Report: ${qaH(r.file.name)}<br>${r.reportLink || r.photoLink ? `Files: <a href="${qaH(r.reportLink || r.photoLink)}" target="_blank" rel="noopener">Drive ↗</a><br>` : ''}
@@ -1038,6 +1086,30 @@ function qaRecordDetail(r) {
       <div class="klabel" style="margin-top:12px;">${qaPlural(misses.length, 'miss')} · ${qaPlural(gaps.filter(g => !g.standing).length, 'applied gap')}</div>
       <div class="qa-mini">${misses.slice(0, 10).map(line).join('') || 'No misses.'}${misses.length > 10 ? `<div>+${misses.length - 10} more</div>` : ''}</div></div>
   </div>`;
+}
+// Revise a saved review from History: the status, its reason and the summary. The findings
+// stay as they were reviewed; change those from the review itself while it is open.
+function qaEditForm(r) {
+  const d = qaEditDraft;
+  return `<div class="qa-edit"><div class="klabel">Status</div>
+    <div class="toggle-group">${QA_SF_STATUSES.map(s => `<button class="tgl-btn${d.status === s ? ' active' : ''}" onclick="qaEditSet('status','${s}')">${s}</button>`).join('')}</div>
+    ${d.status === 'Passed with Override' ? `<textarea class="qa-in short" placeholder="Why this passes despite the gap or miss" oninput="qaEditSet('override',this.value,true)" aria-label="Override reason">${qaH(d.override)}</textarea>` : ''}
+    <div class="klabel">Summary</div>
+    <textarea class="qa-in" style="min-height:150px;" oninput="qaEditSet('summary',this.value,true)" aria-label="Summary">${qaH(d.summary)}</textarea>
+    <div class="qa-actions"><button class="qa-primary" id="qa-edit-save" onclick="qaEditSave('${qaH(r.id)}')">Save changes</button><button class="qa-link" onclick="qaEditRecord(null)">Cancel</button><span class="qa-sfhint warn" id="qa-edit-why"></span></div></div>`;
+}
+function qaEditRecord(id) {
+  qaEditing = id; const r = id && qaLoad().find(x => x.id === id);
+  qaEditDraft = r ? { status: r.status, override: r.override || '', summary: r.summary || '' } : null;
+  _qaLogTable();
+}
+function qaEditSet(k, v, quiet) { qaEditDraft[k] = v; if (!quiet) return _qaLogTable(); }
+async function qaEditSave(id) {
+  const d = qaEditDraft, why = d.status === 'Passed with Override' && d.override.trim().length < 5 ? 'Say why you are passing it with an override' : !d.summary.trim() ? 'The summary can\'t be empty' : '';
+  const el = document.getElementById('qa-edit-why'); if (el) el.textContent = why; if (why) return;
+  const out = await qaApplyChanges(id, { status: d.status, override: d.status === 'Passed with Override' ? d.override.trim() : '', summary: d.summary });
+  if (!out) return;
+  qaEditing = null; qaEditDraft = null; toast('Changes saved'); _qaLog();
 }
 function qaCopyRecord(id, what, btn) {
   const r = qaLoad().find(x => x.id === id); if (!r) return;

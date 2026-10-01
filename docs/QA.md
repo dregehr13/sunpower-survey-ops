@@ -210,3 +210,10 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
   told apart by its paths. A Radicl report cuts "Dead Front On/Off" to "Dead Front…";
   the zip's full names resolve it by template order (On, then Off) when the counts add
   up, and are not used otherwise. Checked against a real report: 166 of 166 photos.
+- **Saved reviews are editable** (2026-10-01). While the review is open the status,
+  override, summary, findings and photo marks stay live and the button reads
+  *Save changes* (enabled only when something differs from what was saved). From
+  History, *Edit* changes the status, its reason and the summary. `PUT
+  /api/qa-log?id=` takes `{changes}`; project, number, reviewer and report are
+  fixed, and `edited_by` / `edited_at` record who changed it. **Start over** sits in
+  the review's strip (and as a link on the intake card before a report is loaded).
