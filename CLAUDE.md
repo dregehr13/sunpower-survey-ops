@@ -717,6 +717,27 @@ becomes relevant instead of standing there inert. Things not to undo:
   read; testing only `mapIgnoresDates()` left Open WIP→Coverage still offering
   Resource, since both ignore dates. All eight adjacent transitions verified,
   round trips included
+### Map clean-up (2026-10-01)
+Things not to undo:
+- **The filter bar is the first thing on the page**, above the rail, as on every
+  other page — it is the broad scope; state / market / mode are view controls
+  beneath it. Still the `#fb-map` slot filled by `renderFBars()`
+- **The panel title is a fixed "Markets"** and the "← All states" button is gone.
+  The title, the button, the STATE label and the select all said the same state;
+  the select already carries "All states" and a map click still zooms
+- **`.map-ctl` takes the room the title leaves and wraps inside it**
+  (`flex:1 1 0`). At content width it ran past the panel from ~1100px down and
+  clipped Team reach / Site a base with no scrollbar. Under 860px it takes its
+  own full row
+- **Top locations** (`#map-top`): label track is `clamp(96px,24%,160px)` with
+  ellipsis; under 640px each row is name+count / bar / detail. Scoped to
+  `#map-top` — Quality's rows share `.rswk-row`
+- **Volume is a neutral ink ramp** (`_MAP_RAMP`, pale grey to `--text`), and the
+  legend gradient is built from the same stops. The old cream-gold-brick ramp
+  ended in the app's "bad" red for a count, which is not a status
+- Legend text 11px, footnotes (`.map-foot`) and timeline ticks 10px, layer
+  buttons 11px — the label scale
+
 - **Nothing on the map is redundant** — audited 2026-08-31, every mode measured.
   Volume is what a map is for; Cycle and Resurvey carry a geographic cut no
   other page has (region is a sales territory, not a place — 0.9d to 5.8d and
@@ -791,6 +812,13 @@ ticks only added unfinished rows Performance discards. Things not to undo:
   effect: the Data page can no longer show open rows on canceled/at-risk deals
 - **`resScope()` uses its own `RES_SCOPE_STATUSES`**, so the Resource page does
   not move when the default widens
+- **WIP ignores project status entirely** (2026-10-01, Doug's call). It reads
+  `wipRows()` — the scope with every status ticked — not `rows`: the control is
+  not shown there (`fbShow`), and a Canceled/In Progress unticked on another page
+  must not shrink the queue invisibly. WIP is an open initial survey, or an open
+  resurvey, on a live deal; `isWIP` / `isOpenResurvey` already carry that test.
+  The nav badge, filter hint, Current's WIP cell and scheduled-remaining read it
+  too. Verified identical at default, and unchanged with In Progress unticked
 - Saved filter state equal to either earlier default is migrated to the new one
 - Quality shows the control again (it was dropped as "every row is complete",
   which stopped being a reason once status restricts)

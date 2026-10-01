@@ -557,6 +557,16 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
    layout fault rather than as a long name. Wrapping stays the fallback for a
    label longer than any of today's. */
 @media(max-width:1180px){.rswk-row.rswk-cat{grid-template-columns:152px minmax(40px,1fr) 28px;}}
+/* Top locations (Map). The label track is a share of the row, not a fixed 112px,
+   and a long town truncates instead of running under the bar. Phone width gives
+   each row its own three lines — name and count, bar, detail — so the detail
+   keeps the full width instead of wrapping inside the 155px left under the bar.
+   Scoped to #map-top: Quality's rows share .rswk-row and are tuned separately. */
+#map-top .rswk-row{grid-template-columns:clamp(96px,24%,160px) minmax(48px,1fr) 28px;}
+#map-top .rswk-wk{overflow:hidden;text-overflow:ellipsis;min-width:0;}
+@media(max-width:640px){
+  #map-top .rswk-row{grid-template-columns:minmax(0,1fr) 28px;grid-template-areas:"wk n" "bar bar" "meta meta";gap:4px 10px;}
+}
 
 /* Resurveys requested — the day rows reuse .rswk-row above; these style the
    requests that expand underneath one.
@@ -602,7 +612,8 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-tip .mv{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.16);opacity:.85;}
 .map-state{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:12px;}
 .map-state[hidden]{display:none;}
-.map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted);}
+.map-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11px;color:var(--muted);}
+.map-legend .map-foot{font-size:10px;color:var(--faint);}
 .map-legend .map-ring{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:-2px;
   border:1px dashed var(--res-spwr);background:color-mix(in srgb,var(--res-spwr) 10%,transparent);}
 /* The layer and the siting tool are checkbox-shaped controls, not segments of
@@ -618,9 +629,12 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-head{align-items:center;margin-bottom:6px;}
 .map-head .stitle{flex:0 0 auto;}
 .map-sub{margin:0 0 11px;min-height:15px;}
-.map-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0;flex:0 0 auto;}
+/* The controls take whatever the title leaves and wrap inside it. At content
+   width (flex:0 0 auto) they were wider than the panel from ~1100px down and the
+   layer buttons clipped off the right edge with no scrollbar to reach them. */
+.map-ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;min-width:0;flex:1 1 0;}
 .map-layers{display:flex;gap:8px;}
-.map-layer{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;font-weight:600;
+.map-layer{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11px;font-weight:600;
   color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:6px;
   height:30px;padding:0 10px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;}
 .map-layer:hover{color:var(--text);border-color:var(--muted);}
@@ -635,7 +649,7 @@ th:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offs
 .map-track{position:relative;flex:1;min-width:0;height:52px;}
 #map-hist{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .map-ticks{position:absolute;left:0;right:0;bottom:-3px;height:11px;pointer-events:none;}
-.map-ticks span{position:absolute;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;}
+.map-ticks span{position:absolute;transform:translateX(-50%);font-size:10px;color:var(--faint);white-space:nowrap;}
 @media(max-width:480px){.map-ticks span:nth-child(even){display:none;}}
 /* The two scope pickers — which state to zoom to, and how wide a market is.
    Both are definitions rather than views, which is why the radius sits here
@@ -1069,6 +1083,9 @@ mark.dhl{background:#fdf1dc;color:inherit;border-radius:2px;padding:0 1px;box-sh
   #page-map .toggle-group{overflow-x:auto;scrollbar-width:none;min-width:0;max-width:100%;}
   #page-map .toggle-group::-webkit-scrollbar{display:none;}
   #page-map .tgl-btn,#page-map .map-layer{flex:0 0 auto;}
+  /* Beside a one-word title the controls got 257px of a 315px panel at 375px.
+     Full row instead, left-aligned, so the scrolling toggle has all of it. */
+  #page-map .map-ctl{flex:1 1 100%;justify-content:flex-start;}
 }
 
 /* WIP QUEUE — scroll within the card, header stays visible */
@@ -1868,6 +1885,18 @@ PAGES.forEach(p => pageF[p] = GF);
 // to 2,538 — pulling in At-Risk and Canceled — while the button read
 // "Status · 0" and highlighted as active. Only a missing or malformed
 // GF.statuses falls back to the full set.
+function inStatusScope(r,s){
+  // Unfinished work only counts while the deal is live: an open task on a
+  // canceled or at-risk project is not queue (inScope says the same), and
+  // letting it in swung the WIP SS ratio from 0.9 to 17.
+  return s.includes(r.project_status)&&(OpsMetrics.isComplete(r)||(LIVE_STATUSES.includes(r.project_status)&&r.list!=='Inactive'&&r.list!=='Not Required'));
+}
+// What the WIP page reads in place of `rows`: the same scope with every project
+// status ticked, whatever the Project status control holds elsewhere. WIP is
+// open work on a live deal by definition (isWIP / isOpenResurvey carry that
+// test), so project status has nothing to cut and a setting made on another
+// page must not shrink the queue invisibly.
+function wipRows(){ return allRows.filter(r=>inStatusScope(r,PROJECT_STATUSES)); }
 function scopeRows(){
   const s=GF&&GF.statuses;
   if(!Array.isArray(s)){ rows=allRows.slice(); return; }
@@ -1879,10 +1908,7 @@ function scopeRows(){
   // (It used to ADD — a ticked 'Complete' kept every finished survey whatever the
   // project had become — so ticking Canceled or At-Risk changed nothing on any
   // page that counts finished surveys.)
-  // Unfinished work only counts while the deal is live: an open task on a
-  // canceled or at-risk project is not queue (inScope says the same), and
-  // letting it in swung the WIP SS ratio from 0.9 to 17.
-  rows = allRows.filter(r=>s.includes(r.project_status)&&(OpsMetrics.isComplete(r)||(LIVE_STATUSES.includes(r.project_status)&&r.list!=='Inactive'&&r.list!=='Not Required')));
+  rows = allRows.filter(r=>inStatusScope(r,s));
 }
 let allRows = loadAll(JSON.parse(JSON.stringify(RAW)));
 let rows = [];
@@ -2068,7 +2094,7 @@ function fbShow(page){
 // Map printed "3748 of 3836 shown" nine pixels above a rail reading 3,824, and
 // the source editor printed it above a table of 3,836 rows.
 function fbHint(page){
-  if(page==='wip')  return wipFiltered().length+' of '+rows.filter(isOpenQueue).length+' open';
+  if(page==='wip')  return wipFiltered().length+' of '+wipRows().filter(isOpenQueue).length+' open';
   if(page==='data') return rows.length+' rows in scope';
   if(page==='map')  return '';   // the rail below states the count the map actually draws
   return filtered.length+' of '+rows.length+' shown';
@@ -2180,8 +2206,8 @@ function buildFBar(page){
 // Sales Rep and Install Type: WIP-only, because chasing a specific rep's open
 // jobs is a queue question and no analytics page cuts by either.
 function wipExtraControls(){
-  const salesReps=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
-  const types=[...new Set(rows.filter(r=>isWIP(r)).map(r=>r.type).filter(Boolean))].sort();
+  const salesReps=[...new Set(wipRows().filter(r=>isWIP(r)).map(r=>r.sales_rep).filter(Boolean))].sort();
+  const types=[...new Set(wipRows().filter(r=>isWIP(r)).map(r=>r.type).filter(Boolean))].sort();
   const sel=(key,label,vals)=>vals.length?`<div class="fsep"></div><span class="fselgrp${wipF[key]&&wipF[key]!=='all'?' on':''}"><span class="fsel-label">${esc(label)}</span>
     <select aria-label="Filter by ${esc(label)}" onchange="onWipF('${key}',this.value)">
       <option value="all">All</option>
@@ -2303,7 +2329,7 @@ function clearF(page){
 // a region while the denominator stayed national produced a ratio of two
 // different populations.
 function wipScoped(){
-  return rows.filter(r=>{
+  return wipRows().filter(r=>{
     if(!gfDim(r)) return false;   // region / office / resource, shared with every page
     if(wipF.type&&wipF.type!=='all'&&r.type!==wipF.type) return false;
     if(wipF.sales_rep&&wipF.sales_rep!=='all'&&r.sales_rep!==wipF.sales_rep) return false;
@@ -3424,7 +3450,7 @@ function renderWeek(){
 function renderWipCountBadge(){
   const b=document.getElementById('wip-count-badge');
   if(!b) return;
-  const n=rows.filter(isOpenQueue).length;
+  const n=wipRows().filter(isOpenQueue).length;
   b.textContent=n||'';
   b.title=n?n+' surveys open':'';
   b.style.display=n?'inline-flex':'none';
@@ -3721,7 +3747,7 @@ function renderThisWeek(){
   // nothing here needs the initial-only half on its own.
   const completedTW=weekCompletions(tw.from,dataThrough).combined;
   // Initial surveys only — resurveys have their own line (see rsBreak below).
-  const scheduledRem=rows.filter(r=>isWIP(r)&&inScope(r)&&r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to);
+  const scheduledRem=wipRows().filter(r=>isWIP(r)&&inScope(r)&&r.scheduled&&r.scheduled>=dataThrough&&r.scheduled<=tw.to);
   const atRisk=rows.filter(r=>r.scheduled&&r.scheduled>=tw.from&&r.scheduled<=tw.to&&isWIP(r)&&inScope(r))
     .map(r=>({r,sched:r.scheduled,isRs:false,openFrom:r.start}));
   const {elapsed:bDaysElapsed}=businessDays(dataThrough);
@@ -3730,7 +3756,7 @@ function renderThisWeek(){
   const sixWksAgo=localISO(new Date(Date.now()-42*24*3600*1000));
   const recentComps=rows.filter(r=>isComplete(r)&&r.complete>=sixWksAgo&&r.complete<=dataThrough&&r.ct_total!=null&&r.ct_total>=1);
   const expectedCt=buildExpectedCt(recentComps);
-  const wipProjects=rows.filter(r=>isWIP(r)&&inScope(r));
+  const wipProjects=wipRows().filter(r=>isWIP(r)&&inScope(r));
   const recentAvgCt=avg(wipProjects.map(r=>expectedCt(r)))||4;
   const wip=wipProjects.length;
   // Weekly projection (lib/metrics.cjs). Reads allRows — cancelled rows carry
@@ -5189,7 +5215,7 @@ function renderAgingWIP(){
   // dim-filtered queue so the "Open resurveys" pointer cell and the All-view
   // subtitle always show both halves regardless of the lens.
   const allWip=wipFiltered().filter(inView).map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
-  const wipUnfilteredCount=rows.filter(r=>isOpenQueue(r)&&inView(r)).length;
+  const wipUnfilteredCount=wipRows().filter(r=>isOpenQueue(r)&&inView(r)).length;
   const wipDimFiltered=allWip.length!==wipUnfilteredCount;
   const totalWip=allWip.length;
   // Mean Days Open in SS. Past due held this slot and was the weakest cell on
@@ -6328,9 +6354,8 @@ function renderMap(){
     <div id="map-kpis"></div>
     <div class="sec">
       <div class="shead map-head">
-        <div class="stitle">${mapMarket==='US'?'All markets':esc(MAP_STATE_NAMES[mapMarket]||mapMarket)}</div>
+        <div class="stitle">Markets</div>
         <div class="map-ctl">
-          ${mapMarket!=='US'?`<button class="map-back" onclick="setMapMarket('US')">&larr; All states</button>`:''}
           <label class="map-pick" title="Zoom the map to one state">state
           <select class="map-sel" aria-label="State" onchange="setMapMarket(this.value)">
             <option value="US"${mapMarket==='US'?' selected':''}>All states</option>
@@ -6689,7 +6714,12 @@ function mapResize(){
   mapDraw();
 }
 
-const _MAP_RAMP=[[0,232,217,176,0],[0.18,232,217,176,190],[0.42,201,148,46,225],[0.72,179,64,46,240],[1,125,35,24,252]];
+// Density is a count, not a status, so it takes a neutral ink ramp (pale grey to
+// --text) rather than the cream-gold-red it had: that ramp ended in the same
+// brick red the app uses for "bad", and a dense market is not a bad one.
+// [t, r, g, b, alpha]. The legend gradient below is built from these stops.
+const _MAP_RAMP=[[0,204,204,210,0],[0.18,204,204,210,170],[0.5,112,112,122,215],[1,23,23,27,250]];
+const _MAP_RAMP_CSS='linear-gradient(90deg,'+_MAP_RAMP.slice(1).map(k=>`rgba(${k[1]},${k[2]},${k[3]},${(k[4]/255).toFixed(2)}) ${Math.round(k[0]*100)}%`).join(',')+')';
 const _MAP_LUT=(()=>{ const o=new Uint8ClampedArray(1024);
   for(let i=0;i<256;i++){ const t=i/255; let a=_MAP_RAMP[0],b=_MAP_RAMP[_MAP_RAMP.length-1];
     for(let k=0;k<_MAP_RAMP.length-1;k++){ if(t>=_MAP_RAMP[k][0]&&t<=_MAP_RAMP[k+1][0]){a=_MAP_RAMP[k];b=_MAP_RAMP[k+1];break;} }
@@ -6998,7 +7028,7 @@ function mapPaintMeta(vis,zips){
       const k=esc(z.key).replace(/'/g,"\\'");
       return `<div class="rswk-row drill-tgt" role="button" tabindex="0" onclick="mapDrillPlace('${k}')"
                    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mapDrillPlace('${k}');}">
-        <div class="rswk-wk">${esc(z.city)}</div>
+        <div class="rswk-wk" title="${esc(z.city)}">${esc(z.city)}</div>
         <div class="rswk-barwrap"><div class="rswk-bar" style="width:${Math.max(z.n/maxN*100,4)}%;"></div></div>
         <div class="rswk-n">${z.n}</div>
         <div class="rswk-meta">${esc(meta)}</div>
@@ -7012,17 +7042,17 @@ function mapPaintMeta(vis,zips){
     ? `<span><span class="map-ring"></span>${OpsCoverage.surveyorConfig().maxOneWayMi}mi day trip from a base</span>`:'';
   lg.innerHTML=mapMetric==='cov'
     ? RES_TRIO.map(t=>sw(t.cssFill,t.full)).join('')
-      +`<span style="color:var(--faint);">Hollow = no work in view · circle size follows job count · colour = the resource doing most of the work here</span>`+teamKey
+      +`<span class="map-foot">Hollow = no work in view · circle size follows job count · colour = the resource doing most of the work here</span>`+teamKey
     : mapMetric==='rec'
     ? Object.entries(MAP_REC_C).map(([k,c])=>sw(c,Object.values(OpsCoverage.RECOMMENDATIONS).find(r=>r.k===k).label)).join('')
-      +`<span style="color:var(--faint);">Hollow = gone quiet · a recommendation is a case to consider, not a decision</span>`+teamKey
+      +`<span class="map-foot">Hollow = gone quiet · a recommendation is a case to consider, not a decision</span>`+teamKey
     : mapMetric==='vol'
-    ? `<span>Sparse</span><span class="map-ramp" style="background:linear-gradient(90deg,var(--border-lt),#e8d9b0,#c9942e,#b3402e,#7d2318);"></span><span>Concentrated${kinfo(TIP.mapVolume)}</span><span style="color:var(--faint);">Blob size follows job count; overlaps add.</span>`+teamKey
+    ? `<span>Sparse</span><span class="map-ramp" style="background:${_MAP_RAMP_CSS};"></span><span>Concentrated${kinfo(TIP.mapVolume)}</span><span class="map-foot">Blob size follows job count; overlaps add.</span>`+teamKey
     : mapMetric==='wip'
-    ? `${sw('--green','Fully scheduled')}${sw('--amber','Some unscheduled')}${sw('--red','Mostly unscheduled')}<span style="color:var(--faint);">Hollow = nothing open · circle size follows open count${kinfo(TIP.mapWip)}</span>`+teamKey
+    ? `${sw('--green','Fully scheduled')}${sw('--amber','Some unscheduled')}${sw('--red','Mostly unscheduled')}<span class="map-foot">Hollow = nothing open · circle size follows open count${kinfo(TIP.mapWip)}</span>`+teamKey
     : mapMetric==='cycle'
-      ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey
-      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span style="color:var(--faint);">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey;
+      ? `${sw('--green','&le;'+S.targetAvg+'d')}${sw('--amber','&le;'+(S.targetAvg+2)+'d')}${sw('--red','slower')}<span class="map-foot">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey
+      : `${sw('--green','under 10%')}${sw('--amber','10&ndash;20%')}${sw('--red','20%+')}<span class="map-foot">Hollow = under ${MAP_MIN_N} completions · circle size follows job count</span>`+teamKey;
 }
 
 // The one line a coverage market is summarised by, shared by the list below the
