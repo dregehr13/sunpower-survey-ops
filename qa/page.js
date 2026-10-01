@@ -668,20 +668,24 @@ function qaLikely() {
 }
 function _qaLikely() {
   const host = document.getElementById('qa-likely'); if (!host || qaRun) return;
-  const all = qaLikely(), list = qaLikelyAll ? all : all.slice(0, 12), log = qaLoad();
+  // Show everything unless the list is long; a "Show all" that reveals one more card is not worth a click.
+  const all = qaLikely(), list = qaLikelyAll || all.length <= 18 ? all : all.slice(0, 12), log = qaLoad();
   if (!all.length) { host.innerHTML = ''; return; }
   const sel = qaProj.trim().toUpperCase();
   const reviews = p => log.filter(x => x.project === p.toUpperCase()).length;
+  // Grouped by how long it has been waiting, so the late ones stand out.
+  const groups = [['Today', x => x.ago === 0], ['Yesterday', x => x.ago === 1], ['Earlier', x => x.ago > 1]];
+  const card = x => {
+    const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase();
+    return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
+      <span class="qa-lk-p">${qaH(x.r.project)}</span>
+      <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
+      <span class="qa-lk-m">${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
+  };
   host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Likely to review</div>
     <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
-    <div class="qa-likely">${list.map(x => {
-      const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase();
-      return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
-        <span class="qa-lk-p">${qaH(x.r.project)}</span>
-        <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
-        <span class="qa-lk-m">${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'} · ${x.ago === 0 ? 'today' : x.ago === 1 ? 'yesterday' : x.ago + ' days ago'}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
-    }).join('')}</div>
-    ${all.length > 12 ? `<div class="tbl-foot"><button class="copy-btn" onclick="qaLikelyAll=!qaLikelyAll;_qaLikely()">${qaLikelyAll ? 'Show fewer' : 'Show all ' + all.length}</button></div>` : ''}</div>`;
+    ${groups.map(([label, test]) => { const g = list.filter(test); return g.length ? `<div class="qa-lk-h">${label}<span>${g.length}</span></div><div class="qa-likely">${g.map(card).join('')}</div>` : ''; }).join('')}
+    ${all.length > list.length || (qaLikelyAll && all.length > 18) ? `<div class="tbl-foot"><button class="copy-btn" onclick="qaLikelyAll=!qaLikelyAll;_qaLikely()">${qaLikelyAll ? 'Show fewer' : 'Show all ' + all.length}</button></div>` : ''}</div>`;
 }
 function qaPickProject(p) {
   if (qaRun) return;

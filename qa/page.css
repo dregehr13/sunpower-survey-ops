@@ -295,3 +295,7 @@ textarea.qa-in.short{min-height:54px;}
 .qa-ev-th.bad{border-color:var(--red);box-shadow:0 0 0 1px var(--red);}
 .qa-field .upd-drophere span{overflow-wrap:anywhere;word-break:break-word;}
 .qa-field .upd-drophere{overflow:hidden;}
+
+.qa-lk-h{display:flex;align-items:baseline;gap:6px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 6px;}
+.qa-lk-h:first-of-type{margin-top:4px;}
+.qa-lk-h span{font-weight:400;color:var(--faint);}
