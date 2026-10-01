@@ -390,7 +390,7 @@ test('the photo zoom moves with the arrow keys', () => {
 
 test('a Good or Bad call on a flagged item settles it: Good passes, Bad becomes a miss', () => {
   const F = [{ id: 'roof_pitch', status: 'verify', severity: 'hard', detail: 'odd pitch' }, { id: 'dead_front', status: 'pass', verify: true, severity: 'hard', detail: '' }];
-  const src = pageSrc.match(/const qaIsFlagged[\s\S]*?\nconst qaFlagKey[^\n]*\n/)[0] + pageSrc.match(/function qaFindings\(\) \{[\s\S]*?\n\}\n/)[0];
+  const src = pageSrc.match(/const qaActionable[\s\S]*?\nconst qaFlagKey[^\n]*\n/)[0] + pageSrc.match(/function qaFindings\(\) \{[\s\S]*?\n\}\n/)[0];
   const run = (decisions) => new Function('qaRun', src + 'return qaFindings();')({ R: { findings: F }, decisions, items: [], verdicts: {} });
   const key = f => f.id + '|' + (f.detail || f.note || '');
   const out = run({ [key(F[0])]: 'bad', [key(F[1])]: 'ok' });

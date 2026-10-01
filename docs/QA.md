@@ -253,3 +253,30 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
   keeps it.
 - Needs the team server (it does not run against a browser-only log) and says so on the
   Photo review step when it cannot run.
+
+### Terms (Doug, 2026-10-01)
+A defect our own QA catches is a **go back**. A **resurvey** is only what Design calls
+out after we have already QA'd the survey. Copy in the QA app says go back
+(the Salesforce summary reads "Needs go back / follow-up:"); Quality and the metrics
+keep "resurvey" because they measure Design's callouts. Radicl's invoices also use
+"Go Back" as a charge type; that is the vendor's term for a return visit, not ours.
+
+### 2026-10-01 — summary calls, fixed zoom, verdict
+- **Every finding that is not "not in template" takes a ✓ / ✕ call** on the summary
+  page, with a "PDF p.N" link where the report prints its answer or photos
+  (`pageOf` in `lib/qa.cjs`). ✓ turns a miss into a pass; ✕ turns a pass into a
+  miss at the check's own weight. A row whose check rests on photos also shows what the
+  photo marks say (✕ if any photo in the category is marked not usable, ✓ if marked
+  good), and ✓ on the row marks the thumbnails beside it good. ✕ on a row does not mark
+  photos: the check is judged, not the photo. Chips follow the check's original
+  result, so a click never moves a row.
+- The zoom is two stages of one fixed size, so switching examples never moves
+  anything. Marks bottom left, example text bottom right.
+- **Design closeout call** is no longer a check (and the template field is not
+  held against the survey).
+- The status buttons update in place; the old rebuild on every click lost the caret
+  and made them flicker. Save sits below both columns so Override cannot move it.
+- **Why the SunPower and Radicl checklists differ:** the design needs are the same
+  list. The three extras on SunPower (photos deleted before sync, proposal attached,
+  photos taken on site on the survey date) exist because only Site Capture's report
+  records those answers.
