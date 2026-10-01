@@ -388,3 +388,25 @@ test('the project box is highlighted, not explained, while it is empty', () => {
   assert.ok(/qaNeedsProject = \(\) => !!qaRun/.test(pageSrc));
   assert.ok(!/Required to save/.test(pageSrc));
 });
+
+test('a Radicl image folder is matched to report photos, cut captions included', () => {
+  const pack = QA.indexRadiclPack([
+    'Images/ExteriorElectrical_BreakerBox_ElectricalPanel#1—DeadFrontOn_0.jpg', 'Images/ExteriorElectrical_BreakerBox_ElectricalPanel#1—DeadFrontOn_1.jpg',
+    'Images/ExteriorElectrical_BreakerBox_ElectricalPanel#1—DeadFrontOff_0.jpg',
+    'Images/OutsidePhotosofHome_ExteriorPerimeterPhotos_0.jpg', 'Images/OutsidePhotosofHome_ExteriorPerimeterPhotos_1.jpg']);
+  const mk = (section, label, ref) => ({ section, label, ref, instance: '1' });
+  const cut = [mk('Exterior Electrical', 'Breaker Box / Electrical Panel #1 — Dead Front…', 'x'), mk('Exterior Electrical', 'Breaker Box / Electrical Panel #1 — Dead Front…', 'x'), mk('Exterior Electrical', 'Breaker Box / Electrical Panel #1 — Dead Front…', 'x')];
+  const peri = [mk('Outside Photos of Home', 'Exterior Perimeter Photos', 'p'), mk('Outside Photos of Home', 'Exterior Perimeter Photos', 'p')];
+  const S = { photos: [...cut, ...peri] };
+  assert.deepEqual(cut.map(p => QA.radiclPackFile(S, pack, p).split('—')[1]), ['DeadFrontOn_0.jpg', 'DeadFrontOn_1.jpg', 'DeadFrontOff_0.jpg']);
+  assert.match(QA.radiclPackFile(S, pack, peri[1]), /Perimeter.*_1\.jpg$/);
+  // a count that does not add up is not guessed at
+  assert.equal(QA.radiclPackFile({ photos: cut.slice(0, 2) }, pack, cut[0]), null);
+  assert.equal(QA.crossCheckRadiclPack(S, pack).matched, 3);
+});
+
+test('the intake no longer asks which survey type it is, and takes photos for either', () => {
+  const intake = pageSrc.match(/function _qaIntake\(\) \{[\s\S]*?\n\}\n/)[0];
+  assert.ok(!/Survey type|qaSetVendor|Drive/.test(intake));
+  assert.ok(/Photos/.test(intake) && /qaDropHtml\('zip'\)/.test(intake));
+});

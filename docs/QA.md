@@ -203,3 +203,10 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
 - The import-a-log feature is gone from the page (the endpoint still accepts it).
 - Project IDs may carry Salesforce's suffix (`350VPITT - Battery Only`) or a dot.
 - Claude API layer, when built: a Settings toggle, off by default.
+- **No survey-type toggle on intake, no Drive link** (2026-10-01). The report says
+  whether it is Site Capture or Radicl. The checklist before a report loads keeps a
+  view toggle only. One optional **Photos** zip works for both: Site Capture's is a
+  folder per field, Radicl's is one flat folder (`Section_Field_N.jpg`, N from 0),
+  told apart by its paths. A Radicl report cuts "Dead Front On/Off" to "Dead Front…";
+  the zip's full names resolve it by template order (On, then Off) when the counts add
+  up, and are not used otherwise. Checked against a real report: 166 of 166 photos.

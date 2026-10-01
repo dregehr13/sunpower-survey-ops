@@ -24,7 +24,7 @@ let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
-let qaDrive = '', qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
+let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
 let qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
 const qaUrls = [];
@@ -265,33 +265,22 @@ function qaSetBusy(kind, msg, err) {
 
 // ── Intake ─────────────────────────────────────────
 const QA_VENDORS = { sitecapture: 'SunPower survey', radicl: 'Radicl survey' };
-function qaSetVendor(v) {
-  if (qaRun && qaRun.det.vendor !== v) { toast('This report is a ' + QA_VENDORS[qaRun.det.vendor] + '. Start a new review to switch.'); return; }
+// Which checklist to show before a report is loaded. The report decides the survey
+// type itself once it is read, so nothing here asks the reviewer to say.
+function qaSetCheckVendor(v) {
   qaVendor = v;
   try { localStorage.setItem('ops_qa_vendor', v); } catch (e) {}
-  _qaIntake();
   if (!qaRun) _qaChecklist();
-}
-function qaDriveOk() { return /^https:\/\/(drive|docs)\.google\.com\//.test(qaDrive); }
-function qaSetDrive(v) {
-  qaDrive = v.trim();
-  const a = document.getElementById('qa-drive-open'); if (a) { a.style.display = qaDriveOk() ? '' : 'none'; a.href = qaDriveOk() ? qaDrive : '#'; }
-  const w = document.getElementById('qa-drive-warn'); if (w) w.textContent = qaDrive && !qaDriveOk() ? 'That\'s not a Google Drive link.' : '';
 }
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
-  const vbtn = (v) => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetVendor('${v}')">${QA_VENDORS[v]}</button>`;
-  const photos = qaVendor === 'sitecapture' ? `<div class="qa-field"><span class="klabel">Photo export</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>` : '';
-  const drive = qaVendor !== 'radicl' ? '' : `<div class="qa-field"><span class="klabel" title="Kept with the review so you can reopen the files. The app can't read a Drive folder itself.">Drive link</span><div class="qa-drive"><input class="qa-in" id="qa-drive" type="text" autocomplete="off" spellcheck="false" placeholder="Folder with the report and photos (optional)" value="${qaH(qaDrive)}" oninput="qaSetDrive(this.value)" aria-label="Google Drive link">
-        <a id="qa-drive-open" href="${qaDriveOk() ? qaH(qaDrive) : '#'}" target="_blank" rel="noopener" style="${qaDriveOk() ? '' : 'display:none;'}">Open ↗</a></div><div class="qa-match warn" id="qa-drive-warn"></div></div>`;
   host.innerHTML = `<div class="qa-form">
-    <div class="qa-field"><span class="klabel">Survey</span><div class="toggle-group" role="group" aria-label="Survey type">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
     <div class="qa-field"><span class="klabel">Project ID</span>
       <input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"
         oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" aria-label="Project ID">
       <div id="qa-match">${qaMatchHtml()}</div></div>
     <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
-    ${photos}${drive}
+    <div class="qa-field"><span class="klabel">Photos</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>
   </div>`;
 }
 
@@ -385,9 +374,10 @@ async function qaOpenPack(file) {
     const zip = await JSZip.loadAsync(file);
     const names = Object.keys(zip.files).filter(n => !zip.files[n].dir);
     const deps = await qaDepsLoad();
-    const spec = deps.specs.find(s => s.id === 'sitecapture-v13');
-    const pack = OpsQA.indexPhotoPack(names, spec);
-    qaPack = { name: file.name, zip, pack, note: names.length + ' photos', check: null };
+    // Site Capture's export is one folder per field; Radicl's is one flat folder.
+    const kind = names.some(n => n.split('/').length >= 3) ? 'sitecapture' : 'radicl';
+    const pack = kind === 'sitecapture' ? OpsQA.indexPhotoPack(names, deps.specs.find(s => s.id === 'sitecapture-v13')) : OpsQA.indexRadiclPack(names);
+    qaPack = { name: file.name, zip, pack, kind, note: names.length + ' photos', check: null };
     qaSetBusy('zip', '');
     if (qaRun) { qaCrossCheckPack(); qaRender(); qaLoadPhotos(); }
     else { const el = document.getElementById('qa-dz-zip'); if (el) el.innerHTML = qaDropHtml('zip'); }
@@ -398,8 +388,8 @@ async function qaOpenPack(file) {
 }
 function qaCrossCheckPack() {
   if (!qaPack || !qaRun) return;
-  if (qaRun.S.template.vendor !== 'sitecapture') { qaPack.check = { skipped: true }; qaPack.note = 'Radicl photos are read from its report'; return; }
-  qaPack.check = OpsQA.crossCheckPack(qaRun.S, qaPack.pack);
+  if (qaPack.kind !== qaRun.S.template.vendor) { qaPack.check = { skipped: true }; qaPack.note = 'This photo export is from the other survey type, so it is not used'; return; }
+  qaPack.check = qaPack.kind === 'radicl' ? OpsQA.crossCheckRadiclPack(qaRun.S, qaPack.pack) : OpsQA.crossCheckPack(qaRun.S, qaPack.pack);
   const c = qaPack.check;
   qaPack.note = `${c.packPhotos} photos · ${c.matched} of ${c.folders} folders match the report`;
 }
@@ -430,9 +420,9 @@ async function qaMore(id) {
 }
 async function qaFetchImages(items) {
   const run = qaRun; if (!run) return;
-  if (qaPack && run.S.template.vendor === 'sitecapture') {
+  if (qaPack && qaPack.kind === run.S.template.vendor) {
     for (const it of items) {
-      const path = OpsQA.packFile(run.S, qaPack.pack, it.photo);
+      const path = (qaPack.kind === 'radicl' ? OpsQA.radiclPackFile : OpsQA.packFile)(run.S, qaPack.pack, it.photo);
       const f = path && qaPack.zip.file(path);
       if (f) { const blob = await f.async('blob'); it.url = URL.createObjectURL(blob); qaUrls.push(it.url); it.from = 'Original'; await qaMeasure(it, blob); qaPhotoReady(it); }
     }
@@ -485,7 +475,7 @@ const QA_SOFT_BELOW = 40;           // Laplacian variance at 200px wide; calibra
 const QA_LOW_RES = 1000;            // long edge in pixels below which a breaker rating is unlikely to be readable
 
 function qaQuality() {
-  const run = qaRun, own = qaPack && run && run.S.template.vendor === 'sitecapture';
+  const run = qaRun, own = qaPack && run && qaPack.kind === run.S.template.vendor;
   const m = (run.items || []).filter(i => i.from === 'From the report' && i.w);
   const low = m.filter(i => Math.max(i.w, i.h) < QA_LOW_RES), soft = m.filter(i => i.soft);
   const size = m.length ? `${Math.max(...m.map(i => i.w))}×${Math.max(...m.map(i => i.h))}` : '';
@@ -497,12 +487,9 @@ function qaQuality() {
 function qaQualityHtml() {
   if (!qaRun || !qaRun.items) return '';
   const q = qaQuality(); if (!q.recommend) return '';
-  return qaVendor === 'sitecapture'
-    ? `<div class="qa-quality"><span>${qaH(q.why)} Add the photo export to look at the originals.</span><button onclick="qaAddPack()">Add the photo export</button></div>`
-    : `<div class="qa-quality"><span>${qaH(q.why)} ${qaDriveOk() ? 'Open the Drive folder for the originals.' : 'Add the Drive folder link to reach the originals.'}</span>${qaDriveOk() ? `<button onclick="window.open(qaDrive,'_blank','noopener')">Open the Drive folder</button>` : `<button onclick="qaFocusDrive()">Add the link</button>`}</div>`;
+  return `<div class="qa-quality"><span>${qaH(q.why)} Add the photo export to look at the originals.</span><button onclick="qaAddPack()">Add the photo export</button></div>`;
 }
 function qaAddPack() { const f = document.getElementById('qa-file-zip'); if (f) f.click(); }
-function qaFocusDrive() { const f = document.getElementById('qa-drive'); if (f) { f.scrollIntoView({ block: 'center', behavior: 'smooth' }); f.focus(); } }
 
 function qaPhotoSub() {
   const its = qaRun.items || [], loaded = its.filter(x => x.url).length;
@@ -560,7 +547,7 @@ function _qaBar() {
     ? `<span class="qa-conn" title="Set by your password"><span class="fsel-label">Reviewer</span> <b>${qaH(qaUser)}</b></span>`
     : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
-  const dirty = qaRun || qaProj.trim() || qaPack || qaDrive;
+  const dirty = qaRun || qaProj.trim() || qaPack;
   host.innerHTML = `<div class="fbar">
     <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
     <div class="fgroup" style="margin-left:auto;">
@@ -649,8 +636,9 @@ function _qaChecklist() {
   areas.forEach(a => { const k = load.indexOf(Math.min(...load)); cols[k].push(a); load[k] += weight(a); });
   const outside = list.filter(c => !c.inTemplate).length;
   host.innerHTML = `<div class="sec">
-    <div class="shead"><div><div class="stitle">What we check · ${qaH(QA_VENDORS[qaVendor])}</div>
-      <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div></div>
+    <div class="shead"><div><div class="stitle">What we check</div>
+      <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div>
+      <div class="toggle-group" role="group" aria-label="Checklist">${['sitecapture', 'radicl'].map(v => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetCheckVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`).join('')}</div></div>
     <div class="qa-checks">${cols.map(cs => `<div class="qa-checks-col">${cs.map(a => `<div class="qa-checks-h">${qaH(a)}</div>
       ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
     <div class="note" style="margin-top:10px;"><span class="qa-sw hard"></span> stops a handoff &nbsp; <span class="qa-sw warn"></span> asks for a look</div>
@@ -910,7 +898,6 @@ async function qaSave() {
     summary: run.summary, template: run.det.specId, vendor: run.det.vendor,
     surveyor: run.S.meta.surveyor || '', surveyDate: run.S.meta.assessmentDate || run.S.meta.surveyDate || '', reportCreated: run.S.meta.reportCreated || '',
     file: run.file, counts: o.counts, suggested: o.suggestedStatus,
-    reportLink: run.det.vendor === 'radicl' && qaDriveOk() ? qaDrive : '',
     // the customer's address is not sent: the task id finds the account in Salesforce
     sf: row ? { task_id: row.task_id || '', resource: row.resource || '', status: row.project_status || '' } : null,
     pack: qaPack && qaPack.check && !qaPack.check.skipped ? { name: qaPack.name, matched: qaPack.check.matched, folders: qaPack.check.folders } : null,
@@ -941,7 +928,7 @@ function _qaStatusStepRefresh() { if (qaRun.step === 4) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaDrive = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
+  qaRun = null; qaPack = null; qaProj = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }
