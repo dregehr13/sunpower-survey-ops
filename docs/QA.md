@@ -238,3 +238,18 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
   reviewed", and the review says so. **Export PDF** (Verdict step and History)
   opens a print page; thumbnails appear only while the review is open, since no
   photo is stored.
+
+### 2026-10-01 — Claude photo check (Settings → Site Survey QA)
+- **Off by default**, a checkbox in Settings stored in `S.qaVision`. When on, after a
+  review's photos load, each key photo (up to 30, three at a time) is shrunk to
+  1280px in the browser and sent to `/api/qa-vision`, which asks Claude
+  (`claude-sonnet-5-5`, `lib/qa-vision.cjs`) whether the photo can be read for what its
+  category needs. The password is checked server-side like `/api/qa-log`; it needs
+  `ANTHROPIC_API_KEY` (already used by `api/generate.js`).
+- **Advice only.** A photo Claude doubts gets the yellow "needs your call" border,
+  moves to the front of its row, and shows Claude's sentence on the card and in the
+  zoom. Claude never marks a photo, settles a check or changes a status; nothing it
+  says is saved. This is the one place a photo leaves the browser, and nothing
+  keeps it.
+- Needs the team server (it does not run against a browser-only log) and says so on the
+  Photo review step when it cannot run.

@@ -301,9 +301,15 @@ test('every qa handler named in the page markup is defined', () => {
   for (const fn of used) assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), `${fn} is called from markup but never defined`);
 });
 
-test('the QA page keeps reports in the browser: nothing posts a file anywhere', () => {
-  assert.equal(/method:\s*['"]POST['"]/.test(pageSrc), false);
+test('the QA page keeps reports in the browser: the only upload is the opt-in Claude photo check', () => {
+  // Reports are never posted. The one thing that leaves is a downsized key photo, to
+  // /api/qa-vision, and only when Settings has the Claude photo check on.
+  const posts = [...pageSrc.matchAll(/method:\s*['"]POST['"]/g)];
+  assert.equal(posts.length, 1);
+  assert.ok(/async function qaVisionCall[\s\S]*?\/api\/qa-vision[\s\S]*?method: 'POST'/.test(pageSrc));
+  assert.ok(/async function qaVisionRun\(\) \{\s*const run = qaRun; if \(!run \|\| !qaVisionOn\(\)\) return;/.test(pageSrc));
   assert.equal(/\.send\(/.test(pageSrc), false);
+  assert.ok(/qaVision:\s+false/.test(readFileSync(new URL('../index.html', import.meta.url), 'utf8')));
 });
 
 test('qa/page.css redefines no colour token', () => {

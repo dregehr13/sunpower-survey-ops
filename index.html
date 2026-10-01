@@ -1747,6 +1747,7 @@ const SETTING_DEFAULTS = {
   dataCutoff:           '2025-12-29', // earliest start date included in all metrics
   minCell:              10,        // completions a group needs before a RATE is shown
   anchor:               'opened',  // 'opened' | 'start' — see applyAnchor()
+  qaVision:             false,     // QA review: Claude reads each key photo and says whether it is readable
   // Resource page model overrides, empty until Doug edits one. Nested objects
   // rather than nine flat keys: they are one model, they reset together, and
   // an empty object is what says "still the shipped estimate". Applied through
@@ -9651,6 +9652,14 @@ function renderSettings(){
         <div class="set-row">
           <div><div class="set-label">Auto date range</div><div class="set-desc">Auto-set date range from data on file load</div></div>
           <div class="set-control"><input type="checkbox" ${S.autoDateRange?'checked':''} onchange="setSetting('autoDateRange',this.checked)"></div>
+        </div>
+      </div>
+
+      <div class="set-sec">
+        <div class="set-title">Site Survey QA</div>
+        <div class="set-row">
+          <div><div class="set-label">Claude photo check</div><div class="set-desc">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
+          <div class="set-control"><input type="checkbox" ${S.qaVision?'checked':''} onchange="setSetting('qaVision',this.checked)"></div>
         </div>
       </div>
 

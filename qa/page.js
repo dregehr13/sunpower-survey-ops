@@ -247,7 +247,7 @@ function qaDropState(kind) {
   // Before a report is loaded the report drop is the page's one call to action.
   const big = kind === 'pdf' && !qaRun;
   const title = big ? 'Upload a survey report to begin a review' : kind === 'pdf' ? 'Drop the report (PDF)' : 'Full-resolution photos (optional)';
-  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? qaRun.S.meta.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose. It stays in this browser.' : kind === 'pdf' ? 'Stays in this browser' : 'Drop the photo export (zip)'));
+  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? qaRun.S.meta.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose.' : kind === 'pdf' ? 'Drop the PDF here or click to choose' : 'Drop the photo export (zip)'));
   return { cls: cls + (big ? ' big' : ''), title: have && !busy && !err ? (kind === 'pdf' ? 'Report loaded' : 'Photos loaded') : title, sub };
 }
 function qaDropHtml(kind) {
@@ -411,7 +411,7 @@ const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 
 // The checks that read each photo category. A photo needs a person's eye when one of
 // its category's checks could not be settled from the report, or the image looks soft.
 const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave' };
-const qaNeedsLook = it => !!(qaRun && (it.soft || qaRun.R.findings.some(f => qaIsFlagged(f) && QA_FIND_CAT[f.id] === it.id)));
+const qaNeedsLook = it => !!(qaRun && (it.soft || (it.ai && !it.ai.readable) || qaRun.R.findings.some(f => qaIsFlagged(f) && QA_FIND_CAT[f.id] === it.id)));
 // Categories keep their order; inside one, the photos that need a look come first.
 function qaOrderItems() {
   const run = qaRun, cats = []; run.items.forEach(it => { if (!cats.includes(it.id)) cats.push(it.id); });
@@ -431,7 +431,60 @@ async function qaLoadPhotos() {
   qaOrderItems();                                  // soft photos are known now
   if (run.step < 2) _qaStep();
   _qaPhotoMeta();
+  qaVisionRun();
 }
+
+// ── Claude photo check (Settings → Site Survey QA) ──
+// Advice only: it can pull a photo forward and say why, never mark it.
+const QA_VISION_MAX = 30;
+const qaVisionOn = () => { try { return !!(S && S.qaVision); } catch (e) { return false; } };
+async function qaShrink(url) {
+  const img = new Image(); img.src = url; await img.decode();
+  const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.82).split(',')[1];
+}
+async function qaVisionCall(category, image) {
+  let r;
+  try { r = await fetch('/api/qa-vision', { method: 'POST', headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: JSON.stringify({ category, image }) }); }
+  catch (e) { return { status: 0, body: null }; }
+  let j = null; try { j = await r.json(); } catch (e) {}
+  return { status: r.status, body: j };
+}
+async function qaVisionRun() {
+  const run = qaRun; if (!run || !qaVisionOn()) return;
+  if (qaMode !== 'shared') { run.vision = { error: 'The Claude photo check needs the team server.' }; return _qaPhotoMeta(); }
+  const list = run.items.filter(it => it.url && !it.ai).slice(0, QA_VISION_MAX);
+  if (!list.length) return;
+  const v = run.vision = { total: list.length, done: 0, flagged: 0, error: '' };
+  _qaPhotoMeta();
+  let next = 0;
+  const worker = async () => {
+    while (qaRun === run && !v.error && next < list.length) {
+      const it = list[next++];
+      try {
+        const r = await qaVisionCall(it.id, await qaShrink(it.url));
+        if (r.status === 401) { v.error = 'Wrong password'; qaBounce('Wrong password'); break; }
+        if (r.status === 503) { v.error = 'Claude is not set up on the server (ANTHROPIC_API_KEY).'; break; }
+        if (r.status === 200 && r.body) { it.ai = r.body; if (!r.body.readable) v.flagged++; qaPhotoAi(it); }
+      } catch (e) { /* one photo failing does not stop the rest */ }
+      v.done++; _qaPhotoMeta();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  if (qaRun !== run) return;
+  qaOrderItems();
+  if (run.step < 2) _qaStep();
+  _qaPhotoMeta();
+}
+function qaPhotoAi(it) {
+  const i = qaRun.items.indexOf(it), card = document.querySelector(`.qa-ph[data-i="${i}"]`); if (!card || !it.ai) return;
+  const el = card.querySelector('.qa-ph-ai');
+  if (el) { el.textContent = (it.ai.readable ? '' : 'Claude: ') + it.ai.note; el.title = 'Claude: ' + it.ai.note; el.className = 'qa-ph-ai ' + (it.ai.readable ? 'good' : 'doubt'); }
+  card.classList.toggle('need', !qaRun.verdicts[qaPhotoKey(it)] && qaNeedsLook(it));
+}
+
 async function qaFetchImages(items) {
   const run = qaRun; if (!run) return;
   if (qaPack && qaPack.kind === run.S.template.vendor) {
@@ -507,8 +560,9 @@ function qaAddPack() { const f = document.getElementById('qa-file-zip'); if (f) 
 
 function qaPhotoSub() {
   const its = qaRun.items || [], loaded = its.filter(x => x.url).length;
-  const need = its.filter(qaNeedsLook).length;
-  return loaded < its.length && !qaRun.photosSettled ? `Loading photos ${loaded} of ${its.length}…`
+  const need = its.filter(qaNeedsLook).length, v = qaRun.vision;
+  const ai = !v ? '' : v.error ? ` ${v.error}` : v.done < v.total ? ` Claude is checking the photos (${v.done} of ${v.total})…` : ` Claude checked ${v.total} photos${v.flagged ? ' and doubts ' + v.flagged : ''}.`;
+  return ai && loaded >= its.length ? `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${ai}${need ? ` ${need} with a yellow border need your call.` : ''}` : loaded < its.length && !qaRun.photosSettled ? `Loading photos ${loaded} of ${its.length}…`
     : `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${need ? ` ${need} with a yellow border need your call: ✓ if it does the job, ✕ if it doesn't.` : ' Mark one ✓ or ✕ only if you checked it.'}`;
 }
 function _qaPhotoMeta() {
@@ -786,6 +840,7 @@ function _qaPhotosStep(host) {
           return `<div class="qa-ph${v ? ' ' + v : qaNeedsLook(it) ? ' need' : ''}" data-i="${i}">
             <div class="qa-ph-img${it.url ? '' : ' empty'}"${it.url ? ` onclick="qaZoom(${i})" role="button" tabindex="0"` : ''}>${it.url ? `<img src="${it.url}" alt="${qaH(it.label)}">` : 'Loading…'}</div>
             <div class="qa-ph-cap">${qaPhotoCap(it)}</div>
+            <div class="${it.ai ? 'qa-ph-ai ' + (it.ai.readable ? 'good' : 'doubt') : 'qa-ph-ai'}" title="${it.ai ? 'Claude: ' + qaH(it.ai.note) : ''}">${it.ai ? (it.ai.readable ? '' : 'Claude: ') + qaH(it.ai.note) : ''}</div>
             <div class="qa-ph-btns">${qaMarkBtns(i, v)}</div></div>`;
         }).join('')}</div>`).join('')}`;
 }
@@ -814,7 +869,7 @@ function qaZoom(i, withExample) {
   const ref = QA_REFS[it.id], show = !!ref && qaRefOn, img = ref && ref.imgs[Math.min(qaRefAt, ref.imgs.length - 1)];
   lb.innerHTML = `<div class="qa-lb-main" onclick="event.stopPropagation()">
     <div class="qa-lb-panes${show ? ' two' : ''}">
-      <figure><img src="${it.url}" alt=""><figcaption>This survey · ${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}</figcaption></figure>
+      <figure><img src="${it.url}" alt=""><figcaption>This survey · ${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}${it.ai ? `<br>Claude: ${qaH(it.ai.note)}` : ''}</figcaption></figure>
       ${show ? `<figure class="ref"><img src="${qaH(img.src)}" alt=""><figcaption>Example · ${qaH(img.cap)}${ref.from ? ` (from ${qaH(ref.from)})` : ''}</figcaption>
         ${ref.imgs.length > 1 ? `<div class="qa-lb-tabs">${ref.imgs.map((x, k) => `<button class="${k === Math.min(qaRefAt, ref.imgs.length - 1) ? 'on' : ''}" onclick="qaRefPick(${k})">${k + 1}</button>`).join('')}</div>` : ''}
         <div class="qa-lb-desc"><b>What it should show</b>${qaH(ref.what)}<b>Why Design needs it</b>${qaH(ref.why)}</div></figure>` : ''}
