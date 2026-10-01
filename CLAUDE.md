@@ -1620,6 +1620,32 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   holds the review, the project ID and the report's SHA-256 only, and the
   customer's address is dropped server-side. See `docs/QA.md` → The shared log
 
+## Rep surveys phased out (2026-10-01)
+Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
+**Nothing was changed in code** (Doug's call) — history is kept, and every rep
+figure still reads `resource === 'Sales Rep'` on past rows. What to expect, so a
+drift in the numbers is not mistaken for a bug:
+- **Market recommendations drift for ~8 weeks.** `outsourcedPerWeek` counts only
+  Radicl rows in the `RECENT_WEEKS` window, so as rep volume moves to vendors
+  it rises and markets slide toward Absorb / Deploy / Hire. Part of that is work
+  changing hands, not growth — check the intake trend (project starts, resource
+  blind) before acting on a new Hire in the first 4–8 weeks
+- **`COACH` is now vestigial.** `repShare` / `repDefectRate` / `repDone` in
+  `resMarketFacts()` are all-time, not windowed, so it keeps firing on history
+  with no reps left to coach. Candidates: window it to the recent weeks so it
+  fades out, or retire it. Parked, not decided
+- **The projection reads high for a few weeks.** ~40% of completions were
+  same-week walk-ins, mostly rep self-surveys; `walkInPerWeek` is a trailing
+  3-week rate and `buildProjectionModel` fits hazards over 8, so both lag the
+  falling share. Model adjustment / `recentBias` should absorb it
+- **A blank `resource` still means rep** — `hasRepGrace()` grants the grace day
+  and `parse-sf.js` defaults a blank resource to Sales Rep on a completed row.
+  Harmless for history; a new row left blank in SF would be misfiled, so fill
+  resource in at source
+- **Display-only, correct as is:** Resource page rep column, Quality rep cut,
+  Trends resource mix (the falling rep share is the intended picture)
+- Revisit after about a month of post-cutover data
+
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
 2. Terminal: `~/Projects/survey-ops/push.sh`
