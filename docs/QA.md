@@ -123,9 +123,16 @@ is `IF NOT EXISTS`, so there is no migration step).
 browser ──x-qa-password──▶ /api/qa-log ──▶ lib/qa-store.cjs ──▶ Neon Postgres
 ```
 
-- **Password is checked on the server**, against `QA_PASSWORD`, on every call.
-  The page's prompt only decides whether to show the page; a static file cannot
-  keep a secret. A wrong password is found on the first call and bounces the page
+- **Each person has their own password, and it names them.** `QA_USERS` (env,
+  never the repo) is a JSON object of `{ "<password>": "<name>" }`; `QA_PASSWORD`
+  is the manager's own (named by `QA_PASSWORD_NAME`). The server checks the
+  password on every call, in constant time, and stamps the review's Reviewer and a
+  delete's `deleted_by` with the password's owner, ignoring whatever the page
+  sent. The page shows that name read-only. The page's own prompt only decides
+  whether to show the page; a static file cannot keep a secret. A wrong password
+  is found on the first call and bounces the page
+- **Adding or removing a person** is an edit to `QA_USERS` in Vercel plus a
+  redeploy; no code changes
 - **The server numbers reviews.** The count of the account's reviews so far
   (deleted ones included, so an id is never reused) is computed inside the
   INSERT; two saves in the same instant collide on the primary key and one
@@ -147,7 +154,7 @@ browser ──x-qa-password──▶ /api/qa-log ──▶ lib/qa-store.cjs ─�
 
 ```bash
 vercel integration add neon          # provisions the database; injects DATABASE_URL
-vercel env add QA_PASSWORD production   # the password your team types; also add for preview
+vercel env add QA_USERS production      # {"<password>":"<name>", ...}, one per person
 git push                             # deploy
 ```
 

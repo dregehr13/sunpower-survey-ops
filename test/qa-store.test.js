@@ -121,17 +121,38 @@ test('importing a browser log keeps ids, skips what is already here, renumbers a
 });
 
 // ── The endpoint ──
-const env = { QA_PASSWORD: 'open-sesame' };
+const env = { QA_PASSWORD: 'open-sesame', QA_USERS: JSON.stringify({ 'spwr-banks': 'Kendall Banks', 'spwr-mertz': 'Skylar Mertz' }) };
 const call = (db, method, o = {}, e = env) => Store.handle({ method, query: o.query, body: o.body, headers: { 'x-qa-password': o.pw === undefined ? 'open-sesame' : o.pw } }, e, db);
 
-test('the endpoint refuses without the password, and says so when it is not set up', async () => {
+test('the endpoint refuses without a known password, and says so when none is set up', async () => {
   const db = await fresh();
   assert.equal((await call(db, 'GET', { pw: 'wrong' })).status, 401);
-  assert.equal((await call(db, 'GET', { pw: undefined, query: {} }, env)).status, 200);
   assert.equal((await Store.handle({ method: 'GET', headers: {} }, env, db)).status, 401);
-  assert.equal((await call(db, 'GET', {}, {})).status, 503);                        // QA_PASSWORD missing
+  assert.equal((await call(db, 'GET', {}, {})).status, 503);                        // nothing configured
   assert.equal((await call(null, 'GET')).status, 503);                              // no database
   assert.equal((await call(null, 'GET')).body.error, 'not_configured');
+});
+
+test('each person is identified by their own password', async () => {
+  const db = await fresh();
+  assert.equal((await call(db, 'GET', { pw: 'spwr-banks' })).body.user, 'Kendall Banks');
+  assert.equal((await call(db, 'GET', { pw: 'spwr-mertz' })).body.user, 'Skylar Mertz');
+  assert.equal((await call(db, 'GET', { pw: 'open-sesame' })).body.user, 'Douglas Regehr');
+  assert.equal((await call(db, 'GET', { pw: 'spwr-banks ' })).status, 401);          // exact, not close
+  assert.equal(Store.identify('SPWR-BANKS', env), null);
+  assert.equal(Store.identify('spwr-banks', { QA_USERS: '{not json' }), null);       // an unreadable list grants nobody
+  assert.equal(Store.identify('x', { QA_PASSWORD: 'x', QA_PASSWORD_NAME: 'Allie Morais' }).name, 'Allie Morais');
+});
+
+test('a review is stamped with the password owner, whatever the page sent', async () => {
+  const db = await fresh();
+  const out = await call(db, 'POST', { pw: 'spwr-banks', body: { review: review({ reviewer: 'Someone Else' }) } });
+  assert.equal(out.status, 201);
+  assert.equal(out.body.review.reviewer, 'Kendall Banks');
+  const del = await call(db, 'DELETE', { pw: 'spwr-mertz', query: { id: out.body.review.id, by: 'Spoofed' } });
+  assert.equal(del.status, 200);
+  const { rows } = await db.query('SELECT deleted_by FROM qa_reviews');
+  assert.equal(rows[0].deleted_by, 'Skylar Mertz');
 });
 
 test('the endpoint saves, lists and deletes', async () => {
@@ -143,7 +164,7 @@ test('the endpoint saves, lists and deletes', async () => {
   const all = await call(db, 'GET');
   assert.equal(all.body.reviews.length, 1);
   assert.equal((await call(db, 'DELETE', { query: { id: 'nope' } })).status, 404);
-  assert.equal((await call(db, 'DELETE', { query: { id: 'QA-2321LOPE-1', by: 'Doug' } })).status, 200);
+  assert.equal((await call(db, 'DELETE', { query: { id: 'QA-2321LOPE-1' } })).status, 200);
   assert.equal((await call(db, 'GET')).body.reviews.length, 0);
   assert.equal((await call(db, 'PUT')).status, 405);
 });

@@ -50,6 +50,11 @@ test('Radicl refs are canonical across the two template versions', () => {
   assert.deepEqual(QA.radiclRef('Breaker Box / Electrical Panel #2 — Dead Front…'), { ref: 'Breaker Box — Dead Front', instance: '2' });
 });
 
+test('the September Radicl template names an inside panel "Interior Breaker Box: Quantity #N"', () => {
+  assert.deepEqual(QA.radiclRef('Interior Breaker Box: Quantity #1 — Main Breaker Rating'), { ref: 'Breaker Box — Main Breaker Rating', instance: 'in1' });
+  assert.deepEqual(QA.radiclRef('Interior Breaker Box:Quantity #2 — Dead Front…'), { ref: 'Breaker Box — Dead Front', instance: 'in2' });
+});
+
 test('Site Capture: identical labels resolve by the answer that makes them appear', () => {
   const f = (key, label, extra) => ({ key, label, type: 'FOTO', section: 's', group: null, required: true, dependsOnKey: null, dependsOnValue: null, order: 0, ...extra });
   const spec = { id: 'sitecapture-v13', vendor: 'sitecapture', sections: [{ key: 's', title: '3 - Roof' }], groups: {}, fields: [
@@ -139,6 +144,28 @@ test('standing template gaps do not change the outcome; an applied gap suggests 
   const eq = get(R, 'existing_equipment');
   assert.equal(eq.status, 'gap'); assert.equal(eq.standing, false);
   assert.equal(R.suggestedStatus, 'Passed with Override');
+});
+
+test('Radicl: an inside panel is checked, and an outside panel the surveyor said is not there is not', () => {
+  const e = (ref, value, instance = null) => ({ ref, value, instance });
+  const ph = (ref, instance, n = 1) => Array.from({ length: n }, () => ({ ref, instance }));
+  const S = survey('radicl', {
+    entries: [e('Roof Pitch / Slope Measurement', '6/12'), e('Is there attic access?', 'No'), e('Electric Service Type', 'Underground'), e('Existing Solar', 'No'),
+      e('Are there any breaker boxes outside?', 'No'),
+      e('Breaker Box — Main Breaker Rating', '225A', 'in1'), e('Breaker Box — Max Bus Rating', '200A', 'in1')],
+    photos: [...ph('Breaker Box — Location', '1', 4),                                  // outside number, location only
+      ...ph('Breaker Box — Location', 'in1', 2), ...ph('Breaker Box — Dead Front', 'in1', 5), ...ph('Breaker Box — Panel La', 'in1', 3),
+      ...ph('Electrical Meter: Close Up'), ...ph('Electric Meter: Location Photos'), ...ph('Layout Map'), ...ph('Eave/Soffit Measurement Photo')],
+  });
+  const R = QA.evaluate(S, specs);
+  assert.equal(R.counts.missHard, 0, JSON.stringify(R.findings.filter(f => f.status === 'miss').map(f => f.id + ': ' + f.detail)));
+  assert.equal(get(R, 'main_breaker_rating').status, 'pass');
+});
+
+test('Radicl: a pitch with no number points at the pitch photos', () => {
+  const S = survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: 'Unable to access roof', instance: null }], photos: [{ ref: 'Roof Pitch', instance: null }, { ref: 'Roof Pitch / Slope', instance: null }] });
+  const f = get(QA.evaluate(S, specs), 'roof_pitch');
+  assert.equal(f.status, 'verify'); assert.match(f.detail, /2 pitch photos/);
 });
 
 test('a hard miss fails the survey; warnings alone ask for review', () => {

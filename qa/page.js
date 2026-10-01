@@ -22,14 +22,18 @@ const QA_TEMPLATE_NAMES = {
 
 let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 'all', qaOpen = null;
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
-let qaMode = 'checking', qaNote = '', qaSyncing = null;      // 'checking' | 'shared' | 'local'
+let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
 let qaPendingRecord = null;
 const qaUrls = [];
 
 // The hash that opened the page names a record (#qa?r=QA-...). Captured at load,
 // before the main script's own routing rewrites the URL.
-(function () { const m = location.hash.match(/[?&]r=([^&]+)/); if (m && /^#qa/.test(location.hash)) qaPendingRecord = decodeURIComponent(m[1]); })();
+function qaReadRecordHash() { const m = location.hash.match(/[?&]r=([^&]+)/); if (m && /^#qa/.test(location.hash)) qaPendingRecord = decodeURIComponent(m[1]); }
+qaReadRecordHash();
+// This listener is registered before the app's own (this file loads first), so it
+// sees a pasted or clicked record link before the app rewrites the hash.
+window.addEventListener('hashchange', qaReadRecordHash);
 
 const qaH = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const qaPlural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
@@ -51,7 +55,7 @@ function qaGate() {
 // go back to the page the person came from.
 function qaBounce(msg) {
   try { sessionStorage.removeItem(QA_PW_KEY); } catch (e) {}
-  qaLog = null; qaMode = 'checking';
+  qaLog = null; qaMode = 'checking'; qaUser = '';
   toast(msg || 'Wrong password');
   nav(['week'].includes(currentPage) || currentPage === 'qa' ? 'week' : currentPage);
 }
@@ -92,6 +96,8 @@ function qaSync() {
     qaSyncing = null;
     if (r.status === 200 && r.body && Array.isArray(r.body.reviews)) {
       qaMode = 'shared'; qaNote = ''; qaLog = r.body.reviews;
+      // The password says who this is; the Reviewer is that person and is not editable.
+      qaUser = r.body.user || ''; if (qaUser) qaReviewer = qaUser;
     } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
     else {
       qaMode = 'local';
@@ -106,6 +112,7 @@ function qaSync() {
 }
 function qaAfterSync() {
   if (currentPage !== 'qa') return;
+  if (qaMode === 'shared' && qaUser) _qaBar();        // the Reviewer is now known and locked
   _qaConn(); _qaDup();
   if (qaView === 'log') _qaLog();
   else if (qaView === 'templates') _qaTemplates();
@@ -162,6 +169,7 @@ function qaSetProject(v) {
   if (qaRun && !qaRun.saved) qaReeval(false);
 }
 function qaSetReviewer(v) {
+  if (qaMode === 'shared' && qaUser) return;
   qaReviewer = v;
   try { localStorage.setItem(QA_USER_KEY, v); } catch (e) {}
   if (qaRun) _qaHandoff();
@@ -348,7 +356,14 @@ function renderQA() {
   qaRender();
   qaSync().then(ok => {
     if (!ok) return;
-    if (qaPendingRecord) { const id = qaPendingRecord; qaPendingRecord = null; if (qaLog.some(r => r.id === id)) { qaView = 'log'; qaOpen = id; qaRender(); return; } }
+    if (qaPendingRecord) {
+      const id = qaPendingRecord; qaPendingRecord = null;
+      qaView = 'log'; qaLens = 'reviews'; qaQ = ''; qaStatusF = 'all';
+      if (qaLog.some(r => r.id === id)) qaOpen = id;
+      else toast(id + ' is not in the log. It was probably never saved.');
+      qaRender(); requestAnimationFrame(() => { const el = document.getElementById('qa-row-' + id); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
+      return;
+    }
     qaAfterSync();
   });
 }
@@ -371,7 +386,7 @@ function _qaBar() {
       <span id="qa-conn"></span>
       <span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}"
-        oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">
+        oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;"${qaMode === 'shared' && qaUser ? ' readonly title="Signed in by your password"' : ''} aria-label="Reviewer name">
       ${qaView === 'review' && qaRun ? `<button class="fbtn" onclick="qaNew()">New review</button>` : ''}
     </div>
   </div>`;
@@ -599,13 +614,15 @@ function _qaHandoff() {
   host.innerHTML = `<div class="sec">
     <div class="shead"><div><div class="stitle">Salesforce hand-off</div>
       <div class="ssub">The six fields on the Site Survey QA and Completion panel</div></div>
-      <button class="fbtn" onclick="qaCopyAll(this)">Copy all</button></div>
+      <button class="fbtn" onclick="qaCopyAll(this)"${run.saved ? '' : ' disabled style="opacity:.45;cursor:default;" title="Save the review first: the report link does not exist until then"'}>Copy all</button></div>
     <div class="qa-sf">
       ${row('Site Survey QA Review Status', `<div class="toggle-group">${QA_SF_STATUSES.map(stBtn).join('')}</div><div class="qa-sfhint">${qaH(hint)}</div>`, run.status ? 'status' : '', true)}
       ${row('Site Survey QA Review Date', qaToday(), 'date')}
       ${row('Site Survey QA Review Source', 'Coordinator', 'source')}
       ${row('Site Survey QA Reviewed By', (qaReviewer || '').trim() ? qaH(qaReviewer) : '<span style="color:var(--faint);">Add your name in the bar above</span>', (qaReviewer || '').trim() ? 'by' : '')}
-      ${row('Site Survey QA Report Link', `<span style="font-size:11px;">${qaH(qaRecordLink(id))}</span><div class="qa-sfhint">${qaH(id)} · kept in this browser's log</div>`, 'link')}
+      ${run.saved
+        ? row('Site Survey QA Report Link', `<span style="font-size:11px;">${qaH(qaRecordLink(id))}</span><div class="qa-sfhint">${qaH(id)} · ${qaMode === 'shared' ? 'opens this review for anyone on the team' : 'opens in this browser only'}</div>`, 'link')
+        : row('Site Survey QA Report Link', `<span style="color:var(--faint);">Assigned when you save</span><div class="qa-sfhint warn">Save the review first. A link copied before then points at a review that does not exist yet.</div>`, '')}
       ${need ? `<div class="qa-sfrow wide"><div class="klabel">Override reason</div><div class="qa-sfval" style="grid-column:1/-1;">
         <textarea class="qa-in short" id="qa-override" placeholder="Why this passes despite the gap or miss" oninput="qaSetOverride(this.value)">${qaH(run.override)}</textarea></div></div>` : ''}
       <div class="qa-sfrow wide"><div class="klabel">Site Survey QA Summary<span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--faint);margin-left:8px;">${run.edited ? 'edited · <button class="qa-link" onclick="qaResetSummary()">reset</button>' : 'written from the findings'}</span></div>
@@ -632,6 +649,7 @@ function qaCopy(k, btn) {
   navigator.clipboard.writeText(text).then(() => qaCopied(btn)).catch(_copyFail);
 }
 function qaCopyAll(btn) {
+  if (!qaRun || !qaRun.saved) return;
   const L = { status: 'Site Survey QA Review Status', date: 'Site Survey QA Review Date', by: 'Site Survey QA Reviewed By', source: 'Site Survey QA Review Source', summary: 'Site Survey QA Summary', link: 'Site Survey QA Report Link' };
   const text = Object.keys(L).map(k => L[k] + '\t' + String(qaFieldValue(k)).replace(/\n/g, ' / ')).join('\n');
   navigator.clipboard.writeText(text).then(() => qaCopied(btn)).catch(_copyFail);
@@ -799,7 +817,7 @@ function qaCopyRecord(id, what, btn) {
 async function qaDelete(id) {
   if (!confirm('Delete review ' + id + '? It leaves the log for everyone.')) return;
   if (qaMode === 'shared') {
-    const r = await qaApi('DELETE', '?id=' + encodeURIComponent(id) + '&by=' + encodeURIComponent(qaReviewer || ''));
+    const r = await qaApi('DELETE', '?id=' + encodeURIComponent(id));
     if (r.status === 401) return qaBounce('Wrong password');
     if (r.status !== 200 && r.status !== 404) return toast('Could not delete. Try again');
   }

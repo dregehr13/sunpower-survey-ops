@@ -3,6 +3,7 @@
 //
 //   node scripts/qa-dev-server.mjs            → http://localhost:8732/#qa  (password: sunpower)
 //   QA_PASSWORD=x PORT=9000 node scripts/qa-dev-server.mjs
+//   QA_USERS='{"pw1":"Name One"}' node scripts/qa-dev-server.mjs   (one password per person)
 //
 // Serves this folder and mounts /api/qa-log on an in-process Postgres (PGlite)
 // kept in .qa-dev-db/, through the same lib/qa-store.cjs the deployed function
@@ -20,7 +21,7 @@ const require = createRequire(import.meta.url);
 const Store = require('../lib/qa-store.cjs');
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.PORT || 8732);
-const env = { QA_PASSWORD: process.env.QA_PASSWORD || 'sunpower' };
+const env = { QA_PASSWORD: process.env.QA_PASSWORD || (process.env.QA_USERS ? '' : 'sunpower'), QA_USERS: process.env.QA_USERS || '' };
 const pg = new PGlite(path.join(root, '.qa-dev-db'));
 const db = { query: (t, p) => pg.query(t, p) };
 
@@ -39,4 +40,4 @@ http.createServer(async (req, res) => {
   if (!file.startsWith(root) || !existsSync(file) || statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
   res.end(await readFile(file));
-}).listen(port, () => console.log(`Dashboard with the shared QA log: http://localhost:${port}/#qa  (password: ${env.QA_PASSWORD})`));
+}).listen(port, () => console.log(`Dashboard with the shared QA log: http://localhost:${port}/#qa  (password: ${env.QA_PASSWORD || 'see QA_USERS'})`));
