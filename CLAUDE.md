@@ -1580,6 +1580,46 @@ group, same weight as the Pipeline cohorts `cohortMap`. Things not to undo:
 - `TIP.trResMix` on the Trends subtitle; `docs/METRICS.md` → *Survey resource
   mix* in the non-shared table
 
+## Site Survey QA (2026-10-01)
+Semi-automatic review of every completed survey before Design. Rep surveys are
+phased out as of 2026-10-01; Radicl and Site Capture (SPWR) are the only forms.
+Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
+`qa/page.js`) are built; there are no model calls yet. Things not to undo:
+- **Fourth shared library, `lib/qa.cjs`**, and it shares no definition with the
+  other three: it reads a vendor report, not a Salesforce row. Only
+  `qa/pdf-blocks.mjs` touches a PDF; everything else runs on plain blocks, so
+  the tests need no PDF
+- **The template is the standard, the Site Survey Guide is the floor** (Doug's
+  call). Layer A is every field a template requires; Layer B is `REQUIREMENTS`,
+  the design needs (Enphase holds, resurvey categories, the guide), each naming
+  what satisfies it per template
+- **A requirement with no field in a template is a template GAP, never a
+  surveyor miss.** Standing gaps (true of every survey) are reported once and do
+  not change the outcome; an applied gap suggests Passed with Override. Don't
+  fold gaps into a vendor's miss rate
+- **Radicl has two template versions** (Aug 2026 and Sep 2026) and publishes no
+  template, so its spec is inferred and skipped below 3 reference reports. Refs
+  are canonical across versions in `radiclRef`
+- **Site Capture's report prints every field, hidden or not**, and several
+  fields share one label (one per answer of a parent question). Applicability
+  comes from `dependsOn` and the surveyor's answers (`depOk`), and an exact label
+  match outranks a cut-label prefix match. Both bit during calibration
+- **Warn, don't fail, on the template's own photo minimums**: surveys that
+  passed Design miss them routinely ("10+ attic photos" runs 3-11)
+- **Customer data stays out of the repo**: reports are never committed
+  (`qa/samples/` is gitignored), the specs are the blank template and the tests
+  build synthetic pages
+- Site Capture's photo export is self-labelling (folder per field, `-k` = plane)
+  and reconciles with its PDF; it is the no-API route to original-resolution
+  photos (the PDF embeds 450x600)
+- **The QA page is a real dashboard page, not a standalone one**, so it inherits
+  the sidebar, tokens and shared classes. Password gate (`qaGate`, same `ops_auth`
+  as /compose) and the review history in Postgres (Neon) behind `api/qa-log.js`,
+  password checked server-side (`QA_PASSWORD`), falling back to localStorage when
+  there is no server. Reports and photos are never uploaded or stored — the log
+  holds the review, the project ID and the report's SHA-256 only, and the
+  customer's address is dropped server-side. See `docs/QA.md` → The shared log
+
 ## Morning workflow
 1. In Salesforce: run the Site Survey report → Export → Details Only → Excel format → save to Downloads
 2. Terminal: `~/Projects/survey-ops/push.sh`

@@ -1,0 +1,809 @@
+{
+ "id": "radicl-v2",
+ "vendor": "radicl",
+ "inferred": true,
+ "inferredFrom": 1,
+ "note": "Inferred from reference surveys; Radicl publishes no template. Branches no survey took are unseen.",
+ "sections": [
+  "Outside Photos of Home",
+  "Exterior Electrical",
+  "Battery Placement",
+  "Interior Electrical",
+  "Attic Info",
+  "Roof Photos",
+  "Second Roof Photos",
+  "Patio Information",
+  "Detached Structure",
+  "Site Assessment",
+  "Quality Check"
+ ],
+ "fields": [
+  {
+   "ref": "Gas Meter?",
+   "section": "Outside Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "Electric Meter: Clearance Issues",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Electric Service Type",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Grounding Type",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "AC Unit",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Are there any breaker boxes outside?",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box / Electrical Panel",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Main Breaker Rating",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Max Bus Rating",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Are all breakers returned to original position?",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Subpanel Breaker?",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Generator",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Existing Solar",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Is battery location required?",
+   "section": "Battery Placement",
+   "seen": 1
+  },
+  {
+   "ref": "Are there any breaker boxes inside the home?",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Is there attic access?",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Attic Access Location",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Attic Decking, Plywood, OSB, or Sheathing?",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Is there any damaged or stained decking?",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Truss/Rafter Type",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Rafter Spacing",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Rafter Size",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Are there areas of concern?",
+   "section": "Attic Info",
+   "seen": 1
+  },
+  {
+   "ref": "Estimated Age of Roof",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Roof Type",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Roof Pitch / Slope Measurement",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Is there roof damage?",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "How will you capture the required rooftop horizon photos?",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Is there a second roof type on the main structure?",
+   "section": "Second Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Is there a patio that solar panels will be installed on?",
+   "section": "Patio Information",
+   "seen": 1
+  },
+  {
+   "ref": "Is there a Detached Structure on the property?",
+   "section": "Detached Structure",
+   "seen": 1
+  },
+  {
+   "ref": "What type of Detached Structure is on property?",
+   "section": "Detached Structure",
+   "seen": 1
+  },
+  {
+   "ref": "Detached Structure: Roof Type",
+   "section": "Detached Structure",
+   "seen": 1
+  },
+  {
+   "ref": "Detached Structure: Roof Layers",
+   "section": "Detached Structure",
+   "seen": 1
+  },
+  {
+   "ref": "Basement",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Crawlspace",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Unpermitted / Code Violations",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Concluding Notes",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Damage Occured",
+   "section": "Site Assessment",
+   "seen": 1
+  }
+ ],
+ "photos": [
+  {
+   "ref": "Selfie with House Number",
+   "section": "Quality Check",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Photo of Home from Street",
+   "section": "Outside Photos of Home",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Exterior Perimeter Photos",
+   "section": "Outside Photos of Home",
+   "seen": 1,
+   "min": 16,
+   "max": 16,
+   "perInstance": false
+  },
+  {
+   "ref": "Electric Meter: Location Photos",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Electrical Meter: Close Up",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Meter Wall: Measurements",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Grounding Type Photo",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Nameplate Label",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Breaker Box — Location",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Dead Front",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 16,
+   "max": 20,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Panel La",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 3,
+   "max": 5,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Back of",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": true
+  },
+  {
+   "ref": "Attic Access Photos",
+   "section": "Attic Info",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "360 Degree photos in Attic",
+   "section": "Attic Info",
+   "seen": 1,
+   "min": 9,
+   "max": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Rafter Measurement Photos",
+   "section": "Attic Info",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Pitch",
+   "section": "Attic Info",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Number of Roofing Layers Photos",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Drip Edge Photo",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Eave/Soffit Measurement Photo",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Pitch / Slope",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Measurement: Ridge",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Measurement: Eave to Ridge",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Close-Up Roof Quality",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Super Close-Up Roof Quality",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Obstruction Photos",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 6,
+   "max": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: North",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Northeast",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: East",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Southeast",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: South",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Southwest",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: West",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Northwest",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Exterior Photos",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 9,
+   "max": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Location on Property",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Path to Meter",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 5,
+   "max": 5,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Roof Photos",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 6,
+   "max": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Roof Pitch",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Shingle Roof Layer Verification",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Garage / ADU: Attic Photos",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 8,
+   "max": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Garage / ADU: Rafter Photos",
+   "section": "Detached Structure",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Layout Map",
+   "section": "Site Assessment",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  }
+ ],
+ "core": [
+  {
+   "ref": "Selfie with House Number",
+   "section": "Quality Check",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Photo of Home from Street",
+   "section": "Outside Photos of Home",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Exterior Perimeter Photos",
+   "section": "Outside Photos of Home",
+   "min": 16,
+   "perInstance": false
+  },
+  {
+   "ref": "Electric Meter: Location Photos",
+   "section": "Exterior Electrical",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Electrical Meter: Close Up",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Meter Wall: Measurements",
+   "section": "Exterior Electrical",
+   "min": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Grounding Type Photo",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Nameplate Label",
+   "section": "Exterior Electrical",
+   "min": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Breaker Box — Location",
+   "section": "Exterior Electrical",
+   "min": 2,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Dead Front",
+   "section": "Exterior Electrical",
+   "min": 16,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Panel La",
+   "section": "Exterior Electrical",
+   "min": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Back of",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": true
+  },
+  {
+   "ref": "Attic Access Photos",
+   "section": "Attic Info",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "360 Degree photos in Attic",
+   "section": "Attic Info",
+   "min": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Rafter Measurement Photos",
+   "section": "Attic Info",
+   "min": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Pitch",
+   "section": "Attic Info",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Number of Roofing Layers Photos",
+   "section": "Roof Photos",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Drip Edge Photo",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Eave/Soffit Measurement Photo",
+   "section": "Roof Photos",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Pitch / Slope",
+   "section": "Roof Photos",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Measurement: Ridge",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Measurement: Eave to Ridge",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Close-Up Roof Quality",
+   "section": "Roof Photos",
+   "min": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Super Close-Up Roof Quality",
+   "section": "Roof Photos",
+   "min": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Obstruction Photos",
+   "section": "Roof Photos",
+   "min": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: North",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Northeast",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: East",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Southeast",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: South",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Southwest",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: West",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Northwest",
+   "section": "Roof Photos",
+   "min": 2,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Exterior Photos",
+   "section": "Detached Structure",
+   "min": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Location on Property",
+   "section": "Detached Structure",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Path to Meter",
+   "section": "Detached Structure",
+   "min": 5,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Roof Photos",
+   "section": "Detached Structure",
+   "min": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Structure: Roof Pitch",
+   "section": "Detached Structure",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Shingle Roof Layer Verification",
+   "section": "Detached Structure",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Garage / ADU: Attic Photos",
+   "section": "Detached Structure",
+   "min": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Detached Garage / ADU: Rafter Photos",
+   "section": "Detached Structure",
+   "min": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Layout Map",
+   "section": "Site Assessment",
+   "min": 1,
+   "perInstance": false
+  }
+ ]
+}

@@ -5,6 +5,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
+    "@neondatabase/serverless": "^1.2.0",
+    "pdfjs-dist": "^4.10.38",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

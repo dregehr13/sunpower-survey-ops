@@ -1430,6 +1430,7 @@ body{padding-left:180px;}
   .nmenu-item{padding:6px 10px;font-size:10px;}
 }
 </style>
+<link rel="stylesheet" href="qa/page.css">
 </head>
 <body>
 
@@ -1447,6 +1448,7 @@ body{padding-left:180px;}
   <div class="nav-group-label nav-group-div">Ops</div>
   <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
   <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
+  <div class="ntab" id="ntab-qa" data-page="qa" role="button" tabindex="0">QA</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><polyline points="6 9 12 16 18 9"/></svg></div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge"></span>
@@ -1481,6 +1483,7 @@ body{padding-left:180px;}
 <div id="page-map"         class="page">                                     <div id="map-content"></div></div>
 <div id="page-resource"    class="page">     <div id="res-content"></div></div>
 <div id="page-billing"     class="page">                                     <div id="billing-content"></div></div>
+<div id="page-qa"          class="page">                                     <div id="qa-content"></div></div>
 <div id="page-data"        class="page">     <div id="fb-data"></div>        <div id="dt-content"></div></div>
 <div id="page-settings"    class="page">     <div id="settings-content"></div></div>
 <div id="page-definitions" class="page">     <div id="definitions-content"></div></div>
@@ -1629,6 +1632,8 @@ body{padding-left:180px;}
 <script src="lib/metrics.cjs"></script>
 <script src="lib/coverage.cjs"></script>
 <script src="lib/billing.cjs"></script>
+<script src="lib/qa.cjs"></script>
+<script src="qa/page.js"></script>
 <script src="data.js"></script>
 <script>
 // Guard: if data.js or the chart CDN failed to load, show a recoverable error instead of a blank page
@@ -1639,6 +1644,7 @@ body{padding-left:180px;}
   if (typeof OpsMetrics === 'undefined') missing.push('the metrics library (lib/metrics.cjs)');
   if (typeof OpsCoverage === 'undefined') missing.push('the coverage library (lib/coverage.cjs)');
   if (typeof OpsBilling === 'undefined') missing.push('the billing library (lib/billing.cjs)');
+  if (typeof OpsQA === 'undefined') missing.push('the QA library (lib/qa.cjs)');
   if (!missing.length) return;
   document.body.innerHTML =
     '<div style="max-width:420px;margin:80px auto;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a;">'
@@ -1869,7 +1875,7 @@ const RES_SCOPE_STATUSES = ['In Progress','Change Order','Complete'];
 
 // ═══ FILTER STATE ═════════════════════════════════════════
 // Declared before allRows/scopeRows so GF is initialized when scopeRows() is first called.
-const PAGES = ['week','wip','performance','trends','resurvey','map','resource','billing','data'];
+const PAGES = ['week','wip','performance','trends','resurvey','map','resource','billing','qa','data'];
 const defaultF = () => ({dateFrom:'',dateTo:'',region:[],office:[],resource:'all',removeOutliers:false,statuses:[...DEFAULT_STATUSES]});
 // One GLOBAL filter shared by every page — pageF keys all reference it so
 // existing per-page call sites keep working
@@ -1934,7 +1940,7 @@ function saveFilterState(){
 // never read back: #map round-tripped into the URL while applyURLState()
 // rejected it, so a reload — and the /va-map redirect in vercel.json — landed
 // on whatever page localStorage had saved instead.
-const URL_PAGES=['week','performance','trends','wip','resurvey','map','data','settings','definitions'];
+const URL_PAGES=['week','performance','trends','wip','resurvey','map','qa','data','settings','definitions'];
 function syncURL(){
   const f=pageF[currentPage];
   const q=new URLSearchParams();
@@ -2564,6 +2570,8 @@ function _animateOnArrival(page){
   requestAnimationFrame(()=>animateSections('page-'+page));
 }
 function nav(page){
+  // The QA page holds customer reports, so it asks for the same password /compose does.
+  if(page==='qa'&&!qaGate()) page=(currentPage&&currentPage!=='qa')?currentPage:'week';
   currentPage=page;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active','entering'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
@@ -2638,6 +2646,7 @@ function renderPage(p){
   if(p==='map')         renderMap();
   if(p==='resource')    renderResource();
   if(p==='billing')     renderBilling();
+  if(p==='qa')          renderQA();
   if(p==='data')        renderEditor();
   if(p==='settings')    renderSettings();
   if(p==='definitions') renderDefinitions();

@@ -18,3 +18,11 @@ geo/.src/
 memos/*
 !memos/template.docx
 !memos/register.json
+
+# Local survey reports for the QA engine. They hold customer names and photos
+# of homes; the repo deploys to a public URL.
+qa/samples/
+
+# Local database for scripts/qa-dev-server.mjs
+.qa-dev-db/
+.env*.local
