@@ -735,3 +735,17 @@ test('the resource alarm stays quiet on a go back, where Salesforce still names 
   assert.equal(QA.evaluate(full, specs, { sfResource: 'Sales Rep' }).findings.find(f => f.id === 'resource_match').status, 'miss');
   assert.equal(QA.evaluate(full, specs, { sfResource: 'Sales Rep', sfReopened: true }).findings.find(f => f.id === 'resource_match'), undefined);
 });
+
+test('an unsettled check asks for the photos beside it on the summary, and none once it is decided', () => {
+  // RD-07: 36 dead-front photos all had the yellow border, and kept it after the check was decided.
+  const P = loadPage();
+  const S = survey('radicl', { photos: Array.from({ length: 6 }, () => ({ ref: 'Breaker Box — Dead Front', instance: '1', page: 3 })) });
+  const R = QA.evaluate(S, specs, {});
+  const items = Array.from({ length: 6 }, (_, k) => ({ id: 'breaker', unit: '1', n: k + 1, url: 'blob:' + k }));
+  P.__.set('qaRun', { R, S, decisions: {}, items, verdicts: {} });
+  const look = P.__.get('qaNeedsLook');
+  assert.deepEqual(items.map(look), [true, true, true, false, false, false]);
+  const f = R.findings.find(x => x.id === 'msp_dead_front_on');
+  P.__.get('qaRun').decisions[P.__.get('qaFlagKey')(f)] = 'ok';
+  assert.deepEqual(items.map(look), [false, false, false, false, false, false]);
+});
