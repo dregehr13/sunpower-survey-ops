@@ -647,3 +647,17 @@ test('a review cannot be saved as a pass while a flagged item is undecided', () 
   for (const f of flagged) P.__.get('qaRun').decisions[P.__.get('qaFlagKey')(f)] = 'ok';
   assert.equal(P.qaSaveBlock(), '');
 });
+
+test('the address check says which numbers differ without writing either address into the review', () => {
+  // A finding's detail is saved to the shared history, which promises never to hold the customer's address.
+  const S = survey('radicl', { meta: { address: '21 Valley View Dr, Warren, PA 16365' } });
+  const ok = get(QA.evaluate(S, specs, { sfAddress: '21 Valley View Dr, Warren, PA 16365' }), 'address_match');
+  const bad = get(QA.evaluate(S, specs, { sfAddress: '23 Valley View Dr, Warren, PA 16365' }), 'address_match');
+  assert.equal(ok.status, 'pass'); assert.equal(bad.status, 'miss');
+  for (const f of [ok, bad]) assert.ok(!/Valley|Warren/.test(f.detail || ''), f.detail);
+  assert.match(bad.detail, /21.*23/);
+  // a one-digit house number is the house number, not a reason to compare ZIP codes
+  const one = survey('radicl', { meta: { address: '5 Elm St, Warren, PA 16365' } });
+  assert.equal(get(QA.evaluate(one, specs, { sfAddress: '7 Elm St, Warren, PA 16365' }), 'address_match').status, 'miss');
+  assert.equal(get(QA.evaluate(one, specs, { sfAddress: '5 Elm St, Warren, PA 16365' }), 'address_match').status, 'pass');
+});
