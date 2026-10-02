@@ -296,13 +296,6 @@ function qaSetBusy(kind, msg, err) {
 
 // ── Intake ─────────────────────────────────────────
 const QA_VENDORS = { sitecapture: 'SunPower survey', radicl: 'Radicl survey' };
-// Which checklist to show before a report is loaded. The report decides the survey
-// type itself once it is read, so nothing here asks the reviewer to say.
-function qaSetCheckVendor(v) {
-  qaVendor = v;
-  try { localStorage.setItem('ops_qa_vendor', v); } catch (e) {}
-  if (!qaRun) _qaChecklist();
-}
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
   // No report yet: one field. A job picked from the list rides along and the report
@@ -683,7 +676,7 @@ function _qaReview() {
   const host = document.getElementById('qa-body'); if (!host) return;
   host.innerHTML = `<div id="qa-dup"></div><div class="sec qa-intake" id="qa-intake"></div><div id="qa-likely"></div><div id="qa-run"></div>`;
   _qaIntake(); _qaDup();
-  if (qaRun) _qaFlow(); else { _qaLikely(); _qaChecklist(); }
+  if (qaRun) _qaFlow(); else _qaLikely();
 }
 // A report someone has already reviewed — a colleague included — is flagged
 // before it is reviewed twice.
@@ -738,33 +731,8 @@ function qaPickProject(p) {
     const r = qaProjectRow(p);
     if (r && r.resource) { qaVendor = r.resource === 'Radicl Services' ? 'radicl' : 'sitecapture'; try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {} }
   }
-  _qaIntake(); _qaLikely(); _qaChecklist(); _qaBar();
+  _qaIntake(); _qaLikely(); _qaBar();
   if (qaProj) { const f = document.getElementById('qa-intake'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
-}
-
-// What is checked, before there is anything to check.
-function _qaChecklist() {
-  const host = document.getElementById('qa-run'); if (!host) return;
-  const specId = qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13';
-  const own = OpsQA.checklist(specId, qaChecks), vkey = qaVendor === 'radicl' ? 'radicl' : 'sitecapture';
-  // The other survey type's extras are listed too, so both checklists read the same; the report just cannot answer them.
-  const extra = OpsQA.allChecks().filter(c => !c.vendors.includes(vkey) && qaChecks[c.id] !== 'off')
-    .map(c => ({ id: c.id, area: c.area, title: c.title, severity: qaChecks[c.id] === 'hard' || qaChecks[c.id] === 'warn' ? qaChecks[c.id] : c.severity, inTemplate: true, absent: true }));
-  const list = own.concat(extra);
-  const areas = OpsQA.AREA_ORDER.filter(a => list.some(c => c.area === a));
-  const cols = [[], [], []];
-  const weight = a => list.filter(c => c.area === a).length + 2;
-  const load = [0, 0, 0];
-  areas.forEach(a => { const k = load.indexOf(Math.min(...load)); cols[k].push(a); load[k] += weight(a); });
-  const outside = list.filter(c => !c.inTemplate && !c.absent).length;
-  host.innerHTML = `<div class="sec">
-    <div class="shead"><div><div class="stitle">What we check</div>
-      <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div>
-      <div class="toggle-group" role="group" aria-label="Checklist">${['sitecapture', 'radicl'].map(v => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetCheckVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`).join('')}</div></div>
-    <div class="qa-checks">${cols.map(cs => `<div class="qa-checks-col">${cs.map(a => `<div class="qa-checks-h">${qaH(a)}</div>
-      ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.when ? ` <span class="qa-when-i">· ${qaH(c.when)}</span>` : ''}${c.absent ? ' <span class="qa-tag" title="This survey type\'s report has no field for it">not on this report</span>' : c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
-    <div class="note" style="margin-top:10px;"><span class="qa-sw hard"></span> stops a handoff &nbsp; <span class="qa-sw warn"></span> asks for a look</div>
-  </div>`;
 }
 
 function qaStatusPill(s) {
@@ -1426,21 +1394,38 @@ function qaSetTplVendor(v) { qaTplVendor = v; qaDepsLoad().then(d => _qaTemplate
 function _qaTemplatesBody(specs) {
   const host = document.getElementById('qa-body'); if (!host || qaView !== 'templates') return;
   const vendor = qaTplVendor || qaVendor, id = vendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13';
-  const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id);
+  const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id), fix = {}; ch.forEach(c => { fix[c.id] = c; });
   const vbtn = v => `<button class="tgl-btn${vendor === v ? ' active' : ''}" onclick="qaSetTplVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`;
   const note = !spec ? '' : vendor === 'radicl'
     ? (spec.inferredFrom >= 3 ? `Standard built from ${spec.inferredFrom} reference reports.` : `Standard built from ${qaPlural(spec.inferredFrom, 'reference report')}. Completeness checks start at three.`)
     : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} of them photos.`;
+  // Everything the review checks for this template, then whether the template can capture it.
+  const own = OpsQA.checklist(id, qaChecks);
+  const other = OpsQA.allChecks().filter(c => !c.vendors.includes(vendor) && ['off', 'alarm'].indexOf(qaChecks[c.id] || c.def) < 0)
+    .map(c => ({ id: c.id, area: c.area, title: c.title, when: c.when, severity: qaChecks[c.id] === 'hard' || qaChecks[c.id] === 'warn' ? qaChecks[c.id] : c.severity, inTemplate: true, absent: true }));
+  const list = own.concat(other), ids = new Set(list.map(c => c.id));
+  const extras = ch.filter(c => !ids.has(c.id));            // template improvements that are not one of the checks
+  const areas = OpsQA.AREA_ORDER.filter(a => list.some(c => c.area === a));
+  const add = list.filter(c => !c.inTemplate && !c.absent).length + extras.length;
   const tid = 'qa-chg-' + id;
+  const sw = c => `<span class="qa-sev"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Required: stops a handoff' : 'Flagged: asks for a look'}"></span></span>`;
+  const state = c => c.absent ? `<span class="qa-tag" title="This survey type's report has no field for it">not on this report</span>`
+    : c.inTemplate ? '<span class="qa-ok">In the template</span>'
+    : `<span class="qa-tag qa-tag-add">Add to template</span><div class="qa-detail">${qaH((fix[c.id] || {}).fix || (fix[c.id] || {}).gap || 'The template has no field for this.')}</div>`;
   host.innerHTML = `<div class="fbar qa-tplbar"><div class="toggle-group" role="group" aria-label="Template">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
     <div class="sec">
       <div class="shead"><div><div class="stitle">${qaH(QA_TEMPLATE_NAMES[id])}</div>
-        <div class="ssub">${qaH(note)} ${ch.length ? qaPlural(ch.length, 'change') + ' needed.' : ''}</div></div>
+        <div class="ssub">${qaH(note)} ${qaPlural(own.length, 'check')} on every review${add ? `, ${add} to add to the template` : ', all in the template'}. Weights are set in Settings.</div></div>
         ${ch.length ? `<button class="fbtn" onclick="qaCopyChanges('${id}',this)">Copy change list</button>` : ''}</div>
-      ${ch.length ? `<div class="xscroll"><table class="tbl qa-tbl" id="${tid}"><thead><tr><th>Change</th><th>What to add or fix</th></tr></thead><tbody>
-        ${ch.map(c => `<tr><td class="qa-check"><span class="qa-sev"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}"></span></span> ${qaH(c.title)}</td><td class="qa-detail">${qaH(c.fix)}</td></tr>`).join('')}
-      </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${tid}',this,'changes')">Copy table</button></div>`
-        : `<div class="note" style="padding:10px 0;">Nothing to change.</div>`}
+      <div class="xscroll"><table class="tbl qa-tbl" id="${tid}"><thead><tr><th>What we review</th><th>Weight</th><th>In this template</th></tr></thead><tbody>
+        ${areas.map(a => `<tr><td colspan="3" class="qa-areahead">${qaH(a)}</td></tr>` + list.filter(c => c.area === a).map(c => `<tr>
+          <td class="qa-check">${sw(c)} ${qaH(c.title)}${c.when ? `<div class="qa-when">${qaH(c.when)}</div>` : ''}</td>
+          <td style="color:var(--muted);white-space:nowrap;">${c.severity === 'hard' ? 'Required' : 'Flagged'}</td>
+          <td>${state(c)}</td></tr>`).join('')).join('')}
+        ${extras.length ? `<tr><td colspan="3" class="qa-areahead">Also add to the template</td></tr>` + extras.map(c => `<tr>
+          <td class="qa-check">${sw(c)} ${qaH(c.title)}</td><td style="color:var(--muted);white-space:nowrap;">${c.severity === 'hard' ? 'Required' : 'Flagged'}</td>
+          <td><span class="qa-tag qa-tag-add">Add to template</span><div class="qa-detail">${qaH(c.fix)}</div></td></tr>`).join('') : ''}
+      </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${tid}',this,'checks')">Copy table</button></div>
     </div>`;
 }
 function qaCopyChanges(id, btn) {

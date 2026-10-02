@@ -330,7 +330,7 @@ test('no function in the QA page is defined twice (a later one silently replaces
 });
 
 test('the three review steps exist and each has a renderer', () => {
-  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaVerdictStep', '_qaChecklist', '_qaIntake']) {
+  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaVerdictStep', '_qaIntake']) {
     assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), fn);
   }
   assert.ok(/const QA_STEPS = \['Summary of findings', 'Photo review', 'Verdict'\]/.test(pageSrc));
@@ -513,4 +513,13 @@ test('checks that only apply sometimes say when, in the checklist and in Setting
   assert.equal(by('roof_pitch').when, '');
   assert.ok(QA.checklist('radicl-v2').find(c => c.id === 'existing_equipment').when);
   assert.equal(by('attic_photos').zeroHard, true);
+});
+
+test('the checklist lives on the Templates tab, not the Review tab, and marks what the template lacks', () => {
+  assert.ok(!/function _qaChecklist/.test(pageSrc) && !/What we check/.test(pageSrc));
+  assert.ok(/What we review/.test(pageSrc) && /Add to template/.test(pageSrc));
+  // a check the template cannot capture is listed with its fix
+  const lacking = QA.checklist('sitecapture-v13').filter(c => !c.inTemplate).map(c => c.id);
+  const fixes = new Set(QA.templateChanges('sitecapture-v13').map(c => c.id));
+  assert.ok(lacking.length && lacking.some(id => fixes.has(id)));
 });

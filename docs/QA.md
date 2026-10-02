@@ -352,3 +352,11 @@ links look off.
   not block a pass.
 - Template gaps true of every survey (4 on Site Capture, 3 on Radicl) are listed on every
   review; they are the Templates tab's business more than the review's.
+
+### 2026-10-01 — "What we review" moved to the Templates tab
+The Review tab no longer shows the checklist. **Templates** now holds it, per template
+(SunPower / Radicl): every check the review runs, its weight (Required / Flagged, from
+Settings), when it applies, and whether the template can capture it. Checks the template
+lacks are tagged **Add to template** with the fix, followed by template improvements that are
+not one of the checks. Checks only the other survey type's report can answer show
+**not on this report**. Copy change list / Copy table work on it.
