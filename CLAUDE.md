@@ -1620,6 +1620,13 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   holds the review, the project ID and the report's SHA-256 only, and the
   customer's address is dropped server-side. See `docs/QA.md` → The shared log
 
+- **Check weights are Required / Flagged / Alarm only / Off**, set per check in the app's
+  Settings page (shared on the server, manager password only). Alarm-only checks stay out of
+  the review and the report unless they fail. A photo-location check compares the photos' GPS
+  with the project address (Census geocoder, `api/qa-geocode.js`). `scripts/qa-check-pages.mjs`
+  re-checks the PDF page links on real reports. A defect our QA catches is a **go back**;
+  a **resurvey** is what Design calls out after QA
+
 ## Rep surveys phased out (2026-10-01)
 Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
 **Nothing was changed in code** (Doug's call) — history is kept, and every rep

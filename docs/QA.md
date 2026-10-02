@@ -332,3 +332,23 @@ added with no hold or guide behind them.
 - A finding's page is where the answer is printed, not where its label is: a field whose
   label sits at the foot of one page and its answer at the head of the next now links the
   second page.
+
+### Checking the page links (2026-10-01)
+`node scripts/qa-check-pages.mjs <report.pdf>...` re-checks the "PDF p.N" links on real
+reports: the numbering matches the report's own "Page N of M" footer, every answer and photo
+caption is on the page it was given, and every finding's page holds one of its fields. Run
+on two Site Capture and three Radicl reports: all ok. A unit test pins the case that was
+wrong (label at the foot of one page, answer on the next). Run it on any report whose
+links look off.
+
+### Conditional checks, and an audit of the weights (2026-10-01)
+- Checks that only apply sometimes carry a `when` (existing modules and interconnection:
+  only when solar already exists; battery: battery surveys; generator; meter/main combo;
+  attic checks on Radicl: when the attic is accessible). They were already silent
+  when they did not apply; the checklist and Settings now say so.
+- Attic photos is Flagged but becomes Required when there are none at all (`zeroHard`).
+  Choosing a weight in Settings replaces that rule with the one you chose.
+- A `verify` result on a Required check (a pitch written as prose) asks for a look and does
+  not block a pass.
+- Template gaps true of every survey (4 on Site Capture, 3 on Radicl) are listed on every
+  review; they are the Templates tab's business more than the review's.

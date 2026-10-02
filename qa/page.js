@@ -762,7 +762,7 @@ function _qaChecklist() {
       <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div>
       <div class="toggle-group" role="group" aria-label="Checklist">${['sitecapture', 'radicl'].map(v => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetCheckVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`).join('')}</div></div>
     <div class="qa-checks">${cols.map(cs => `<div class="qa-checks-col">${cs.map(a => `<div class="qa-checks-h">${qaH(a)}</div>
-      ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.absent ? ' <span class="qa-tag" title="This survey type\'s report has no field for it">not on this report</span>' : c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
+      ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.when ? ` <span class="qa-when-i">· ${qaH(c.when)}</span>` : ''}${c.absent ? ' <span class="qa-tag" title="This survey type\'s report has no field for it">not on this report</span>' : c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
     <div class="note" style="margin-top:10px;"><span class="qa-sw hard"></span> stops a handoff &nbsp; <span class="qa-sw warn"></span> asks for a look</div>
   </div>`;
 }
@@ -1389,7 +1389,7 @@ function _qaSettings() {
       ${changed && can ? `<div class="set-control"><button class="fbtn" onclick="qaResetChecks()">Reset ${changed} to the defaults</button></div>` : ''}</div>
     <div class="xscroll"><table class="tbl qa-tbl"><thead><tr><th>Check</th><th>Survey types</th><th>Weight</th></tr></thead><tbody>
       ${areas.map(a => `<tr><td colspan="3" class="qa-areahead">${qaH(a)}</td></tr>` + checks.filter(c => c.area === a).map(c => `<tr>
-        <td class="qa-check">${qaH(c.title)}${cur(c) !== c.def ? ' <span class="qa-tag">changed</span>' : ''}</td>
+        <td class="qa-check">${qaH(c.title)}${cur(c) !== c.def ? ' <span class="qa-tag">changed</span>' : ''}${c.when ? `<div class="qa-when">${qaH(c.when)}</div>` : ''}${c.zeroHard && cur(c) === c.def ? '<div class="qa-when">Required when there are none</div>' : ''}</td>
         <td style="color:var(--muted);white-space:nowrap;">${c.vendors.length > 1 ? 'Both' : c.vendors[0] === 'radicl' ? 'Radicl only' : 'SunPower only'}</td>
         <td><div class="toggle-group" role="group" aria-label="${qaH(c.title)}">${QA_CHECK_SET.map(([v, l]) => btn(c, v, l)).join('')}</div></td></tr>`).join('')).join('')}
     </tbody></table></div>

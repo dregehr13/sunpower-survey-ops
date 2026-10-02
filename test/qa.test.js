@@ -496,3 +496,21 @@ test('photos taken far from the Salesforce address are flagged, near ones pass, 
   assert.equal(run(survey('sitecapture', { photos: [{ ref: 'p', instance: null, page: 1 }] }), home).status, 'na');
   assert.equal(run(at(45.5, -122.5), undefined).status, 'na');            // not looked up yet
 });
+
+test('a finding links the page where the answer is printed, not the page where its label starts', () => {
+  const S = survey('radicl', { entries: [
+    { ref: 'Electric Service Type', value: null, page: 3, instance: null },       // the label at the foot of one page
+    { ref: 'Electric Service Type', value: 'Underground', page: 4, instance: null }] });   // the answer at the head of the next
+  const f = QA.evaluate(S, specs).findings.find(x => x.id === 'service_entrance');
+  assert.equal(f.found, 'Underground');
+  assert.equal(f.page, 4);
+});
+
+test('checks that only apply sometimes say when, in the checklist and in Settings', () => {
+  const all = QA.allChecks(), by = id => all.find(c => c.id === id);
+  assert.ok(/solar already exists/.test(by('existing_equipment').when));
+  assert.ok(/battery/.test(by('battery_location').when));
+  assert.equal(by('roof_pitch').when, '');
+  assert.ok(QA.checklist('radicl-v2').find(c => c.id === 'existing_equipment').when);
+  assert.equal(by('attic_photos').zeroHard, true);
+});
