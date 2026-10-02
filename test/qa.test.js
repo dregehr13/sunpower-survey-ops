@@ -616,3 +616,34 @@ test('Radicl completeness runs from the reference reports and skips the roof on 
   assert.equal(tpl(QA.evaluate(survey('radicl'), specs)), roofCore);
   assert.equal(tpl(QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' })), 0);
 });
+
+// The page, run for real: page.js in a VM with the few browser globals it touches at load.
+import vm from 'node:vm';
+function loadPage() {
+  const noop = () => {};
+  const store = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
+  const ctx = { OpsQA: QA, console, setTimeout, clearTimeout, URL, Blob: class {}, localStorage: store(), sessionStorage: store(),
+    location: { hash: '', origin: 'http://x', pathname: '/' }, window: { addEventListener: noop }, document: { addEventListener: noop, getElementById: () => null, querySelectorAll: () => [] },
+    allRows: [], toast: noop, isOpenQueue: () => false };
+  vm.createContext(ctx);
+  vm.runInContext(pageSrc + '\n;this.__ = { set: (k, v) => { eval(k + " = v"); }, get: k => eval(k) };', ctx);
+  return ctx;
+}
+
+test('a review cannot be saved as a pass while a flagged item is undecided', () => {
+  // RD-03 in the browser: Passed was saveable with both Dead Front checks (Required) still
+  // waiting for a call, and the summary said nothing about them.
+  const P = loadPage();
+  const S = survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: 'Unable to access roof', instance: null }] });
+  const R = QA.evaluate(S, specs, {});
+  const flagged = R.findings.filter(f => f.status === 'verify' || (f.status === 'pass' && f.verify));
+  assert.ok(flagged.length >= 1);
+  P.__.set('qaRun', { R, S, decisions: {}, items: [], verdicts: {}, status: 'Passed', override: '' });
+  P.__.set('qaProj', '3219SCHR'); P.__.set('qaReviewer', 'Doug');
+  assert.match(P.qaSaveBlock(), /Decide the \d+ flagged item/);
+  P.__.get('qaRun').status = 'Failed - Gaps Found';
+  assert.equal(P.qaSaveBlock(), '', 'a fail can be saved without settling every look');
+  P.__.get('qaRun').status = 'Passed';
+  for (const f of flagged) P.__.get('qaRun').decisions[P.__.get('qaFlagKey')(f)] = 'ok';
+  assert.equal(P.qaSaveBlock(), '');
+});

@@ -1007,6 +1007,9 @@ function qaSaveBlock() {
   if (!run.status) return 'Choose a review status';
   if (!(qaReviewer || '').trim()) return 'Add your name under Reviewer';
   if (run.status === 'Passed with Override' && run.override.trim().length < 5) return 'Say why you are passing it with an override';
+  // A pass says someone looked. A flagged item still waiting for ✓ or ✕ has not been looked at.
+  const open = run.status !== 'Failed - Gaps Found' ? qaOutcome().counts.verify : 0;
+  if (open) return `Decide the ${qaPlural(open, 'flagged item')} on the Summary of findings before passing it`;
   return '';
 }
 function _qaSaveBtn() {
