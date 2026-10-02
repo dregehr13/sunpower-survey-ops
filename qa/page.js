@@ -794,7 +794,8 @@ function _qaSteps() {
   const open = qaUndecided();
   host.innerHTML = QA_STEPS.map((l, i) => {
     const on = qaRun.step === i, left = i === 0 && open && !on, done = qaRun.visited[i] && !on && !left;
-    return `<button class="qa-stepbtn${on ? ' on' : ''}${done ? ' done' : ''}${left ? ' open' : ''}" onclick="qaGo(${i})"${left ? ` title="${qaPlural(open, 'flagged item')} to decide"` : ''}><span class="qa-stepn">${done ? '✓' : left ? open : i + 1}</span><span class="qa-stepl">${l}</span></button>`;
+    // The count sits after the title as a pill, so it never reads as a step number.
+    return `<button class="qa-stepbtn${on ? ' on' : ''}${done ? ' done' : ''}" onclick="qaGo(${i})"><span class="qa-stepn">${done ? '✓' : i + 1}</span><span class="qa-stepl">${l}</span>${left ? `<span class="qa-stepbadge">${open} to decide</span>` : ''}</button>`;
   }).join('');
 }
 function qaGo(i) {
@@ -1090,7 +1091,7 @@ function _qaSaveBtn() {
 function _qaVerdictStep(host) {
   const run = qaRun, o = qaOutcome(), id = qaRecordId();
   const hardMiss = o.counts.missHard > 0, rec = o.suggestedStatus;
-  const stBtn = s => `<button class="qa-stbtn${run.status === s ? ' on' : ''}${rec === s && run.status !== s ? ' rec' : ''}" data-s="${s}"${s === 'Passed' && hardMiss ? ' disabled title="There are hard misses, so use Passed with Override"' : ''} onclick="qaSetStatus('${s}')"><b>${s}</b>${rec === s ? `<span>Suggested by the checks${s !== 'Failed - Gaps Found' && qaUndecided() ? `, once ${qaPlural(qaUndecided(), 'flagged item')} ${qaUndecided() === 1 ? 'is' : 'are'} decided` : ''}</span>` : ''}</button>`;
+  const stBtn = s => `<button class="qa-stbtn ${s === 'Passed' ? 'st-pass' : s === 'Failed - Gaps Found' ? 'st-fail' : 'st-over'}${run.status === s ? ' on' : ''}${rec === s && run.status !== s ? ' rec' : ''}" data-s="${s}"${s === 'Passed' && hardMiss ? ' disabled title="There are hard misses, so use Passed with Override"' : ''} onclick="qaSetStatus('${s}')"><b>${s}</b>${rec === s ? `<span>Suggested by the checks${s !== 'Failed - Gaps Found' && qaUndecided() ? `, once ${qaPlural(qaUndecided(), 'flagged item')} ${qaUndecided() === 1 ? 'is' : 'are'} decided` : ''}</span>` : ''}</button>`;
   const row = (label, val, key, wide) => `<div class="qa-sfrow${wide ? ' wide' : ''}"><div class="klabel">${label}</div><div class="qa-sfval">${val}</div>${key ? `<button class="copy-btn" onclick="qaCopy('${key}',this)">Copy</button>` : ''}</div>`;
   host.innerHTML = `<div class="qa-verdict">
     <div class="qa-vleft"><div class="klabel">Summary</div>

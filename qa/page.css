@@ -103,7 +103,7 @@ textarea.qa-in.short{min-height:54px;}
 .qa-stepn{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:var(--muted);}
 .qa-stepbtn.on .qa-stepn{background:var(--text);border-color:var(--text);color:var(--surface);}
 .qa-stepbtn.done .qa-stepn{background:var(--green-bg);border-color:var(--green-fill);color:var(--green);}
-.qa-stepbtn.open .qa-stepn{background:var(--amber-bg);border-color:#e3c98a;color:var(--amber);}
+.qa-stepbadge{font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--amber-bg);border:1px solid #e3c98a;color:var(--amber);}
 .qa-strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);}
 .qa-strip b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
 .qa-strip .open b{color:var(--amber);}
@@ -231,8 +231,12 @@ textarea.qa-in.short{min-height:54px;}
 .qa-stbtn span{font-size:11px;color:var(--muted);}
 .qa-stbtn:hover:not(:disabled){border-color:var(--faint);}
 .qa-stbtn.rec{border-color:var(--green-fill);}
-.qa-stbtn.on{background:var(--text);border-color:var(--text);color:var(--surface);}
-.qa-stbtn.on span{color:var(--border);}
+/* the chosen status fills in its own colour: green pass, red fail, amber override */
+.qa-stbtn.on{color:var(--surface);}
+.qa-stbtn.on span{color:rgba(255,255,255,.82);}
+.qa-stbtn.st-pass.on{background:var(--green);border-color:var(--green);}
+.qa-stbtn.st-fail.on{background:var(--red);border-color:var(--red);}
+.qa-stbtn.st-over.on{background:var(--amber);border-color:var(--amber);}
 .qa-stbtn:disabled{opacity:.4;cursor:default;}
 .qa-vfoot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
 .qa-primary{font:inherit;font-size:12px;font-weight:600;padding:7px 16px;border:1px solid var(--text);border-radius:6px;background:var(--text);color:var(--surface);cursor:pointer;transition:opacity .15s;}
@@ -295,6 +299,7 @@ textarea.qa-in.short{min-height:54px;}
   .qa-stepbtn{min-width:0;flex:0 0 auto;padding:10px 14px;}
   .qa-stepbtn.on{flex:1 1 auto;}
   .qa-stepbtn:not(.on) .qa-stepl{display:none;}
+  .qa-stepbtn:not(.on) .qa-stepbadge{padding:1px 6px;}
   .qa-photos-h{flex-wrap:wrap;row-gap:2px;}
   .qa-photos-h .qa-link{white-space:nowrap;}
 }
