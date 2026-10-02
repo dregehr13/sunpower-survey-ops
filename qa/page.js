@@ -4,8 +4,8 @@
 // it leans on (esc, toast, allRows, sfUrl, animateSections ...) is resolved when
 // a function runs, never at load. It reads a vendor's report in the browser —
 // the PDF never leaves the machine — checks it with lib/qa.cjs, and builds the
-// six fields Salesforce wants. Reviews are kept in this browser for now; see
-// docs/QA.md for what a shared log needs.
+// six fields Salesforce wants. Reviews go to the team's shared history
+// (api/qa-log.js); see docs/QA.md.
 
 const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
@@ -994,7 +994,7 @@ document.addEventListener('keydown', e => {
 function qaSetSummary(v) { qaRun.summary = v; qaRun.edited = true; const n = document.getElementById('qa-sum-n'); if (n) n.textContent = v.length + ' characters'; _qaSaveBtn(); }
 function qaResetSummary() { qaRun.edited = false; qaRun.summary = qaSummaryText(); _qaStep(); }
 
-// Step 5 — the status, then save, then the Salesforce fields
+// The status, then save, then the Salesforce fields
 function qaToday() { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`; }
 function qaRecordId() { if (qaRun && qaRun.saved) return qaRun.saved; const p = (qaProj.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'REPORT'); return `QA-${p}-${qaReviewNumber()}`; }
 function qaRecordLink(id) { return location.origin + location.pathname + '#qa?r=' + encodeURIComponent(id); }
@@ -1181,9 +1181,8 @@ function _qaLog() {
   const host = document.getElementById('qa-body'); if (!host) return;
   const log = qaLoad();
   const where = qaMode === 'shared' ? '' : 'Saved in this browser only.';
-  const migrate = '';
   if (!log.length) {
-    host.innerHTML = migrate + `<div class="sec"><div class="shead"><div><div class="stitle">No reviews yet</div>
+    host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">No reviews yet</div>
       <div class="ssub">Saved reviews appear here, with how many times each account has been reviewed.</div></div></div>
       ${where ? `<div class="note" style="padding:6px 0 4px;">${where}</div>` : ''}</div>`;
     return;
@@ -1197,7 +1196,7 @@ function _qaLog() {
   const fp = firstPass.length ? Math.round(firstPass.filter(r => r.status === 'Passed').length / firstPass.length * 100) : null;
   const overrides = log.filter(r => r.status === 'Passed with Override').length;
   const cell = (label, val, sub, tip) => `<div class="srail-cell"><div class="klabel">${label}${tip ? kinfo(tip) : ''}</div><div class="srail-val">${val}${sub ? `<span class="srail-sub">${sub}</span>` : ''}</div></div>`;
-  host.innerHTML = migrate + `
+  host.innerHTML = `
     <div class="srail">
       ${cell('Reviews', log.length, thisWeek + ' this week', 'Every saved review.')}
       ${cell('Passed first time', fp == null ? '—' : fp + '%', firstPass.length + ' first reviews', 'Of first reviews of an account, the share that passed with nothing to fix.')}

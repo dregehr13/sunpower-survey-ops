@@ -1620,6 +1620,9 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   holds the review, the project ID and the report's SHA-256 only, and the
   customer's address is dropped server-side. See `docs/QA.md` → The shared log
 
+- **Audited 2026-10-01** (`docs/QA-AUDIT-REPORT.md`): battery-only surveys skip the roof
+  checks, Radicl partial surveys (go backs) are reviewed, a pass needs every flagged item
+  decided, and a server error reads "History offline", never a wrong password
 - **Check weights are Required / Flagged / Alarm only / Off**, set per check in the app's
   Settings page (shared on the server, manager password only). Alarm-only checks stay out of
   the review and the report unless they fail. A photo-location check compares the photos' GPS

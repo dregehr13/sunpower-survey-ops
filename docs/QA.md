@@ -33,7 +33,7 @@ runs on plain data and the extractor can move into the browser.
   surveyor's own answers.
 - **Layer A, Radicl is inferred.** Radicl publishes no template; the spec is what
   reference surveys contain, per template version, and is skipped below 3
-  reports (`radicl-v2` has 1). Radicl changed its template between 2026-08-29
+  reports (`radicl-v1` has 4, `radicl-v2` 7 since the 2026-10-01 audit). Radicl changed its template between 2026-08-29
   and 2026-09-30 ("Inside Breaker Box 1: Dead Front On" became "Breaker Box /
   Electrical Panel #1 — Dead Front…"); refs are canonical across both.
 - **Miss vs gap.** A requirement with no field in a template is a TEMPLATE GAP,
@@ -82,13 +82,10 @@ timestamps; the pack is only for pixels. Radicl's Drive folder is not yet seen.
 `qa/page.js` + `qa/page.css`, loaded by index.html; it inherits the sidebar,
 tokens and shared classes (`.sec`, `.srail`, `.fbar`, `.tbl`, `.pill`) so it reads
 as part of the app. Three views:
-- **Review** — one compact intake card (SunPower survey / Radicl survey toggle,
-  project ID, report, photo export or Drive link), then **what we check** (the
-  current checklist, `OpsQA.checklist`, with what the template cannot capture
-  tagged "not in template") until a report is loaded. With a report, five steps:
-  **Findings → Photos → Report → Summary → Status & save**, a slim strip of
-  counts above them. Reads the PDF in the browser (pdf.js from cdnjs); nothing
-  is uploaded
+- **Review** — one upload field, then a project card and three steps:
+  **Summary of findings → Photo review → Verdict** (see the dated rounds
+  below). Reads the PDF in the browser (pdf.js from cdnjs); nothing is
+  uploaded
 - **History** (was Log) — every saved review, the review number per account, a By account
   lens, search, Export (JSON/CSV) and Import. A report already reviewed (by
   anyone) is caught by its SHA-256
@@ -186,10 +183,8 @@ Things not to undo:
 
 ## Not built yet
 
-Vision checks (legible breaker rating, readable label, tape visible,
-blur/duplicates) through the Claude API,
-Radicl's images folder (Drive), storing the reports themselves (a private bucket), and a real login. `evaluate` already marks
-`verify` items for a model to take.
+Storing the reports themselves (a private bucket), and a real login. The Claude
+photo check is built but has never run against the live API (see below).
 
 ## 2026-10-01 round
 - Tabs are Review / Templates / History. The Reviewer is read-only once a
@@ -360,3 +355,24 @@ Settings), when it applies, and whether the template can capture it. Checks the 
 lacks are tagged **Add to template** with the fix, followed by template improvements that are
 not one of the checks. Checks only the other survey type's report can answer show
 **not on this report**. Copy change list / Copy table work on it.
+
+### 2026-10-01 — pre-launch audit
+Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
+- **Battery-only surveys** (Salesforce survey type, or "Battery Only" in the project
+  name) skip the roof, attic and plane checks, and Site Capture's roof and attic
+  sections in Layer A. The page passes `sfSurveyType` in the context
+- **Site Capture battery captions name no instance** ("Proposed Walls / <field>");
+  they go to the group's only instance, or count for every instance when there are
+  several. Read as unmatched, they made every required battery photo a hard miss
+- **A Radicl blank pitch with gauge photos asks for a look**, as an unreadable one
+  does; a bare number ("16") asks for its unit. A breaker or bus rating with no
+  number in it ("Unknown", "No labels") is not recorded
+- **Radicl no attic access asks for a look** with the surveyor's note, instead of
+  silently skipping the framing check
+- **Radicl partial surveys (go backs) are reviewed**; an inspection report is named
+  and refused. A report whose pages use the August layout under the new contents page
+  is read as the August template (the pages decide)
+- **A pass needs every flagged item decided.** Failed can be saved without
+- **A server error is "History offline"**, never a wrong password and never a silent
+  switch to the browser-only log. Only 404 (no API) and 503 (not set up) mean local
+- No finding's detail carries an address; the Radicl page header is cut on height
