@@ -253,3 +253,22 @@ test('check settings are kept on the server, readable by the team, and changed o
   assert.equal(seen.body.manager, false);
   assert.equal((await call(db, 'GET')).body.manager, true);
 });
+
+test('an imported review id can only be the shape the server itself writes', async () => {
+  // Ids are printed inside onclick="...('ID')" on History; an entity-escaped quote is decoded
+  // before the script runs, so an id carrying one would run in every teammate's browser.
+  const db = await fresh();
+  const out = await Store.importMany(db, [review({ id: "QA-X-1');alert(1);('" }), review({ id: 'QA-2321LOPE-7', file: { name: 'b.pdf', size: 1, hash: hash('b') } })]);
+  assert.equal(out.skipped, 1); assert.equal(out.inserted, 1);
+  assert.deepEqual((await Store.list(db)).map(r => r.id), ['QA-2321LOPE-7']);
+});
+
+test('the endpoint creates the schema once per database, not on every call', async () => {
+  // Over Neon's HTTP driver every statement is a round trip; nine of them on every call was most of a History load.
+  const pg = new PGlite(); let creates = 0;
+  const db = { query: (t, p) => { if (/^\s*(CREATE|ALTER)/.test(t)) creates++; return pg.query(t, p); } };
+  const env = { QA_PASSWORD: 'pw' }, req = { method: 'GET', headers: { 'x-qa-password': 'pw' }, query: {} };
+  await Store.handle(req, env, db); const once = creates;
+  await Store.handle(req, env, db); await Store.handle(req, env, db);
+  assert.ok(once > 0); assert.equal(creates, once);
+});
