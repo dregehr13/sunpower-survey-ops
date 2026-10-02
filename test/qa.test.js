@@ -335,7 +335,7 @@ test('the review is two steps, each with a renderer, and photo review rows open 
   for (const fn of ['_qaReviewStep', '_qaVerdictStep', '_qaIntake', 'qaToggleRow', 'qaExpandAll', 'qaPhotoCardHtml']) {
     assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), fn);
   }
-  assert.ok(/const QA_STEPS = \['Photo review', 'Verdict'\]/.test(pageSrc));
+  assert.ok(/const QA_STEPS = \['Photo Review', 'Verdict and Summary'\]/.test(pageSrc));
   assert.ok(!/_qaReportStep|_qaSummaryStep|_qaStatusStep\b|_qaPhotosStep|_qaFindings\b/.test(pageSrc));
   assert.ok(/Expand all/.test(pageSrc) && /Collapse all/.test(pageSrc));
 });

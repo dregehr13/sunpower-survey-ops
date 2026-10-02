@@ -783,7 +783,7 @@ function qaStatusPill(s) {
 }
 
 // ── The flow: photo review, then the verdict ──
-const QA_STEPS = ['Photo review', 'Verdict'];
+const QA_STEPS = ['Photo Review', 'Verdict and Summary'];
 function _qaFlow() {
   const host = document.getElementById('qa-run'); if (!host) return;
   host.innerHTML = `<div class="sec qa-flow"><div class="qa-steps" id="qa-steps"></div><div class="qa-strip" id="qa-strip"></div><div class="qa-body" id="qa-step"></div><div class="qa-nav" id="qa-nav"></div></div>`;

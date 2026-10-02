@@ -83,7 +83,7 @@ timestamps; the pack is only for pixels. Radicl's Drive folder is not yet seen.
 tokens and shared classes (`.sec`, `.srail`, `.fbar`, `.tbl`, `.pill`) so it reads
 as part of the app. Three views:
 - **Review** — one upload field, then a project card and two steps:
-  **Photo review → Verdict** (see the dated rounds
+  **Photo Review → Verdict and Summary** (see the dated rounds
   below). Reads the PDF in the browser (pdf.js from cdnjs); nothing is
   uploaded
 - **History** (was Log) — every saved review, the review number per account, a By account
