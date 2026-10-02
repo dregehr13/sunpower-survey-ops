@@ -303,3 +303,23 @@ textarea.qa-in.short{min-height:54px;}
 .qa-areahead{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);}
 .qa-switch{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;}
 .tgl-btn:disabled{opacity:.55;cursor:default;}
+
+/* summary rows: dot, check + PDF link, what was found, photos, call */
+.qa-find,.qa-find.flag{grid-template-columns:14px minmax(200px,1.2fr) minmax(0,1.5fr) auto 76px;align-items:center;gap:0 14px;}
+.qa-find .t .qa-link{margin-left:8px;font-weight:400;white-space:nowrap;}
+.qa-find .ev{display:flex;justify-content:flex-end;}
+.qa-find .ev .qa-ev{margin-left:0;}
+.qa-find .act{display:flex;justify-content:flex-end;}
+@media (max-width:860px){.qa-find,.qa-find.flag{grid-template-columns:14px 1fr auto;}.qa-find .d{grid-column:2/-1;}.qa-find .ev{grid-column:2;justify-content:flex-start;}.qa-find .act{grid-column:3;}}
+/* project card */
+.qa-projcard{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.qa-pc-top{display:flex;align-items:center;gap:8px;}
+.qa-pc-id{font-size:18px;font-weight:700;letter-spacing:-.01em;}
+.qa-pc-edit{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--faint);cursor:pointer;}
+.qa-pc-edit:hover{background:var(--bg);color:var(--text);}
+.qa-pc-name{font-size:13px;font-weight:600;}
+.qa-pc-meta{font-size:12px;color:var(--muted);line-height:1.45;}
+.qa-pc-meta a{color:var(--sf);text-decoration:none;}
+.qa-pc-meta a:hover{text-decoration:underline;}
+.qa-projcard .qa-in{max-width:220px;}
+@media(min-width:1001px){.qa-form{grid-template-columns:minmax(240px,1.5fr) minmax(0,1fr) minmax(0,1fr);}}

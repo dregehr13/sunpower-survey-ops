@@ -209,6 +209,29 @@ function qaMatchHtml() {
   const link = sfUrl(r) ? ` <a href="${qaH(sfUrl(r))}" target="_blank" rel="noopener">Open ↗</a>` : '';
   return `<div class="qa-match ok"><b>${qaH(r.project)}</b> · ${qaH(r.address || 'no address')}<br>${qaH(r.project_status || '')}${r.resource ? ' · ' + qaH(r.resource) : ''}${link}</div>`;
 }
+// The project this review is for: who it is, from Salesforce. The ID is text with a pencil;
+// it becomes a field only while it is being changed, or when there is nothing to show yet.
+let qaProjEdit = false;
+function qaProjCard() {
+  const id = qaProj.trim(), r = id ? qaProjectRow(id) : null, locked = !!(qaRun && qaRun.saved);
+  if (r && !qaProjEdit) {
+    const link = sfUrl(r) ? ` · <a href="${qaH(sfUrl(r))}" target="_blank" rel="noopener">Open in Salesforce ↗</a>` : '';
+    const rep = [r.sales_rep, r.sales_office].filter(Boolean).join(' · ');
+    return `<div class="qa-projcard"><div class="qa-pc-top"><span class="qa-pc-id">${qaH(r.project)}</span>${locked ? '' : `<button class="qa-pc-edit" title="Change the project" aria-label="Change the project" onclick="qaEditProject()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>`}</div>
+      ${r.contact ? `<div class="qa-pc-name">${qaH(r.contact)}</div>` : ''}
+      <div class="qa-pc-meta">${qaH(r.address || 'no address')}</div>
+      ${rep ? `<div class="qa-pc-meta">Sales rep ${qaH(rep)}</div>` : ''}
+      <div class="qa-pc-meta">${qaH([r.project_status, r.resource, r.region].filter(Boolean).join(' · '))}${link}</div></div>`;
+  }
+  return `<div class="qa-projcard"><input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="Project ID, e.g. 2321LOPE" value="${qaH(qaProj)}"
+      oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" onblur="qaProjDone()" aria-label="Project ID"><div id="qa-match">${qaMatchHtml()}</div></div>`;
+}
+function qaEditProject() { qaProjEdit = true; const h = document.getElementById('qa-projcard'); if (h) { h.innerHTML = qaProjCard(); const i = document.getElementById('qa-project'); if (i) { i.focus(); i.select(); } } }
+// Leaving the field with a project that exists puts the card back.
+function qaProjDone() {
+  if (!qaProjEdit && qaProjectRow(qaProj)) return;
+  if (qaProjectRow(qaProj)) { qaProjEdit = false; const h = document.getElementById('qa-projcard'); if (h) h.innerHTML = qaProjCard(); }
+}
 // Typing only records the ID and shows the Salesforce match; the checks that read
 // the project (address, resource) re-run when the field is left, so the page does
 // not rebuild under the cursor.
@@ -226,6 +249,7 @@ function qaSetProject(v, fromStep) {
 function qaProjectCommit() {
   const run = qaRun; if (!run || run.saved) return;
   qaReeval(true);
+  qaProjDone();
   if (!run.edited) run.summary = qaSummaryText();
   _qaStrip();
   if (run.step === 2) { const f = document.getElementById('qa-project-field'); if (f && qaProj.trim()) f.remove(); _qaSaveBtn(); }
@@ -289,10 +313,7 @@ function _qaIntake() {
     return;
   }
   host.innerHTML = `<div class="qa-form">
-    <div class="qa-field"><span class="klabel">Project ID</span>
-      <input class="qa-in${qaNeedsProject() ? ' needs' : ''}" id="qa-project" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. 2321LOPE" value="${qaH(qaProj)}"${qaRun && qaRun.saved ? ' readonly title="The project is fixed once a review is saved"' : ''}
-        oninput="qaSetProject(this.value)" onchange="qaProjectCommit()" aria-label="Project ID">
-      <div id="qa-match">${qaMatchHtml()}</div></div>
+    <div class="qa-field"><span class="klabel">Project</span><div id="qa-projcard">${qaProjCard()}</div></div>
     <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
     <div class="qa-field"><span class="klabel">Photos</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>
   </div>`;
@@ -315,7 +336,7 @@ async function qaOpenReport(file) {
     try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {}
     qaRun = { file: { name: file.name, size: file.size, hash }, bytes, det, S, spec, specs: deps.specs, R: null, items: null, allKey: [], expand: {},
       verdicts: {}, decisions: {}, status: null, override: '', summary: '', edited: false, saved: null, step: 0, visited: { 0: true }, pdfUrl: null };
-    qaFlag = 'all';
+    qaFlag = 'all'; qaProjEdit = false;
     qaReeval(true);
     if (how) toast('Project ' + qaProj + ' filled in from ' + how);
     qaSetBusy('pdf', '');
@@ -819,10 +840,11 @@ function _qaFindings(host) {
       const dim = f.status === 'pass' && !f.verify;
       const fi = f.fk ? acts.findIndex(x => qaFlagKey(x) === f.fk) : -1;
       const link = f.page ? `<button class="qa-link" onclick="qaViewPdf(${f.page})">PDF p.${f.page}</button>` : f.fl ? `<button class="qa-link" onclick="qaViewPdf(1)">Open report PDF</button>` : '';
-      return `<div class="qa-find${dim ? ' pass' : ''}${fi >= 0 ? ' flag' : ''}" data-fi="${fi}"><span class="qa-sw ${sw}"></span>
-        <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}</div>
-        <div class="d">${qaH(f.detail || f.note || (dim ? 'OK' : ''))}${link ? ' ' + link : ''}${qaEvidence(f)}</div>
-        ${fi >= 0 ? qaDecideHtml(fi, qaRowState(f)) : ''}</div>`;
+      return `<div class="qa-find${dim ? ' pass' : ''}" data-fi="${fi}"><span class="qa-sw ${sw}"></span>
+        <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}${link ? ' ' + link : ''}</div>
+        <div class="d">${qaH(f.detail || f.note || f.found || (dim ? 'OK' : ''))}</div>
+        <div class="ev">${qaEvidence(f)}</div>
+        <div class="act">${fi >= 0 ? qaDecideHtml(fi, qaRowState(f)) : ''}</div></div>`;
     }).join('') : `<div class="qa-empty">Nothing here.</div>`}`;
 }
 const qaReportSub = (n, left) => left ? `${qaPlural(n, 'item')} to check against the report or photos. ${left} left to decide: ✓ if it is fine, ✕ if it is a miss.` : 'Every flagged item is decided. Anything marked ✕ is now a miss.';
@@ -1074,7 +1096,7 @@ async function qaSave() {
   run.saving = false; run.saved = saved.id; run.savedRec = saved;
   if (saved.summary !== run.summary) run.summary = saved.summary;
   run.snap = qaSnap();
-  const pf = document.getElementById('qa-project'); if (pf) { pf.readOnly = true; pf.title = 'The project is fixed once a review is saved'; pf.classList.remove('needs'); }
+  qaProjEdit = false; { const h = document.getElementById('qa-projcard'); if (h) h.innerHTML = qaProjCard(); }   // fixed once saved: no pencil
   toast('Saved ' + saved.id);
   _qaStatusStepRefresh(); _qaConn(); _qaBar(); _qaStrip();
 }
@@ -1116,7 +1138,7 @@ function _qaStatusStepRefresh() { if (qaRun.step === 2) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
+  qaRun = null; qaPack = null; qaProj = ''; qaProjEdit = false; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }

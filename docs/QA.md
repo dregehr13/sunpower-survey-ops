@@ -293,3 +293,23 @@ keep "resurvey" because they measure Design's callouts. Radicl's invoices also u
 - The review checklist lists the other survey type's extras too, tagged **not on this
   report**, so SunPower and Radicl read as one list.
 - "Likely to review" is now **Expected surveys**.
+
+### 2026-10-01 — project card, summary row layout
+- Once a report is loaded the Project is a card (ID, customer, address, sales rep and
+  office, status, resource, Salesforce link). The ID is text with a pencil; it is a field
+  only while changing it, or while nothing matches (amber). Locked once saved.
+- Summary rows read: dot · check + **PDF p.N** · what was found · photos · ✓/✕. "What was
+  found" is the report's own answer when it is short (bus rating, framing, service
+  entrance) or the number of photos for a photo check (`found` in `lib/qa.cjs`).
+
+### Where the Layer B checks came from
+`REQUIREMENTS` (lib/qa.cjs) is a synthesis, not a single document. Each carries its
+evidence: the **Enphase hold report** Doug forwarded 2026-10-01 (counts such as "Missing
+top view image of new construction: 2", "Different address available: 1" are the
+`enphase` / `enphaseN` fields), **our resurvey categories** read from `resurvey_details`
+(`rs: ['roofMeas','where','redo']`), and the **Site Survey Guide** (photos Design says it
+needs). The three Site Capture-only checks (photos deleted, proposal attached, plane
+count) come from questions in Site Capture's own form (section 10, Office Feedback, and
+"How many Mounting Planes does the Proposal show?"). *Report is from the resource
+Salesforce lists* and *Photos taken on site, on the survey date* are integrity checks
+added with no hold or guide behind them.
