@@ -392,18 +392,18 @@ Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
   (sub panels: "Sub panel location") and "Roof condition" (`photoTitle` in `lib/qa.cjs`). The
   go back comparison matches Layer B checks by id, so reviews saved under the old titles still match.
 
-### 2026-10-02 — find the report in Downloads
-Picking an Expected survey now looks for its report in a folder the reviewer picks
-once (Chrome/Edge File System Access API; other browsers keep the plain upload).
-- **The first pick opens the folder picker at Downloads**; the handle is kept in
-  IndexedDB (`ops_qa` / `h` / `downloads`), so later visits only ask the browser to
-  allow it again. Read only, top level of the folder only. Cancelling stops the
-  automatic look for that visit; *Look in Downloads* / *Look again* / *Change folder*
-  sit under the picked project
-- **Match by file name first** (`OpsQA.namesProject`: project ID, or street number +
-  first street word of the Salesforce address). When no name fits, the PDFs from the
-  last 21 days (newest 30) are opened to **page 1 only** (`pdfToBlocks` `maxPages`)
-  and the same test runs on the text. Newest match wins. A photo zip is picked up
-  only by file name
-- Nothing is uploaded: the found file goes through the same `qaOpenReport` path a
-  drop does
+### 2026-10-02 — several reports at once (was: find the report in Downloads)
+The first version read the Downloads folder through the File System Access API. **Chrome
+refuses Downloads itself as a "system folder"**, so it only worked if every reviewer moved
+Chrome's download location into a subfolder — too much to ask of the team. Removed the same
+day. What replaced it:
+- Before a review, the report drop takes **many files at once** (select all of the day's
+  reports in the file chooser, or drag them in). Each PDF is matched to an Expected survey
+  with `OpsQA.namesProject` — file name first (project ID, or street number + first street
+  word of the Salesforce address), else the text of its **first page only** (`pdfToBlocks`
+  `maxPages`). A match must be unique; an ambiguous one is left unmatched. A photo zip is
+  matched by file name only
+- A matched card reads **Report ready**, and clicking it opens that report (and zip) through
+  the normal `qaOpenReport` path. A line under the drop says how many matched and names the
+  ones that did not
+- One file still behaves exactly as before. Held in memory for the visit; nothing uploaded
