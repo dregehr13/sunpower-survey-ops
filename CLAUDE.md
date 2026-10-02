@@ -1633,6 +1633,9 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   Expected survey (file name, else page 1) and the card reads *Report ready*. Reading the
   Downloads folder directly was built and removed the same day: Chrome refuses Downloads as a
   system folder. See `docs/QA.md`
+- **Site Capture V.14 is the baseline** (2026-10-02): `qa/specs/sitecapture-v14.json`, with
+  V.13 still accepted. The version is read off a V.14-only field in the report; a rule's
+  `scFrom` makes the fields V.14 added a template gap on V.13. See `docs/QA.md`
 
 ## Rep surveys phased out (2026-10-01)
 Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
