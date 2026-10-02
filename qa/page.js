@@ -103,7 +103,13 @@ function qaSync() {
       qaUser = r.body.user || ''; if (qaUser) qaReviewer = qaUser;
       qaChecks = (r.body.settings && r.body.settings.checks) || {}; qaManager = !!r.body.manager;
     } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
-    else {
+    else if (r.status !== 404 && r.status !== 503) {
+      // The server is there but failing (or the connection dropped). That is not a wrong password,
+      // and saving into this browser instead would split the team's history without anyone knowing.
+      qaMode = 'down'; qaNote = `Can't reach the review history (${r.status ? 'error ' + r.status : 'no connection'}). Nothing can be saved until it is back.`;
+      if (!qaLog) qaLog = [];
+    } else {
+      // 404: a local copy with no API at all. 503: the server says the history is not set up.
       qaMode = 'local';
       qaNote = r.status === 503 ? (r.body && r.body.detail) || 'The review database isn\'t set up on the server yet.'
         : 'No server here, so reviews stay in this browser.';
@@ -116,6 +122,15 @@ function qaSync() {
   })();
   return qaSyncing;
 }
+// Before anything is written: a history that was down gets one more try.
+async function qaReady() {
+  const was = qaMode;
+  if (qaMode === 'down' || qaMode === 'checking') await qaSync();
+  if (was !== qaMode && currentPage === 'qa') { _qaBar(); _qaDup(); }     // back up: the offline banner goes
+  if (qaMode === 'shared' || qaMode === 'local') return true;
+  toast(qaNote || 'Can\'t reach the review history. Try again in a minute');
+  return false;
+}
 function qaAfterSync() {
   if (currentPage !== 'qa') return;
   if (qaMode === 'shared' && qaUser) _qaBar();        // the Reviewer is now known and locked
@@ -123,7 +138,7 @@ function qaAfterSync() {
   if (qaView === 'log') _qaLog();
   else if (qaView === 'templates') _qaTemplates();
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden && currentPage === 'qa' && qaMode === 'shared') qaSync().then(ok => ok && qaAfterSync()); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && currentPage === 'qa' && (qaMode === 'shared' || qaMode === 'down')) qaSync().then(ok => ok && qaAfterSync()); });
 
 // ── Dependencies, loaded on first use so no other page pays for them ──
 function qaDepsLoad() {
@@ -670,7 +685,8 @@ function _qaBar() {
 function _qaConn() {
   const el = document.getElementById('qa-conn'); if (!el) return;
   const n = qaLog ? qaLog.length : 0;
-  el.innerHTML = qaMode === 'checking' ? '' : `<span class="qa-conn" title="${qaMode === 'local' ? qaH(qaNote) : 'Reviews saved by the whole team'}">${qaMode === 'local' ? '<span class="qa-sw warn"></span>' : ''}${qaPlural(n, 'review')}${qaMode === 'local' ? ' · this browser only' : ''}</span>`;
+  el.innerHTML = qaMode === 'checking' ? '' : qaMode === 'down' ? `<span class="qa-conn" title="${qaH(qaNote)}"><span class="qa-sw hard"></span>History offline</span>`
+    : `<span class="qa-conn" title="${qaMode === 'local' ? qaH(qaNote) : 'Reviews saved by the whole team'}">${qaMode === 'local' ? '<span class="qa-sw warn"></span>' : ''}${qaPlural(n, 'review')}${qaMode === 'local' ? ' · this browser only' : ''}</span>`;
 }
 
 // ── Review view ────────────────────────────────────
@@ -685,7 +701,8 @@ function _qaReview() {
 function _qaDup() {
   const host = document.getElementById('qa-dup'); if (!host) return;
   const dup = qaRun && !qaRun.saved && qaLoad().find(r => r.file && r.file.hash === qaRun.file.hash);
-  const local = qaMode === 'local' ? `<div class="qa-banner qa-banner-info"><span>${qaH(qaNote)} Reviews you save stay on this computer.</span></div>` : '';
+  const local = qaMode === 'local' ? `<div class="qa-banner qa-banner-info"><span>${qaH(qaNote)} Reviews you save stay on this computer.</span></div>`
+    : qaMode === 'down' ? `<div class="qa-banner"><span>${qaH(qaNote)} You can keep reviewing; Save tries again.</span></div>` : '';
   host.innerHTML = local + (dup ? `<div class="qa-banner"><span>This exact report was already reviewed: review ${dup.n} of ${qaH(dup.project)} on ${qaH(qaDate(dup))} by ${qaH(dup.reviewer)}, ${qaH(dup.status)}.</span>
       <button onclick="qaOpenRecord('${qaH(dup.id)}')">Open it</button></div>` : '');
 }
@@ -1072,6 +1089,7 @@ function qaCopied(btn) {
 // ── Save ───────────────────────────────────────────
 async function qaSave() {
   const run = qaRun; if (!run || run.saving || qaSaveBlock()) return;
+  if (!(await qaReady())) return;
   if (run.saved) return qaUpdate();
   const o = qaOutcome(), id = qaRecordId(), row = qaProjectRow(qaProj);
   const rec = {
@@ -1127,6 +1145,7 @@ async function qaUpdate() {
 }
 // Send changes for a saved review to the server, or apply them to this browser's own log.
 async function qaApplyChanges(id, changes) {
+  if (!(await qaReady())) return null;
   const log = qaLoad(), i = log.findIndex(r => r.id === id);
   let rec;
   if (qaMode === 'shared') {
@@ -1327,6 +1346,7 @@ function qaCopyRecord(id, what, btn) {
 }
 async function qaDelete(id) {
   if (!confirm('Delete review ' + id + '? It disappears for everyone.')) return;
+  if (!(await qaReady())) return;
   if (qaMode === 'shared') {
     const r = await qaApi('DELETE', '?id=' + encodeURIComponent(id));
     if (r.status === 401) return qaBounce('Wrong password');
@@ -1378,6 +1398,7 @@ async function qaSetCheck(id, v) {
 }
 function qaResetChecks() { if (confirm('Put every check back to its default?')) qaSaveChecks({}); }
 async function qaSaveChecks(next) {
+  if (!(await qaReady())) return _qaSettings();
   const prev = qaChecks; qaChecks = next;
   if (qaMode === 'shared') {
     const r = await qaApi('PUT', '?settings=1', { checks: next });

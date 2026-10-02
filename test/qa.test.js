@@ -693,3 +693,22 @@ test('a review the coordinator fails lists its misses as the go back, even when 
   assert.match(QA.summarize(R, { status: 'Failed - Gaps Found' }).text, /Needs go back \/ follow-up:\n- Attic photographed/);
   assert.match(QA.summarize(R, { status: 'Passed' }).text, /Noted:\n- Attic/);
 });
+
+test('a failing server is not a wrong password, and nothing is saved to one browser behind the team\'s back', async () => {
+  // Any reply but 200/401 used to drop into the browser-only log: a teammate's own password was
+  // then "wrong" (signed out, sent away), and the shared password saved reviews into one browser.
+  for (const status of [0, 500, 502]) {
+    const P = loadPage(), toasts = [];
+    P.toast = m => toasts.push(m); P.nav = () => toasts.push('nav');
+    P.fetch = async () => { if (!status) throw new Error('offline'); return { status, json: async () => ({ error: 'server_error' }) }; };
+    P.sessionStorage.setItem('ops_qa_pw', 'sunpower');
+    assert.equal(await P.qaSync(), true);
+    assert.equal(P.__.get('qaMode'), 'down', 'status ' + status);
+    assert.ok(!toasts.includes('Wrong password') && !toasts.includes('nav'));
+    assert.equal(await P.qaReady(), false);
+  }
+  // A local copy with no API at all still keeps reviews in the browser, as before.
+  const L = loadPage(); L.fetch = async () => ({ status: 404, json: async () => { throw new Error('html'); } });
+  L.sessionStorage.setItem('ops_qa_pw', 'sunpower'); L.toast = () => {};
+  await L.qaSync(); assert.equal(L.__.get('qaMode'), 'local');
+});
