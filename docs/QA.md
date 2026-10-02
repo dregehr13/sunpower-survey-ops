@@ -391,17 +391,3 @@ Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
   template's long photo labels become "Mounting planes", "Each roof obstruction", "MSP location"
   (sub panels: "Sub panel location") and "Roof condition" (`photoTitle` in `lib/qa.cjs`). The
   go back comparison matches Layer B checks by id, so reviews saved under the old titles still match.
-
-### 2026-10-02 — battery surveys recognised from the report
-Donald Andrews (Radicl, 1202 PA-44) came back with 21 misses. It was a battery survey: sections
-Quality Check, Exterior Photos of Home, Exterior Electrical, Battery Placement, Interior
-Electrical, Site Assessment, no roof or attic. Salesforce called it "Site Survey" (the project is
-the second one, `-1`), so the Salesforce-only battery rule never fired and the roof survey's
-checklist was held against a battery survey. The report now says so itself
-(`reportBatteryOnly`): Radicl with Battery Placement and no Roof Photos / Attic Info section, or
-Site Capture with "battery survey: yes" and no mounting plane. Roof and attic checks read "not
-applicable" and the roof survey's photo list (Layer A) is not run; the design checks still are.
-Result: 0 misses, Passed (2 dead front lines to look at). Radicl's battery template has no
-reference spec of its own; one more battery report or two would let Layer A cover it.
-A Radicl report whose roof sections exist but read "No information" (RD-03) is still held to the
-roof checklist unless Salesforce says Battery Only.
