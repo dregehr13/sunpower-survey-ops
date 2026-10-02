@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/build-qa-spec.cjs — Site Capture form JSON → qa/specs/sitecapture-v13.json
+// scripts/build-qa-spec.cjs — Site Capture form JSON → qa/specs/sitecapture-v<N>.json
 //
 // The form export is the template's own definition: every field, its type,
 // whether it is required and what answer makes it appear. Flattening it into
@@ -13,6 +13,12 @@ const path = require('path');
 const src = process.argv[2];
 if (!src) { console.error('usage: build-qa-spec.cjs <form.json>'); process.exit(1); }
 const form = JSON.parse(fs.readFileSync(src, 'utf8'));
+
+// The form's own key names the version (site_survey_form_v14 -> sitecapture-v14), so each
+// form version gets its own spec and older reports keep reading against theirs.
+const ver = (String(form.projectKey || '').match(/_v(\d+)$/) || [])[1];
+if (!ver) { console.error(`no version in projectKey "${form.projectKey}"`); process.exit(1); }
+const specId = 'sitecapture-v' + ver;
 
 const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
 const fields = [];
@@ -53,7 +59,7 @@ for (const s of form.sections) {
 }
 
 const spec = {
-  id: 'sitecapture-v13',
+  id: specId,
   vendor: 'sitecapture',
   title: form.title,
   formId: form.id,
@@ -62,5 +68,5 @@ const spec = {
   groups,
   fields,
 };
-fs.writeFileSync(path.join(__dirname, '..', 'qa', 'specs', 'sitecapture-v13.json'), JSON.stringify(spec, null, 1) + '\n');
-console.log(`${fields.length} fields, ${Object.keys(groups).length} groups, ${fields.filter(f => f.type === 'FOTO').length} photo fields`);
+fs.writeFileSync(path.join(__dirname, '..', 'qa', 'specs', specId + '.json'), JSON.stringify(spec, null, 1) + '\n');
+console.log(`${specId}: ${fields.length} fields, ${Object.keys(groups).length} groups, ${fields.filter(f => f.type === 'FOTO').length} photo fields`);

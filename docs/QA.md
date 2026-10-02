@@ -6,7 +6,7 @@ model yet.
 
 ```
 node scripts/qa-run.mjs <report.pdf> [--json] [--coverage] [--sf-address "..."]
-node scripts/build-qa-spec.cjs "<Site_Survey_Form_V.13.json>"      # Site Capture spec
+node scripts/build-qa-spec.cjs "<Site_Survey_Form_V.14.json>"      # Site Capture spec (id from the form's projectKey)
 node scripts/build-qa-radicl-spec.mjs <report.pdf>...              # Radicl specs, per version
 ```
 
@@ -47,6 +47,23 @@ runs on plain data and the extractor can move into the browser.
   the registry. Outcomes: any hard miss → Failed - Gaps Found; warnings only →
   Needs review (internal, never sent as a picklist value); applied gap →
   Passed with Override; else Passed.
+
+## Site Capture V.14 (2026-10-02)
+
+V.14 is the current Site Capture form and the QA baseline; V.13 reports are still read
+while it phases out. V.14 is V.13 plus the fields the QA kept reporting as missing from the
+template: roof pitch per plane (in the roof group, so not attic-dependent), one overhang per
+house, main breaker rating per panel and per combo meter, service voltage and phase, the
+combo's open-enclosure photo, generator make/model/kW, and existing modules and inverters.
+The retrofit question kept its key (`is_this_survey_for_a_retr_c1`) and is relabelled
+"Existing System Information". Things not to undo:
+- **The report prints no form version**, so `detectTemplate` reads a V.14-only label
+  (`SC_FINGERPRINTS`, the service-voltage field); without it the report is V.13
+- **`scFrom` on a requirement** names the first form with the field. On an older form
+  `srcOf()` returns nothing, so the item is a template gap there, exactly as before
+- **`tplPhotos`**: the overhang, generator and existing-system rules read the answer and
+  leave the field's own photo requirement to Layer A, so a value with no photo still misses
+- V.14's checklist and Templates view list no template gaps; a test pins that
 
 ## What the data showed (10 reports)
 

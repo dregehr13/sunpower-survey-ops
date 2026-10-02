@@ -9,7 +9,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const QA = require('../lib/qa.cjs');
 const SC = require('../qa/specs/sitecapture-v13.json');
-const specs = [SC, require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
+const SC14 = require('../qa/specs/sitecapture-v14.json');
+const specs = [SC, SC14, require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
 
 const tk = QA.tok;
 const blk = (text, x0 = 18, y0 = 700) => ({ text, x0, y0, x1: x0 + 100, y1: y0 - 10 });
@@ -227,10 +228,13 @@ test('summarize emits only Salesforce picklist labels and keeps gaps apart from 
 
 // ── The registry against the template ──
 test('every Site Capture requirement that names fields still resolves against the spec', () => {
-  for (const r of QA.REQUIREMENTS) {
-    if (!r.sc) continue;
-    const keys = [...QA.scKeys(SC, r.sc.match), ...QA.scKeys(SC, r.sc.equipment), ...QA.scKeys(SC, r.sc.combo)];
-    assert.ok(keys.length > 0, `${r.id}: no template field matches — the template changed or the rule is stale`);
+  // Each matcher on its own, on every form version that has the field (scFrom): a rule whose
+  // equipment matcher resolves but whose combo matcher does not reads one panel kind only.
+  for (const spec of [SC, SC14]) for (const r of QA.REQUIREMENTS) {
+    if (!r.sc || Array.isArray(r.sc)) continue;
+    if (r.scFrom && Number(spec.id.split('-v')[1]) < Number(r.scFrom.split('-v')[1])) continue;
+    for (const m of [...(r.sc.match || []), ...(r.sc.equipment || []), ...(r.sc.combo || [])])
+      assert.ok(QA.scKeys(spec, [m]).length > 0, `${spec.id} ${r.id}: ${m.label} matches no template field`);
   }
 });
 
@@ -812,4 +816,72 @@ test('namesProject finds a report by project ID or by street number and street w
   assert.equal(QA.namesProject('Radicl Report - 26150 Oakfield Dr', k), '');   // a longer number is another house
   assert.equal(QA.namesProject('Radicl Report - 2615 Maple Dr', k), '');
   assert.equal(QA.namesProject('report', { id: '', num: '', word: '' }), '');
+});
+
+// ── Site Capture V.14 ──
+const survey14 = (o = {}) => QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-v14' }, meta: {}, ...o });
+const key14 = (re, group) => { const k = QA.scKeys(SC14, [{ label: re, group }]); assert.equal(k.length, 1, String(re)); return k[0]; };
+
+test('V.14: a report carrying the service-voltage field is read as V.14, one without it as V.13', () => {
+  const sc = extra => [page(1, [blk('Report Created: 10/05/2026'), blk('1 - Customer Information')]), page(9, extra.map(t => blk(t)))];
+  assert.equal(QA.detectTemplate(sc(['Utility Meter - Select the service voltage', 'and phase (from the meter face or the panel label).']), specs).specId, 'sitecapture-v14');
+  assert.equal(QA.detectTemplate(sc(['Utility Meter - 6.) Select Service Entrance Type']), specs).specId, 'sitecapture-v13');
+});
+
+test('V.14: the template captures every check, so nothing reads as missing from it', () => {
+  assert.deepEqual(QA.checklist('sitecapture-v14').filter(c => !c.inTemplate).map(c => c.id), []);
+  assert.deepEqual(QA.templateChanges('sitecapture-v14').map(c => c.id), []);
+  assert.deepEqual(QA.templateCoverage(SC14).gaps.map(g => g.id), []);
+  const R = QA.evaluate(survey14(), specs);
+  assert.deepEqual(R.findings.filter(f => f.status === 'gap').map(f => f.id), []);
+});
+
+test('V.13 reports still read as before: the fields V.14 added are template gaps there', () => {
+  const R = QA.evaluate(survey('sitecapture'), specs);
+  for (const id of ['roof_overhang', 'main_breaker_rating', 'service_voltage', 'existing_declared'])
+    assert.equal(get(R, id).status, 'gap', id);
+  assert.ok(QA.templateChanges('sitecapture-v13').some(c => c.id === 'pitch_without_attic'));
+});
+
+test('V.14: each new field is read from its own key', () => {
+  const e = (ref, value, instance = null) => ({ ref, value, instance });
+  const msp = { electrical_equipment: [{ idx: 1, id: 'MSP' }], electrical_meter: [{ idx: 1, id: 'Meter 1' }], mounting_plane_roof: [{ idx: 1, id: 'MP1' }] };
+  const mbr = key14(/^Main Breaker Rating - Select/, 'electrical_equipment');
+  const run = (entries, id) => get(QA.evaluate(survey14({ groups: msp, entries }), specs), id);
+  assert.equal(run([e(mbr, '200 amps', 'MSP')], 'main_breaker_rating').status, 'pass');
+  assert.equal(run([e(mbr, 'Main lug only (no main breaker)', 'MSP')], 'main_breaker_rating').status, 'pass');
+  assert.equal(run([e(mbr, 'Other - Leave a Comment', 'MSP')], 'main_breaker_rating').status, 'miss');
+  assert.equal(run([], 'main_breaker_rating').status, 'miss');
+  assert.equal(run([e(key14(/^Utility Meter - Select the service voltage/, 'electrical_meter'), '120/240V Single Phase', 'Meter 1')], 'service_voltage').status, 'pass');
+  assert.equal(run([], 'service_voltage').status, 'miss');
+  assert.equal(run([e(key14(/^Overhang - Measure the eave overhang/), '18')], 'roof_overhang').status, 'pass');
+  assert.equal(run([], 'roof_overhang').status, 'miss');
+  assert.equal(run([e(key14(/^Roof Pitch - Tilt reading/, 'mounting_plane_roof'), '22', 'MP1')], 'roof_pitch').status, 'pass');
+  assert.equal(run([], 'roof_pitch').status, 'miss');
+  // the existing-system question kept its V.13 key; modules and inverters are both required
+  const ex = e('is_this_survey_for_a_retr_c1', 'Yes'), mod = key14(/^Existing System Information - Modules/), inv = key14(/^Existing System Information - Inverters/);
+  assert.equal(ex.ref, key14(/^Existing System Information - Is there an existing solar system/));
+  assert.equal(run([ex, e(mod, 'REC 400 x 20'), e(inv, 'Enphase IQ8')], 'existing_equipment').status, 'pass');
+  assert.equal(run([ex, e(mod, 'REC 400 x 20')], 'existing_equipment').status, 'miss');
+  assert.equal(run([ex], 'existing_declared').status, 'pass');
+  const gen = key14(/^Generator - Enter the manufacturer/);
+  const genQ = e(SC14.fields.find(f => /^does_the_home_have_a_generator/.test(f.key)).key, 'Yes');
+  assert.equal(run([genQ, e(gen, 'Generac 22kW')], 'generator_details').status, 'pass');
+  assert.equal(run([genQ], 'generator_details').status, 'miss');
+});
+
+test('V.14: a combo meter needs its main breaker rating and the open-enclosure photo', () => {
+  const combo = key14(/^Exterior MSP - Main Breaker Rating/, 'electrical_meter'), open = key14(/^Exterior MSP - Meter\/Main Combo/, 'electrical_meter');
+  const S = ph => survey14({ groups: { electrical_meter: [{ idx: 1, id: 'Meter 1' }] },
+    entries: [{ ref: 'utility_meter_is_the_msp_c1', value: 'Yes', instance: 'Meter 1' }, { ref: combo, value: '200 amps', instance: 'Meter 1' }],
+    photos: ph ? [{ ref: open, instance: 'Meter 1' }] : [] });
+  assert.equal(get(QA.evaluate(S(true), specs), 'meter_main_open').status, 'pass');
+  assert.equal(get(QA.evaluate(S(false), specs), 'meter_main_open').status, 'miss');
+  assert.equal(get(QA.evaluate(S(true), specs), 'main_breaker_rating').status, 'pass');
+});
+
+test('V.14: the overhang, generator and existing-system photos the template requires are still checked', () => {
+  const ov = key14(/^Overhang - Measure the eave overhang/);
+  const R = QA.evaluate(survey14({ entries: [{ ref: ov, value: '18', instance: null }] }), specs);
+  assert.ok(R.findings.some(f => f.id === 'tpl:' + ov && f.status === 'miss'), 'overhang answered with no photo');
 });
