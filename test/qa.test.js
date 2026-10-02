@@ -686,3 +686,10 @@ test('Site Capture: a label wrapped at a slash still matches, so its answer is r
   const S = QA.parseSiteCapture(pages, SC);
   assert.equal(S.value(/^does_the_home_have_a_generator/), 'Yes');
 });
+
+test('a review the coordinator fails lists its misses as the go back, even when none is Required', () => {
+  // SC-08 saved as Failed with five Flagged misses read "Noted:" and never said what to go back for.
+  const R = { template: { vendor: 'sitecapture' }, meta: {}, findings: [{ id: 'x', status: 'miss', severity: 'warn', title: 'Attic photographed for every plane', detail: 'MP2: 1 of 10+ photos' }] };
+  assert.match(QA.summarize(R, { status: 'Failed - Gaps Found' }).text, /Needs go back \/ follow-up:\n- Attic photographed/);
+  assert.match(QA.summarize(R, { status: 'Passed' }).text, /Noted:\n- Attic/);
+});
