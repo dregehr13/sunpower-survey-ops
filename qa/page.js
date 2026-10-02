@@ -475,7 +475,8 @@ const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 
 // A list is tried in order: Dead Front Off reads its own row, or the breaker row on a Radicl
 // report that cuts both captions to "Dead Front…".
 const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave',
-  msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap' };
+  msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap',
+  attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
 const qaCatOf = f => { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
 // first three of its category), not all 36 dead-front photos; a decided check asks for none.
@@ -941,6 +942,9 @@ const QA_REFS = {
     imgs: [{ src: 'qa/ref/meter.jpg', cap: 'Meter number readable' }] },
   framing: { what: 'A measurement of the rafter size, and of how far apart the rafters are. The tape or the Measure app has to be in the shot.', why: 'The structural engineer needs 2x4, 2x6 or 2x8, and the spacing (12, 18, 24, 30 or 36 inches).',
     imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Spacing: the next rafter at 24"', from: 'a past SunPower survey' }] },
+  attic: { what: 'The whole attic over each mounting plane: every rafter or truss, the supports and the decking, in photos that overlap.', why: 'The structural engineer checks the framing can carry the array, and looks for damage, sagging or anything in the way.',
+    imgs: [{ src: 'qa/ref/attic.jpg', cap: 'Trusses, plates and decking in one shot', from: 'a past SunPower survey' },
+      { src: 'qa/ref/attic-radicl.jpg', cap: 'Down the length of the attic', from: 'a past Radicl survey' }] },
   pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', from: 'a past Radicl report',
     imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Pitch readable in the photo' }] },
   eave: { what: 'The overhang measured with a tape against the eave.', why: 'Design needs the overhang to place the array against the roof edge. The tape and the numbers have to be in frame.', from: 'a past Radicl report',

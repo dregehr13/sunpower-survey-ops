@@ -768,4 +768,7 @@ test('panel location, dead front off, meter location and site map have photo row
   const P = loadPage(), cat = P.__.get('QA_FIND_CAT');
   assert.deepEqual([cat.msp_location, cat.meter_location, cat.site_map].map(c => [].concat(c)[0]), ['location', 'meterloc', 'sitemap']);
   assert.equal([].concat(cat.msp_dead_front_off)[0], 'deadoff');
+  // and the checks read off a photo another row already holds
+  assert.deepEqual([cat.attic_photos, cat.bus_rating, cat.service_entrance], ['attic', 'label', 'meterloc']);
+  assert.ok(QA.KEY_PHOTOS.some(k => k.id === 'attic'));
 });
