@@ -543,3 +543,56 @@ test('Site Capture: a group photo captioned without its instance ("Proposed Wall
   const R = QA.evaluate(S, specs, {});
   assert.ok(!R.findings.some(f => f.id === 'tpl:garage_floor_cement_type'), 'the wall photo counts for MW1');
 });
+
+test('Radicl: no pitch written but pitch photos in the report asks for a look, not a hard miss', () => {
+  // RD-06 and RD-08: the pitch field is blank, the pitch-gauge photos are there. RD-09, which
+  // wrote "Unable to access roof", already got a look; a blank answer with photos is no worse.
+  const S = survey('radicl', { photos: [{ ref: 'Roof Pitch / Slope', instance: null, page: 31 }] });
+  const f = get(QA.evaluate(S, specs), 'roof_pitch');
+  assert.equal(f.status, 'verify'); assert.match(f.detail, /1 pitch photo/);
+  assert.equal(get(QA.evaluate(survey('radicl'), specs), 'roof_pitch').status, 'miss');
+});
+
+test('Radicl: a bare pitch number has no unit and asks for a look; "panels" alone is not a second structure', () => {
+  const run = v => get(QA.evaluate(survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: v, instance: null }] }), specs), 'roof_pitch');
+  assert.equal(run('16').status, 'verify');                       // RD-04: 16/12 or 16 degrees?
+  assert.equal(run('10 degrees confirmed on all roof planes where panels will be installed').status, 'pass');   // RD-02
+  assert.equal(run('5 in 12 for house. Panels are going on the shop').status, 'verify');
+});
+
+test('Radicl: a breaker or bus rating with no number in it is not recorded', () => {
+  // RD-08: "Unknown", "No labels", "Unknown. No label. Box closed not able to open" all passed.
+  const S = cleanRadicl();
+  S.entries = S.entries.filter(e => !/Rating/.test(e.ref)).concat(
+    { ref: 'Breaker Box — Main Breaker Rating', value: 'Unknown', instance: '1' }, { ref: 'Breaker Box — Max Bus Rating', value: 'No labels', instance: '1' });
+  const R = QA.evaluate(S, specs);
+  assert.equal(get(R, 'main_breaker_rating').status, 'miss'); assert.match(get(R, 'main_breaker_rating').detail, /Unknown/);
+  assert.equal(get(R, 'bus_rating').status, 'miss');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'main_breaker_rating').status, 'pass');
+});
+
+test('a battery-only survey is not held to the roof and attic checks', () => {
+  // RD-03 (3219SCHR - Battery Only): no roof was surveyed, and it read Failed for no pitch and no eave.
+  const R = QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' });
+  for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Site Survey + Battery' }), 'roof_pitch').status, 'miss');
+});
+
+test('Radicl: no attic access is shown for a look with the surveyor\'s note, not passed over', () => {
+  const S = survey('radicl', { entries: [{ ref: 'Is there attic access?', value: 'No', instance: null }, { ref: 'No Attic Access Notes', value: 'Attic not accessible per HO', instance: null }] });
+  const f = get(QA.evaluate(S, specs), 'attic_framing');
+  assert.equal(f.status, 'verify'); assert.match(f.detail, /not accessible per HO/);
+  assert.equal(get(QA.evaluate(S, specs), 'attic_photos').status, 'na');
+});
+
+test('Radicl: the page header is never read as a photo caption, however long the address', () => {
+  // RD-01: an address long enough to start left of x 400 was read as a caption on every photo
+  // page, so the customer's address became an "unknown photo" and was saved in newToSpec.
+  const pages = [page(1, [blk('SITE SURVEY REPORT radicl', 32, 808)]), page(2, [
+    blk('1411 Long Street Name Rd Klamath Falls, OR 97601', 372, 819), blk('radicl', 32, 812),
+    blk('Roof Photos — Photos (1/2)', 32, 767), blk('Roof Pitch / Slope', 37, 733)]),
+    // the next photo page: the header comes before its own heading, while the last section is still open
+    page(3, [blk('1411 Long Street Name Rd Klamath Falls, OR 97601', 372, 819), blk('Roof Photos — Photos (2/2)', 32, 767), blk('Drip Edge Photo', 37, 733)])];
+  const S = QA.parseRadicl(pages, { specId: 'radicl-v2' });
+  assert.deepEqual(S.photos.map(p => p.label), ['Roof Pitch / Slope', 'Drip Edge Photo']);
+});

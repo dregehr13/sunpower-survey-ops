@@ -363,7 +363,9 @@ function qaReeval(full) {
   const run = qaRun; if (!run) return;
   const row = qaProjectRow(qaProj);
   const addr = row ? row.address : null;
-  const ctx = { sfAddress: addr, sfResource: row ? (row.resource || null) : null, checks: qaChecks, sfGeo: addr ? qaGeo[addr] : undefined };
+  // A battery-only project says so in its survey type, or in the " - Battery Only" on its name.
+  const type = row ? (row.survey_type || (/battery only/i.test(row.project || '') ? 'Battery Only Survey' : null)) : null;
+  const ctx = { sfAddress: addr, sfResource: row ? (row.resource || null) : null, sfSurveyType: type, checks: qaChecks, sfGeo: addr ? qaGeo[addr] : undefined };
   if (addr && !(addr in qaGeo)) qaGeoLookup(addr);
   run.ctx = ctx;
   run.R = OpsQA.evaluate(run.S, run.specs, ctx);

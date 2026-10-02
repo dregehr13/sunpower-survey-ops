@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // scripts/qa-run.mjs — run the QA engine on a survey report PDF.
-//   node scripts/qa-run.mjs <report.pdf> [--json] [--sf-address "123 Main St"]
+//   node scripts/qa-run.mjs <report.pdf> [--json] [--sf-address "123 Main St"] [--sf-type "Battery Only Survey"]
 // Prints the findings, grouped by outcome, and the Salesforce hand-off text.
 // Reports hold customer names and photos of homes: run this on your own
 // machine and keep the PDFs out of the repo.
@@ -20,7 +20,8 @@ const args = process.argv.slice(2);
 const file = args.find(a => !a.startsWith('--'));
 if (!file) { console.error('usage: qa-run.mjs <report.pdf> [--json] [--sf-address "..."]'); process.exit(1); }
 const ai = args.indexOf('--sf-address');
-const ctx = { sfAddress: ai >= 0 ? args[ai + 1] : null };
+const ti = args.indexOf('--sf-type');
+const ctx = { sfAddress: ai >= 0 ? args[ai + 1] : null, sfSurveyType: ti >= 0 ? args[ti + 1] : null };
 
 const { pages } = await pdfToBlocks(file);
 const det = QA.detectTemplate(pages, specs);
