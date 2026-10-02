@@ -37,6 +37,10 @@ qaReadRecordHash();
 // This listener is registered before the app's own (this file loads first), so it
 // sees a pasted or clicked record link before the app rewrites the hash.
 window.addEventListener('hashchange', qaReadRecordHash);
+// A reload or a closed tab would lose every call and photo mark of a review not yet saved.
+window.addEventListener('beforeunload', e => {
+  if (qaRun && (!qaRun.saved || qaSnap() !== qaRun.snap)) { e.preventDefault(); e.returnValue = ''; }
+});
 
 const qaH = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const qaPlural = (n, w) => n + ' ' + w + (n === 1 ? '' : /s$/.test(w) ? 'es' : 's');

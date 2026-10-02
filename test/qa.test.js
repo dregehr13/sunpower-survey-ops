@@ -623,7 +623,7 @@ function loadPage() {
   const noop = () => {};
   const store = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
   const ctx = { OpsQA: QA, console, setTimeout, clearTimeout, URL, Blob: class {}, localStorage: store(), sessionStorage: store(),
-    location: { hash: '', origin: 'http://x', pathname: '/' }, window: { addEventListener: noop }, document: { addEventListener: noop, getElementById: () => null, querySelectorAll: () => [] },
+    location: { hash: '', origin: 'http://x', pathname: '/' }, window: { on: {}, addEventListener(t, f) { this.on[t] = f; } }, document: { addEventListener: noop, getElementById: () => null, querySelectorAll: () => [] },
     allRows: [], toast: noop, isOpenQueue: () => false };
   vm.createContext(ctx);
   vm.runInContext(pageSrc + '\n;this.__ = { set: (k, v) => { eval(k + " = v"); }, get: k => eval(k) };', ctx);
@@ -711,4 +711,16 @@ test('a failing server is not a wrong password, and nothing is saved to one brow
   const L = loadPage(); L.fetch = async () => ({ status: 404, json: async () => { throw new Error('html'); } });
   L.sessionStorage.setItem('ops_qa_pw', 'sunpower'); L.toast = () => {};
   await L.qaSync(); assert.equal(L.__.get('qaMode'), 'local');
+});
+
+test('leaving the page with an unsaved review asks first', () => {
+  const P = loadPage(), leave = () => { const e = { returnValue: undefined, preventDefault() { this.prevented = true; } }; P.window.on.beforeunload(e); return !!e.prevented; };
+  assert.equal(leave(), false, 'nothing open');
+  const R = QA.evaluate(survey('radicl'), specs, {});
+  P.__.set('qaRun', { R, S: survey('radicl'), decisions: {}, items: [], verdicts: {}, status: null, override: '', summary: '', saved: null });
+  assert.equal(leave(), true, 'an unsaved review');
+  const run = P.__.get('qaRun'); run.saved = 'QA-X-1'; run.snap = P.qaSnap();
+  assert.equal(leave(), false, 'saved and unchanged');
+  run.status = 'Passed';
+  assert.equal(leave(), true, 'saved, then changed');
 });
