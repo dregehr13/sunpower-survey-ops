@@ -523,3 +523,23 @@ test('the checklist lives on the Templates tab, not the Review tab, and marks wh
   const fixes = new Set(QA.templateChanges('sitecapture-v13').map(c => c.id));
   assert.ok(lacking.length && lacking.some(id => fixes.has(id)));
 });
+
+test('Site Capture: a group photo captioned without its instance ("Proposed Walls / ...") still counts', () => {
+  // The battery groups print "9.5 - Battery Backup / Proposed Walls / <field>" with no wall name,
+  // unlike "Mounting Plane MP1 / <field>". Read as unmatched, every battery photo was lost and
+  // each required one came out a hard miss.
+  const pages = [page(1, [
+    blk('9.5 - Battery Backup', 18, 770),
+    blk('Proposed Walls 1', 18, 740),
+    blk('MW1 Identify Wall', 18, 720),
+    blk('9.5 - Battery Backup / Proposed Walls / Garage Floor Cement Type', 18, 400),
+    blk('9.5 - Battery Backup / Proposed Battery Install Location / Take photos of the entire room. Take two 360 degree photo sets', 315, 400),
+  ])];
+  const S = QA.parseSiteCapture(pages, SC);
+  const wall = S.photos.find(p => /Cement/.test(p.label));
+  assert.equal(wall.ref, 'garage_floor_cement_type');
+  assert.equal(wall.instance, 'MW1');
+  assert.equal(S.photos.find(p => /entire room/.test(p.label)).ref, 'take_photos_of_the_entire');
+  const R = QA.evaluate(S, specs, {});
+  assert.ok(!R.findings.some(f => f.id === 'tpl:garage_floor_cement_type'), 'the wall photo counts for MW1');
+});
