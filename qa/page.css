@@ -329,3 +329,11 @@ textarea.qa-in.short{min-height:54px;}
 .qa-find-x{background:var(--bg);border-top:1px solid var(--border);padding:12px 14px 6px 30px;margin-bottom:6px;border-radius:0 0 8px 8px;}
 .qa-find-x .qa-photos-h:first-child{margin-top:0;}
 .qa-expand-all{margin-left:auto;}
+
+/* magnify inside the zoom */
+.qa-lb-stage{position:relative;}
+.qa-lb-stage img{cursor:zoom-in;transition:transform .08s ease-out;}
+.qa-lb-stage.mag img{cursor:zoom-out;}
+.qa-mag-btn{position:absolute;right:10px;bottom:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;opacity:.85;}
+.qa-mag-btn:hover{opacity:1;background:rgba(0,0,0,.8);}
+.qa-lb-stage.mag .qa-mag-btn{background:#fff;color:#111;}

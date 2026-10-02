@@ -1037,6 +1037,28 @@ function qaVerdict(i, v) {
   _qaSteps(); _qaStrip(); _qaSaveBtn();
 }
 let qaZoomAt = -1, qaRefAt = 0;
+// Magnify a photo inside the zoom: click it (or the magnifier) to go in, move to look around,
+// scroll to change how far, click again to come out. Changing photo starts from the whole picture.
+const qaMagBtn = '<button class="qa-mag-btn" title="Zoom in" aria-label="Zoom in" onclick="qaMagToggle(event,this)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg></button>';
+function qaMagToggle(e, el) {
+  e.stopPropagation();
+  const st = el.closest('.qa-lb-stage'), on = !st.classList.contains('mag');
+  st.classList.toggle('mag', on); st.dataset.z = st.dataset.z || 2.5;
+  const img = st.querySelector('img');
+  if (on) qaMagMove(e, st); else { img.style.transform = ''; img.style.transformOrigin = ''; }
+}
+function qaMagMove(e, st) {
+  if (!st.classList.contains('mag')) return;
+  const r = st.getBoundingClientRect(), img = st.querySelector('img');
+  img.style.transformOrigin = `${Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100))}% ${Math.max(0, Math.min(100, (e.clientY - r.top) / r.height * 100))}%`;
+  img.style.transform = `scale(${st.dataset.z || 2.5})`;
+}
+function qaMagWheel(e, st) {
+  if (!st.classList.contains('mag')) return;
+  e.preventDefault();
+  st.dataset.z = Math.max(1.5, Math.min(8, (+st.dataset.z || 2.5) + (e.deltaY < 0 ? 0.5 : -0.5)));
+  qaMagMove(e, st);
+}
 function qaZoom(i) {
   const run = qaRun, items = run && run.items, it = items && items[i]; if (!it || !it.url) return;
   if (qaZoomAt >= 0 && items[qaZoomAt] && items[qaZoomAt].id !== it.id) qaRefAt = 0;
@@ -1049,12 +1071,12 @@ function qaZoom(i) {
   lb.innerHTML = `<button class="qa-lb-close" onclick="qaZoomClose()">Close</button>
     <div class="qa-lb-main" onclick="event.stopPropagation()"><div class="qa-lb-cols${ref ? ' two' : ''}">
       <div class="qa-lb-col mine"><div class="qa-lb-head"><span class="qa-lb-tag">This survey</span><span class="qa-lb-sub">${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}${ready.length > 1 ? ` · ${pos + 1} of ${ready.length}` : ''}</span></div>
-        <div class="qa-lb-stage"><img src="${it.url}" alt=""></div>
+        <div class="qa-lb-stage" onmousemove="qaMagMove(event,this)" onwheel="qaMagWheel(event,this)"><img src="${it.url}" alt="" onclick="qaMagToggle(event,this)">${qaMagBtn}</div>
         <div class="qa-lb-foot mine"><span class="qa-lb-marks" id="qa-lb-marks">${qaMarkBtns(i, run.verdicts[qaPhotoKey(it)])}</span>
           ${it.ai ? `<span class="qa-lb-cap">Claude: ${qaH(it.ai.note)}</span>` : ''}</div></div>
       ${ref ? `<div class="qa-lb-col ref"><div class="qa-lb-head"><span class="qa-lb-tag ex">Example</span><span class="qa-lb-sub">${qaH(img.cap)}${ref.from ? ` (from ${qaH(ref.from)})` : ''}</span>
           ${ref.imgs.length > 1 ? `<span class="qa-lb-tabs">${ref.imgs.map((x, k) => `<button class="${k === at ? 'on' : ''}" onclick="qaRefPick(${k})">${k + 1}</button>`).join('')}</span>` : ''}</div>
-        <div class="qa-lb-stage"><img src="${qaH(img.src)}" alt=""></div>
+        <div class="qa-lb-stage" onmousemove="qaMagMove(event,this)" onwheel="qaMagWheel(event,this)"><img src="${qaH(img.src)}" alt="" onclick="qaMagToggle(event,this)">${qaMagBtn}</div>
         <div class="qa-lb-foot right"><div class="qa-lb-desc">
           <p><b>What it should show</b>${qaH(ref.what)}</p><p><b>Why Design needs it</b>${qaH(ref.why)}</p></div></div></div>` : ''}
     </div></div>`;
