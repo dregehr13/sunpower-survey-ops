@@ -709,9 +709,9 @@ test('Site Capture: a label wrapped at a slash still matches, so its answer is r
 
 test('a review the coordinator fails lists its misses as the go back, even when none is Required', () => {
   // SC-08 saved as Failed with five Flagged misses read "Noted:" and never said what to go back for.
-  const R = { template: { vendor: 'sitecapture' }, meta: {}, findings: [{ id: 'x', status: 'miss', severity: 'warn', title: 'Attic photographed for every plane', detail: 'MP2: 1 of 10+ photos' }] };
-  assert.match(QA.summarize(R, { status: 'Failed - Gaps Found' }).text, /Needs go back \/ follow-up:\n- Attic photographed/);
-  assert.match(QA.summarize(R, { status: 'Passed' }).text, /Noted:\n- Attic/);
+  const R = { template: { vendor: 'sitecapture' }, meta: {}, findings: [{ id: 'x', area: 'Attic', status: 'miss', severity: 'warn', title: 'Attic photographed for every plane', detail: 'MP2: 1 of 10+ photos' }] };
+  assert.match(QA.summarize(R, { status: 'Failed - Gaps Found' }).text, /Needs go back \/ follow-up:\nAttic\n- Attic photographed/);
+  assert.match(QA.summarize(R, { status: 'Passed' }).text, /Noted:\nAttic\n- Attic photographed/);
 });
 
 test('a failing server is not a wrong password, and nothing is saved to one browser behind the team\'s back', async () => {
@@ -805,4 +805,14 @@ test('a battery survey is recognised from the report itself, so roof and photo-l
   // Site Capture: the survey says battery, and no plane was surveyed
   assert.equal(QA.reportBatteryOnly(survey('sitecapture', { entries: [{ ref: 'is_this_a_battery_survey', value: 'Yes', instance: null }] })), true);
   assert.equal(QA.reportBatteryOnly(survey('radicl', { meta: {} })), false);
+});
+
+test('the Salesforce summary groups its lines by area, in review order', () => {
+  const R = { template: { vendor: 'radicl' }, meta: {}, suggestedStatus: 'Failed - Gaps Found', findings: [
+    { id: 'a', area: 'Electrical', status: 'miss', severity: 'hard', title: 'Meter close-up', detail: 'no photos' },
+    { id: 'b', area: 'Roof', status: 'miss', severity: 'hard', title: 'Roof pitch', detail: 'No roof pitch recorded' },
+    { id: 'c', area: 'Electrical', status: 'miss', severity: 'hard', title: 'Dead front on', detail: 'no photos' },
+    { id: 'd', area: 'Site', status: 'miss', severity: 'warn', title: 'Site map', detail: 'no photos' }] };
+  const t = QA.summarize(R, { status: 'Passed' }).text;
+  assert.match(t, /Needs go back \/ follow-up:\nRoof\n- Roof pitch: No roof pitch recorded\nElectrical\n- Meter close-up: no photos\n- Dead front on: no photos\nAlso noted:\nSite\n- Site map: no photos/);
 });
