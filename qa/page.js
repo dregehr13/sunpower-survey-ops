@@ -1061,7 +1061,8 @@ function _qaSaveBtn() {
   const dirty = !qaRun.saved || qaSnap() !== qaRun.snap;
   b.disabled = !!why || !dirty || !!qaRun.saving; b.title = why;
   b.textContent = qaRun.saved ? 'Save changes' : 'Save review';
-  const h = document.getElementById('qa-save-why'); if (h) h.textContent = why || (qaRun.saved && !dirty ? 'Up to date' : '');
+  // Amber only for what stops a save; "Up to date" is good news.
+  const h = document.getElementById('qa-save-why'); if (h) { h.textContent = why || (qaRun.saved && !dirty ? 'Up to date' : ''); h.classList.toggle('warn', !!why); }
 }
 function _qaVerdictStep(host) {
   const run = qaRun, o = qaOutcome(), id = qaRecordId();
