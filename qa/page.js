@@ -913,17 +913,19 @@ function qaDecide(i, v) {
 }
 
 // Step 2 — the photos
-// A good example of each category, from Doug's Site Survey Guide (and, where the guide has
-// none, a clear photo from a past report). They sit beside the survey's photo in the zoom.
+// A good example of each category, from Doug's Site Survey Guide or, where the guide's picture
+// is not legible or there is none, a clear photo from a past survey (the image says which).
+// They sit beside the survey's photo in the zoom.
 const QA_REFS = {
   breaker: { what: 'A picture of the main breaker, with its rating readable.', why: 'The main breaker is the largest breaker and shuts off the whole panel. Its rating tells Design how the solar system ties into the grid.',
     imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Panel with the dead front on' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
   label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
-    imgs: [{ src: 'qa/ref/label.jpg', cap: 'Panel label open and readable' }] },
+    imgs: [{ src: 'qa/ref/label.jpg', cap: 'Whole label, every line readable', from: 'a past SunPower survey' },
+      { src: 'qa/ref/label-rating.jpg', cap: 'Main ratings close up: 200 A max', from: 'a past Radicl survey' }] },
   meter: { what: 'A close-up of the meter face showing the numbers.', why: 'The plan reviewer matches the meter number to the utility bill so net metering lands on the right home. It also shows which utility owns the meter. Colorado Springs Utilities also needs a photo with a tape from the ground to the center of the glass.',
     imgs: [{ src: 'qa/ref/meter.jpg', cap: 'Meter number readable' }] },
   framing: { what: 'A measurement of the rafter size, and of how far apart the rafters are. The tape or the Measure app has to be in the shot.', why: 'The structural engineer needs 2x4, 2x6 or 2x8, and the spacing (12, 18, 24, 30 or 36 inches).',
-    imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Rafter spacing with a tape' }] },
+    imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Spacing: the next rafter at 24"', from: 'a past SunPower survey' }] },
   pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', from: 'a past Radicl report',
     imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Pitch readable in the photo' }] },
   eave: { what: 'The overhang measured with a tape against the eave.', why: 'Design needs the overhang to place the array against the roof edge. The tape and the numbers have to be in frame.', from: 'a past Radicl report',
@@ -979,7 +981,7 @@ function qaZoom(i) {
         <div class="qa-lb-foot"><span class="qa-lb-marks" id="qa-lb-marks">${qaMarkBtns(i, run.verdicts[qaPhotoKey(it)])}</span>
           <span class="qa-lb-cap">This survey · ${qaH(it.label)}${it.unit ? ' · ' + qaH(qaUnitName(it.unit)) : ''} · photo ${it.n}${it.from ? ' · ' + (it.from === 'Original' ? 'original' : 'from the report') : ''}${ready.length > 1 ? ` · ${pos + 1} of ${ready.length}` : ''}${it.ai ? `<br>Claude: ${qaH(it.ai.note)}` : ''}</span></div></div>
       ${ref ? `<div class="qa-lb-col ref"><div class="qa-lb-stage"><img src="${qaH(img.src)}" alt=""></div>
-        <div class="qa-lb-foot right"><div class="qa-lb-desc"><div class="qa-lb-refcap"><b>Example · ${qaH(img.cap)}${ref.from ? ` (from ${qaH(ref.from)})` : ''}</b>
+        <div class="qa-lb-foot right"><div class="qa-lb-desc"><div class="qa-lb-refcap"><b>Example · ${qaH(img.cap)}${img.from || ref.from ? ` (from ${qaH(img.from || ref.from)})` : ''}</b>
           ${ref.imgs.length > 1 ? `<span class="qa-lb-tabs">${ref.imgs.map((x, k) => `<button class="${k === at ? 'on' : ''}" onclick="qaRefPick(${k})">${k + 1}</button>`).join('')}</span>` : ''}</div>
           <p><b>What it should show</b>${qaH(ref.what)}</p><p><b>Why Design needs it</b>${qaH(ref.why)}</p></div></div></div>` : ''}
     </div></div>`;
