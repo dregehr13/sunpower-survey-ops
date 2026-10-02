@@ -320,9 +320,9 @@ async function qaOpenReport(file) {
     const hash = await qaHash(bytes);
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
-    if (det.vendor === 'unknown') throw new Error('That\'s not a Site Capture or Radicl survey report');
+    if (det.vendor === 'unknown') throw new Error(/^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture or Radicl survey report');
     const spec = deps.specs.find(s => s.id === det.specId) || null;
-    const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId });
+    const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
     const how = qaAutoProject(S);
     if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
     qaVendor = det.vendor;                                    // the report says what it is
@@ -834,7 +834,7 @@ function _qaFindings(host) {
   const rows = all.filter(g.f).sort(qaSortFindings);
   const S = run.S, det = run.det;
   const acts = run.R.findings.filter(qaActionable), flagged = run.R.findings.filter(qaIsFlagged), left = flagged.filter(f => !run.decisions[qaFlagKey(f)]).length;
-  const sub = [QA_TEMPLATE_NAMES[det.specId] || det.reason, S.meta.surveyor, S.meta.assessmentDate || S.meta.surveyDate].filter(Boolean).join(' · ');
+  const sub = [QA_TEMPLATE_NAMES[det.specId] || det.reason, det.partial ? 'Partial survey (a go back)' : '', S.meta.surveyor, S.meta.assessmentDate || S.meta.surveyDate].filter(Boolean).join(' · ');
   host.innerHTML = `<div class="qa-lede">${qaH(sub)}</div>
     ${qaGoBackHtml()}
     ${flagged.length ? `<div class="qa-lede" id="qa-rep-sub">${qaReportSub(flagged.length, left)}</div>` : ''}

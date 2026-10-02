@@ -661,3 +661,15 @@ test('the address check says which numbers differ without writing either address
   assert.equal(get(QA.evaluate(one, specs, { sfAddress: '7 Elm St, Warren, PA 16365' }), 'address_match').status, 'miss');
   assert.equal(get(QA.evaluate(one, specs, { sfAddress: '5 Elm St, Warren, PA 16365' }), 'address_match').status, 'pass');
 });
+
+test('a Radicl partial survey (a go back) is reviewed like a survey; an inspection report is named and refused', () => {
+  // RD-11 is the full template under "PARTIAL SURVEY REPORT"; RD-10 is a 2-section inspection.
+  const cover = t => [page(1, [blk(t, 400, 808), blk('radicl', 32, 817)]), page(2, [blk('Exterior Electrical', 68, 559)])];
+  const partial = QA.detectTemplate(cover('PARTIAL SURVEY REPORT'), specs);
+  assert.equal(partial.vendor, 'radicl'); assert.equal(partial.specId, 'radicl-v2'); assert.equal(partial.partial, true);
+  assert.equal(QA.detectTemplate(cover('SITE SURVEY REPORT'), specs).partial, false);
+  const insp = QA.detectTemplate(cover('INSPECTION REPORT'), specs);
+  assert.equal(insp.vendor, 'unknown'); assert.match(insp.reason, /Radicl inspection report/);
+  const S = QA.parseRadicl(cover('PARTIAL SURVEY REPORT'), { specId: 'radicl-v2', partial: true });
+  assert.match(QA.summarize(QA.evaluate(S, specs, {})).text, /^QA review 1 · Radicl partial survey/);
+});
