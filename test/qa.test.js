@@ -745,7 +745,27 @@ test('an unsettled check asks for the photos beside it on the summary, and none 
   P.__.set('qaRun', { R, S, decisions: {}, items, verdicts: {} });
   const look = P.__.get('qaNeedsLook');
   assert.deepEqual(items.map(look), [true, true, true, false, false, false]);
-  const f = R.findings.find(x => x.id === 'msp_dead_front_on');
-  P.__.get('qaRun').decisions[P.__.get('qaFlagKey')(f)] = 'ok';
+  // On and Off both rest on these photos here (Radicl cuts both captions to "Dead Front…").
+  const key = id => P.__.get('qaFlagKey')(R.findings.find(x => x.id === id));
+  P.__.get('qaRun').decisions[key('msp_dead_front_on')] = 'ok';
+  assert.deepEqual(items.map(look), [true, true, true, false, false, false], 'Off is still open');
+  P.__.get('qaRun').decisions[key('msp_dead_front_off')] = 'ok';
   assert.deepEqual(items.map(look), [false, false, false, false, false, false]);
+});
+
+test('panel location, dead front off, meter location and site map have photo rows, and their checks point at them', () => {
+  const sc = (label, group) => SC.fields.find(f => label.test(f.label) && (!group || f.group === group)).key;
+  const S = survey('sitecapture', { groups: { electrical_equipment: [{ idx: 1, id: 'MSP' }] }, photos: [
+    { ref: sc(/^Dead Front Off - Full length/, 'electrical_equipment'), instance: 'MSP' },
+    { ref: sc(/^Location - 1\.\) 5\+ photos showing entire wall/, 'electrical_equipment'), instance: 'MSP' },
+    { ref: sc(/5\+ photo\(s\) of ENTIRE side of home the meter/, 'electrical_meter'), instance: 'Meter 1' },
+    { ref: sc(/^Site Map/), instance: null }] });
+  const ids = S => new Set(QA.keyPhotos(S, SC, { all: true }).map(k => k.id));
+  for (const id of ['deadoff', 'location', 'meterloc', 'sitemap']) assert.ok(ids(S).has(id), 'sitecapture ' + id);
+  const R = survey('radicl', { photos: [{ ref: 'Breaker Box — Dead Front Off', instance: 'in1' }, { ref: 'Breaker Box — Location Photos', instance: 'in1' },
+    { ref: 'Electric Meter: Location Photos', instance: null }, { ref: 'Layout Map', instance: null }] });
+  for (const id of ['deadoff', 'location', 'meterloc', 'sitemap']) assert.ok(ids(R).has(id), 'radicl ' + id);
+  const P = loadPage(), cat = P.__.get('QA_FIND_CAT');
+  assert.deepEqual([cat.msp_location, cat.meter_location, cat.site_map].map(c => [].concat(c)[0]), ['location', 'meterloc', 'sitemap']);
+  assert.equal([].concat(cat.msp_dead_front_off)[0], 'deadoff');
 });

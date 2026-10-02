@@ -472,11 +472,15 @@ function qaCrossCheckPack() {
 const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 0, soft: false });
 // The checks that read each photo category. A photo needs a person's eye when one of
 // its category's checks could not be settled from the report, or the image looks soft.
-const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave' };
+// A list is tried in order: Dead Front Off reads its own row, or the breaker row on a Radicl
+// report that cuts both captions to "Dead Front…".
+const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave',
+  msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap' };
+const qaCatOf = f => { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
 // first three of its category), not all 36 dead-front photos; a decided check asks for none.
 const qaNeedsLook = it => !!(qaRun && (it.soft || (it.ai && !it.ai.readable) ||
-  (qaRun.R.findings.some(f => qaIsFlagged(f) && !qaRun.decisions[qaFlagKey(f)] && QA_FIND_CAT[f.id] === it.id)
+  (qaRun.R.findings.some(f => qaIsFlagged(f) && !qaRun.decisions[qaFlagKey(f)] && qaCatOf(f) === it.id)
     && qaRun.items.filter(x => x.id === it.id && x.url).slice(0, 3).includes(it))));
 // Categories keep their order; inside one, the photos that need a look come first.
 function qaOrderItems() {
@@ -854,7 +858,7 @@ function qaGoBackHtml() {
 
 // A photo or two the check was judged from, so a Pass can be seen as well as read.
 function qaEvidenceIdx(f) {
-  const cat = QA_FIND_CAT[f.id], its = qaRun.items; if (!cat || !its) return [];
+  const cat = qaCatOf(f), its = qaRun.items; if (!cat || !its) return [];
   const idx = []; its.forEach((it, i) => { if (it.id === cat && it.url && idx.length < 3) idx.push(i); });
   return idx;
 }
@@ -865,7 +869,7 @@ function qaEvidence(f) {
 // What the row says right now: the reviewer's own call, else what the photo marks in its category say.
 function qaRowState(f) {
   const d = qaRun.decisions[f.fk]; if (d) return d;
-  const cat = QA_FIND_CAT[f.id]; if (!cat || !qaRun.items) return null;
+  const cat = qaCatOf(f); if (!cat || !qaRun.items) return null;
   const vs = qaRun.items.filter(it => it.id === cat).map(it => qaRun.verdicts[qaPhotoKey(it)]).filter(Boolean);
   return vs.includes('bad') ? 'bad' : vs.includes('ok') ? 'ok' : null;
 }
@@ -922,6 +926,17 @@ const QA_REFS = {
   label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
     imgs: [{ src: 'qa/ref/label.jpg', cap: 'Whole label, every line readable', from: 'a past SunPower survey' },
       { src: 'qa/ref/label-rating.jpg', cap: 'Main ratings close up: 200 A max', from: 'a past Radicl survey' }] },
+  sitemap: { what: 'A top-down map of the house with every mounting plane numbered, the pitch of each, north, and where the meter, main panel and attic access are.', why: 'Design lays out the array from it and finds the equipment by it. A site map of the wrong house means a resurvey.',
+    imgs: [{ src: 'qa/ref/sitemap.jpg', cap: 'Digital: planes and equipment marked on an aerial', from: 'a past SunPower survey' },
+      { src: 'qa/ref/sitemap-sketch.jpg', cap: 'Handwritten: planes, pitch, sizes and north on grid paper', from: 'a past Radicl survey' }] },
+  location: { what: 'The whole wall the panel is on, floor to ceiling and corner to corner, so the panel can be seen in its room.', why: 'Design plans the conduit run and the clearances from it, and decides whether new equipment fits beside the panel.',
+    imgs: [{ src: 'qa/ref/location.jpg', cap: 'Inside: the whole wall around the panel', from: 'a past SunPower survey' },
+      { src: 'qa/ref/location-outside.jpg', cap: 'Outside: panel and meter with what surrounds them', from: 'a past Radicl survey' }] },
+  deadoff: { what: 'The panel with its cover off, top to bottom in one shot, then the main lugs and terminations close enough to see the wire.', why: 'Design checks for room to land new breakers or taps, and for double taps or damage that would hold up the install.',
+    imgs: [{ src: 'qa/ref/deadoff.jpg', cap: 'Full panel, cover off', from: 'a past SunPower survey' },
+      { src: 'qa/ref/deadoff-lugs.jpg', cap: 'Main lugs and terminations', from: 'a past Radicl survey' }] },
+  meterloc: { what: 'The whole side of the house the meter is on, with the meter, any disconnect, the conduit and whatever sits in front of it.', why: 'Design places the new equipment on that wall and checks the clearances in front of the meter.',
+    imgs: [{ src: 'qa/ref/meter-location.jpg', cap: 'The meter wall and what is near it', from: 'a past SunPower survey' }] },
   meter: { what: 'A close-up of the meter face showing the numbers.', why: 'The plan reviewer matches the meter number to the utility bill so net metering lands on the right home. It also shows which utility owns the meter. Colorado Springs Utilities also needs a photo with a tape from the ground to the center of the glass.',
     imgs: [{ src: 'qa/ref/meter.jpg', cap: 'Meter number readable' }] },
   framing: { what: 'A measurement of the rafter size, and of how far apart the rafters are. The tape or the Measure app has to be in the shot.', why: 'The structural engineer needs 2x4, 2x6 or 2x8, and the spacing (12, 18, 24, 30 or 36 inches).',
