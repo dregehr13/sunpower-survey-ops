@@ -2,7 +2,7 @@
  "id": "radicl-v2",
  "vendor": "radicl",
  "inferred": true,
- "inferredFrom": 2,
+ "inferredFrom": 7,
  "note": "Inferred from reference surveys; Radicl publishes no template. Branches no survey took are unseen.",
  "sections": [
   "Outside Photos of Home",
@@ -21,156 +21,291 @@
   {
    "ref": "Gas Meter?",
    "section": "Outside Photos of Home",
-   "seen": 2
+   "seen": 7
+  },
+  {
+   "ref": "Gas Meter: Location",
+   "section": "Outside Photos of Home",
+   "seen": 5
+  },
+  {
+   "ref": "Are there any electrical components within 4' of the meter?",
+   "section": "Outside Photos of Home",
+   "seen": 5
   },
   {
    "ref": "Electric Meter: Clearance Issues",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Electric Service Type",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Grounding Type",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "AC Unit",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Are there any breaker boxes outside?",
    "section": "Exterior Electrical",
-   "seen": 2
-  },
-  {
-   "ref": "Breaker Box / Electrical Panel",
-   "section": "Exterior Electrical",
-   "seen": 2
-  },
-  {
-   "ref": "Breaker Box — Main Breaker Rating",
-   "section": "Exterior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Max Bus Rating",
-   "section": "Exterior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Are all breakers returned to original position?",
-   "section": "Exterior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Subpanel Breaker?",
-   "section": "Exterior Electrical",
-   "seen": 1
+   "seen": 7
   },
   {
    "ref": "Generator",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Existing Solar",
    "section": "Exterior Electrical",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Is battery location required?",
    "section": "Battery Placement",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Are there any breaker boxes inside the home?",
    "section": "Interior Electrical",
-   "seen": 2
+   "seen": 7
+  },
+  {
+   "ref": "Interior Breaker Box: Quantity",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Is this Breaker Box on the same wall as the electric meter?",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Clearance Issues?",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Main Breaker Rating",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Max Bus Rating",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Are all breakers returned to original position?",
+   "section": "Interior Electrical",
+   "seen": 6
+  },
+  {
+   "ref": "Breaker Box — Subpanel Breaker",
+   "section": "Interior Electrical",
+   "seen": 6
   },
   {
    "ref": "Is there attic access?",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Attic Access Location",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Attic Decking, Plywood, OSB, or Sheathing?",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Is there any damaged or stained decking?",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Truss/Rafter Type",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Rafter Spacing",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Rafter Size",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Are there areas of concern?",
    "section": "Attic Info",
-   "seen": 2
+   "seen": 5
   },
   {
    "ref": "Estimated Age of Roof",
    "section": "Roof Photos",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Roof Type",
    "section": "Roof Photos",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Roof Pitch / Slope Measurement",
    "section": "Roof Photos",
-   "seen": 2
+   "seen": 6
   },
   {
    "ref": "Is there roof damage?",
    "section": "Roof Photos",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "How will you capture the required rooftop horizon photos?",
    "section": "Roof Photos",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Is there a second roof type on the main structure?",
    "section": "Second Roof Photos",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Is there a patio that solar panels will be installed on?",
    "section": "Patio Information",
-   "seen": 2
+   "seen": 7
   },
   {
    "ref": "Is there a Detached Structure on the property?",
    "section": "Detached Structure",
+   "seen": 7
+  },
+  {
+   "ref": "Basement",
+   "section": "Site Assessment",
+   "seen": 7
+  },
+  {
+   "ref": "Crawlspace",
+   "section": "Site Assessment",
+   "seen": 7
+  },
+  {
+   "ref": "Unpermitted / Code Violations",
+   "section": "Site Assessment",
+   "seen": 7
+  },
+  {
+   "ref": "Concluding Notes",
+   "section": "Site Assessment",
+   "seen": 6
+  },
+  {
+   "ref": "Damage Occured",
+   "section": "Site Assessment",
+   "seen": 7
+  },
+  {
+   "ref": "No Attic Access Notes",
+   "section": "Attic Info",
+   "seen": 2
+  },
+  {
+   "ref": "Are there Vaulted Ceilings Inside the Home?",
+   "section": "Attic Info",
+   "seen": 2
+  },
+  {
+   "ref": "Does the homeowner have access to the original plans?",
+   "section": "Attic Info",
+   "seen": 2
+  },
+  {
+   "ref": "Type of Metal Roof",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Metal Roof Measurements: Ridge/Seam Height",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Metal Roof Measurements: Ridge/Seam Width",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Metal Roof Measurements: Ridge/Seam Spacing",
+   "section": "Roof Photos",
+   "seen": 1
+  },
+  {
+   "ref": "Clearance Issues: Is the gas meter within 6' of the Electric Meter?",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box / Electrical Panel",
+   "section": "Exterior Electrical",
+   "seen": 4
+  },
+  {
+   "ref": "Battery Location — Description",
+   "section": "Battery Placement",
+   "seen": 2
+  },
+  {
+   "ref": "Battery Location — Is this location on an unfinished wall of the home?",
+   "section": "Battery Placement",
+   "seen": 2
+  },
+  {
+   "ref": "Is this home located in Los Angeles County, CA?",
+   "section": "Battery Placement",
+   "seen": 2
+  },
+  {
+   "ref": "Does the home have a garage?",
+   "section": "Battery Placement",
+   "seen": 2
+  },
+  {
+   "ref": "Breaker Box — Other Main Breaker Rating",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Main Breaker Rating",
+   "section": "Exterior Electrical",
+   "seen": 2
+  },
+  {
+   "ref": "Breaker Box — Max Bus Rating",
+   "section": "Exterior Electrical",
+   "seen": 2
+  },
+  {
+   "ref": "Breaker Box — Are all breakers returned to original position?",
+   "section": "Exterior Electrical",
+   "seen": 2
+  },
+  {
+   "ref": "Breaker Box — Subpanel Breaker?",
+   "section": "Exterior Electrical",
    "seen": 2
   },
   {
@@ -189,86 +324,6 @@
    "seen": 1
   },
   {
-   "ref": "Basement",
-   "section": "Site Assessment",
-   "seen": 2
-  },
-  {
-   "ref": "Crawlspace",
-   "section": "Site Assessment",
-   "seen": 2
-  },
-  {
-   "ref": "Unpermitted / Code Violations",
-   "section": "Site Assessment",
-   "seen": 2
-  },
-  {
-   "ref": "Concluding Notes",
-   "section": "Site Assessment",
-   "seen": 1
-  },
-  {
-   "ref": "Damage Occured",
-   "section": "Site Assessment",
-   "seen": 2
-  },
-  {
-   "ref": "Battery Location — Description",
-   "section": "Battery Placement",
-   "seen": 1
-  },
-  {
-   "ref": "Battery Location — Is this location on an unfinished wall of the home?",
-   "section": "Battery Placement",
-   "seen": 1
-  },
-  {
-   "ref": "Is this home located in Los Angeles County, CA?",
-   "section": "Battery Placement",
-   "seen": 1
-  },
-  {
-   "ref": "Does the home have a garage?",
-   "section": "Battery Placement",
-   "seen": 1
-  },
-  {
-   "ref": "Interior Breaker Box: Quantity",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Is this Breaker Box on the same wall as the electric meter?",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Clearance Issues?",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Main Breaker Rating",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Max Bus Rating",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Are all breakers returned to original position?",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
-   "ref": "Breaker Box — Subpanel Breaker",
-   "section": "Interior Electrical",
-   "seen": 1
-  },
-  {
    "ref": "Rafter Spacing: Other",
    "section": "Attic Info",
    "seen": 1
@@ -278,7 +333,7 @@
   {
    "ref": "Selfie with House Number",
    "section": "Quality Check",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
    "max": 3,
    "perInstance": false
@@ -286,95 +341,103 @@
   {
    "ref": "Photo of Home from Street",
    "section": "Outside Photos of Home",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 2,
+   "max": 3,
    "perInstance": false
   },
   {
    "ref": "Exterior Perimeter Photos",
    "section": "Outside Photos of Home",
-   "seen": 2,
-   "min": 16,
-   "max": 23,
+   "seen": 7,
+   "min": 12,
+   "max": 27,
+   "perInstance": false
+  },
+  {
+   "ref": "Gas Meter: Location Photos",
+   "section": "Outside Photos of Home",
+   "seen": 5,
+   "min": 1,
+   "max": 6,
    "perInstance": false
   },
   {
    "ref": "Electric Meter: Location Photos",
    "section": "Exterior Electrical",
-   "seen": 2,
-   "min": 2,
-   "max": 3,
+   "seen": 7,
+   "min": 1,
+   "max": 7,
    "perInstance": false
   },
   {
    "ref": "Electrical Meter: Close Up",
    "section": "Exterior Electrical",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 2,
+   "max": 4,
    "perInstance": false
   },
   {
    "ref": "Meter Wall: Measurements",
    "section": "Exterior Electrical",
-   "seen": 2,
+   "seen": 7,
    "min": 4,
-   "max": 27,
+   "max": 32,
    "perInstance": false
   },
   {
    "ref": "Grounding Type Photo",
    "section": "Exterior Electrical",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 3,
+   "max": 7,
    "perInstance": false
   },
   {
    "ref": "AC Nameplate Label",
    "section": "Exterior Electrical",
-   "seen": 2,
-   "min": 3,
+   "seen": 6,
+   "min": 1,
    "max": 6,
    "perInstance": false
   },
   {
    "ref": "Breaker Box — Location",
-   "section": "Exterior Electrical",
-   "seen": 2,
-   "min": 2,
+   "section": "Interior Electrical",
+   "seen": 6,
+   "min": 1,
    "max": 4,
    "perInstance": true
   },
   {
    "ref": "Breaker Box — Dead Front",
-   "section": "Exterior Electrical",
-   "seen": 1,
-   "min": 16,
-   "max": 20,
+   "section": "Interior Electrical",
+   "seen": 6,
+   "min": 14,
+   "max": 26,
    "perInstance": true
   },
   {
    "ref": "Breaker Box — Panel La",
-   "section": "Exterior Electrical",
-   "seen": 1,
-   "min": 3,
-   "max": 5,
+   "section": "Interior Electrical",
+   "seen": 6,
+   "min": 2,
+   "max": 8,
    "perInstance": true
   },
   {
    "ref": "Breaker Box — Back of",
-   "section": "Exterior Electrical",
-   "seen": 1,
+   "section": "Interior Electrical",
+   "seen": 6,
    "min": 1,
-   "max": 1,
+   "max": 2,
    "perInstance": true
   },
   {
    "ref": "Attic Access Photos",
    "section": "Attic Info",
-   "seen": 2,
+   "seen": 5,
    "min": 1,
    "max": 5,
    "perInstance": false
@@ -382,23 +445,23 @@
   {
    "ref": "360 Degree photos in Attic",
    "section": "Attic Info",
-   "seen": 2,
-   "min": 9,
+   "seen": 5,
+   "min": 8,
    "max": 9,
    "perInstance": false
   },
   {
    "ref": "Rafter Measurement Photos",
    "section": "Attic Info",
-   "seen": 2,
-   "min": 4,
+   "seen": 5,
+   "min": 2,
    "max": 11,
    "perInstance": false
   },
   {
    "ref": "Roof Pitch",
    "section": "Attic Info",
-   "seen": 2,
+   "seen": 5,
    "min": 1,
    "max": 6,
    "perInstance": false
@@ -406,7 +469,7 @@
   {
    "ref": "Number of Roofing Layers Photos",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
    "max": 9,
    "perInstance": false
@@ -414,47 +477,47 @@
   {
    "ref": "Drip Edge Photo",
    "section": "Roof Photos",
-   "seen": 2,
-   "min": 2,
+   "seen": 7,
+   "min": 1,
    "max": 7,
    "perInstance": false
   },
   {
    "ref": "Eave/Soffit Measurement Photo",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 1,
+   "max": 2,
    "perInstance": false
   },
   {
    "ref": "Roof Pitch / Slope",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 1,
+   "max": 4,
    "perInstance": false
   },
   {
    "ref": "Roof Measurement: Ridge",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 2,
+   "max": 6,
    "perInstance": false
   },
   {
    "ref": "Roof Measurement: Eave to Ridge",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 1,
-   "max": 2,
+   "max": 8,
    "perInstance": false
   },
   {
    "ref": "Close-Up Roof Quality",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 3,
    "max": 4,
    "perInstance": false
@@ -462,23 +525,31 @@
   {
    "ref": "Super Close-Up Roof Quality",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 3,
-   "max": 4,
+   "max": 5,
    "perInstance": false
   },
   {
    "ref": "Roof Obstruction Photos",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 6,
-   "max": 7,
+   "max": 13,
+   "perInstance": false
+  },
+  {
+   "ref": "Roof Damage Photos",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 2,
+   "max": 2,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: North",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 3,
    "perInstance": false
@@ -486,7 +557,7 @@
   {
    "ref": "Horizon Photos: Northeast",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 5,
    "perInstance": false
@@ -494,7 +565,7 @@
   {
    "ref": "Horizon Photos: East",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 3,
    "perInstance": false
@@ -502,7 +573,7 @@
   {
    "ref": "Horizon Photos: Southeast",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 3,
    "perInstance": false
@@ -510,7 +581,7 @@
   {
    "ref": "Horizon Photos: South",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 3,
    "perInstance": false
@@ -518,7 +589,7 @@
   {
    "ref": "Horizon Photos: Southwest",
    "section": "Roof Photos",
-   "seen": 2,
+   "seen": 7,
    "min": 2,
    "max": 3,
    "perInstance": false
@@ -526,18 +597,146 @@
   {
    "ref": "Horizon Photos: West",
    "section": "Roof Photos",
+   "seen": 7,
+   "min": 2,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Horizon Photos: Northwest",
+   "section": "Roof Photos",
+   "seen": 7,
+   "min": 2,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Layout Map",
+   "section": "Site Assessment",
+   "seen": 7,
+   "min": 1,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Proof of No Attic Access",
+   "section": "Attic Info",
    "seen": 2,
    "min": 2,
    "max": 2,
    "perInstance": false
   },
   {
-   "ref": "Horizon Photos: Northwest",
+   "ref": "Metal Roof Measurements: Reference Photos",
    "section": "Roof Photos",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Metal Roof: Profile",
+   "section": "Roof Photos",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Battery Location — 360 Degree",
+   "section": "Battery Placement",
+   "seen": 2,
+   "min": 8,
+   "max": 9,
+   "perInstance": true
+  },
+  {
+   "ref": "Battery Location — Measurements",
+   "section": "Battery Placement",
+   "seen": 2,
+   "min": 2,
+   "max": 8,
+   "perInstance": true
+  },
+  {
+   "ref": "Battery Location — Layout Map",
+   "section": "Battery Placement",
+   "seen": 2,
+   "min": 2,
+   "max": 8,
+   "perInstance": true
+  },
+  {
+   "ref": "Interior Battery Location: 360 Degree",
+   "section": "Battery Placement",
+   "seen": 2,
+   "min": 9,
+   "max": 12,
+   "perInstance": false
+  },
+  {
+   "ref": "Interior Battery Location: Garage Door Clear",
+   "section": "Battery Placement",
+   "seen": 2,
+   "min": 9,
+   "max": 10,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Nameplate Label",
+   "section": "Battery Placement",
    "seen": 2,
    "min": 2,
    "max": 2,
    "perInstance": false
+  },
+  {
+   "ref": "Breaker Box — Clearance",
+   "section": "Interior Electrical",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": true
+  },
+  {
+   "ref": "Crawlspace: Size",
+   "section": "Site Assessment",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": false
+  },
+  {
+   "ref": "Breaker Box — Location",
+   "section": "Exterior Electrical",
+   "seen": 3,
+   "min": 2,
+   "max": 4,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Dead Front",
+   "section": "Exterior Electrical",
+   "seen": 2,
+   "min": 15,
+   "max": 20,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Panel La",
+   "section": "Exterior Electrical",
+   "seen": 2,
+   "min": 3,
+   "max": 5,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Back of",
+   "section": "Exterior Electrical",
+   "seen": 2,
+   "min": 1,
+   "max": 2,
+   "perInstance": true
   },
   {
    "ref": "Detached Structure: Exterior Photos",
@@ -602,94 +801,6 @@
    "min": 3,
    "max": 3,
    "perInstance": false
-  },
-  {
-   "ref": "Layout Map",
-   "section": "Site Assessment",
-   "seen": 2,
-   "min": 1,
-   "max": 3,
-   "perInstance": false
-  },
-  {
-   "ref": "Battery Location — 360 Degree",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 8,
-   "max": 8,
-   "perInstance": true
-  },
-  {
-   "ref": "Battery Location — Measurements",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 2,
-   "max": 4,
-   "perInstance": true
-  },
-  {
-   "ref": "Battery Location — Layout Map",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 2,
-   "max": 3,
-   "perInstance": true
-  },
-  {
-   "ref": "Interior Battery Location: 360 Degree",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 12,
-   "max": 12,
-   "perInstance": false
-  },
-  {
-   "ref": "Interior Battery Location: Garage Door Clear",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 9,
-   "max": 9,
-   "perInstance": false
-  },
-  {
-   "ref": "AC Nameplate Label",
-   "section": "Battery Placement",
-   "seen": 1,
-   "min": 2,
-   "max": 2,
-   "perInstance": false
-  },
-  {
-   "ref": "Breaker Box — Location",
-   "section": "Interior Electrical",
-   "seen": 1,
-   "min": 2,
-   "max": 2,
-   "perInstance": true
-  },
-  {
-   "ref": "Breaker Box — Dead Front",
-   "section": "Interior Electrical",
-   "seen": 1,
-   "min": 21,
-   "max": 21,
-   "perInstance": true
-  },
-  {
-   "ref": "Breaker Box — Panel La",
-   "section": "Interior Electrical",
-   "seen": 1,
-   "min": 8,
-   "max": 8,
-   "perInstance": true
-  },
-  {
-   "ref": "Breaker Box — Back of",
-   "section": "Interior Electrical",
-   "seen": 1,
-   "min": 2,
-   "max": 2,
-   "perInstance": true
   }
  ],
  "core": [
@@ -708,13 +819,13 @@
   {
    "ref": "Exterior Perimeter Photos",
    "section": "Outside Photos of Home",
-   "min": 16,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Electric Meter: Location Photos",
    "section": "Exterior Electrical",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
@@ -732,42 +843,6 @@
   {
    "ref": "Grounding Type Photo",
    "section": "Exterior Electrical",
-   "min": 1,
-   "perInstance": false
-  },
-  {
-   "ref": "AC Nameplate Label",
-   "section": "Exterior Electrical",
-   "min": 3,
-   "perInstance": false
-  },
-  {
-   "ref": "Breaker Box — Location",
-   "section": "Exterior Electrical",
-   "min": 2,
-   "perInstance": true
-  },
-  {
-   "ref": "Attic Access Photos",
-   "section": "Attic Info",
-   "min": 1,
-   "perInstance": false
-  },
-  {
-   "ref": "360 Degree photos in Attic",
-   "section": "Attic Info",
-   "min": 9,
-   "perInstance": false
-  },
-  {
-   "ref": "Rafter Measurement Photos",
-   "section": "Attic Info",
-   "min": 1,
-   "perInstance": false
-  },
-  {
-   "ref": "Roof Pitch",
-   "section": "Attic Info",
    "min": 1,
    "perInstance": false
   },
@@ -810,25 +885,25 @@
   {
    "ref": "Close-Up Roof Quality",
    "section": "Roof Photos",
-   "min": 3,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Super Close-Up Roof Quality",
    "section": "Roof Photos",
-   "min": 3,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Roof Obstruction Photos",
    "section": "Roof Photos",
-   "min": 6,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: North",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
@@ -840,37 +915,37 @@
   {
    "ref": "Horizon Photos: East",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: Southeast",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: South",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: Southwest",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: West",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {
    "ref": "Horizon Photos: Northwest",
    "section": "Roof Photos",
-   "min": 2,
+   "min": 1,
    "perInstance": false
   },
   {

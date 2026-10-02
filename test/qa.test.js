@@ -130,7 +130,9 @@ const cleanRadicl = (over = {}) => {
     entries: [e('Roof Pitch / Slope Measurement', '6/12'), e('Is there attic access?', 'No'), e('Electric Service Type', 'Underground'),
       e('Existing Solar', over.solar || 'No'), e('Breaker Box — Main Breaker Rating', '200A', '1'), e('Breaker Box — Max Bus Rating', '200A', '1')],
     photos: [...ph('Breaker Box — Location', '1'), ...ph('Breaker Box — Dead Front', '1', 4), ...ph('Breaker Box — Panel La', '1'),
-      ...ph('Electrical Meter: Close Up'), ...ph('Electric Meter: Location Photos'), ...ph('Layout Map'), ...ph('Eave/Soffit Measurement Photo')],
+      ...ph('Electrical Meter: Close Up'), ...ph('Electric Meter: Location Photos'), ...ph('Layout Map'), ...ph('Eave/Soffit Measurement Photo'),
+      // and every caption the reference reports all carry (Layer A)
+      ...specs.find(x => x.id === 'radicl-v2').core.flatMap(c => ph(c.ref, c.perInstance ? '1' : null, c.min))],
   });
 };
 
@@ -595,4 +597,22 @@ test('Radicl: the page header is never read as a photo caption, however long the
     page(3, [blk('1411 Long Street Name Rd Klamath Falls, OR 97601', 372, 819), blk('Roof Photos — Photos (2/2)', 32, 767), blk('Drip Edge Photo', 37, 733)])];
   const S = QA.parseRadicl(pages, { specId: 'radicl-v2' });
   assert.deepEqual(S.photos.map(p => p.label), ['Roof Pitch / Slope', 'Drip Edge Photo']);
+});
+
+test('a Radicl report with the new contents page over August pages is read as the August template', () => {
+  // RD-08 (Sep 2): contents say "Exterior Electrical", every page after says "Outside Electrical Information".
+  const pages = [page(1, [blk('SITE SURVEY REPORT radicl', 32, 808)]), page(2, [blk('Exterior Electrical', 68, 559)]),
+    page(9, [blk('Outside Electrical Information — Photos (1/7)', 32, 767)])];
+  assert.equal(QA.detectTemplate(pages, specs).specId, 'radicl-v1');
+  assert.equal(QA.detectTemplate(pages.slice(0, 2), specs).specId, 'radicl-v2');
+});
+
+test('Radicl completeness runs from the reference reports and skips the roof on a battery-only survey', () => {
+  const v2 = specs.find(s => s.id === 'radicl-v2');
+  assert.ok(v2.inferredFrom >= 3 && v2.core.length > 10);
+  const roofCore = v2.core.filter(c => /Roof Photos|Attic Info/.test(c.section)).length;
+  assert.ok(roofCore > 0);
+  const tpl = R => R.findings.filter(f => f.layer === 'A' && /Roof Photos|Attic Info/.test(f.area)).length;
+  assert.equal(tpl(QA.evaluate(survey('radicl'), specs)), roofCore);
+  assert.equal(tpl(QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' })), 0);
 });

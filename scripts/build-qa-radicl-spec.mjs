@@ -61,10 +61,10 @@ const spec = {
   fields: [...fields].map(([k, seen]) => { const [ref, section] = k.split('|'); return { ref, section, seen }; }),
   photos: [...photos].map(([k, v]) => { const [ref, section] = k.split('|'); return { ref, section, seen: v.seen, min: v.min, max: v.max, perInstance: v.perInstance }; }),
 };
-// A caption's minimum is only a standard when the reference surveys agree on it:
-// 12–14 perimeter photos is a norm, 10–24 dead-front photos is not, so presence
-// is all that is asked of the latter.
-spec.core = spec.photos.filter(p => p.seen === n).map(p => ({ ref: p.ref, section: p.section, min: p.max <= 2 * p.min ? p.min : 1, perInstance: p.perInstance }));
+// A caption's minimum is only a standard when every reference survey took exactly that
+// many. How many perimeter or obstruction photos a survey needs depends on the house (seven
+// references ran 6 to 13 obstruction photos), so for those presence is all that is asked.
+spec.core = spec.photos.filter(p => p.seen === n).map(p => ({ ref: p.ref, section: p.section, min: p.max === p.min ? p.min : 1, perInstance: p.perInstance }));
 writeFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'qa', 'specs', version + '.json'), JSON.stringify(spec, null, 1) + '\n');
 console.log(`${version}: ${n} reports → ${spec.sections.length} sections, ${spec.fields.length} fields, ${spec.photos.length} photo captions, ${spec.core.length} core`);
 }
