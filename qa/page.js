@@ -992,12 +992,14 @@ function qaZoom(i) {
   // Both photos sit in a stage of one fixed size, so changing photo or example never moves the page around them.
   lb.innerHTML = `<button class="qa-lb-close" onclick="qaZoomClose()">Close</button>
     <div class="qa-lb-main" onclick="event.stopPropagation()"><div class="qa-lb-cols${ref ? ' two' : ''}">
-      <div class="qa-lb-col"><div class="qa-lb-stage"><img src="${it.url}" alt=""></div>
-        <div class="qa-lb-foot"><span class="qa-lb-marks" id="qa-lb-marks">${qaMarkBtns(i, run.verdicts[qaPhotoKey(it)])}</span>
-          <span class="qa-lb-cap">This survey · ${qaH(it.label)}${it.unit ? ' · ' + qaH(qaUnitName(it.unit)) : ''} · photo ${it.n}${it.from ? ' · ' + (it.from === 'Original' ? 'original' : 'from the report') : ''}${ready.length > 1 ? ` · ${pos + 1} of ${ready.length}` : ''}${it.ai ? `<br>Claude: ${qaH(it.ai.note)}` : ''}</span></div></div>
-      ${ref ? `<div class="qa-lb-col ref"><div class="qa-lb-stage"><img src="${qaH(img.src)}" alt=""></div>
-        <div class="qa-lb-foot right"><div class="qa-lb-desc"><div class="qa-lb-refcap"><b>Example · ${qaH(img.cap)}${img.from || ref.from ? ` (from ${qaH(img.from || ref.from)})` : ''}</b>
+      <div class="qa-lb-col mine"><div class="qa-lb-head"><span class="qa-lb-tag">This survey</span><span class="qa-lb-sub">${qaH(it.label)}${it.unit ? ' · ' + qaH(it.unit) : ''} · photo ${it.n}${ready.length > 1 ? ` · ${pos + 1} of ${ready.length}` : ''}</span></div>
+        <div class="qa-lb-stage"><img src="${it.url}" alt=""></div>
+        <div class="qa-lb-foot mine"><span class="qa-lb-marks" id="qa-lb-marks">${qaMarkBtns(i, run.verdicts[qaPhotoKey(it)])}</span>
+          ${it.ai ? `<span class="qa-lb-cap">Claude: ${qaH(it.ai.note)}</span>` : ''}</div></div>
+      ${ref ? `<div class="qa-lb-col ref"><div class="qa-lb-head"><span class="qa-lb-tag ex">Example</span><span class="qa-lb-sub">${qaH(img.cap)}${ref.from ? ` (from ${qaH(ref.from)})` : ''}</span>
           ${ref.imgs.length > 1 ? `<span class="qa-lb-tabs">${ref.imgs.map((x, k) => `<button class="${k === at ? 'on' : ''}" onclick="qaRefPick(${k})">${k + 1}</button>`).join('')}</span>` : ''}</div>
+        <div class="qa-lb-stage"><img src="${qaH(img.src)}" alt=""></div>
+        <div class="qa-lb-foot right"><div class="qa-lb-desc">
           <p><b>What it should show</b>${qaH(ref.what)}</p><p><b>Why Design needs it</b>${qaH(ref.why)}</p></div></div></div>` : ''}
     </div></div>`;
   lb.classList.remove('hidden');

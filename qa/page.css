@@ -298,3 +298,16 @@ textarea.qa-in.short{min-height:54px;}
   .qa-photos-h{flex-wrap:wrap;row-gap:2px;}
   .qa-photos-h .qa-link{white-space:nowrap;}
 }
+
+/* which photo is which: big labels above each stage, the example half tinted */
+.qa-lb-head{display:flex;align-items:center;gap:12px;min-height:40px;flex-wrap:wrap;}
+.qa-lb-tag{font-size:20px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#111;background:#fff;border-radius:8px;padding:5px 16px;line-height:1.2;}
+.qa-lb-tag.ex{color:#0f3d24;background:var(--green-fill);}
+.qa-lb-sub{font-size:13px;color:#e8e8e4;}
+.qa-lb-col.mine .qa-lb-stage{outline:3px solid #fff;}
+.qa-lb-col.ref{background:rgba(31,157,85,.12);border-radius:12px;padding:10px;margin:-10px;}
+.qa-lb-col.ref .qa-lb-stage{outline:3px solid var(--green-fill);}
+.qa-lb-foot.mine{justify-content:center;flex-direction:column;align-items:center;gap:8px;}
+.qa-lb-foot.mine .qa-lb-cap{text-align:center;}
+.qa-lb-stage{height:clamp(240px,calc(100vh - 300px),640px);}
+@media (max-width:860px){.qa-lb-stage{height:clamp(160px,30vh,380px);}.qa-lb-tag{font-size:16px;}}
