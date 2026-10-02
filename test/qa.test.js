@@ -673,3 +673,16 @@ test('a Radicl partial survey (a go back) is reviewed like a survey; an inspecti
   const S = QA.parseRadicl(cover('PARTIAL SURVEY REPORT'), { specId: 'radicl-v2', partial: true });
   assert.match(QA.summarize(QA.evaluate(S, specs, {})).text, /^QA review 1 · Radicl partial survey/);
 });
+
+test('Site Capture: a label wrapped at a slash still matches, so its answer is read', () => {
+  // Every Site Capture report prints "...hookup\n/transfer switch..."; the template says
+  // "hookup/transfer". The generator question read its own label tail as the answer, so a
+  // generator was never seen (SC-11 has one).
+  const pages = [page(1, [
+    blk('1 - Customer Information', 18, 759),
+    { text: 'Does the home have a\ngenerator or generator hookup\ninstalled? (If yes, photos of\nthe generator and hookup\n/transfer switch MUST be\nincluded in the electrical\nsection)', x0: 18, y0: 318, x1: 150, y1: 250 },
+    { text: 'Yes', x0: 171, y0: 318, x1: 190, y1: 310 },
+  ])];
+  const S = QA.parseSiteCapture(pages, SC);
+  assert.equal(S.value(/^does_the_home_have_a_generator/), 'Yes');
+});
