@@ -321,7 +321,7 @@ function _qaIntake() {
   // is matched to it; otherwise the report names the project itself.
   if (!qaRun) {
     host.innerHTML = `<div class="qa-hero"><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div>
-      ${qaProj.trim() ? `<div class="qa-picked">Starting with <b>${qaH(qaProj.trim().toUpperCase())}</b> <button class="qa-link" onclick="qaStartOver()">Clear</button></div><div id="qa-match">${qaMatchHtml()}</div>` : '<div id="qa-match"></div>'}</div>`;
+      ${qaProj.trim() ? `<div class="qa-picked">Starting with <b>${qaH(qaProj.trim().toUpperCase())}</b> <button class="qa-link" onclick="qaStartOver()">Clear</button></div><div id="qa-match">${qaMatchHtml()}</div><div id="qa-dl">${qaDlHtml()}</div>` : '<div id="qa-match"></div>'}</div>`;
     return;
   }
   host.innerHTML = `<div class="qa-form">
@@ -773,9 +773,109 @@ function qaPickProject(p) {
     const r = qaProjectRow(p);
     if (r && r.resource) { qaVendor = r.resource === 'Radicl Services' ? 'radicl' : 'sitecapture'; try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {} }
   }
+  qaDlNote = '';
   _qaIntake(); _qaLikely(); _qaBar();
   if (qaProj) { const f = document.getElementById('qa-intake'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  if (qaProj && qaDlOk() && !qaDlSkip) qaDlFind();
 }
+
+// ── Find the report in Downloads ───────────────────
+// Chrome and Edge can read a folder the user picks once (File System Access API). The
+// handle is kept in IndexedDB, so a later visit only asks to allow it again. Read only;
+// nothing is moved or written. Browsers without the API keep the plain upload.
+const qaDlOk = () => typeof window.showDirectoryPicker === 'function' && typeof indexedDB !== 'undefined';
+let qaDl = null, qaDlNote = '', qaDlSkip = false, qaDlRun = 0;
+const QA_DL_DAYS = 21, QA_DL_PEEK = 30;   // reports opened to read their first page: this recent, at most this many
+function qaDlDb(mode, fn) {
+  return new Promise((res, rej) => {
+    const o = indexedDB.open('ops_qa', 1);
+    o.onupgradeneeded = () => o.result.createObjectStore('h');
+    o.onerror = () => rej(o.error);
+    o.onsuccess = () => { const tx = o.result.transaction('h', mode), q = fn(tx.objectStore('h')); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); };
+  });
+}
+if (qaDlOk()) qaDlDb('readonly', st => st.get('downloads')).then(h => { if (h && !qaDl) qaDl = h; }).catch(() => {});
+// The folder, with read permission, or null. The first time this opens the folder picker
+// at Downloads; after that it only asks the browser to allow the remembered folder again.
+async function qaDlFolder(change) {
+  if (qaDl && !change) {
+    try {
+      let p = await qaDl.queryPermission({ mode: 'read' });
+      if (p !== 'granted') p = await qaDl.requestPermission({ mode: 'read' });
+      if (p === 'granted') return qaDl;
+    } catch (e) {}
+    return null;
+  }
+  try { qaDl = await window.showDirectoryPicker({ id: 'qa-downloads', startIn: 'downloads', mode: 'read' }); }
+  catch (e) { return null; }                                   // cancelled
+  qaDlDb('readwrite', st => st.put(qaDl, 'downloads')).catch(() => {});
+  return qaDl;
+}
+function qaDlKeys(p) {
+  const r = qaProjectRow(p), a = qaAddrParts(r && r.address);
+  return { id: String(p).toUpperCase().split(' - ')[0], num: a.num, word: a.first };
+}
+// Look for the picked project's report (and photo export) in the folder and open it.
+// The file name is tried first; when no name fits, the recent PDFs' first pages are read,
+// since a report's file name does not always carry the project or the address.
+async function qaDlFind(change) {
+  const p = qaProj.trim(), run = ++qaDlRun; if (!p || qaRun) return;
+  const dir = await qaDlFolder(change);
+  if (run !== qaDlRun || qaProj.trim() !== p || qaRun) return;
+  // Cancelled or not allowed: stop asking on every pick this visit; the link below still looks.
+  if (!dir) { if (!change) { qaDlSkip = true; qaDlNote = qaDl ? 'Downloads was not allowed, so nothing was looked up.' : ''; } return qaDlPaint(); }
+  qaDlSkip = false;
+  const keys = qaDlKeys(p), stale = () => run !== qaDlRun || qaProj.trim() !== p || !!qaRun;
+  qaSetBusy('pdf', 'Looking in ' + dir.name + ' for ' + keys.id + '…');
+  try {
+    const pdfs = [], zips = [];
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind !== 'file' || /^\./.test(name)) continue;
+      const ext = (name.match(/\.(pdf|zip)$/i) || [])[1]; if (!ext) continue;
+      const hit = OpsQA.namesProject(name.replace(/\.[^.]+$/, ''), keys);
+      if (ext.toLowerCase() === 'zip') { if (hit) zips.push({ h, hit }); continue; }
+      pdfs.push({ h, hit });
+    }
+    if (stale()) return;
+    for (const f of pdfs.concat(zips)) f.file = await f.h.getFile();
+    const newest = (a, b) => b.file.lastModified - a.file.lastModified;
+    let pdf = pdfs.filter(f => f.hit).sort(newest)[0], how = 'its file name';
+    if (!pdf) {
+      const since = Date.now() - QA_DL_DAYS * 864e5;
+      const peek = pdfs.filter(f => f.file.lastModified >= since).sort(newest).slice(0, QA_DL_PEEK);
+      const deps = peek.length ? await qaDepsLoad() : null;
+      for (let i = 0; i < peek.length && !pdf; i++) {
+        if (stale()) return;
+        qaSetBusy('pdf', `Reading recent reports in ${dir.name}… ${i + 1} of ${peek.length}`);
+        try {
+          const { pages } = await deps.mod.pdfToBlocks(new Uint8Array(await peek[i].file.arrayBuffer()), { pdfjs: deps.pdfjs, maxPages: 1 });
+          if (OpsQA.namesProject(pages.map(pg => pg.blocks.map(b => b.text).join(' ')).join(' '), keys)) { pdf = peek[i]; how = 'its first page'; }
+        } catch (e) {}                                          // not a readable PDF; keep looking
+      }
+      if (stale()) return;
+      if (!pdf) {
+        qaSetBusy('pdf', '');
+        qaDlNote = `No report for ${keys.id} in ${dir.name}: no file name fits it, and none of the ${qaPlural(peek.length, 'PDF')} from the last ${QA_DL_DAYS} days is for it.`;
+        return qaDlPaint();
+      }
+    }
+    qaSetBusy('pdf', '');
+    const zip = zips.sort(newest)[0];
+    if (zip) await qaOpenPack(zip.file);
+    if (stale()) return;
+    await qaOpenReport(pdf.file);
+    if (qaRun) toast(`Opened ${pdf.file.name} from ${dir.name} (matched by ${how})${zip ? ', with the photos in ' + zip.file.name : ''}`);
+  } catch (e) {
+    console.error(e);
+    if (!stale()) { qaSetBusy('pdf', ''); qaDlNote = 'Couldn\'t read ' + dir.name + '.'; qaDlPaint(); }
+  }
+}
+function qaDlHtml() {
+  if (!qaDlOk() || !qaProj.trim()) return '';
+  const links = `<button class="qa-link" onclick="qaDlFind()">${qaDl ? 'Look again' : 'Look in Downloads'}</button>${qaDl ? ` <button class="qa-link" onclick="qaDlFind(true)">Change folder</button>` : ''}`;
+  return `<div class="qa-dl">${qaDlNote ? qaH(qaDlNote) + ' ' : ''}${links}</div>`;
+}
+function qaDlPaint() { const el = document.getElementById('qa-dl'); if (el) el.innerHTML = qaDlHtml(); }
 
 function qaStatusPill(s) {
   const cls = s === 'Passed' ? 'pg' : s === 'Failed - Gaps Found' ? 'pr' : s === 'Passed with Override' ? 'pam' : 'qa-pill-mute';
@@ -1289,7 +1389,7 @@ function _qaStatusStepRefresh() { if (qaRun.step === 1) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
   if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaProjEdit = false; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
+  qaRun = null; qaPack = null; qaProj = ''; qaDlNote = ''; qaDlRun++; qaProjEdit = false; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }

@@ -84,11 +84,12 @@ function blocksOf(lines) {
 }
 
 // Returns { pages: [{ n, width, height, blocks }], numPages }.
-// opts.onPage(n, total) reports progress; opts.pdfjs supplies the library.
+// opts.onPage(n, total) reports progress; opts.pdfjs supplies the library;
+// opts.maxPages stops early (finding a report only needs its first page).
 export async function pdfToBlocks(src, opts) {
   const { doc } = await openDoc(src, opts);
-  const pages = [];
-  for (let n = 1; n <= doc.numPages; n++) {
+  const pages = [], last = opts && opts.maxPages ? Math.min(opts.maxPages, doc.numPages) : doc.numPages;
+  for (let n = 1; n <= last; n++) {
     const page = await doc.getPage(n);
     const vp = page.getViewport({ scale: 1 });
     const tc = await page.getTextContent();

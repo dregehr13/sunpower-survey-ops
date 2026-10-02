@@ -391,3 +391,19 @@ Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
   template's long photo labels become "Mounting planes", "Each roof obstruction", "MSP location"
   (sub panels: "Sub panel location") and "Roof condition" (`photoTitle` in `lib/qa.cjs`). The
   go back comparison matches Layer B checks by id, so reviews saved under the old titles still match.
+
+### 2026-10-02 — find the report in Downloads
+Picking an Expected survey now looks for its report in a folder the reviewer picks
+once (Chrome/Edge File System Access API; other browsers keep the plain upload).
+- **The first pick opens the folder picker at Downloads**; the handle is kept in
+  IndexedDB (`ops_qa` / `h` / `downloads`), so later visits only ask the browser to
+  allow it again. Read only, top level of the folder only. Cancelling stops the
+  automatic look for that visit; *Look in Downloads* / *Look again* / *Change folder*
+  sit under the picked project
+- **Match by file name first** (`OpsQA.namesProject`: project ID, or street number +
+  first street word of the Salesforce address). When no name fits, the PDFs from the
+  last 21 days (newest 30) are opened to **page 1 only** (`pdfToBlocks` `maxPages`)
+  and the same test runs on the text. Newest match wins. A photo zip is picked up
+  only by file name
+- Nothing is uploaded: the found file goes through the same `qaOpenReport` path a
+  drop does

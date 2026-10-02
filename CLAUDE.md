@@ -1629,6 +1629,9 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   with the project address (Census geocoder, `api/qa-geocode.js`). `scripts/qa-check-pages.mjs`
   re-checks the PDF page links on real reports. A defect our QA catches is a **go back**;
   a **resurvey** is what Design calls out after QA
+- **Clicking an Expected survey looks for its report in Downloads** (2026-10-02, Chrome/Edge
+  only): a folder picked once, matched by file name, then by reading page 1 of recent PDFs.
+  Read only; the file goes through the normal upload path. See `docs/QA.md`
 
 ## Rep surveys phased out (2026-10-01)
 Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
