@@ -282,7 +282,7 @@ keep "resurvey" because they measure Design's callouts. Radicl's invoices also u
   records those answers.
 
 ### 2026-10-01 — QA Settings tab, Expected surveys
-- **QA → Settings** (fourth tab) holds what each check requires: **Required** (stops a
+- **Settings → Site Survey QA** (the app's Settings page; it was briefly a QA tab) holds what each check requires: **Required** (stops a
   handoff, `hard`), **Flagged** (asks for a look, `warn`) or **Off**, per check, over the
   shipped defaults. Only changes are stored (`qa_settings` table, key `checks`), shared by
   the whole team, and only the manager password (`QA_PASSWORD`) can change them
@@ -313,3 +313,22 @@ count) come from questions in Site Capture's own form (section 10, Office Feedba
 "How many Mounting Planes does the Proposal show?"). *Report is from the resource
 Salesforce lists* and *Photos taken on site, on the survey date* are integrity checks
 added with no hold or guide behind them.
+
+### 2026-10-01 — alarm-only checks, photo location, go back reviews
+- **Alarm only** is a fourth weight: the check runs but stays out of the checklist, the
+  summary, the report PDF and the counts unless it fails. Default for *Report is from the
+  resource Salesforce lists*, *No photos deleted before sync* and *Proposal attached*.
+  A setting can promote any of them back to Flagged or Required.
+- **Photos taken at the Salesforce address** (Required): the median GPS of the report's
+  photos against the project's address, looked up with the US Census geocoder through
+  `/api/qa-geocode` (the street address only). Within 100 m passes, 100-300 m asks for a
+  look, beyond that is a miss. Radicl's report has no photo locations, so it does not
+  apply there. It catches the wrong block, not the wrong house on the same street; reading
+  the house number from the front-of-house photo would be the next layer, behind the
+  Claude photo toggle.
+- **Go back reviews:** when the project already has a review, the summary opens with what
+  the last one found and which of those misses this report fixed, matched by check and
+  title.
+- A finding's page is where the answer is printed, not where its label is: a field whose
+  label sits at the foot of one page and its answer at the head of the next now links the
+  second page.

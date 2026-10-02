@@ -39,7 +39,7 @@ qaReadRecordHash();
 window.addEventListener('hashchange', qaReadRecordHash);
 
 const qaH = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const qaPlural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+const qaPlural = (n, w) => n + ' ' + w + (n === 1 ? '' : /s$/.test(w) ? 'es' : 's');
 const qaDate = r => r.date || (r.created ? new Date(r.created).toLocaleDateString('en-US') : '');
 
 // ── Access ─────────────────────────────────────────
@@ -351,10 +351,27 @@ async function qaOpenReport(file) {
 }
 
 // Run the checks again with the project the coordinator typed.
+// Where Salesforce's address is, looked up once per address: {lat,lon}, null (not found) or false (no lookup here).
+const qaGeo = {}, qaGeoBusy = new Set();
+async function qaGeoLookup(addr) {
+  if (qaGeoBusy.has(addr)) return;
+  qaGeoBusy.add(addr);
+  let out = false;
+  if (qaMode === 'shared') {
+    try {
+      const r = await fetch('/api/qa-geocode', { method: 'POST', headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: JSON.stringify({ address: addr }) });
+      if (r.status === 200) { const j = await r.json(); out = { lat: j.lat, lon: j.lon }; } else if (r.status === 404) { const j = await r.json().catch(() => null); out = j && j.error === 'no_match' ? null : false; }
+    } catch (e) { out = false; }
+  }
+  qaGeo[addr] = out; qaGeoBusy.delete(addr);
+  if (qaRun && qaProjectRow(qaProj) && qaProjectRow(qaProj).address === addr) { qaReeval(true); qaRefresh(); }
+}
 function qaReeval(full) {
   const run = qaRun; if (!run) return;
   const row = qaProjectRow(qaProj);
-  const ctx = { sfAddress: row ? row.address : null, sfResource: row ? (row.resource || null) : null, checks: qaChecks };
+  const addr = row ? row.address : null;
+  const ctx = { sfAddress: addr, sfResource: row ? (row.resource || null) : null, checks: qaChecks, sfGeo: addr ? qaGeo[addr] : undefined };
+  if (addr && !(addr in qaGeo)) qaGeoLookup(addr);
   run.ctx = ctx;
   run.R = OpsQA.evaluate(run.S, run.specs, ctx);
   if (!full) qaRefresh();
@@ -634,7 +651,6 @@ function qaRender() {
   _qaBar();
   if (qaView === 'review') _qaReview();
   else if (qaView === 'log') _qaLog();
-  else if (qaView === 'settings') _qaSettings();
   else _qaTemplates();
 }
 function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => animateSections('page-qa')); }
@@ -647,7 +663,8 @@ function _qaBar() {
     : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
   host.innerHTML = `<div class="fbar">
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}${btn('settings', 'Settings')}</div>
+    <span class="qa-title">Site Survey QA</span>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
@@ -805,6 +822,23 @@ function qaSortFindings(a, b) {
   return rank(a) - rank(b) || String(a.area).localeCompare(String(b.area));
 }
 function qaSetFlag(k) { qaFlag = k; _qaStep(); }
+// A second look after a go back: what the last review for this project found, and whether this
+// report fixes it. Matched by check id; a repeat of the same miss reads as still open.
+function qaPrior() {
+  const id = qaProj.trim().toUpperCase(); if (!id || !qaRun) return null;
+  const prev = qaLoad().filter(r => r.project === id && r.id !== qaRun.saved && r.findings).sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')))[0];
+  return prev || null;
+}
+function qaGoBackHtml() {
+  const prev = qaPrior(); if (!prev) return '';
+  const misses = prev.findings.filter(f => f.status === 'miss' && !f.standing); if (!misses.length) return '';
+  const now = qaFindings(), still = f => now.some(x => x.id === f.id && x.status === 'miss' && (x.title === f.title));
+  const open = misses.filter(still), fixed = misses.filter(f => !still(f));
+  const line = (f, ok) => `<div class="qa-gb-row"><span class="qa-mk ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✕'}</span> ${qaH(f.title)}${f.detail ? ` <span class="qa-gb-d">${qaH(f.detail)}</span>` : ''}</div>`;
+  return `<div class="qa-banner qa-banner-info qa-gb"><div><b>Go back review.</b> Last review (${qaH(qaDate(prev))}, ${qaH(prev.status)}) found ${qaPlural(misses.length, 'miss')}: ${fixed.length} fixed, ${open.length} still open.
+    ${open.map(f => line(f, false)).join('')}${fixed.map(f => line(f, true)).join('')}</div></div>`;
+}
+
 // A photo or two the check was judged from, so a Pass can be seen as well as read.
 function qaEvidenceIdx(f) {
   const cat = QA_FIND_CAT[f.id], its = qaRun.items; if (!cat || !its) return [];
@@ -832,6 +866,7 @@ function _qaFindings(host) {
   const acts = run.R.findings.filter(qaActionable), flagged = run.R.findings.filter(qaIsFlagged), left = flagged.filter(f => !run.decisions[qaFlagKey(f)]).length;
   const sub = [QA_TEMPLATE_NAMES[det.specId] || det.reason, S.meta.surveyor, S.meta.assessmentDate || S.meta.surveyDate].filter(Boolean).join(' · ');
   host.innerHTML = `<div class="qa-lede">${qaH(sub)}</div>
+    ${qaGoBackHtml()}
     ${flagged.length ? `<div class="qa-lede" id="qa-rep-sub">${qaReportSub(flagged.length, left)}</div>` : ''}
     <div class="qa-chips">${QA_GROUPS.filter(x => x.k === 'all' || counts[x.k]).map(x => `<button class="qa-chip${qaFlag === x.k ? ' on' : ''}" aria-pressed="${qaFlag === x.k}" onclick="qaSetFlag('${x.k}')">${x.sw ? `<span class="qa-sw ${x.sw}"></span>` : ''}${x.l}<span class="qa-chip-n">${counts[x.k]}</span></button>`).join('')}</div>
     ${g.note ? `<div class="qa-lede">${qaH(g.note)}</div>` : ''}
@@ -1336,32 +1371,35 @@ function qaExport() {
 }
 
 // ── Settings ───────────────────────────────────────
-// What each check requires. Required stops a handoff; Flagged asks for a look; Off drops the
-// check. Only changes from the shipped weight are kept. The whole team reviews against
+// What each check requires, in the app's Settings page. Required stops a handoff; Flagged asks
+// for a look; Alarm only stays out of every review and the report unless it fails; Off drops the
+// check. Only changes from a check's own default are stored. The whole team reviews against
 // this, so it lives on the server and only the manager's password may change it.
-const QA_CHECK_SET = [['hard', 'Required'], ['warn', 'Flagged'], ['off', 'Off']];
+const QA_CHECK_SET = [['hard', 'Required'], ['warn', 'Flagged'], ['alarm', 'Alarm only'], ['off', 'Off']];
 function _qaSettings() {
-  const host = document.getElementById('qa-body'); if (!host) return;
+  const host = document.getElementById('qa-set-host'); if (!host) return;
+  const head = `<div class="set-title">Site Survey QA</div>`;
+  if (!qaPw()) { host.innerHTML = `${head}<div class="set-desc" style="margin-bottom:10px;">Sign in to the QA page to see what each check requires.</div><button class="fbtn" onclick="qaSettingsSignIn()">Sign in</button>`; return; }
+  if (qaMode === 'checking') { host.innerHTML = `${head}<div class="set-desc">Loading…</div>`; qaSync().then(ok => { if (ok !== false) _qaSettings(); }); return; }
   const checks = OpsQA.allChecks(), areas = OpsQA.AREA_ORDER.filter(a => checks.some(c => c.area === a));
-  const can = qaManager, changed = checks.filter(c => qaChecks[c.id] && qaChecks[c.id] !== c.severity).length;
-  const btn = (c, v, l) => { const cur = qaChecks[c.id] || c.severity; return `<button class="tgl-btn${cur === v ? ' active' : ''}"${can ? '' : ' disabled'} onclick="qaSetCheck('${c.id}','${v}')">${l}</button>`; };
-  host.innerHTML = `<div class="sec">
-    <div class="shead"><div><div class="stitle">What each check requires</div>
-      <div class="ssub">Required stops a handoff. Flagged asks for a look. Off drops the check. ${can ? 'Changes apply to everyone on the next review.' : 'Only the manager can change these.'}</div></div>
-      ${changed && can ? `<button class="fbtn" onclick="qaResetChecks()">Reset ${changed} to the defaults</button>` : ''}</div>
+  const can = qaManager, cur = c => qaChecks[c.id] || c.def, changed = checks.filter(c => cur(c) !== c.def).length;
+  const btn = (c, v, l) => `<button class="tgl-btn${cur(c) === v ? ' active' : ''}"${can ? '' : ' disabled'} onclick="qaSetCheck('${c.id}','${v}')">${l}</button>`;
+  host.innerHTML = `${head}
+    <div class="set-row"><div><div class="set-label">What each check requires</div><div class="set-desc"><b>Required</b> stops a handoff. <b>Flagged</b> asks for a look. <b>Alarm only</b> stays out of the review and the report unless it fails. <b>Off</b> drops the check. ${can ? 'Changes apply to everyone on the next review.' : 'Only the manager can change these.'}</div></div>
+      ${changed && can ? `<div class="set-control"><button class="fbtn" onclick="qaResetChecks()">Reset ${changed} to the defaults</button></div>` : ''}</div>
     <div class="xscroll"><table class="tbl qa-tbl"><thead><tr><th>Check</th><th>Survey types</th><th>Weight</th></tr></thead><tbody>
       ${areas.map(a => `<tr><td colspan="3" class="qa-areahead">${qaH(a)}</td></tr>` + checks.filter(c => c.area === a).map(c => `<tr>
-        <td class="qa-check">${qaH(c.title)}${qaChecks[c.id] && qaChecks[c.id] !== c.severity ? ' <span class="qa-tag">changed</span>' : ''}</td>
+        <td class="qa-check">${qaH(c.title)}${cur(c) !== c.def ? ' <span class="qa-tag">changed</span>' : ''}</td>
         <td style="color:var(--muted);white-space:nowrap;">${c.vendors.length > 1 ? 'Both' : c.vendors[0] === 'radicl' ? 'Radicl only' : 'SunPower only'}</td>
         <td><div class="toggle-group" role="group" aria-label="${qaH(c.title)}">${QA_CHECK_SET.map(([v, l]) => btn(c, v, l)).join('')}</div></td></tr>`).join('')).join('')}
-    </tbody></table></div></div>
-    <div class="sec"><div class="shead"><div><div class="stitle">Claude photo check</div>
-      <div class="ssub">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
-      <label class="qa-switch"><input type="checkbox" ${S.qaVision ? 'checked' : ''} onchange="setSetting('qaVision',this.checked)"> ${S.qaVision ? 'On' : 'Off'}</label></div></div>`;
+    </tbody></table></div>
+    <div class="set-row" style="margin-top:14px;"><div><div class="set-label">Claude photo check</div><div class="set-desc">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
+      <div class="set-control"><input type="checkbox" ${S.qaVision ? 'checked' : ''} onchange="setSetting('qaVision',this.checked)"></div></div>`;
 }
+async function qaSettingsSignIn() { if (!qaGate()) return; qaMode = 'checking'; const ok = await qaSync(); if (ok === false) return; _qaSettings(); }
 async function qaSetCheck(id, v) {
   if (!qaManager) return;
-  const def = (OpsQA.allChecks().find(c => c.id === id) || {}).severity, next = Object.assign({}, qaChecks);
+  const def = (OpsQA.allChecks().find(c => c.id === id) || {}).def, next = Object.assign({}, qaChecks);
   if (v === def) delete next[id]; else next[id] = v;
   await qaSaveChecks(next);
 }

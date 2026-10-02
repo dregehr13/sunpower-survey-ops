@@ -172,7 +172,10 @@ test('the checklist names every check once and marks what the template cannot ca
   assert.equal(by(sc, 'main_breaker_rating').inTemplate, false);
   assert.equal(by(rd, 'main_breaker_rating').inTemplate, true);
   assert.equal(by(rd, 'plane_count').inTemplate, false);
-  assert.ok(by(sc, 'photos_deleted') && !by(rd, 'photos_deleted'));  // vendor-specific checks only appear for their vendor
+  assert.ok(by(sc, 'photo_provenance') && !by(rd, 'photo_provenance'));  // vendor-specific checks only appear for their vendor
+  // alarm-only checks are not part of the routine list, but a setting can bring one back
+  assert.ok(!by(sc, 'photos_deleted') && !by(sc, 'resource_match') && !by(sc, 'proposal_attached'));
+  assert.ok(QA.checklist('sitecapture-v13', { photos_deleted: 'warn' }).some(c => c.id === 'photos_deleted'));
 });
 
 test('keyPhotos shows a few per check unless asked for all', () => {
@@ -305,7 +308,9 @@ test('the QA page keeps reports in the browser: the only upload is the opt-in Cl
   // Reports are never posted. The one thing that leaves is a downsized key photo, to
   // /api/qa-vision, and only when Settings has the Claude photo check on.
   const posts = [...pageSrc.matchAll(/method:\s*['"]POST['"]/g)];
-  assert.equal(posts.length, 1);
+  // and the project's street address, to /api/qa-geocode, to find where it is (no customer name)
+  assert.equal(posts.length, 2);
+  assert.ok(/async function qaGeoLookup[\s\S]*?\/api\/qa-geocode[\s\S]*?method: 'POST'/.test(pageSrc));
   assert.ok(/async function qaVisionCall[\s\S]*?\/api\/qa-vision[\s\S]*?method: 'POST'/.test(pageSrc));
   assert.ok(/async function qaVisionRun\(\) \{\s*const run = qaRun; if \(!run \|\| !qaVisionOn\(\)\) return;/.test(pageSrc));
   assert.equal(/\.send\(/.test(pageSrc), false);
@@ -459,7 +464,35 @@ test('Settings can turn a check off or change its weight, and the checklist foll
   assert.ok(QA.allChecks().every(c => c.vendors.length >= 1));
 });
 
-test('the Settings tab and the Expected surveys heading exist', () => {
-  assert.ok(/btn\('settings', 'Settings'\)/.test(pageSrc) && /function _qaSettings\(\)/.test(pageSrc));
+test('check settings live in the app Settings page, and the heading reads Expected surveys', () => {
+  const idx = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(/id="qa-set-host"/.test(idx) && /_qaSettings\(\)/.test(idx));
+  assert.ok(/function _qaSettings\(\)/.test(pageSrc) && !/btn\('settings'/.test(pageSrc));
   assert.ok(pageSrc.includes('Expected surveys') && !pageSrc.includes('Likely to review'));
+});
+
+test('alarm-only checks appear only when they fail, and Settings can promote or silence them', () => {
+  const ok = survey('sitecapture', { entries: [{ ref: 'x', key: 'office_feedback_were_any', value: 'No', instance: null }] });
+  const has = (res, id) => res.findings.some(f => f.id === id);
+  assert.equal(has(QA.evaluate(ok, specs), 'resource_match'), false);                      // nothing to compare: silent
+  const wrong = QA.evaluate(ok, specs, { sfResource: 'Radicl Services' });
+  const f = wrong.findings.find(x => x.id === 'resource_match');
+  assert.ok(f && f.alarm && f.status === 'miss' && f.severity === 'warn');
+  assert.equal(has(QA.evaluate(ok, specs, { sfResource: 'SunPower Surveyor' }), 'resource_match'), false);   // passes: silent
+  assert.equal(has(QA.evaluate(ok, specs, { sfResource: 'Radicl Services', checks: { resource_match: 'off' } }), 'resource_match'), false);
+  const promoted = QA.evaluate(ok, specs, { sfResource: 'SunPower Surveyor', checks: { resource_match: 'warn' } }).findings.find(x => x.id === 'resource_match');
+  assert.ok(promoted && promoted.status === 'pass');
+});
+
+test('photos taken far from the Salesforce address are flagged, near ones pass, and a report with no GPS is left alone', () => {
+  const at = (lat, lon) => survey('sitecapture', { photos: [{ ref: 'p', instance: null, page: 1, loc: { lat, lon } }, { ref: 'p', instance: null, page: 1, loc: { lat, lon } }] });
+  const run = (S, geo) => QA.evaluate(S, specs, { sfAddress: '1 Main St', sfGeo: geo }).findings.find(x => x.id === 'address_photos');
+  const home = { lat: 45.5, lon: -122.5 };
+  assert.equal(run(at(45.5002, -122.5), home).status, 'pass');
+  assert.equal(run(at(45.5, -122.5), home).status, 'pass');
+  assert.equal(run(at(45.5015, -122.5), home).status, 'verify');          // ~170 m
+  assert.equal(run(at(45.51, -122.5), home).status, 'miss');              // ~1.1 km
+  assert.equal(run(at(45.5, -122.5), null).status, 'verify');             // address not found
+  assert.equal(run(survey('sitecapture', { photos: [{ ref: 'p', instance: null, page: 1 }] }), home).status, 'na');
+  assert.equal(run(at(45.5, -122.5), undefined).status, 'na');            // not looked up yet
 });

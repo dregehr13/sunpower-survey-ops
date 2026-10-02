@@ -9777,6 +9777,8 @@ function renderSettings(){
         <div id="rm-msg" class="note" style="min-height:14px;margin-top:6px;"></div>
       </div>
 
+      <div class="set-sec" style="grid-column:1/-1;" id="qa-set-host"></div>
+
       <div class="set-sec" style="grid-column:1/-1;">
         <div class="set-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:${fieldRegOpen?'14px':'0'};" onclick="toggleFieldReg()">
           <span>Field Registry Status</span>
@@ -9806,6 +9808,7 @@ function renderSettings(){
       </div>
 
     </div>`;
+  if(typeof _qaSettings==='function') _qaSettings();
 }
 
 // Data definitions page (Settings → Data → View definitions). Reuses the same

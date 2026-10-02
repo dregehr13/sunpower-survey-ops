@@ -305,9 +305,9 @@ textarea.qa-in.short{min-height:54px;}
 .tgl-btn:disabled{opacity:.55;cursor:default;}
 
 /* summary rows: dot, check + PDF link, what was found, photos, call */
-.qa-find,.qa-find.flag{grid-template-columns:14px minmax(200px,1.2fr) minmax(0,1.5fr) auto 76px;align-items:center;gap:0 14px;}
+.qa-find,.qa-find.flag{grid-template-columns:14px minmax(200px,1.2fr) minmax(0,1.5fr) 140px 76px;align-items:center;gap:0 14px;}
 .qa-find .t .qa-link{margin-left:8px;font-weight:400;white-space:nowrap;}
-.qa-find .ev{display:flex;justify-content:flex-end;}
+.qa-find .ev{display:flex;justify-content:flex-end;width:140px;}
 .qa-find .ev .qa-ev{margin-left:0;}
 .qa-find .act{display:flex;justify-content:flex-end;}
 @media (max-width:860px){.qa-find,.qa-find.flag{grid-template-columns:14px 1fr auto;}.qa-find .d{grid-column:2/-1;}.qa-find .ev{grid-column:2;justify-content:flex-start;}.qa-find .act{grid-column:3;}}
@@ -323,3 +323,9 @@ textarea.qa-in.short{min-height:54px;}
 .qa-pc-meta a:hover{text-decoration:underline;}
 .qa-projcard .qa-in{max-width:220px;}
 @media(min-width:1001px){.qa-form{grid-template-columns:minmax(240px,1.5fr) minmax(0,1fr) minmax(0,1fr);}}
+
+.qa-title{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-right:6px;white-space:nowrap;}
+
+.qa-gb{display:block;margin-bottom:10px;}
+.qa-gb-row{font-size:12px;margin-top:3px;}
+.qa-gb-d{color:var(--muted);}
