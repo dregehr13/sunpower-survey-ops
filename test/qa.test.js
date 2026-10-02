@@ -792,3 +792,17 @@ test('panel location, dead front off, meter location and site map have photo row
   assert.deepEqual([cat.attic_photos, cat.bus_rating, cat.service_entrance], ['attic', 'label', 'meterloc']);
   assert.ok(QA.KEY_PHOTOS.some(k => k.id === 'attic'));
 });
+
+test('a battery survey is recognised from the report itself, so roof and photo-list checks do not call it incomplete', () => {
+  const batt = survey('radicl', { meta: { sectionNames: ['Quality Check', 'Exterior Photos of Home', 'Exterior Electrical', 'Battery Placement', 'Interior Electrical', 'Site Assessment'] } });
+  assert.equal(QA.reportBatteryOnly(batt), true);
+  const res = QA.evaluate(batt, specs, {});
+  for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(res.findings.find(f => f.id === id).status, 'na', id);
+  assert.equal(res.findings.filter(f => f.layer === 'A').length, 0);
+  // a roof survey that also has a battery section is not a battery survey
+  const both = survey('radicl', { meta: { sectionNames: ['Quality Check', 'Battery Placement', 'Attic Info', 'Roof Photos'] } });
+  assert.equal(QA.reportBatteryOnly(both), false);
+  // Site Capture: the survey says battery, and no plane was surveyed
+  assert.equal(QA.reportBatteryOnly(survey('sitecapture', { entries: [{ ref: 'is_this_a_battery_survey', value: 'Yes', instance: null }] })), true);
+  assert.equal(QA.reportBatteryOnly(survey('radicl', { meta: {} })), false);
+});
