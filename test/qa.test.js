@@ -724,3 +724,14 @@ test('leaving the page with an unsaved review asks first', () => {
   run.status = 'Passed';
   assert.equal(leave(), true, 'saved, then changed');
 });
+
+test('the resource alarm stays quiet on a go back, where Salesforce still names the first survey\'s resource', () => {
+  // RD-11 (3472IKRO): a Sales Rep survey in August, sent back by Design, re-done by Radicl.
+  const S = QA.parseRadicl([page(1, [blk('PARTIAL SURVEY REPORT radicl', 32, 808)])], { specId: 'radicl-v2', partial: true });
+  const alarm = ctx => QA.evaluate(S, specs, ctx).findings.find(f => f.id === 'resource_match');
+  assert.equal(alarm({ sfResource: 'Sales Rep' }), undefined);
+  assert.equal(alarm({ sfResource: 'Sales Rep', sfReopened: true }), undefined);
+  const full = QA.parseRadicl([page(1, [blk('SITE SURVEY REPORT radicl', 32, 808)])], { specId: 'radicl-v2' });
+  assert.equal(QA.evaluate(full, specs, { sfResource: 'Sales Rep' }).findings.find(f => f.id === 'resource_match').status, 'miss');
+  assert.equal(QA.evaluate(full, specs, { sfResource: 'Sales Rep', sfReopened: true }).findings.find(f => f.id === 'resource_match'), undefined);
+});
