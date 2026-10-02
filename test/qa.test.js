@@ -802,3 +802,14 @@ test('the Salesforce summary groups its lines by area, in review order', () => {
   const t = QA.summarize(R, { status: 'Passed' }).text;
   assert.match(t, /Needs go back \/ follow-up:\nRoof\n- Roof pitch: No roof pitch recorded\nElectrical\n- Meter close-up: no photos\n- Dead front on: no photos\nAlso noted:\nSite\n- Site map: no photos/);
 });
+
+test('namesProject finds a report by project ID or by street number and street word', () => {
+  const k = { id: '2615OKAF', num: '2615', word: 'oakfield' };
+  assert.equal(QA.namesProject('2615OKAF Site Survey Report', k), 'id');
+  assert.equal(QA.namesProject('site-survey_2615okaf (1)', k), 'id');
+  assert.equal(QA.namesProject('Radicl Report - 2615 Oakfield Dr', k), 'address');
+  assert.equal(QA.namesProject('Site Address 2615 Oakfield Drive Richmond VA 23233', k), 'address');
+  assert.equal(QA.namesProject('Radicl Report - 26150 Oakfield Dr', k), '');   // a longer number is another house
+  assert.equal(QA.namesProject('Radicl Report - 2615 Maple Dr', k), '');
+  assert.equal(QA.namesProject('report', { id: '', num: '', word: '' }), '');
+});
