@@ -130,7 +130,7 @@ textarea.qa-in.short{min-height:54px;}
 .qa-chip:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
 .qa-chip-n{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
 /* a row: dot, check + PDF link, what was found, photos, call */
-.qa-find{display:grid;grid-template-columns:14px minmax(200px,1.2fr) minmax(0,1.5fr) 140px 76px;gap:0 14px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.qa-find{display:grid;grid-template-columns:16px 14px minmax(200px,1.2fr) minmax(0,1.5fr) 140px 76px;gap:0 14px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .qa-find:last-child{border-bottom:0;}
 .qa-find .t{font-weight:600;color:var(--text);}
 .qa-find .t .qa-link{font-weight:400;white-space:nowrap;}
@@ -316,3 +316,16 @@ textarea.qa-in.short{min-height:54px;}
 .qa-lb-foot.mine .qa-lb-cap{text-align:center;}
 .qa-lb-stage{height:clamp(240px,calc(100vh - 300px),640px);}
 @media (max-width:860px){.qa-lb-stage{height:clamp(160px,30vh,380px);}.qa-lb-tag{font-size:16px;}}
+
+/* photo review: rows that open onto their photos */
+.qa-find .qa-caret{display:inline-block;color:var(--faint);font-size:15px;line-height:1;transition:transform .15s;}
+.qa-find.open .qa-caret{transform:rotate(90deg);}
+.qa-find.xp{cursor:pointer;}
+.qa-find.xp:hover{background:var(--bg);}
+.qa-find.xp:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;}
+.qa-fr{border-bottom:1px solid var(--border);}
+.qa-fr .qa-find{border-bottom:0;}
+.qa-fr:last-child{border-bottom:0;}
+.qa-find-x{background:var(--bg);border-top:1px solid var(--border);padding:12px 14px 6px 30px;margin-bottom:6px;border-radius:0 0 8px 8px;}
+.qa-find-x .qa-photos-h:first-child{margin-top:0;}
+.qa-expand-all{margin-left:auto;}

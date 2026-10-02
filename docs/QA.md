@@ -82,8 +82,8 @@ timestamps; the pack is only for pixels. Radicl's Drive folder is not yet seen.
 `qa/page.js` + `qa/page.css`, loaded by index.html; it inherits the sidebar,
 tokens and shared classes (`.sec`, `.srail`, `.fbar`, `.tbl`, `.pill`) so it reads
 as part of the app. Three views:
-- **Review** — one upload field, then a project card and three steps:
-  **Summary of findings → Photo review → Verdict** (see the dated rounds
+- **Review** — one upload field, then a project card and two steps:
+  **Photo review → Verdict** (see the dated rounds
   below). Reads the PDF in the browser (pdf.js from cdnjs); nothing is
   uploaded
 - **History** (was Log) — every saved review, the review number per account, a By account
@@ -376,3 +376,18 @@ Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
 - **A server error is "History offline"**, never a wrong password and never a silent
   switch to the browser-only log. Only 404 (no API) and 503 (not set up) mean local
 - No finding's detail carries an address; the Radicl page header is cut on height
+
+### 2026-10-02 — two steps: Photo review, Verdict
+- **Summary of findings and Photo review are one step, "Photo review".** Each line: caret · dot ·
+  the check, very simply, with its PDF link · what was found or what is missing · thumbnails of its
+  photos · the check/X call. A line that has photos opens onto them, large, each with its own
+  check/X (the cards the old photo step had); **Expand all** opens every such line and, pressed
+  again, shuts them. Calls and marks redraw the lines in place, so open photos and scroll stay put.
+- **One photo is enough.** Every photo requirement is a minimum of 1, template field or check
+  (the template's "5+", "8+", "10+" no longer produce a miss; none at all still does). The one
+  exception is Radicl v2's Dead Front On/Off pair, which stays at 2 because the report cuts both
+  captions to "Dead Front…" and one photo cannot show both.
+- **Titles are plain.** Check titles are short ("Dead front on", "Rafter size and spacing"); the
+  template's long photo labels become "Mounting planes", "Each roof obstruction", "MSP location"
+  (sub panels: "Sub panel location") and "Roof condition" (`photoTitle` in `lib/qa.cjs`). The
+  go back comparison matches Layer B checks by id, so reviews saved under the old titles still match.

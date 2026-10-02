@@ -331,12 +331,32 @@ test('no function in the QA page is defined twice (a later one silently replaces
   assert.deepEqual(dups, []);
 });
 
-test('the three review steps exist and each has a renderer', () => {
-  for (const fn of ['_qaFindings', '_qaPhotosStep', '_qaVerdictStep', '_qaIntake']) {
+test('the review is two steps, each with a renderer, and photo review rows open onto their photos', () => {
+  for (const fn of ['_qaReviewStep', '_qaVerdictStep', '_qaIntake', 'qaToggleRow', 'qaExpandAll', 'qaPhotoCardHtml']) {
     assert.ok(new RegExp('function\\s+' + fn + '\\b').test(pageSrc), fn);
   }
-  assert.ok(/const QA_STEPS = \['Summary of findings', 'Photo review', 'Verdict'\]/.test(pageSrc));
-  assert.ok(!/_qaReportStep|_qaSummaryStep|_qaStatusStep\b/.test(pageSrc));
+  assert.ok(/const QA_STEPS = \['Photo review', 'Verdict'\]/.test(pageSrc));
+  assert.ok(!/_qaReportStep|_qaSummaryStep|_qaStatusStep\b|_qaPhotosStep|_qaFindings\b/.test(pageSrc));
+  assert.ok(/Expand all/.test(pageSrc) && /Collapse all/.test(pageSrc));
+});
+
+test('photo lines read as people say them, with no count in the title', () => {
+  const t = QA.photoTitle;
+  assert.equal(t('5+ overlapping photos covering each section under the MP (left, middle-left, middle, middle-right, right)'), 'Mounting planes');
+  assert.equal(t('3+ photos of each pipe or vent exiting the attic through the roof'), 'Each roof obstruction');
+  assert.equal(t('Roof Condition - 6+ photos of each mounting plane'), 'Roof condition');
+  assert.equal(t('Location - 5+ photos showing path to opposite side of wall', 'MSP'), 'MSP location');
+  assert.equal(t('Location - 5+ photos showing the entire room', 'SP1'), 'Sub panel location');
+  assert.equal(t('Roof Shading Front - 8+ photos creating a 360° photo set'), 'Roof Shading Front');
+  assert.equal(QA.allChecks().find(c => c.id === 'msp_location').title, 'MSP location');
+});
+
+test('a plane with fewer photos than the template asks for is not a miss; none at all still is', () => {
+  const S = survey('sitecapture', {});
+  const ids = QA.evaluate(S, specs, {}).findings.filter(f => f.layer === 'A').map(f => f.detail);
+  assert.ok(ids.every(d => !/ of \d+\+ photos/.test(d || '')), 'no "N of M+ photos" miss remains');
+  const engine = readFileSync(new URL('../lib/qa.cjs', import.meta.url), 'utf8');
+  assert.ok(!/of \$\{need\}\+ photos/.test(engine) && !/the reference surveys had at least/.test(engine));
 });
 
 test('the verdict step carries the summary help text and marks the suggested status', () => {

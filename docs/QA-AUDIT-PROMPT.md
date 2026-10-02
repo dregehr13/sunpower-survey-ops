@@ -102,7 +102,7 @@ the page's own functions or the file picker). Use `scripts/qa-check-pages.mjs` f
    duration, 4.5 MB body), and that it is truly off by default and advisory only. Same for the Census
    geocoder (address quality, 100/300 m thresholds, Radicl has no photo GPS, privacy). Try both end to
    end if you can (you may need to ask Doug for `ANTHROPIC_API_KEY`; do not request secrets in chat).
-9. **UI, design, accessibility, copy.** The three steps, the one-field start, the project card and pencil,
+9. **UI, design, accessibility, copy.** The two steps (Photo review, Verdict), the one-field start, the project card and pencil,
    Expected surveys, summary rows, zoom, Verdict, History, Settings, empty and error states, loading
    states, keyboard use (arrow keys in the zoom, focus, Tab order), screen widths from 375 px to 1600 px
    (the flow was mostly checked in a narrow pane), dark mode if the app has it, long names and addresses,
