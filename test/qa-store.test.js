@@ -240,3 +240,16 @@ test('the photos a reviewer marked are kept with the review, and nothing else ab
   assert.deepEqual(got.photos.marks[0], { k: 'label', label: 'Panel label', unit: 'Panel #1', n: 1, m: 'ok' });
   assert.ok(!('url' in got.photos.marks[1]));
 });
+
+test('check settings are kept on the server, readable by the team, and changed only with the manager password', async () => {
+  const db = await fresh();
+  assert.deepEqual((await call(db, 'GET')).body.settings, { checks: {} });
+  assert.equal((await call(db, 'PUT', { query: { settings: '1' }, body: { checks: { roof_pitch: 'warn' } }, pw: 'spwr-banks' })).status, 403);
+  const ok = await call(db, 'PUT', { query: { settings: '1' }, body: { checks: { roof_pitch: 'warn', site_map: 'off', bogus: 'nope', 'Bad Key': 'off' } } });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body.settings, { checks: { roof_pitch: 'warn', site_map: 'off' } });
+  const seen = await call(db, 'GET', { pw: 'spwr-banks' });
+  assert.deepEqual(seen.body.settings.checks, { roof_pitch: 'warn', site_map: 'off' });
+  assert.equal(seen.body.manager, false);
+  assert.equal((await call(db, 'GET')).body.manager, true);
+});

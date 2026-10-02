@@ -23,6 +23,7 @@ const QA_TEMPLATE_NAMES = {
 let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 'all', qaOpen = null;
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
+let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged / Off over the defaults, and whether this password may change them
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
@@ -100,6 +101,7 @@ function qaSync() {
       qaMode = 'shared'; qaNote = ''; qaLog = r.body.reviews;
       // The password says who this is; the Reviewer is that person and is not editable.
       qaUser = r.body.user || ''; if (qaUser) qaReviewer = qaUser;
+      qaChecks = (r.body.settings && r.body.settings.checks) || {}; qaManager = !!r.body.manager;
     } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
     else {
       qaMode = 'local';
@@ -107,6 +109,8 @@ function qaSync() {
         : 'No server here, so reviews stay in this browser.';
       if (qaPw() !== QA_LOCAL_PASSWORD) { qaBounce('Wrong password'); return false; }
       qaLog = qaLocalLog();
+      try { qaChecks = JSON.parse(localStorage.getItem('ops_qa_checks') || '{}') || {}; } catch (e) { qaChecks = {}; }
+      qaManager = true;
     }
     return true;
   })();
@@ -329,7 +333,7 @@ async function qaOpenReport(file) {
 function qaReeval(full) {
   const run = qaRun; if (!run) return;
   const row = qaProjectRow(qaProj);
-  const ctx = { sfAddress: row ? row.address : null, sfResource: row ? (row.resource || null) : null };
+  const ctx = { sfAddress: row ? row.address : null, sfResource: row ? (row.resource || null) : null, checks: qaChecks };
   run.ctx = ctx;
   run.R = OpsQA.evaluate(run.S, run.specs, ctx);
   if (!full) qaRefresh();
@@ -609,6 +613,7 @@ function qaRender() {
   _qaBar();
   if (qaView === 'review') _qaReview();
   else if (qaView === 'log') _qaLog();
+  else if (qaView === 'settings') _qaSettings();
   else _qaTemplates();
 }
 function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => animateSections('page-qa')); }
@@ -621,7 +626,7 @@ function _qaBar() {
     : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
   host.innerHTML = `<div class="fbar">
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}${btn('settings', 'Settings')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
@@ -682,7 +687,7 @@ function _qaLikely() {
       <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
       <span class="qa-lk-m">${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
   };
-  host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Likely to review</div>
+  host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Expected surveys</div>
     <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
     ${groups.map(([label, test]) => { const g = list.filter(test); return g.length ? `<div class="qa-lk-h">${label}<span>${g.length}</span></div><div class="qa-likely">${g.map(card).join('')}</div>` : ''; }).join('')}
     ${all.length > list.length || (qaLikelyAll && all.length > 18) ? `<div class="tbl-foot"><button class="copy-btn" onclick="qaLikelyAll=!qaLikelyAll;_qaLikely()">${qaLikelyAll ? 'Show fewer' : 'Show all ' + all.length}</button></div>` : ''}</div>`;
@@ -703,19 +708,23 @@ function qaPickProject(p) {
 function _qaChecklist() {
   const host = document.getElementById('qa-run'); if (!host) return;
   const specId = qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13';
-  const list = OpsQA.checklist(specId);
+  const own = OpsQA.checklist(specId, qaChecks), vkey = qaVendor === 'radicl' ? 'radicl' : 'sitecapture';
+  // The other survey type's extras are listed too, so both checklists read the same; the report just cannot answer them.
+  const extra = OpsQA.allChecks().filter(c => !c.vendors.includes(vkey) && qaChecks[c.id] !== 'off')
+    .map(c => ({ id: c.id, area: c.area, title: c.title, severity: qaChecks[c.id] === 'hard' || qaChecks[c.id] === 'warn' ? qaChecks[c.id] : c.severity, inTemplate: true, absent: true }));
+  const list = own.concat(extra);
   const areas = OpsQA.AREA_ORDER.filter(a => list.some(c => c.area === a));
   const cols = [[], [], []];
   const weight = a => list.filter(c => c.area === a).length + 2;
   const load = [0, 0, 0];
   areas.forEach(a => { const k = load.indexOf(Math.min(...load)); cols[k].push(a); load[k] += weight(a); });
-  const outside = list.filter(c => !c.inTemplate).length;
+  const outside = list.filter(c => !c.inTemplate && !c.absent).length;
   host.innerHTML = `<div class="sec">
     <div class="shead"><div><div class="stitle">What we check</div>
       <div class="ssub">${list.length} checks, plus every field the template requires.${outside ? ` ${qaH(outside === 1 ? 'One' : String(outside))} marked <span class="qa-tag">not in template</span> ${outside === 1 ? 'is' : 'are'} something Design needs that the template doesn't ask for.` : ''}</div></div>
       <div class="toggle-group" role="group" aria-label="Checklist">${['sitecapture', 'radicl'].map(v => `<button class="tgl-btn${qaVendor === v ? ' active' : ''}" onclick="qaSetCheckVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`).join('')}</div></div>
     <div class="qa-checks">${cols.map(cs => `<div class="qa-checks-col">${cs.map(a => `<div class="qa-checks-h">${qaH(a)}</div>
-      ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
+      ${list.filter(c => c.area === a).map(c => `<div class="qa-chk"><span class="qa-sw ${c.severity === 'hard' ? 'hard' : 'warn'}" title="${c.severity === 'hard' ? 'Stops a handoff' : 'Asks for a look'}"></span><span>${qaH(c.title)}${c.absent ? ' <span class="qa-tag" title="This survey type\'s report has no field for it">not on this report</span>' : c.inTemplate ? '' : ' <span class="qa-tag">not in template</span>'}</span></div>`).join('')}`).join('')}</div>`).join('')}</div>
     <div class="note" style="margin-top:10px;"><span class="qa-sw hard"></span> stops a handoff &nbsp; <span class="qa-sw warn"></span> asks for a look</div>
   </div>`;
 }
@@ -1302,6 +1311,49 @@ function qaExport() {
   const body = [head.map(q).join(',')].concat(log.map(r => [r.id, r.project, r.n, qaDate(r), r.reviewer, r.source, r.status, r.template, r.surveyor, r.counts.missHard, r.counts.missWarn, r.counts.gap, r.override, r.summary, r.file.name, r.file.hash].map(q).join(','))).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type: 'text/csv' })); a.download = 'qa-reviews.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ── Settings ───────────────────────────────────────
+// What each check requires. Required stops a handoff; Flagged asks for a look; Off drops the
+// check. Only changes from the shipped weight are kept. The whole team reviews against
+// this, so it lives on the server and only the manager's password may change it.
+const QA_CHECK_SET = [['hard', 'Required'], ['warn', 'Flagged'], ['off', 'Off']];
+function _qaSettings() {
+  const host = document.getElementById('qa-body'); if (!host) return;
+  const checks = OpsQA.allChecks(), areas = OpsQA.AREA_ORDER.filter(a => checks.some(c => c.area === a));
+  const can = qaManager, changed = checks.filter(c => qaChecks[c.id] && qaChecks[c.id] !== c.severity).length;
+  const btn = (c, v, l) => { const cur = qaChecks[c.id] || c.severity; return `<button class="tgl-btn${cur === v ? ' active' : ''}"${can ? '' : ' disabled'} onclick="qaSetCheck('${c.id}','${v}')">${l}</button>`; };
+  host.innerHTML = `<div class="sec">
+    <div class="shead"><div><div class="stitle">What each check requires</div>
+      <div class="ssub">Required stops a handoff. Flagged asks for a look. Off drops the check. ${can ? 'Changes apply to everyone on the next review.' : 'Only the manager can change these.'}</div></div>
+      ${changed && can ? `<button class="fbtn" onclick="qaResetChecks()">Reset ${changed} to the defaults</button>` : ''}</div>
+    <div class="xscroll"><table class="tbl qa-tbl"><thead><tr><th>Check</th><th>Survey types</th><th>Weight</th></tr></thead><tbody>
+      ${areas.map(a => `<tr><td colspan="3" class="qa-areahead">${qaH(a)}</td></tr>` + checks.filter(c => c.area === a).map(c => `<tr>
+        <td class="qa-check">${qaH(c.title)}${qaChecks[c.id] && qaChecks[c.id] !== c.severity ? ' <span class="qa-tag">changed</span>' : ''}</td>
+        <td style="color:var(--muted);white-space:nowrap;">${c.vendors.length > 1 ? 'Both' : c.vendors[0] === 'radicl' ? 'Radicl only' : 'SunPower only'}</td>
+        <td><div class="toggle-group" role="group" aria-label="${qaH(c.title)}">${QA_CHECK_SET.map(([v, l]) => btn(c, v, l)).join('')}</div></td></tr>`).join('')).join('')}
+    </tbody></table></div></div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Claude photo check</div>
+      <div class="ssub">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
+      <label class="qa-switch"><input type="checkbox" ${S.qaVision ? 'checked' : ''} onchange="setSetting('qaVision',this.checked)"> ${S.qaVision ? 'On' : 'Off'}</label></div></div>`;
+}
+async function qaSetCheck(id, v) {
+  if (!qaManager) return;
+  const def = (OpsQA.allChecks().find(c => c.id === id) || {}).severity, next = Object.assign({}, qaChecks);
+  if (v === def) delete next[id]; else next[id] = v;
+  await qaSaveChecks(next);
+}
+function qaResetChecks() { if (confirm('Put every check back to its default?')) qaSaveChecks({}); }
+async function qaSaveChecks(next) {
+  const prev = qaChecks; qaChecks = next;
+  if (qaMode === 'shared') {
+    const r = await qaApi('PUT', '?settings=1', { checks: next });
+    if (r.status === 401) { qaBounce('Wrong password'); return; }
+    if (r.status !== 200 || !r.body || !r.body.settings) { qaChecks = prev; toast(r.status === 403 ? 'Only the manager can change these' : "Couldn't save. Try again"); return _qaSettings(); }
+    qaChecks = r.body.settings.checks;
+  } else { try { localStorage.setItem('ops_qa_checks', JSON.stringify(next)); } catch (e) {} }
+  if (qaRun) { qaReeval(true); qaRefresh(); }
+  _qaSettings();
 }
 
 // ── Templates ──────────────────────────────────────

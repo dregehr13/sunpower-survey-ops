@@ -9656,14 +9656,6 @@ function renderSettings(){
       </div>
 
       <div class="set-sec">
-        <div class="set-title">Site Survey QA</div>
-        <div class="set-row">
-          <div><div class="set-label">Claude photo check</div><div class="set-desc">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
-          <div class="set-control"><input type="checkbox" ${S.qaVision?'checked':''} onchange="setSetting('qaVision',this.checked)"></div>
-        </div>
-      </div>
-
-      <div class="set-sec">
         <div class="set-title">Cycle Time Targets</div>
         <div class="set-row">
           <div><div class="set-label">Median target (days)</div><div class="set-desc">Green threshold — currently ${S.targetMedian}d per Spec 12744</div></div>

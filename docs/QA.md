@@ -194,7 +194,7 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
 ## 2026-10-01 round
 - Tabs are Review / Templates / History. The Reviewer is read-only once a
   password names them; the bar shows the total review count, not "shared log".
-- **Likely to review** lists Radicl and SunPower surveys booked today or earlier
+- **Expected surveys** lists Radicl and SunPower surveys booked today or earlier
   and still open in Salesforce (`isOpenQueue` + `wipSchedDate`, reps excluded).
   Picking one fills the project ID and the survey type.
 - **Start over** discards an in-progress review (asks first if unsaved).
@@ -239,7 +239,7 @@ Radicl's images folder (Drive), storing the reports themselves (a private bucket
   opens a print page; thumbnails appear only while the review is open, since no
   photo is stored.
 
-### 2026-10-01 — Claude photo check (Settings → Site Survey QA)
+### 2026-10-01 — Claude photo check (QA → Settings)
 - **Off by default**, a checkbox in Settings stored in `S.qaVision`. When on, after a
   review's photos load, each key photo (up to 30, three at a time) is shrunk to
   1280px in the browser and sent to `/api/qa-vision`, which asks Claude
@@ -280,3 +280,16 @@ keep "resurvey" because they measure Design's callouts. Radicl's invoices also u
   list. The three extras on SunPower (photos deleted before sync, proposal attached,
   photos taken on site on the survey date) exist because only Site Capture's report
   records those answers.
+
+### 2026-10-01 — QA Settings tab, Expected surveys
+- **QA → Settings** (fourth tab) holds what each check requires: **Required** (stops a
+  handoff, `hard`), **Flagged** (asks for a look, `warn`) or **Off**, per check, over the
+  shipped defaults. Only changes are stored (`qa_settings` table, key `checks`), shared by
+  the whole team, and only the manager password (`QA_PASSWORD`) can change them
+  (`PUT /api/qa-log?settings=1`, 403 otherwise). `OpsQA.evaluate` reads `ctx.checks`; an
+  open review re-evaluates when a setting changes. The template-field layer (every field
+  the template requires) is not per-check yet. The Claude photo check toggle moved here
+  from the dashboard Settings page.
+- The review checklist lists the other survey type's extras too, tagged **not on this
+  report**, so SunPower and Radicl read as one list.
+- "Likely to review" is now **Expected surveys**.

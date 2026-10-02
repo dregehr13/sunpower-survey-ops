@@ -299,3 +299,7 @@ textarea.qa-in.short{min-height:54px;}
 .qa-lk-h{display:flex;align-items:baseline;gap:6px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 6px;}
 .qa-lk-h:first-of-type{margin-top:4px;}
 .qa-lk-h span{font-weight:400;color:var(--faint);}
+
+.qa-areahead{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);}
+.qa-switch{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;}
+.tgl-btn:disabled{opacity:.55;cursor:default;}

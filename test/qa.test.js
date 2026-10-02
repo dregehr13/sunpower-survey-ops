@@ -447,3 +447,19 @@ test('Start over lives on the review itself, not in the top bar, and a saved rev
   assert.ok(!/run\.saved \? ' disabled'/.test(pageSrc));          // the status buttons stay live after a save
   assert.ok(/function qaEditRecord\(id\)/.test(pageSrc));
 });
+
+test('Settings can turn a check off or change its weight, and the checklist follows', () => {
+  const S = survey('radicl', { entries: [] });
+  const base = get(QA.evaluate(S, specs), 'roof_pitch');
+  assert.equal(base.severity, 'hard');
+  assert.equal(get(QA.evaluate(S, specs, { checks: { roof_pitch: 'warn' } }), 'roof_pitch').severity, 'warn');
+  assert.equal(QA.evaluate(S, specs, { checks: { roof_pitch: 'off' } }).findings.find(f => f.id === 'roof_pitch'), undefined);
+  assert.equal(QA.checklist('radicl-v2', { roof_pitch: 'off' }).some(c => c.id === 'roof_pitch'), false);
+  assert.equal(QA.checklist('radicl-v2', { roof_pitch: 'warn' }).find(c => c.id === 'roof_pitch').severity, 'warn');
+  assert.ok(QA.allChecks().every(c => c.vendors.length >= 1));
+});
+
+test('the Settings tab and the Expected surveys heading exist', () => {
+  assert.ok(/btn\('settings', 'Settings'\)/.test(pageSrc) && /function _qaSettings\(\)/.test(pageSrc));
+  assert.ok(pageSrc.includes('Expected surveys') && !pageSrc.includes('Likely to review'));
+});
