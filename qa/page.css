@@ -14,7 +14,6 @@
 .qa-hero .qa-match{text-align:center;}
 .qa-picked{font-size:12px;color:var(--muted);}
 .qa-picked b{color:var(--text);font-weight:600;}
-.qa-dl{font-size:12px;color:var(--muted);margin-top:4px;}
 
 /* ── Intake once a report is loaded: project card, report, photos ── */
 .qa-form{display:grid;grid-template-columns:minmax(240px,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:12px 16px;align-items:start;}
@@ -92,6 +91,7 @@ textarea.qa-in.short{min-height:54px;}
 .qa-lk-p{font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .qa-lk-a{font-size:11px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .qa-lk-m{font-size:11px;color:var(--faint);}
+.qa-lk-ready{color:var(--green,#2e7d32);font-weight:600;}
 
 /* ── The review: steps, strip, body, nav ── */
 .qa-flow{padding:0;overflow:hidden;}
