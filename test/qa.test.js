@@ -216,12 +216,13 @@ test('address_match compares street numbers against Salesforce when it is suppli
   assert.equal(get(QA.evaluate(S, specs, {}), 'address_match').status, 'na');
 });
 
-test('summarize emits only Salesforce picklist labels and keeps gaps apart from misses', () => {
+test('summarize emits only Salesforce picklist labels and leaves template gaps out', () => {
   const R = QA.evaluate(survey('radicl'), specs);
   const out = QA.summarize(R, { reviewNumber: 2, reviewTotal: 3 });
   assert.ok(out.text.startsWith('QA review 2 of 3'));
   assert.ok(QA.SF_STATUS.includes(out.status));
-  assert.ok(/Standing template gaps:/.test(out.text));
+  assert.ok(R.findings.some(f => f.status === 'gap'), 'the fixture has template gaps');
+  assert.ok(!/template gap/i.test(out.text));
   assert.equal(QA.summarize(R, { status: 'Needs review' }).status, null);   // internal state is never sent as a picklist value
 });
 
@@ -642,7 +643,7 @@ import vm from 'node:vm';
 function loadPage() {
   const noop = () => {};
   const store = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
-  const ctx = { OpsQA: QA, console, setTimeout, clearTimeout, URL, Blob: class {}, localStorage: store(), sessionStorage: store(),
+  const ctx = { OpsQA: QA, console, setTimeout, clearTimeout, setInterval: noop, URL, Blob: class {}, localStorage: store(), sessionStorage: store(),
     location: { hash: '', origin: 'http://x', pathname: '/' }, window: { on: {}, addEventListener(t, f) { this.on[t] = f; } }, document: { addEventListener: noop, getElementById: () => null, querySelectorAll: () => [] },
     allRows: [], toast: noop, isOpenQueue: () => false };
   vm.createContext(ctx);
@@ -765,11 +766,9 @@ test('an unsettled check asks for the photos beside it on the summary, and none 
   P.__.set('qaRun', { R, S, decisions: {}, items, verdicts: {} });
   const look = P.__.get('qaNeedsLook');
   assert.deepEqual(items.map(look), [true, true, true, false, false, false]);
-  // On and Off both rest on these photos here (Radicl cuts both captions to "Dead Front…").
+  // Radicl cuts both captions to "Dead Front…", so on and off are one row there, decided once.
   const key = id => P.__.get('qaFlagKey')(R.findings.find(x => x.id === id));
   P.__.get('qaRun').decisions[key('msp_dead_front_on')] = 'ok';
-  assert.deepEqual(items.map(look), [true, true, true, false, false, false], 'Off is still open');
-  P.__.get('qaRun').decisions[key('msp_dead_front_off')] = 'ok';
   assert.deepEqual(items.map(look), [false, false, false, false, false, false]);
 });
 
@@ -812,4 +811,46 @@ test('namesProject finds a report by project ID or by street number and street w
   assert.equal(QA.namesProject('Radicl Report - 26150 Oakfield Dr', k), '');   // a longer number is another house
   assert.equal(QA.namesProject('Radicl Report - 2615 Maple Dr', k), '');
   assert.equal(QA.namesProject('report', { id: '', num: '', word: '' }), '');
+});
+
+test('Radicl Sep 2026: dead front is one row needing two photos, checked for one on and one off', () => {
+  const two = n => survey('radicl', { photos: Array.from({ length: n }, () => ({ ref: 'Breaker Box — Dead Front', instance: '1', page: 3 })) });
+  const R = QA.evaluate(two(2), specs, {}), on = R.findings.find(f => f.id === 'msp_dead_front_on'), off = R.findings.find(f => f.id === 'msp_dead_front_off');
+  assert.equal(on.title, 'Dead front on and off');
+  assert.equal(on.status, 'pass'); assert.equal(on.verify, true); assert.match(on.note, /one photo shows the dead front on and one shows it off/);
+  assert.equal(off.status, 'na');
+  assert.equal(QA.evaluate(two(1), specs, {}).findings.find(f => f.id === 'msp_dead_front_on').status, 'miss');
+});
+
+test('a go back is checked as one survey: the original report plus the partial that came back', () => {
+  // Allie and Doug, 2026-10-02: Radicl's go back is a partial report, so on its own it reads as
+  // missing everything the first visit did capture.
+  const base = QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v2' }, meta: { pages: 10, address: '1 Main St' },
+    entries: [{ ref: 'Breaker Box — Main Breaker Rating', value: 'Unknown', instance: '1', page: 4 }],
+    photos: [{ ref: 'Breaker Box — Dead Front', instance: '1', page: 3 }] });
+  const back = QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v2', partial: true }, meta: { pages: 3 },
+    entries: [{ ref: 'Breaker Box — Main Breaker Rating', value: '200', instance: '1', page: 2 }],
+    photos: [{ ref: 'Breaker Box — Dead Front', instance: '1', page: 2 }] });
+  const m = QA.mergeSurveys(base, back);
+  assert.equal(m.meta.pages, 13); assert.equal(m.meta.address, '1 Main St'); assert.equal(m.template.partial, false);
+  assert.equal(m.value(/^Breaker Box — Main Breaker Rating/, '1'), '200', 'the go back corrects the original');
+  assert.deepEqual(m.photos.map(p => p.page).sort((a, b) => a - b), [3, 12], 'its pages run on after the original');
+  assert.equal(base.photos[0].page, 3, 'the original is not changed');
+  const R = QA.evaluate(m, specs, {});
+  assert.equal(R.findings.find(f => f.id === 'msp_dead_front_on').status, 'pass');
+  assert.equal(QA.evaluate(base, specs, {}).findings.find(f => f.id === 'msp_dead_front_on').status, 'miss');
+});
+
+test('a page link names the report it is in once a go back report is added', () => {
+  const P = loadPage();
+  P.__.set('qaRun', { docs: [{ name: 'a.pdf', from: 1, pages: 10 }, { name: 'b.pdf', from: 11, pages: 3 }] });
+  const lbl = P.__.get('qaPageLabel');
+  assert.equal(lbl(4), 'PDF p.4'); assert.equal(lbl(12), 'Go back p.2');
+});
+
+test('only the report link and the summary carry a copy button on the Salesforce fields', () => {
+  const P = loadPage();
+  assert.deepEqual([...P.__.get('QA_SF_COPY')], ['link', 'summary']);
+  assert.equal(P.__.get('QA_SF_FIELDS').length, 6);
+  assert.equal(/qaCopyAll/.test(pageSrc), false);
 });

@@ -1634,6 +1634,13 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   Downloads folder directly was built and removed the same day: Chrome refuses Downloads as a
   system folder. See `docs/QA.md`
 
+- **From the 2026-10-02 call with Allie** (`docs/QA.md`): a go back review takes the original
+  report plus the partial that came back, joined by `OpsQA.mergeSurveys` (still a new review, never
+  an amendment); an open review holds its project as **In progress** (`qa_claims`, 30-minute
+  expiry, cleared by the save) so two coordinators don't review one survey; template gaps are
+  out of the Salesforce summary; Radicl Sep 2026 dead front is one row needing two photos; only
+  the Report Link and Summary fields have Copy, in `QA_SF_FIELDS` order
+
 ## Rep surveys phased out (2026-10-01)
 Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
 **Nothing was changed in code** (Doug's call) — history is kept, and every rep

@@ -272,3 +272,31 @@ test('the endpoint creates the schema once per database, not on every call', asy
   await Store.handle(req, env, db); await Store.handle(req, env, db);
   assert.ok(once > 0); assert.equal(creates, once);
 });
+
+test('a review in progress is held for its coordinator, shown to the others, and let go by a save', async () => {
+  const db = await fresh();
+  const banks = { pw: 'spwr-banks' }, mertz = { pw: 'spwr-mertz' };
+  const mine = await call(db, 'POST', { ...banks, body: { claim: '2321lope' } });
+  assert.equal(mine.status, 200); assert.equal(mine.body.claim.by, 'Kendall Banks'); assert.equal(mine.body.claim.project, '2321LOPE');
+  assert.equal((await call(db, 'POST', { ...banks, body: { claim: '2321LOPE' } })).status, 200, 'renewing your own hold');
+  const theirs = await call(db, 'POST', { ...mertz, body: { claim: '2321LOPE' } });
+  assert.equal(theirs.status, 409); assert.equal(theirs.body.held.by, 'Kendall Banks');
+  assert.deepEqual((await call(db, 'GET', mertz)).body.claims.map(c => [c.project, c.by]), [['2321LOPE', 'Kendall Banks']]);
+  // taking it over is a deliberate choice
+  assert.equal((await call(db, 'POST', { ...mertz, body: { claim: '2321LOPE', force: true } })).body.claim.by, 'Skylar Mertz');
+  // a release only lets go of your own
+  await call(db, 'POST', { ...banks, body: { release: '2321LOPE' } });
+  assert.equal((await call(db, 'GET')).body.claims.length, 1);
+  // saving the review clears the hold, whoever holds it
+  assert.equal((await call(db, 'POST', { body: { review: review() } })).status, 201);
+  assert.deepEqual((await call(db, 'GET')).body.claims, []);
+  assert.equal((await call(db, 'POST', { body: { claim: '<x>' } })).status, 400);
+});
+
+test('a hold nobody renews runs out', async () => {
+  const db = await fresh();
+  await call(db, 'POST', { pw: 'spwr-banks', body: { claim: '2321LOPE' } });
+  await db.query(`UPDATE qa_claims SET at = now() - interval '${Store.CLAIM_MINUTES + 1} minutes'`);
+  assert.deepEqual((await call(db, 'GET')).body.claims, []);
+  assert.equal((await call(db, 'POST', { pw: 'spwr-mertz', body: { claim: '2321LOPE' } })).status, 200);
+});

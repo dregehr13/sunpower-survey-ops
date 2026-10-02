@@ -407,3 +407,28 @@ day. What replaced it:
   the normal `qaOpenReport` path. A line under the drop says how many matched and names the
   ones that did not
 - One file still behaves exactly as before. Held in memory for the visit; nothing uploaded
+
+### 2026-10-02 — from the QA call with Allie
+- **Go back reviews take both reports.** Radicl's go back is a partial report, so on its own
+  every check the first visit already covered reads as missing. Once a report is open, the
+  **Go back** drop takes the partial survey that came back; `OpsQA.mergeSurveys` joins it to
+  the original as one survey. Its pages run on after the original's, and its answers and photos
+  come first, so a value it corrects wins. Same vendor only. It is still a **new review** (Doug:
+  amending the first one would write over it and hide that there were two). `run.docs` holds
+  each report; the photo extractor and the PDF viewer read the right one by page, and a page
+  link reads "Go back p.N". The review's file is the set: names joined with " + ", hash over
+  the reports' hashes. Loose photos a surveyor emails are not taken yet
+- **In progress.** Opening a report for a project holds it for that coordinator (`qa_claims`,
+  `lib/qa-store.cjs`): colleagues see **In progress · name** on its Expected card and a banner
+  if they open it anyway, with **Review it anyway** to take it over. The page renews the hold
+  every 5 minutes; a save clears it server-side, Start over and closing the tab release it,
+  and an abandoned one runs out after `CLAIM_MINUTES` (30). Shared mode only
+- **Template gaps are out of the Salesforce summary.** They are the template's to fix
+  (Templates view), not anything whoever reads the summary can act on. The review still shows
+  them under Not in template, and the printed report still lists the ones that applied
+- **Radicl Sep 2026 dead front is one row**, "Dead front on and off", needing two photos and
+  flagged so the reviewer checks one is on and one off. Dead front off is not applicable there.
+  Two rows over the same photos asked for the same call twice
+- **Salesforce fields:** only the Report Link and the Summary have Copy; the other four are
+  picked from a list or a calendar. Copy all is gone. The order is one list, `QA_SF_FIELDS`,
+  meant to match the Site Survey task's layout

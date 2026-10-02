@@ -23,10 +23,11 @@ const QA_TEMPLATE_NAMES = {
 let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 'all', qaOpen = null;
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
+let qaClaims = [];  // reviews open right now, team-wide: [{ project, by, at }]
 let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged / Off over the defaults, and whether this password may change them
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
-let qaBusy = { pdf: '', zip: '' }, qaErr = { pdf: '', zip: '' };
+let qaBusy = { pdf: '', zip: '', add: '' }, qaErr = { pdf: '', zip: '', add: '' };
 let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
 const qaUrls = [];
 
@@ -85,10 +86,10 @@ function qaPersist() {
   catch (e) { toast('Couldn\'t save. Browser storage is full or blocked'); return false; }
 }
 
-async function qaApi(method, query, body) {
+async function qaApi(method, query, body, keepalive) {
   let r;
   try {
-    r = await fetch(QA_API + (query || ''), { method, headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: body ? JSON.stringify(body) : undefined });
+    r = await fetch(QA_API + (query || ''), { method, keepalive: !!keepalive, headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: body ? JSON.stringify(body) : undefined });
   } catch (e) { return { status: 0, body: null }; }
   let j = null; try { j = await r.json(); } catch (e) {}
   return { status: r.status, body: j };
@@ -106,6 +107,7 @@ function qaSync() {
       // The password says who this is; the Reviewer is that person and is not editable.
       qaUser = r.body.user || ''; if (qaUser) qaReviewer = qaUser;
       qaChecks = (r.body.settings && r.body.settings.checks) || {}; qaManager = !!r.body.manager;
+      qaClaims = Array.isArray(r.body.claims) ? r.body.claims : [];
     } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
     else if (r.status !== 404 && r.status !== 503) {
       // The server is there but failing (or the connection dropped). That is not a wrong password,
@@ -269,6 +271,7 @@ function qaProjectCommit() {
   const run = qaRun; if (!run || run.saved) return;
   qaReeval(true);
   qaProjDone();
+  if (qaProj.trim().toUpperCase() !== (run.claimed || '')) qaClaimNow();
   if (!run.edited) run.summary = qaSummaryText();
   _qaStrip();
   if (run.step === 1) { const f = document.getElementById('qa-project-field'); if (f && qaProj.trim()) f.remove(); _qaSaveBtn(); }
@@ -285,21 +288,27 @@ function qaSetReviewer(v) {
 async function qaPick(kind, file) {
   if (!file) return;
   if (kind === 'pdf') return qaOpenReport(file);
+  if (kind === 'add') return qaAddReport(file);
   return qaOpenPack(file);
 }
 function qaDropState(kind) {
   const busy = qaBusy[kind], err = qaErr[kind];
-  const have = kind === 'pdf' ? qaRun && qaRun.file : qaPack;
+  if (kind === 'add') {
+    const docs = qaRun && qaRun.docs ? qaRun.docs.slice(1) : [];
+    const sub = busy || err || (docs.length ? docs.map(d => d.name + ' · ' + qaPlural(d.pages, 'page')).join('; ') : 'The partial survey a go back sends. Drop it here to check it with the original as one survey');
+    return { cls: busy ? ' busy' : err ? ' err' : docs.length ? ' loaded' : '', title: docs.length && !busy && !err ? 'Go back report added' : 'Go back report (optional)', sub };
+  }
+  const have = kind === 'pdf' ? qaRun && qaRun.docs[0] : qaPack;
   const cls = busy ? ' busy' : err ? ' err' : have ? ' loaded' : '';
   // Before a report is loaded the report drop is the page's one call to action.
   const big = kind === 'pdf' && !qaRun;
   const title = big ? 'Upload a survey report to begin a review' : kind === 'pdf' ? 'Drop the report (PDF)' : 'Full-resolution photos (optional)';
-  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? qaRun.S.meta.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose. You can select all of today\'s reports at once.' : kind === 'pdf' ? 'Drop the PDF here or click to choose' : 'Drop the photo export (zip)'));
+  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? have.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose. You can select all of today\'s reports at once.' : kind === 'pdf' ? 'Drop the PDF here or click to choose' : 'Drop the photo export (zip)'));
   return { cls: cls + (big ? ' big' : ''), title: have && !busy && !err ? (kind === 'pdf' ? 'Report loaded' : 'Photos loaded') : title, sub };
 }
 function qaDropHtml(kind) {
   const d = qaDropState(kind), id = 'qa-file-' + kind;
-  return `<input type="file" id="${id}" accept="${kind === 'pdf' ? (qaRun ? '.pdf,application/pdf' : '.pdf,application/pdf,.zip,application/zip') : '.zip,application/zip'}"${kind === 'pdf' && !qaRun ? ' multiple' : ''} style="display:none;" onchange="${kind === 'pdf' && !qaRun ? 'qaPickMany(this.files)' : `qaPick('${kind}',this.files[0])`};this.value='';">
+  return `<input type="file" id="${id}" accept="${kind !== 'zip' ? (qaRun ? '.pdf,application/pdf' : '.pdf,application/pdf,.zip,application/zip') : '.zip,application/zip'}"${kind === 'pdf' && !qaRun ? ' multiple' : ''} style="display:none;" onchange="${kind === 'pdf' && !qaRun ? 'qaPickMany(this.files)' : `qaPick('${kind}',this.files[0])`};this.value='';">
     <div class="upd-drophere${d.cls}" id="qa-drop-${kind}" tabindex="0" role="button"
       onclick="document.getElementById('${id}').click()"
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('${id}').click();}"
@@ -328,6 +337,7 @@ function _qaIntake() {
     <div class="qa-field"><span class="klabel">Project</span><div id="qa-projcard">${qaProjCard()}</div></div>
     <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
     <div class="qa-field"><span class="klabel">Photos</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>
+    ${qaRun.saved ? '' : `<div class="qa-field"><span class="klabel">Go back</span><div id="qa-dz-add">${qaDropHtml('add')}</div></div>`}
   </div>`;
 }
 
@@ -343,11 +353,12 @@ async function qaOpenReport(file) {
     const spec = deps.specs.find(s => s.id === det.specId) || null;
     const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
     const how = qaAutoProject(S);
-    if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
+    qaRevokeDocs(qaRun);
     qaVendor = det.vendor;                                    // the report says what it is
     try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {}
-    qaRun = { file: { name: file.name, size: file.size, hash }, bytes, det, S, spec, specs: deps.specs, R: null, items: null, allKey: [], expand: {},
-      verdicts: {}, decisions: {}, status: null, override: '', summary: '', edited: false, saved: null, step: 0, visited: { 0: true }, pdfUrl: null };
+    qaRun = { file: { name: file.name, size: file.size, hash }, det, S, spec, specs: deps.specs, R: null, items: null, allKey: [], expand: {},
+      verdicts: {}, decisions: {}, status: null, override: '', summary: '', edited: false, saved: null, step: 0, visited: { 0: true },
+      docs: [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S.meta.pages }] };
     qaFlag = 'all'; qaProjEdit = false;
     qaReeval(true);
     if (how) toast('Project ' + qaProj + ' filled in from ' + how);
@@ -355,12 +366,55 @@ async function qaOpenReport(file) {
     if (qaPack) qaCrossCheckPack();
     qaRender();
     requestAnimationFrame(() => animateSections('page-qa'));
+    qaClaimNow();
     qaLoadPhotos();
   } catch (e) {
     console.error(e);
     qaSetBusy('pdf', '', e.message || 'Couldn\'t read that file');
   }
 }
+
+// A go back: the original report stays loaded and the partial survey that came back is read
+// beside it, then both are checked as one survey (OpsQA.mergeSurveys). It is a new review of
+// the project, so History keeps both reviews, not one written over the other.
+async function qaAddReport(file) {
+  const run = qaRun; if (!run || run.saved) return;
+  qaSetBusy('add', 'Reading the go back report…');
+  try {
+    const deps = await qaDepsLoad();
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const hash = await qaHash(bytes);
+    if (run.docs.some(d => d.hash === hash)) throw new Error('That report is already in this review');
+    const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('add', `Reading page ${n} of ${t}…`) });
+    const det = OpsQA.detectTemplate(pages, deps.specs);
+    if (det.vendor !== run.det.vendor) throw new Error(det.vendor === 'unknown' ? 'That\'s not a Site Capture or Radicl survey report' : 'That report is from the other survey type');
+    const spec = deps.specs.find(x => x.id === det.specId) || null;
+    const S2 = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
+    if (qaRun !== run) return;
+    run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages });
+    run.S = OpsQA.mergeSurveys(run.S, S2);
+    run.det = Object.assign({}, run.det, { partial: run.S.template.partial });
+    // The review's file is the set: names joined, and a hash over the reports' own hashes.
+    run.file = { name: run.docs.map(d => d.name).join(' + '), size: run.docs.reduce((n, d) => n + d.size, 0), hash: await qaHash(new TextEncoder().encode(run.docs.map(d => d.hash).join(''))) };
+    qaReeval(true);
+    qaSetBusy('add', '');
+    if (qaPack) qaCrossCheckPack();
+    qaRender();
+    qaLoadPhotos();
+    toast('Go back report added: ' + qaPlural(S2.photos.length, 'photo'));
+  } catch (e) {
+    console.error(e);
+    qaSetBusy('add', '', e.message || 'Couldn\'t read that file');
+  }
+}
+function qaRevokeDocs(run) { for (const d of (run && run.docs) || []) if (d.url) URL.revokeObjectURL(d.url); }
+// Which report a page of the review is on, and its own page number there.
+function qaDocAt(page) {
+  const docs = (qaRun && qaRun.docs) || [];
+  const d = docs.slice().reverse().find(x => page >= x.from) || docs[0];
+  return d ? { d, page: Math.max(1, page - d.from + 1), i: docs.indexOf(d) } : null;
+}
+const qaPageLabel = p => { const a = qaDocAt(p); return a && a.i > 0 ? `Go back p.${a.page}` : `PDF p.${a ? a.page : p}`; };
 
 // Run the checks again with the project the coordinator typed.
 // Where Salesforce's address is, looked up once per address: {lat,lon}, null (not found) or false (no lookup here).
@@ -571,8 +625,14 @@ async function qaFetchImages(items) {
   if (!need.length) return;
   try {
     const deps = await qaDepsLoad();
-    const pages = [...new Set(need.map(i => i.photo.page))];
-    const imgs = await deps.mod.pdfImages(run.bytes, pages, { pdfjs: deps.pdfjs });
+    // Pages run on across the reports of a go back; each report is read for its own pages.
+    const imgs = {};
+    for (const d of run.docs) {
+      const pages = [...new Set(need.map(i => i.photo.page))].filter(p => qaDocAt(p).d === d);
+      if (!pages.length) continue;
+      const got = await deps.mod.pdfImages(d.bytes, pages.map(p => p - d.from + 1), { pdfjs: deps.pdfjs });
+      for (const p of pages) imgs[p] = got[p - d.from + 1];
+    }
     for (const it of need) {
       const cap = it.photo.cap; if (!cap) continue;
       const near = (imgs[it.photo.page] || [])
@@ -726,9 +786,40 @@ function _qaDup() {
   const dup = qaRun && !qaRun.saved && qaLoad().find(r => r.file && r.file.hash === qaRun.file.hash);
   const local = qaMode === 'local' ? `<div class="qa-banner qa-banner-info"><span>${qaH(qaNote)} Reviews you save stay on this computer.</span></div>`
     : qaMode === 'down' ? `<div class="qa-banner"><span>${qaH(qaNote)} You can keep reviewing; Save tries again.</span></div>` : '';
-  host.innerHTML = local + (dup ? `<div class="qa-banner"><span>This exact report was already reviewed: review ${dup.n} of ${qaH(dup.project)} on ${qaH(qaDate(dup))} by ${qaH(dup.reviewer)}, ${qaH(dup.status)}.</span>
+  const held = qaRun && !qaRun.saved && qaRun.held;
+  const heldHtml = held ? `<div class="qa-banner"><span><b>In progress.</b> ${qaH(held.by)} opened ${qaH(held.project)} for review at ${qaH(qaClock(held.at))}. Check with them before you go on.</span>
+      <button onclick="qaClaimNow(true)">Review it anyway</button></div>` : '';
+  host.innerHTML = local + heldHtml + (dup ? `<div class="qa-banner"><span>This exact report was already reviewed: review ${dup.n} of ${qaH(dup.project)} on ${qaH(qaDate(dup))} by ${qaH(dup.reviewer)}, ${qaH(dup.status)}.</span>
       <button onclick="qaOpenRecord('${qaH(dup.id)}')">Open it</button></div>` : '');
 }
+
+// ── In progress ────────────────────────────────────
+// A report open for a project holds that project for this coordinator, so a colleague sees
+// "In progress" on its card and a warning if they open it too. The server lets the hold go on
+// save; Start over and closing the tab let it go here; a tab that just disappears stops
+// renewing it and it runs out (lib/qa-store.cjs, CLAIM_MINUTES).
+const QA_CLAIM_EVERY = 5 * 60e3;
+const qaClock = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+const qaHeldBy = p => { const P = String(p || '').toUpperCase(); return qaClaims.find(c => c.project === P && c.by !== qaUser) || null; };
+async function qaClaimNow(force) {
+  const run = qaRun, p = qaProj.trim().toUpperCase();
+  if (qaMode !== 'shared' || !run || run.saved || !p) return;
+  if (force) run.forced = true;
+  if (run.claimed && run.claimed !== p) qaRelease(run.claimed);
+  const r = await qaApi('POST', '', { claim: p, force: !!run.forced });
+  if (qaRun !== run) return;
+  qaClaims = qaClaims.filter(c => c.project !== p);
+  if (r.status === 200 && r.body && r.body.claim) { run.claimed = p; run.held = null; qaClaims.push(r.body.claim); }
+  else if (r.status === 409 && r.body && r.body.held) { run.claimed = null; run.held = r.body.held; qaClaims.push(r.body.held); }
+  _qaDup();
+}
+function qaRelease(p, keepalive) {
+  if (qaMode !== 'shared' || !p) return;
+  qaClaims = qaClaims.filter(c => !(c.project === p && c.by === qaUser));
+  qaApi('POST', '', { release: p }, keepalive);
+}
+setInterval(() => { if (qaRun && !qaRun.saved && qaRun.claimed && !document.hidden) qaClaimNow(); }, QA_CLAIM_EVERY);
+window.addEventListener('pagehide', () => { if (qaRun && !qaRun.saved && qaRun.claimed) qaRelease(qaRun.claimed, true); });
 
 // Surveys that were booked for today or earlier and are not complete in Salesforce:
 // the ones most likely to have a report waiting. Rep surveys are phased out, so
@@ -754,11 +845,11 @@ function _qaLikely() {
   // Grouped by how long it has been waiting, so the late ones stand out.
   const groups = [['Today', x => x.ago === 0], ['Yesterday', x => x.ago === 1], ['Earlier', x => x.ago > 1]];
   const card = x => {
-    const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase();
+    const n = reviews(x.r.project), on = sel && sel === x.r.project.toUpperCase(), held = qaHeldBy(x.r.project);
     return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
       <span class="qa-lk-p">${qaH(x.r.project)}</span>
       <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
-      <span class="qa-lk-m">${qaInbox[x.r.project] && qaInbox[x.r.project].pdf ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
+      <span class="qa-lk-m">${held ? `<b class="qa-lk-busy" title="Opened at ${qaH(qaClock(held.at))}">In progress · ${qaH(held.by)}</b> · ` : ''}${qaInbox[x.r.project] && qaInbox[x.r.project].pdf ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
   };
   host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Expected surveys</div>
     <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
@@ -939,7 +1030,7 @@ const qaFindingAt = fi => { const a = qaActs()[fi]; return a && qaFindings().fin
 function qaRowInner(f, fi, open) {
   const sw = f.status === 'miss' ? (f.severity === 'hard' ? 'hard' : 'warn') : f.status === 'gap' ? 'gap' : f.status === 'verify' || f.verify ? 'look' : 'pass';
   const dim = f.status === 'pass' && !f.verify, has = fi >= 0 && qaCatsOf(f).length > 0;
-  const link = f.page ? `<button class="qa-link" onclick="qaViewPdf(${f.page})">PDF p.${f.page}</button>` : f.fl ? `<button class="qa-link" onclick="qaViewPdf(1)">Open report PDF</button>` : '';
+  const link = f.page ? `<button class="qa-link" onclick="qaViewPdf(${f.page})">${qaPageLabel(f.page)}</button>` : f.fl ? `<button class="qa-link" onclick="qaViewPdf(1)">Open report PDF</button>` : '';
   return `<div class="qa-find${dim ? ' pass' : ''}${has ? ' xp' : ''}${open ? ' open' : ''}"${has ? ` onclick="qaRowClick(event,${fi})" role="button" aria-expanded="${!!open}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();qaToggleRow(${fi});}"` : ''}>
     <span class="qa-caret">${has ? '›' : ''}</span><span class="qa-sw ${sw}"></span>
     <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}${link ? ' &nbsp;' + link : ''}</div>
@@ -1148,11 +1239,12 @@ function qaZoomClose() { qaZoomAt = -1; const lb = document.getElementById('qa-l
 // The report itself, in front of you, at the page that raised a question.
 function qaViewPdf(page) {
   const run = qaRun; if (!run) return;
-  if (!run.pdfUrl) run.pdfUrl = URL.createObjectURL(new Blob([run.bytes], { type: 'application/pdf' }));
+  const at = qaDocAt(page || 1), d = at.d;
+  if (!d.url) d.url = URL.createObjectURL(new Blob([d.bytes], { type: 'application/pdf' }));
   let v = document.getElementById('qa-pdf');
   if (!v) { v = document.createElement('div'); v.id = 'qa-pdf'; v.className = 'qa-pdf hidden'; document.body.appendChild(v); }
-  v.innerHTML = `<div class="qa-pdf-bar"><span>${qaH(run.file.name)}${page > 1 ? ' · page ' + page : ''}</span><button onclick="qaPdfClose()">Close</button></div>
-    <iframe title="Survey report" src="${run.pdfUrl}#page=${page || 1}"></iframe>`;
+  v.innerHTML = `<div class="qa-pdf-bar"><span>${qaH(d.name)}${at.page > 1 ? ' · page ' + at.page : ''}</span><button onclick="qaPdfClose()">Close</button></div>
+    <iframe title="Survey report" src="${d.url}#page=${at.page}"></iframe>`;
   v.classList.remove('hidden');
 }
 function qaPdfClose() { const v = document.getElementById('qa-pdf'); if (v) { v.classList.add('hidden'); v.innerHTML = ''; } }
@@ -1233,29 +1325,26 @@ function _qaVerdictStep(host) {
     </div></div>
     <div class="qa-vfoot"><button class="qa-primary" id="qa-save" onclick="qaSave()">${run.saved ? 'Save changes' : 'Save review'}</button><span class="qa-sfhint warn" id="qa-save-why"></span>
       ${run.saved ? `<span class="qa-saved">Saved as ${qaH(run.saved)}</span><button class="qa-link" onclick="qaOpenRecord('${qaH(run.saved)}')">Open in History</button><button class="qa-link" onclick="qaPrintRecord('${qaH(run.saved)}')">Export PDF</button>` : ''}</div>
-    ${run.saved ? `<div class="qa-actions" style="justify-content:flex-end;margin-bottom:0;"><button class="fbtn" onclick="qaCopyAll(this)">Copy all</button></div><div class="qa-sf">
-      ${row('Site Survey QA Review Status', qaH(run.status), 'status')}
-      ${row('Site Survey QA Review Date', qaH(run.savedRec ? run.savedRec.date : qaToday()), 'date')}
-      ${row('Site Survey QA Review Source', 'Coordinator', 'source')}
-      ${row('Site Survey QA Reviewed By', qaH(run.savedRec ? run.savedRec.reviewer : qaReviewer), 'by')}
-      ${row('Site Survey QA Report Link', `<span style="font-size:11px;">${qaH(qaRecordLink(id))}</span><div class="qa-sfhint">${qaH(id)} · ${qaMode === 'shared' ? 'opens this review for anyone on the team' : 'opens in this browser only'}</div>`, 'link', true)}
-      ${row('Site Survey QA Summary', `<span style="white-space:pre-wrap;font-size:11.5px;">${qaH(run.summary)}</span>`, 'summary', true)}
-    </div>` : ''}`;
+    ${run.saved ? `<div class="qa-sf">${QA_SF_FIELDS.map(([k, label]) => row(label, qaFieldHtml(k, id), QA_SF_COPY.includes(k) ? k : '', k === 'link' || k === 'summary')).join('')}</div>` : ''}`;
   _qaSaveBtn();
 }
 
+// The fields as they sit on the Site Survey task in Salesforce, in that order. The four picked
+// from a list or a calendar are typed there; only the report link and the summary are pasted.
+const QA_SF_FIELDS = [['status', 'Site Survey QA Review Status'], ['date', 'Site Survey QA Review Date'], ['source', 'Site Survey QA Review Source'],
+  ['by', 'Site Survey QA Reviewed By'], ['link', 'Site Survey QA Report Link'], ['summary', 'Site Survey QA Summary']];
+const QA_SF_COPY = ['link', 'summary'];
 function qaFieldValue(k) {
   const run = qaRun, id = qaRecordId();
   return ({ status: run.status || '', date: run.savedRec ? run.savedRec.date : qaToday(), by: (run.savedRec ? run.savedRec.reviewer : (qaReviewer || '')).trim(), source: 'Coordinator', summary: run.summary, link: qaRecordLink(id) })[k];
 }
+function qaFieldHtml(k, id) {
+  if (k === 'link') return `<span style="font-size:11px;">${qaH(qaRecordLink(id))}</span><div class="qa-sfhint">${qaH(id)} · ${qaMode === 'shared' ? 'opens this review for anyone on the team' : 'opens in this browser only'}</div>`;
+  if (k === 'summary') return `<span style="white-space:pre-wrap;font-size:11.5px;">${qaH(qaRun.summary)}</span>`;
+  return qaH(qaFieldValue(k));
+}
 function qaCopy(k, btn) {
   const text = qaFieldValue(k);
-  navigator.clipboard.writeText(text).then(() => qaCopied(btn)).catch(_copyFail);
-}
-function qaCopyAll(btn) {
-  if (!qaRun || !qaRun.saved) return;
-  const L = { status: 'Site Survey QA Review Status', date: 'Site Survey QA Review Date', by: 'Site Survey QA Reviewed By', source: 'Site Survey QA Review Source', summary: 'Site Survey QA Summary', link: 'Site Survey QA Report Link' };
-  const text = Object.keys(L).map(k => L[k] + '\t' + String(qaFieldValue(k)).replace(/\n/g, ' / ')).join('\n');
   navigator.clipboard.writeText(text).then(() => qaCopied(btn)).catch(_copyFail);
 }
 function qaCopied(btn) {
@@ -1297,6 +1386,8 @@ async function qaSave() {
     if (!qaPersist()) { qaLoad().shift(); run.saving = false; return; }
   }
   run.saving = false; run.saved = saved.id; run.savedRec = saved;
+  qaClaims = qaClaims.filter(c => c.project !== saved.project);      // the server let the hold go with the save
+  _qaDup();
   if (saved.summary !== run.summary) run.summary = saved.summary;
   run.snap = qaSnap();
   qaProjEdit = false; { const h = document.getElementById('qa-projcard'); if (h) h.innerHTML = qaProjCard(); }   // fixed once saved: no pencil
@@ -1341,8 +1432,9 @@ async function qaApplyChanges(id, changes) {
 function _qaStatusStepRefresh() { if (qaRun.step === 1) _qaStep(); }
 function qaStartOver() {
   if (qaRun && !qaRun.saved && !confirm('Discard this review and start over? Nothing has been saved.')) return;
-  if (qaRun && qaRun.pdfUrl) URL.revokeObjectURL(qaRun.pdfUrl);
-  qaRun = null; qaPack = null; qaProj = ''; qaProjEdit = false; qaFlag = null; qaErr = { pdf: '', zip: '' }; qaBusy = { pdf: '', zip: '' };
+  qaRevokeDocs(qaRun);
+  if (qaRun && !qaRun.saved && qaRun.claimed) qaRelease(qaRun.claimed);
+  qaRun = null; qaPack = null; qaProj = ''; qaProjEdit = false; qaFlag = null; qaErr = { pdf: '', zip: '', add: '' }; qaBusy = { pdf: '', zip: '', add: '' };
   qaUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
   qaRender();
 }
