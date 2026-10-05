@@ -7,10 +7,13 @@
 // instead of guessing at labels, and lets the QA page say which template
 // fields no rule reads.
 //   node scripts/build-qa-spec.cjs "<path to Site_Survey_Form_V.13.json>"
+//   node scripts/build-qa-spec.cjs "<Battery_Only_Survey.json>" --id sitecapture-battery --battery-only   (the standalone battery form)
 const fs = require('fs');
 const path = require('path');
 
 const src = process.argv[2];
+const opt = n => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : null; };
+const specId = opt('--id') || 'sitecapture-v13', batteryOnly = process.argv.includes('--battery-only');
 if (!src) { console.error('usage: build-qa-spec.cjs <form.json>'); process.exit(1); }
 const form = JSON.parse(fs.readFileSync(src, 'utf8'));
 
@@ -53,8 +56,9 @@ for (const s of form.sections) {
 }
 
 const spec = {
-  id: 'sitecapture-v13',
+  id: specId,
   vendor: 'sitecapture',
+  ...(batteryOnly ? { batteryOnly: true } : {}),
   title: form.title,
   formId: form.id,
   generatedFrom: path.basename(src),
@@ -62,5 +66,5 @@ const spec = {
   groups,
   fields,
 };
-fs.writeFileSync(path.join(__dirname, '..', 'qa', 'specs', 'sitecapture-v13.json'), JSON.stringify(spec, null, 1) + '\n');
+fs.writeFileSync(path.join(__dirname, '..', 'qa', 'specs', specId + '.json'), JSON.stringify(spec, null, 1) + '\n');
 console.log(`${fields.length} fields, ${Object.keys(groups).length} groups, ${fields.filter(f => f.type === 'FOTO').length} photo fields`);

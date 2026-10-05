@@ -1757,7 +1757,7 @@ function _qaTemplatesBody(specs) {
   const srcOf = t => { const sp = specs.find(s => s.id === t.id); return !sp ? '' : /^radicl/.test(t.id) ? qaPlural(sp.inferredFrom, 'reference report') : sp.inferred ? 'One report (no form file)' : `${sp.fields.length} fields from the form file`; };
   const note = !spec ? '' : vendor === 'radicl'
     ? (spec.inferredFrom >= 3 ? `Standard built from ${spec.inferredFrom} reference reports.` : `Standard built from ${qaPlural(spec.inferredFrom, 'reference report')}. Completeness checks start at three.`)
-    : spec.inferred ? 'Read from one report; no form file yet.' : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} of them photos.`;
+    : spec.inferred ? 'Read from one report; no form file yet.' : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO' || f.photoRequired).length} of them photos.`;
   const groups = [...new Set(QA_ACCEPTED.map(t => t.group))];
   const accepted = `<div class="sec"><div class="shead"><div><div class="stitle">Accepted templates</div>
       <div class="ssub">${qaPlural(QA_ACCEPTED.length, 'template')} the tool reads. Pick one to see what is checked.</div></div></div>
