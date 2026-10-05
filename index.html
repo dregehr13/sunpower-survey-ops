@@ -1335,10 +1335,13 @@ body{padding-left:180px;}
 .nav{position:fixed;left:0;top:0;bottom:0;width:180px;height:100vh;flex-direction:column;align-items:stretch;padding:18px 0 14px;gap:2px;overflow:visible;background:var(--glass-dark);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:inset -1px 0 0 var(--glass-dark-edge);}
 .brand{padding:0 18px 14px;margin:0 10px 8px 0;border-bottom:1px solid var(--glass-dark-edge);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding-left:18px;}
 .brand span{color:var(--accent);font-weight:700;}
-/* Groups the same tabs into "which page answers 'is everything okay'" —
-   Status / Analysis / Ops — with no change to order or active-state styling. */
+/* Summary toggle on top (This / Last Week — one page, two views), then Ops
+   (work in it) and Analysis (read it). */
 .nav-group-label{padding:10px 18px 4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);}
 .nav-group-div{margin-top:6px;border-top:1px solid var(--glass-dark-edge);}
+.nav-seg{display:flex;margin:0 10px 6px;padding:3px;gap:2px;background:rgba(255,255,255,.07);border-radius:7px;}
+.nav-seg .ntab{flex:1;justify-content:center;margin:0;padding:6px 4px;border-left:none;border-radius:5px;font-size:12px;text-align:center;}
+.nav-seg .ntab.active{padding-left:4px;}
 .ntab{height:auto;padding:8px 13px;margin:0 10px;border-bottom:none;border-left:3px solid transparent;border-radius:0 5px 5px 0;font-size:12.5px;color:#999;}
 .ntab:hover{color:#ddd;}
 /* Translucent white, not #2c2c2c: the nav's effective background is now lighter
@@ -1396,6 +1399,7 @@ body{padding-left:180px;}
   /* The group labels are a vertical-sidebar affordance — in the horizontal
      scrolling bar they'd break up the tab row, so they drop out here. */
   .nav-group-label{display:none;}
+  .nav-seg{display:contents;}
   /* Fades to the glass fill, not to solid #111 — against a translucent nav an
      opaque stop reads as a black smudge on the right edge. */
   .nav::after{content:'';position:absolute;right:0;top:0;bottom:0;width:24px;background:linear-gradient(to right,rgba(17,17,17,0),var(--glass-dark));pointer-events:none;z-index:10;}
@@ -1404,6 +1408,8 @@ body{padding-left:180px;}
   .ntab{height:46px;padding:0 8px;margin:0;border-left:none;border-radius:0;border-bottom:2px solid transparent;font-size:11px;white-space:nowrap;}
   .ntab.active{background:transparent;border-left:none;border-bottom-color:var(--accent);padding-left:8px;}
   .ntab[data-page="map"],.ntab[data-page="resource"],.ntab[data-page="billing"],.ntab[data-page="qa"]{display:none;}
+  .nav-seg .ntab{flex:none;padding:0 8px;margin:0;border-radius:0;font-size:11px;}
+  .nav-seg .ntab.active{padding-left:8px;}
   /* #999 to match .ntab: over glass the nav's effective background lightens to
      roughly #4a4a4a, and #777 does not hold up against it. */
   .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#999;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
@@ -1436,19 +1442,20 @@ body{padding-left:180px;}
 
 <nav class="nav">
   <div class="brand">Site Survey <span>Ops</span></div>
-  <div class="nav-group-label">Status</div>
-  <div class="ntab active" data-page="week" data-week-view="this" role="button" tabindex="0" aria-current="page">This Week</div>
-  <div class="ntab" data-page="week" data-week-view="last" role="button" tabindex="0">Last Week</div>
+  <div class="nav-seg" role="group" aria-label="Summary">
+    <div class="ntab active" data-page="week" data-week-view="this" role="button" tabindex="0" aria-current="page">This Week</div>
+    <div class="ntab" data-page="week" data-week-view="last" role="button" tabindex="0">Last Week</div>
+  </div>
+  <div class="nav-group-label">Ops</div>
   <div class="ntab" data-page="wip" role="button" tabindex="0">WIP <span id="wip-count-badge" style="display:none;"></span></div>
+  <div class="ntab" id="ntab-qa" data-page="qa" role="button" tabindex="0">QA</div>
+  <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
+  <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
   <div class="nav-group-label nav-group-div">Analysis</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
   <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
-  <div class="nav-group-label nav-group-div">Ops</div>
-  <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
-  <div class="ntab" id="ntab-billing" data-page="billing" role="button" tabindex="0">Billing</div>
-  <div class="ntab" id="ntab-qa" data-page="qa" role="button" tabindex="0">QA</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><polyline points="6 9 12 16 18 9"/></svg></div>
   <div class="nav-r">
     <span class="nbadge" id="navBadge"></span>
@@ -1469,10 +1476,10 @@ body{padding-left:180px;}
      overflow-y:hidden. Moving it out also stops an item click bubbling to
      mobileMoreBtn and re-opening the menu that nav() had just closed. -->
 <div class="nmenu-dropdown" id="mobileMoreMenu">
-  <div class="nmenu-item" onclick="nav('map')">Map</div>
+  <div class="nmenu-item" onclick="nav('qa')">QA</div>
   <div class="nmenu-item" onclick="nav('resource')">Resource</div>
   <div class="nmenu-item" onclick="nav('billing')">Billing</div>
-  <div class="nmenu-item" onclick="nav('qa')">QA</div>
+  <div class="nmenu-item" onclick="nav('map')">Map</div>
 </div>
 
 <div class="stale-banner" id="staleBanner"></div>
