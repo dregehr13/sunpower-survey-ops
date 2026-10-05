@@ -446,3 +446,9 @@ template, with the ones not revisited reading "No information". Detection alread
 
 ### Metrics view (2026-10-05)
 A fourth view beside Review / Templates / History, from `OpsQA.reviewMetrics` over the shared log: reviews per week by outcome, first-review pass rate, go-back rate (an account reviewed twice) by vendor and by surveyor, overrides, misses by area and by check. **It lives in QA, not Quality**: the data is the password-gated log, and Quality stays Design's callouts. The Salesforce task keeps only the latest review, so first-review and go-back figures cannot come from the export. Rates sit under `RS_MIN_CELL` accounts show the count instead. Misses count reviews carrying the miss; a template gap is never a miss.
+
+### 2026-10-05 — Site Capture V.14 and the battery-only form
+- **V.14 is V.13 with nine fields added**, one per template gap the review used to report (overhang, roof tilt per plane, main breaker rating, service voltage, meter/main open photo, generator nameplate, existing modules and inverters, existing-system question). `qa/specs/sitecapture-v14.json` is generated from the form file (`node scripts/build-qa-spec.cjs <form.json> --id sitecapture-v14`). New SunPower surveys use it; V.13 stays accepted
+- **Version is read from the report's labels**, not the contents page (the same on both): `pickSiteCaptureSpec` counts the labels only one version has. A report with none of the V.14 labels is V.13, where those items remain template gaps
+- A requirement's `sc` can be a list with `versions`, as Radicl's `rd` is. A check that reads an answer leaves the photo the same field asks for to completeness
+- `sitecapture-battery` (standalone battery-only form) is generated the same way with `--battery-only`; Radicl's flat export (`Section > Field` rows) is read by `parseRadiclFlat`

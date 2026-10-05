@@ -10,11 +10,12 @@
 const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
 const QA_API = '/api/qa-log';
-const QA_SPECS = ['sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2'];
+const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
-const QA_TEMPLATE_SHORT = { 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
+const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
 const QA_TEMPLATE_NAMES = {
+  'sitecapture-v14': 'SunPower · Site Capture form V.14',
   'sitecapture-v13': 'SunPower · Site Capture form V.13',
   'sitecapture-battery': 'SunPower · Site Capture battery-only form',
   'radicl-v2': 'Radicl · current template',
@@ -507,7 +508,7 @@ async function qaOpenPack(file) {
     const deps = await qaDepsLoad();
     // Site Capture's export is one folder per field; Radicl's is one flat folder.
     const kind = names.some(n => n.split('/').length >= 3) ? 'sitecapture' : 'radicl';
-    const pack = kind === 'sitecapture' ? OpsQA.indexPhotoPack(names, deps.specs.find(s => s.id === 'sitecapture-v13')) : OpsQA.indexRadiclPack(names);
+    const pack = kind === 'sitecapture' ? OpsQA.indexPhotoPack(names, (qaRun && qaRun.spec && qaRun.spec.vendor === 'sitecapture' ? qaRun.spec : deps.specs.find(s => s.id === 'sitecapture-v14'))) : OpsQA.indexRadiclPack(names);
     qaPack = { name: file.name, zip, pack, kind, note: names.length + ' photos', check: null };
     qaSetBusy('zip', '');
     if (qaRun) { qaCrossCheckPack(); qaRender(); qaLoadPhotos(); }
@@ -1739,8 +1740,10 @@ function _qaTemplates() {
 // Every template the tool reads, grouped by who wrote it. `how` is what the first pages must show for a
 // report to be taken as that template; `forms` are the kinds of report that carry it.
 const QA_ACCEPTED = [
-  { id: 'sitecapture-v13', group: 'SunPower · Site Capture', name: 'Full survey, form V.13', status: 'Current', forms: ['Site survey report'],
-    how: 'A "Report Created" date and "1 - Customer Information" on the first pages' },
+  { id: 'sitecapture-v14', group: 'SunPower · Site Capture', name: 'Full survey, form V.14', status: 'Current', forms: ['Site survey report'],
+    how: 'The V.13 contents page, with the fields V.14 added (overhang, roof tilt, main breaker rating, service voltage, generator, existing system) on its pages' },
+  { id: 'sitecapture-v13', group: 'SunPower · Site Capture', name: 'Full survey, form V.13', status: 'Earlier', forms: ['Site survey report'],
+    how: 'A "Report Created" date and "1 - Customer Information" on the first pages, none of the V.14 fields' },
   { id: 'sitecapture-battery', group: 'SunPower · Site Capture', name: 'Battery-only survey', status: 'Current', forms: ['Site survey report'],
     how: '"Site Survey Report" cover with Battery Location Options in the contents' },
   { id: 'radicl-v2', group: 'Radicl', name: 'September 2026 template', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
@@ -1751,7 +1754,7 @@ const QA_ACCEPTED = [
 function qaSetTplId(id) { qaTplId = id; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
 function _qaTemplatesBody(specs) {
   const host = document.getElementById('qa-body'); if (!host || qaView !== 'templates') return;
-  const cur = QA_ACCEPTED.find(t => t.id === qaTplId) || QA_ACCEPTED.find(t => t.id === (qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13'));
+  const cur = QA_ACCEPTED.find(t => t.id === qaTplId) || QA_ACCEPTED.find(t => t.id === (qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v14'));
   const id = cur.id, vendor = /^radicl/.test(id) ? 'radicl' : 'sitecapture';
   const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id), fix = {}; ch.forEach(c => { fix[c.id] = c; });
   const srcOf = t => { const sp = specs.find(s => s.id === t.id); return !sp ? '' : /^radicl/.test(t.id) ? qaPlural(sp.inferredFrom, 'reference report') : sp.inferred ? 'One report (no form file)' : `${sp.fields.length} fields from the form file`; };
