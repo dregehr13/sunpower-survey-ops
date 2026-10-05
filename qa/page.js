@@ -10,12 +10,13 @@
 const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
 const QA_API = '/api/qa-log';
-const QA_SPECS = ['sitecapture-v13', 'radicl-v1', 'radicl-v2'];
+const QA_SPECS = ['sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
-const QA_TEMPLATE_SHORT = { 'sitecapture-v13': 'Site Capture V.13', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
+const QA_TEMPLATE_SHORT = { 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
 const QA_TEMPLATE_NAMES = {
   'sitecapture-v13': 'SunPower · Site Capture form V.13',
+  'sitecapture-battery': 'SunPower · Site Capture battery-only form',
   'radicl-v2': 'Radicl · current template',
   'radicl-v1': 'Radicl · August 2026 template',
 };
@@ -28,7 +29,7 @@ let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '', add: '' }, qaErr = { pdf: '', zip: '', add: '' };
-let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaTplVendor = null, qaLikelyAll = false;
+let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaTplId = null, qaLikelyAll = false;
 const qaUrls = [];
 
 // The hash that opened the page names a record (#qa?r=QA-...). Captured at load,
@@ -923,7 +924,7 @@ async function qaOpenInbox(p) {
   // The original opens the review and the go back is added to it as one survey; a go back with
   // no original in the drop opens on its own.
   await qaOpenReport(got.pdf || got.back);
-  if (got.pdf && got.back && qaRun && !qaRun.docs.some(d => d.name === got.back.name)) await qaAddReport(got.back);
+  if (got.pdf && got.back && qaRun && qaRun.docs.length === 1) await qaAddReport(got.back);
   return true;
 }
 
@@ -1690,15 +1691,36 @@ function _qaTemplates() {
   qaDepsLoad().then(d => _qaTemplatesBody(d.specs), () => { host.innerHTML = `<div class="sec"><div class="note" style="padding:12px 0;">Couldn't load the templates.</div></div>`; });
   host.innerHTML = `<div class="sec"><div class="note" style="padding:14px 0;">Loading the templates…</div></div>`;
 }
-function qaSetTplVendor(v) { qaTplVendor = v; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
+// Every template the tool reads, grouped by who wrote it. `how` is what the first pages must show for a
+// report to be taken as that template; `forms` are the kinds of report that carry it.
+const QA_ACCEPTED = [
+  { id: 'sitecapture-v13', group: 'SunPower · Site Capture', name: 'Full survey, form V.13', status: 'Current', forms: ['Site survey report'],
+    how: 'A "Report Created" date and "1 - Customer Information" on the first pages' },
+  { id: 'sitecapture-battery', group: 'SunPower · Site Capture', name: 'Battery-only survey', status: 'Current', forms: ['Site survey report'],
+    how: '"Site Survey Report" cover with Battery Location Options in the contents' },
+  { id: 'radicl-v2', group: 'Radicl', name: 'September 2026 template', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
+    how: 'Radicl cover, "Exterior Electrical" in the contents' },
+  { id: 'radicl-v1', group: 'Radicl', name: 'August 2026 template', status: 'Earlier', forms: ['Site survey report', 'Flat export (Section > Field rows)', 'Partial survey report (a go back)'],
+    how: 'Radicl cover with "Outside Electrical Information", or the flat export headed "Site Survey"' },
+];
+function qaSetTplId(id) { qaTplId = id; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
 function _qaTemplatesBody(specs) {
   const host = document.getElementById('qa-body'); if (!host || qaView !== 'templates') return;
-  const vendor = qaTplVendor || qaVendor, id = vendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13';
+  const cur = QA_ACCEPTED.find(t => t.id === qaTplId) || QA_ACCEPTED.find(t => t.id === (qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v13'));
+  const id = cur.id, vendor = /^radicl/.test(id) ? 'radicl' : 'sitecapture';
   const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id), fix = {}; ch.forEach(c => { fix[c.id] = c; });
-  const vbtn = v => `<button class="tgl-btn${vendor === v ? ' active' : ''}" onclick="qaSetTplVendor('${v}')">${v === 'radicl' ? 'Radicl' : 'SunPower'}</button>`;
+  const srcOf = t => { const sp = specs.find(s => s.id === t.id); return !sp ? '' : /^radicl/.test(t.id) ? qaPlural(sp.inferredFrom, 'reference report') : sp.inferred ? 'One report (no form file)' : `${sp.fields.length} fields from the form file`; };
   const note = !spec ? '' : vendor === 'radicl'
     ? (spec.inferredFrom >= 3 ? `Standard built from ${spec.inferredFrom} reference reports.` : `Standard built from ${qaPlural(spec.inferredFrom, 'reference report')}. Completeness checks start at three.`)
-    : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} of them photos.`;
+    : spec.inferred ? 'Read from one report; no form file yet.' : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO').length} of them photos.`;
+  const groups = [...new Set(QA_ACCEPTED.map(t => t.group))];
+  const accepted = `<div class="sec"><div class="shead"><div><div class="stitle">Accepted templates</div>
+      <div class="ssub">${qaPlural(QA_ACCEPTED.length, 'template')} the tool reads. Pick one to see what is checked.</div></div></div>
+    <div class="xscroll"><table class="tbl qa-tbl" id="qa-accepted"><thead><tr><th>Template</th><th>Reports it reads</th><th>Recognised by</th><th>Standard from</th></tr></thead><tbody>
+      ${groups.map(g => `<tr><td colspan="4" class="qa-areahead">${qaH(g)}</td></tr>` + QA_ACCEPTED.filter(t => t.group === g).map(t => `<tr class="drill-tgt" ${drillAttrs(`qaSetTplId('${t.id}')`)}>
+        <td class="qa-check"><b${t.id === id ? ' style="text-decoration:underline;"' : ''}>${qaH(t.name)}</b><div class="qa-when">${qaH(t.status)}</div></td>
+        <td>${t.forms.map(qaH).join('<br>')}</td><td style="color:var(--muted);">${qaH(t.how)}</td><td style="color:var(--muted);white-space:nowrap;">${qaH(srcOf(t))}</td></tr>`).join('')).join('')}
+    </tbody></table></div></div>`;
   // Everything the review checks for this template, then whether the template can capture it.
   const own = OpsQA.checklist(id, qaChecks);
   const other = OpsQA.allChecks().filter(c => !c.vendors.includes(vendor) && ['off', 'alarm'].indexOf(qaChecks[c.id] || c.def) < 0)
@@ -1711,7 +1733,7 @@ function _qaTemplatesBody(specs) {
   const state = c => c.absent ? `<span class="qa-tag" title="This survey type's report has no field for it">not on this report</span>`
     : c.inTemplate ? '<span class="qa-ok">In the template</span>'
     : `<span class="qa-tag qa-tag-add">Add to template</span><div class="qa-detail">${qaH((fix[c.id] || {}).fix || (fix[c.id] || {}).gap || 'The template has no field for this.')}</div>`;
-  host.innerHTML = `<div class="fbar qa-tplbar"><div class="toggle-group" role="group" aria-label="Template">${vbtn('sitecapture')}${vbtn('radicl')}</div></div>
+  host.innerHTML = accepted + `
     <div class="sec">
       <div class="shead"><div><div class="stitle">${qaH(QA_TEMPLATE_NAMES[id])}</div>
         <div class="ssub">${qaH(note)} ${qaPlural(own.length, 'check')} on every review${add ? `, ${add} to add to the template` : ', all in the template'}. Weights are set in Settings.</div></div>
