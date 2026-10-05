@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const QA = require('../lib/qa.cjs');
 const SC = require('../qa/specs/sitecapture-v13.json');
-const specs = [SC, require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
+const specs = [SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
 
 const tk = QA.tok;
 const blk = (text, x0 = 18, y0 = 700) => ({ text, x0, y0, x1: x0 + 100, y1: y0 - 10 });
@@ -881,6 +881,63 @@ test('a Radicl partial survey as it prints: untouched sections read "No informat
   // the same survey read as a full report (not partial) still asks for every section
   const full = QA.parseRadicl(pages, { specId: 'radicl-v2', partial: false });
   assert.equal(names(QA.evaluate(full, specs, {}).findings).includes('Roof Photos'), true);
+});
+
+test('an unrecognised report says what page 1 starts with; a Site Capture date in another order is still read', () => {
+  const sc = d => [page(1, [blk('Report Created: ' + d, 400, 800), blk('1 - Customer Information', 40, 700)])];
+  assert.equal(QA.detectTemplate(sc('05/10/2026'), specs).vendor, 'sitecapture');
+  assert.equal(QA.detectTemplate(sc('2026-10-05'), specs).vendor, 'sitecapture');
+  const u = QA.detectTemplate([page(1, [blk('Some Other Report', 40, 700)])], specs);
+  assert.equal(u.vendor, 'unknown'); assert.match(u.reason, /page 1 starts: Some Other Report/);
+});
+
+test('Radicl flat export ("Section > Field" rows, "> Field" captions) is read into the same refs as the branded report', () => {
+  const rows = [blk('Site Survey\nEdmond Gomez\n2830 Fashion Ave Long Beach, CA 90810', 24, 820),
+    blk('Outside Electrical Information > Grounding Type', 32, 623), blk('Unknown', 538, 623),
+    blk('Outside Electrical Information > Outside Breaker Box 1: Max Bus Rating', 32, 590), blk('200 amp max', 516, 590),
+    blk('Attic Info > Attic Access Location\nInside home in bedroom', 32, 540)];
+  const caps = page(2, [blk('Outside Electrical Information', 16, 827), blk('> Outside Breaker Box 1: Dead Front On', 24, 810)]);
+  const pages = [page(1, rows), caps];
+  assert.equal(QA.isRadiclFlat(pages), true);
+  const d = QA.detectTemplate(pages, specs);
+  assert.equal(d.vendor, 'radicl'); assert.equal(d.specId, 'radicl-v1'); assert.equal(d.partial, false);
+  const S = QA.parseRadicl(pages, { specId: d.specId });
+  assert.equal(S.meta.address, '2830 Fashion Ave Long Beach, CA 90810');
+  assert.equal(S.value('Grounding Type'), 'Unknown');
+  assert.equal(S.value(/^Breaker Box — Max Bus Rating/, 'out1'), '200 amp max');
+  assert.equal(S.value('Attic Access Location'), 'Inside home in bedroom', 'a long label carries its answer on the next line');
+  assert.equal(S.photoCount('Breaker Box — Dead Front On', 'out1'), 1);
+  assert.equal(S.photos[0].section, 'Outside Electrical Information');
+});
+
+test('a go back numbers its panel differently from the original; with one panel each they are the same panel', () => {
+  const base = QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v1' }, meta: { pages: 5 },
+    entries: [{ ref: 'Breaker Box — Main Breaker Rating', value: 'Not installed', instance: 'out1', page: 1 }], photos: [] });
+  const back = QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v2', partial: true }, meta: { pages: 3 },
+    entries: [{ ref: 'Breaker Box — Main Breaker Rating', value: '100A', instance: '1', page: 2 }],
+    photos: [{ ref: 'Breaker Box — Dead Front', instance: '1', page: 2 }] });
+  const m = QA.mergeSurveys(base, back);
+  assert.equal(m.value(/^Breaker Box — Main Breaker Rating/, 'out1'), '100A');
+  assert.equal(m.photoCount('Breaker Box — Dead Front', 'out1'), 1);
+  assert.equal(m.value(/^Breaker Box — Main Breaker Rating/, '1'), null);
+});
+
+test('Site Capture battery-only form: recognised from its contents, checked on its own short list, subpanels per number', () => {
+  const cover = page(1, [blk('Site Survey Report', 261, 723), blk('Customer Information\nHome Context Photos\nBattery Location Options\nElectrical Photos', 18, 575)]);
+  const d = QA.detectTemplate([cover], specs);
+  assert.equal(d.vendor, 'sitecapture'); assert.equal(d.specId, 'sitecapture-battery');
+  const ph = (label, n = 1, pg = 3) => Array.from({ length: n }, () => ({ ref: null, label, page: pg }));
+  const S = QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-battery' }, meta: { address: '1 Main St' },
+    photos: [...ph('Installation Location Photos - Garage'), ...ph('Garage Wall Measurements'), ...ph('Site Map'), ...ph('Meter Photos'),
+      ...ph('MSP Photos - Deadfront On'), ...ph('MSP Photos - Deadfront Off'), ...ph('MSP Rating Labels'),
+      ...ph('Subpanel Photos Deadfront On - 1'), ...ph('Subpanel Photos Deadfront Off - 1')] });
+  const R = QA.evaluate(S, specs, {});
+  assert.equal(R.findings.some(f => f.area === 'Roof' && f.status === 'miss'), false, 'no roof checks on a battery-only form');
+  const miss = R.findings.filter(f => f.status === 'miss').map(f => f.title);
+  assert.ok(miss.includes('Subpanel 1: panel label'));
+  assert.ok(miss.includes('Outside photos'));
+  assert.equal(miss.includes('Dead front on'), false);
+  assert.ok(QA.checklist('sitecapture-battery').some(c => c.id === 'bf_msp_on'));
 });
 
 test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
