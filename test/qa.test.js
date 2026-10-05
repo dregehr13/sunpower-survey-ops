@@ -939,3 +939,27 @@ test('Site Capture battery-only form: recognised from its contents, checked on i
   assert.equal(miss.includes('Dead front on'), false);
   assert.ok(QA.checklist('sitecapture-battery').some(c => c.id === 'bf_msp_on'));
 });
+
+test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
+  const rv = (project, n, status, extra) => ({ project, n, status, vendor: 'radicl', surveyor: 'Sam', created: '2026-10-05T12:00:00Z', findings: [], ...extra });
+  const miss = (id, area, severity) => ({ id, area, severity, status: 'miss', title: id });
+  const log = [
+    rv('A1', 1, 'Failed - Gaps Found', { findings: [miss('roof_pitch', 'Roof', 'hard'), miss('roof_overhang', 'Roof', 'hard'), { id: 'x', area: 'Site', status: 'gap' }] }),
+    rv('A1', 2, 'Passed'),
+    rv('B2', 1, 'Passed'),
+    rv('C3', 1, 'Passed with Override', { vendor: 'sitecapture', surveyor: 'Pat' }),
+  ];
+  const m = QA.reviewMetrics(log, { minCell: 2 });
+  assert.equal(m.reviews, 4); assert.equal(m.accounts, 3); assert.equal(m.firstReviews, 3);
+  assert.equal(m.firstPassRate, 1 / 3);
+  assert.equal(m.goBackRate, 1 / 3);
+  assert.equal(m.overrideRate, 1 / 4);
+  const radicl = m.byVendor.find(c => c.key === 'radicl');
+  assert.equal(radicl.accounts, 2); assert.equal(radicl.goBacks, 1); assert.equal(radicl.rated, true);
+  assert.equal(m.byVendor.find(c => c.key === 'sitecapture').rated, false);
+  assert.equal(m.missesByArea.length, 1);
+  assert.equal(m.missesByArea[0].reviews, 1);   // two Roof misses, one review
+  assert.equal(m.missesByCheck.length, 2);
+  assert.equal(m.weeks.length, 1); assert.equal(m.weeks[0].week, '2026-10-05'); assert.equal(m.weeks[0].total, 4);
+  assert.equal(QA.reviewMetrics([]).firstPassRate, null);
+});

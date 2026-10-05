@@ -143,6 +143,7 @@ function qaAfterSync() {
   if (qaMode === 'shared' && qaUser) _qaBar();        // the Reviewer is now known and locked
   _qaConn(); _qaDup(); if (qaView === 'review' && !qaRun) _qaLikely();
   if (qaView === 'log') _qaLog();
+  else if (qaView === 'metrics') _qaMetrics();
   else if (qaView === 'templates') _qaTemplates();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && currentPage === 'qa' && (qaMode === 'shared' || qaMode === 'down')) qaSync().then(ok => ok && qaAfterSync()); });
@@ -746,6 +747,7 @@ function qaRender() {
   _qaBar();
   if (qaView === 'review') _qaReview();
   else if (qaView === 'log') _qaLog();
+  else if (qaView === 'metrics') _qaMetrics();
   else _qaTemplates();
 }
 function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => animateSections('page-qa')); }
@@ -759,7 +761,7 @@ function _qaBar() {
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
   host.innerHTML = `<div class="fbar">
     <span class="qa-title">Site Survey QA</span>
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}</div>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
@@ -1446,6 +1448,49 @@ function qaStartOver() {
   qaRender();
 }
 function qaOpenRecord(id) { qaView = 'log'; qaLens = 'reviews'; qaOpen = id; qaQ = ''; qaStatusF = 'all'; qaRender(); requestAnimationFrame(() => { const el = document.getElementById('qa-row-' + id); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }); }
+
+// ── Metrics view ───────────────────────────────────
+// Read from the shared log by OpsQA.reviewMetrics. A go back is an account reviewed
+// twice; the Salesforce task keeps only the latest review, so none of this can come
+// from the export.
+function _qaMetrics() {
+  const host = document.getElementById('qa-body'); if (!host) return;
+  const M = OpsQA.reviewMetrics(qaLoad(), { weeks: 12, minCell: RS_MIN_CELL });
+  if (!M.reviews) {
+    host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">No reviews yet</div><div class="ssub">Metrics appear once reviews are saved.</div></div></div></div>`;
+    return;
+  }
+  const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
+  const cell = (label, val, sub, tip) => `<div class="srail-cell"><div class="klabel">${label}${tip ? kinfo(tip) : ''}</div><div class="srail-val">${val}${sub ? `<span class="srail-sub">${sub}</span>` : ''}</div></div>`;
+  const maxW = Math.max(1, ...M.weeks.map(w => w.total));
+  const wk = M.weeks.map(w => {
+    const seg = (n, c) => n ? `<span style="flex:${n};background:${c};"></span>` : '';
+    return `<div class="qa-mwk" title="${qaH(w.week)}: ${w.total} reviews"><div class="qa-mwk-n">${w.total}</div>
+      <div class="qa-mwk-bar" style="height:${Math.max(4, Math.round(w.total / maxW * 90))}px;">${seg(w.failed, 'var(--red)')}${seg(w.override, 'var(--amber)')}${seg(w.passed, 'var(--green)')}</div>
+      <div class="qa-mwk-d">${qaH(w.week.slice(5).replace('-', '/'))}</div></div>`;
+  }).join('');
+  const rateTbl = (rows, head) => rows.length ? `<div class="xscroll"><table class="tbl"><thead><tr><th>${head}</th><th class="r">Accounts</th><th class="r">Passed first</th><th class="r">Go back</th></tr></thead><tbody>
+    ${rows.map(c => `<tr><td><b>${qaH(c.key)}</b></td><td class="r">${c.accounts}</td>
+      <td class="r">${pct(c.accounts ? c.firstPass / c.accounts : null)}</td>
+      <td class="r">${c.rated ? pct(c.rate) : `<span class="pna-n">${c.goBacks} of ${c.accounts}</span>`}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="note" style="padding:8px 0;">Nothing yet.</div>`;
+  const missTbl = (rows, head, max) => rows.length ? `<div class="xscroll"><table class="tbl"><thead><tr><th>${head}</th><th class="r">Reviews</th><th class="r">Share</th></tr></thead><tbody>
+    ${rows.slice(0, max).map(c => `<tr><td>${qaH(c.label)}</td><td class="r">${c.reviews}</td><td class="r">${pct(c.share)}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="note" style="padding:8px 0;">No misses recorded.</div>`;
+  host.innerHTML = `
+    <div class="srail">
+      ${cell('Reviews', M.reviews, qaPlural(M.accounts, 'account'), 'Every saved review.')}
+      ${cell('Passed first time', pct(M.firstPassRate), qaPlural(M.firstReviews, 'first review'), 'Of first reviews, the share that passed with nothing to fix.')}
+      ${cell('Go back', pct(M.goBackRate), 'of accounts', 'Accounts reviewed more than once. Salesforce keeps only the latest review, so this is counted here.')}
+      ${cell('Overrides', pct(M.overrideRate), '', 'Reviews passed with an override.')}
+    </div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Reviews by week</div><div class="ssub">Last ${M.weeks.length} weeks · passed, override, failed</div></div></div>
+      <div class="qa-mwks">${wk}</div></div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by vendor</div><div class="ssub">Rates need ${M.minCell}+ accounts; smaller groups show the count</div></div></div>${rateTbl(M.byVendor, 'Vendor')}</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by surveyor</div></div></div>${rateTbl(M.bySurveyor, 'Surveyor')}</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Misses by area</div><div class="ssub">Reviews with at least one miss in the area. Template gaps are not counted.</div></div></div>${missTbl(M.missesByArea, 'Area', 12)}</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Most-missed checks</div></div></div>${missTbl(M.missesByCheck, 'Check', 10)}</div>`;
+}
 
 // ── Log ────────────────────────────────────────────
 function qaWeekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
