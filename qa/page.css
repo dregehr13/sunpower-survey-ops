@@ -339,3 +339,10 @@ textarea.qa-in.short{min-height:54px;}
 .qa-mag-btn{position:absolute;right:10px;bottom:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;opacity:.85;}
 .qa-mag-btn:hover{opacity:1;background:rgba(0,0,0,.8);}
 .qa-lb-stage.mag .qa-mag-btn{background:#fff;color:#111;}
+
+/* Metrics view: reviews per week */
+.qa-mwks{display:flex;align-items:flex-end;gap:6px;padding:6px 0 2px;overflow-x:auto;}
+.qa-mwk{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1 0 34px;}
+.qa-mwk-bar{display:flex;flex-direction:column;width:100%;border-radius:3px;overflow:hidden;}
+.qa-mwk-n{font-size:11px;color:var(--muted);}
+.qa-mwk-d{font-size:10px;color:var(--faint);}

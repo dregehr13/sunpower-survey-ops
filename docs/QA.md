@@ -443,3 +443,6 @@ template, with the ones not revisited reading "No information". Detection alread
   go back beside its original (`qaInbox[p].back` / `.pdf`) instead of the newer file replacing the
   other, and opening the card reads the original then adds the go back as one review
 - Adding the full report to a review that started from a partial is refused with a message
+
+### Metrics view (2026-10-05)
+A fourth view beside Review / Templates / History, from `OpsQA.reviewMetrics` over the shared log: reviews per week by outcome, first-review pass rate, go-back rate (an account reviewed twice) by vendor and by surveyor, overrides, misses by area and by check. **It lives in QA, not Quality**: the data is the password-gated log, and Quality stays Design's callouts. The Salesforce task keeps only the latest review, so first-review and go-back figures cannot come from the export. Rates sit under `RS_MIN_CELL` accounts show the count instead. Misses count reviews carrying the miss; a template gap is never a miss.
