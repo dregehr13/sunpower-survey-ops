@@ -984,3 +984,11 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
   assert.equal(m.weeks.length, 1); assert.equal(m.weeks[0].week, '2026-10-05'); assert.equal(m.weeks[0].total, 4);
   assert.equal(QA.reviewMetrics([]).firstPassRate, null);
 });
+
+test('a sales rep photo-only report is named, not rejected as unrecognised', () => {
+  const rep = [page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('42 photos, 20 sections', 40, 640)]),
+    page(2, [blk('Photo Overview', 40, 700)])];
+  const d = QA.detectTemplate(rep, specs);
+  assert.equal(d.vendor, 'unknown'); assert.equal(d.rep, true); assert.match(d.reason, /sales rep/);
+  assert.equal(QA.detectTemplate([page(1, [blk('hello')])], specs).rep, undefined);
+});

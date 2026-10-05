@@ -344,6 +344,8 @@ function _qaIntake() {
   </div>`;
 }
 
+const QA_REP_MSG = 'That\'s a sales rep survey: photos only, with no form answers to check, so QA does not review it. Only Site Capture and Radicl surveys are reviewed. Review the rep\'s photos in Salesforce and close the QA task by hand';
+
 async function qaOpenReport(file) {
   qaSetBusy('pdf', 'Reading the report…');
   try {
@@ -352,6 +354,7 @@ async function qaOpenReport(file) {
     const hash = await qaHash(bytes);
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
+    if (det.rep) throw new Error(QA_REP_MSG);
     if (det.vendor === 'unknown') throw new Error(/^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture or Radicl survey report. ' + det.reason.replace(/^No known vendor signature on the first pages\s*/, ''));
     const spec = deps.specs.find(s => s.id === det.specId) || null;
     const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
@@ -390,6 +393,7 @@ async function qaAddReport(file) {
     if (run.docs.some(d => d.hash === hash)) throw new Error('That report is already in this review');
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('add', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
+    if (det.rep) throw new Error(QA_REP_MSG);
     if (det.vendor !== run.det.vendor) throw new Error(det.vendor === 'unknown' ? 'That\'s not a Site Capture or Radicl survey report' : 'That report is from the other survey type');
     if (run.det.partial && !det.partial) throw new Error('That is the full report. Start over with it, then add the go back here');
     const spec = deps.specs.find(x => x.id === det.specId) || null;

@@ -452,3 +452,9 @@ A fourth view beside Review / Templates / History, from `OpsQA.reviewMetrics` ov
 - **Version is read from the report's labels**, not the contents page (the same on both): `pickSiteCaptureSpec` counts the labels only one version has. A report with none of the V.14 labels is V.13, where those items remain template gaps
 - A requirement's `sc` can be a list with `versions`, as Radicl's `rd` is. A check that reads an answer leaves the photo the same field asks for to completeness
 - `sitecapture-battery` (standalone battery-only form) is generated the same way with `--battery-only`; Radicl's flat export (`Section > Field` rows) is read by `parseRadiclFlat`
+
+## Sales rep reports (2026-10-05)
+A rep's survey export (name, address, "N photos, M sections", a photo overview, no answers) has no
+template and nothing to check, so `detectTemplate` flags it `rep: true` and the page says so instead
+of "not a Site Capture or Radicl report". It is not reviewed; no reduced check set was built because
+reps are phased out as of 2026-10-01. A go back added to a review is refused the same way.
