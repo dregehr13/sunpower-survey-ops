@@ -346,3 +346,9 @@ textarea.qa-in.short{min-height:54px;}
 .qa-mwk-bar{display:flex;flex-direction:column;width:100%;border-radius:3px;overflow:hidden;}
 .qa-mwk-n{font-size:11px;color:var(--muted);}
 .qa-mwk-d{font-size:10px;color:var(--faint);}
+
+/* Files loaded in a review: one row each, role first. */
+.qa-files{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.qa-file{display:flex;align-items:center;gap:8px;font-size:12px;min-width:0;}
+.qa-file-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+.qa-file-m{margin-left:auto;color:var(--faint);font-size:11px;white-space:nowrap;}

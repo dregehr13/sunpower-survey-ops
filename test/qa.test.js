@@ -482,10 +482,19 @@ test('a Radicl image folder is matched to report photos, cut captions included',
   assert.equal(QA.crossCheckRadiclPack(S, pack).matched, 3);
 });
 
-test('the intake no longer asks which survey type it is, and takes photos for either', () => {
+test('the intake has one drop for every file: reports, a go back, a rep report and the photo zip', () => {
   const intake = pageSrc.match(/function _qaIntake\(\) \{[\s\S]*?\n\}\n/)[0];
   assert.ok(!/Survey type|qaSetVendor|Drive/.test(intake));
-  assert.ok(/Photos/.test(intake) && /qaDropHtml\('zip'\)/.test(intake));
+  assert.equal((intake.match(/qaDropHtml\(\)/g) || []).length, 2, 'the same drop before and during a review');
+  const drop = pageSrc.match(/function qaDropHtml\(\) \{[\s\S]*?\n\}\n/)[0];
+  assert.ok(/accept="\.pdf,application\/pdf,\.zip,application\/zip" multiple/.test(drop) && /qaPickMany\(this\.files\)/.test(drop));
+  assert.ok(!/qaPick\(/.test(pageSrc.replace(/qaPickMany\(/g, '')), 'no per-kind drop is left');
+});
+
+test('a dropped file is sorted by what it is, and a rep report is read rather than refused', () => {
+  assert.ok(/kind: det\.rep \? 'rep' : OpsQA\.isPartialReport\(pages\) \? 'back' : 'pdf'/.test(pageSrc));
+  assert.ok(/det\.rep \? OpsQA\.parseRep\(pages\)/.test(pageSrc));
+  assert.ok(!/QA does not review it|QA_REP_MSG/.test(pageSrc));
 });
 
 test('Start over lives on the review itself, not in the top bar, and a saved review can be changed', () => {
@@ -985,10 +994,44 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
   assert.equal(QA.reviewMetrics([]).firstPassRate, null);
 });
 
-test('a sales rep photo-only report is named, not rejected as unrecognised', () => {
-  const rep = [page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('42 photos, 20 sections', 40, 640)]),
-    page(2, [blk('Photo Overview', 40, 700)])];
-  const d = QA.detectTemplate(rep, specs);
-  assert.equal(d.vendor, 'unknown'); assert.equal(d.rep, true); assert.match(d.reason, /sales rep/);
+const repPages = () => [
+  page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('8 photos, 5 sections', 40, 640)]),
+  page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650), blk('UtilityBill (1)', 40, 450), blk('Attach Roof Condition Photos (1)', 40, 250)]),
+  page(3, [blk('Attach Panel Cover On Photos (2)', 40, 700)])];
+
+test('a sales rep photo-only report is accepted as its own kind of survey', () => {
+  const d = QA.detectTemplate(repPages(), specs);
+  assert.equal(d.vendor, 'rep'); assert.equal(d.rep, true); assert.equal(d.specId, 'rep-v1');
   assert.equal(QA.detectTemplate([page(1, [blk('hello')])], specs).rep, undefined);
+});
+
+test('parseRep reads the cover and one photo per photo in each section, in order', () => {
+  const S = QA.parseRep(repPages());
+  assert.equal(S.meta.name, 'Jane Doe'); assert.equal(S.meta.address, '1 Main St Town NC 27526');
+  assert.equal(S.meta.photosDeclared, 8); assert.equal(S.photos.length, 8);
+  assert.deepEqual(S.meta.sections.map(x => x.title), ['Exterior', 'Utility Bill', 'Roof Condition', 'Panel Cover On']);
+  assert.deepEqual(S.photos.map(p => p.seq), [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(S.photos[7].page, 3);
+});
+
+test('a rep report lists every photo under its section for the photo review', () => {
+  const S = QA.parseRep(repPages());
+  const k = QA.keyPhotos(S, null, { all: true });
+  assert.equal(k.length, 8); assert.deepEqual(k.filter(x => x.label === 'Exterior').map(x => x.n), [1, 2, 3, 4]);
+  assert.ok(k.every(x => x.photo.sec != null && x.photo.k != null), 'each photo knows its section and place in it');
+});
+
+test('a rep report is reviewed on photo coverage: missing sections are prompts, a wrong address is a miss', () => {
+  const S = QA.parseRep(repPages());
+  const R = QA.evaluate(S, specs, { sfAddress: '1 Main St, Town, NC 27526' });
+  const f = id => R.findings.find(x => x.id === id);
+  assert.equal(f('rep:Exterior').status, 'pass'); assert.equal(f('rep:Panel Cover Off').status, 'miss');
+  assert.equal(f('rep:Panel Cover Off').severity, 'warn'); assert.equal(f('address_match').status, 'pass');
+  assert.equal(R.suggestedStatus, 'Needs review');
+  const bad = QA.evaluate(S, specs, { sfAddress: '9 Other Rd, Town, NC 27526' });
+  assert.equal(bad.suggestedStatus, 'Failed - Gaps Found');
+  const bo = QA.evaluate(S, specs, { sfSurveyType: 'Battery Only Survey' });
+  assert.ok(!bo.findings.some(x => x.id === 'rep:Attic'), 'a battery-only job has no roof sections');
+  const odd = QA.parseRep([repPages()[0], page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650)])]);
+  assert.ok(QA.evaluate(odd, specs, {}).findings.some(x => x.id === 'rep:count'), 'the declared total disagrees with the sections');
 });
