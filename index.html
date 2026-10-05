@@ -1454,7 +1454,7 @@ body{padding-left:180px;}
     <span class="nbadge" id="navBadge"></span>
     <span class="nav-ts" id="nav-ts"></span>
     <button class="nload" onclick="openUpdateModal()" title="Update data"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:2px;"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Update data</button>
-    <input type="file" id="fileInput" accept=".xls,.html,.htm" style="display:none;">
+    <input type="file" id="fileInput" accept=".xls,.xlsx,.html,.htm" style="display:none;">
     <button class="nsettings" id="settings-btn" onclick="nav('settings')" title="Settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -1527,7 +1527,7 @@ body{padding-left:180px;}
         <div class="upd-desc">Drop the downloaded file below, or click to browse.</div>
         <div class="upd-action">
           <div class="upd-drophere" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            <strong>Drop .xls file here</strong>
+            <strong>Drop .xls or .xlsx file here</strong>
             or click to browse
           </div>
         </div>
@@ -10071,18 +10071,47 @@ function exportCSV(){
 }
 
 // ═══ IMPORT ═══════════════════════════════════════════════
-const DROPZONE_DEFAULT='<strong>Drop .xls file here</strong>or click to browse';
+const DROPZONE_DEFAULT='<strong>Drop .xls or .xlsx file here</strong>or click to browse';
 function setDropZone(state,html){
   const dz=document.getElementById('dropZone'); if(!dz) return;
   dz.classList.remove('loaded','err','drag-over');
   if(state) dz.classList.add(state);
   dz.innerHTML=html||DROPZONE_DEFAULT;
 }
+// A real .xlsx (ZIP, "PK") is converted to the same HTML table the classic
+// Details Only .xls export is, so parseImport has one path. SheetJS is only
+// fetched when an .xlsx is actually dropped.
+let _xlsxLib=null;
+function loadXlsxLib(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(_xlsxLib) return _xlsxLib;
+  _xlsxLib=new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload=()=>res(window.XLSX); sc.onerror=()=>{ _xlsxLib=null; rej(new Error('Could not load the Excel reader')); };
+    document.head.appendChild(sc);
+  });
+  return _xlsxLib;
+}
 function loadFile(file){
   const reader=new FileReader();
   reader.onerror=()=>setDropZone('err','<strong>Couldn’t read that file</strong>try exporting again, then drop it here');
-  reader.onload=ev=>{
-    const parsed=parseImport(ev.target.result);
+  reader.onload=async ev=>{
+    let content=ev.target.result;
+    if(content instanceof ArrayBuffer){
+      const u8=new Uint8Array(content);
+      if(u8[0]===0x50&&u8[1]===0x4B){ // .xlsx
+        try{
+          const X=await loadXlsxLib();
+          const wb=X.read(u8,{type:'array'});
+          content=X.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);
+        }catch(err){
+          setDropZone('err','<strong>Couldn’t read '+esc(file.name)+'</strong>'+esc(err.message));
+          toast('Could not read the Excel file: '+err.message); return;
+        }
+      } else content=new TextDecoder('iso-8859-1').decode(u8);
+    }
+    const parsed=parseImport(content);
     if(!parsed||!parsed.length){
       setDropZone('err','<strong>Couldn’t parse '+esc(file.name)+'</strong>check the column headers match the Salesforce report');
       document.getElementById('upd-save').style.display='none';
@@ -10108,7 +10137,7 @@ function loadFile(file){
     savePanel.style.display=''; savePanel.classList.remove('visible'); void savePanel.offsetWidth; savePanel.classList.add('visible');
     lastParsedRows=parsed;
   };
-  reader.readAsText(file,'ISO-8859-1');
+  reader.readAsArrayBuffer(file);
 }
 document.getElementById('fileInput').addEventListener('change',e=>{
   const file=e.target.files[0]; if(!file) return;
@@ -10121,12 +10150,19 @@ function parseImport(content){
   const doc=parser.parseFromString(content,'text/html');
   const table=doc.querySelector('table'); if(!table) return null;
   const allRows=Array.from(table.querySelectorAll('tr')); if(!allRows.length) return null;
-  const headers=Array.from(allRows[0].querySelectorAll('th,td')).map(c=>c.textContent.trim());
+  // The formatted report (.xlsx) carries a title/filter preamble above the
+  // header, so the header is the first row that names a known column — the
+  // same rule lib/parse-sf-core.cjs applies.
+  const sfCols=new Set(FIELDS.filter(f=>!f.computed&&f.sfCol).map(f=>f.sfCol));
+  const rowTexts=r=>Array.from(r.querySelectorAll('th,td')).map(c=>c.textContent.trim());
+  let hi=allRows.findIndex(r=>rowTexts(r).filter(t=>sfCols.has(t)).length>=3);
+  if(hi<0) return null;
+  const headers=rowTexts(allRows[hi]);
   const colIdx={};
   FIELDS.filter(f=>!f.computed&&f.sfCol).forEach(f=>{ const i=headers.indexOf(f.sfCol); if(i>=0) colIdx[f.key]=i; });
   if(!Object.keys(colIdx).length) return null;
   const cleanDate=s=>{ if(!s||s==='NaN') return ''; try{ const d=new Date(s); return isNaN(d)?'':d.toISOString().slice(0,10); }catch(e){ return ''; } };
-  const parsed=allRows.slice(1).map((row,i)=>{
+  const parsed=allRows.slice(hi+1).map((row,i)=>{
     const cells=Array.from(row.querySelectorAll('td')).map(c=>c.textContent.trim());
     const r={id:i,ct_s2r:null,ct_r2s:null,ct_total:null};
     FIELDS.filter(f=>!f.computed).forEach(f=>{
@@ -10137,7 +10173,7 @@ function parseImport(content){
     });
     // Keep rows with blank Sales Region (parse-sf.js does too) — dropping them
     // silently undercounts completions vs Chelsea's report
-    if(!r.project&&!r.contact) return null; // fully empty row
+    if(!r.region&&!r.project&&!r.address&&!r.task_id) return null; // empty row or report footer ("Sum / Total"), same test as lib/parse-sf-core.cjs
     if(r.surveyor_type==='Radicl'&&!r.surveyor_name) r.surveyor_name=null;
     recalc(r); return r;
   }).filter(Boolean);
