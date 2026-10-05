@@ -388,6 +388,7 @@ async function qaAddReport(file) {
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('add', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
     if (det.vendor !== run.det.vendor) throw new Error(det.vendor === 'unknown' ? 'That\'s not a Site Capture or Radicl survey report' : 'That report is from the other survey type');
+    if (run.det.partial && !det.partial) throw new Error('That is the full report. Start over with it, then add the go back here');
     const spec = deps.specs.find(x => x.id === det.specId) || null;
     const S2 = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
     if (qaRun !== run) return;
@@ -849,7 +850,7 @@ function _qaLikely() {
     return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
       <span class="qa-lk-p">${qaH(x.r.project)}</span>
       <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
-      <span class="qa-lk-m">${held ? `<b class="qa-lk-busy" title="Opened at ${qaH(qaClock(held.at))}">In progress · ${qaH(held.by)}</b> · ` : ''}${qaInbox[x.r.project] && qaInbox[x.r.project].pdf ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
+      <span class="qa-lk-m">${held ? `<b class="qa-lk-busy" title="Opened at ${qaH(qaClock(held.at))}">In progress · ${qaH(held.by)}</b> · ` : ''}${qaInbox[x.r.project] && (qaInbox[x.r.project].pdf || qaInbox[x.r.project].back) ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
   };
   host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Expected surveys</div>
     <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
@@ -865,7 +866,7 @@ function qaPickProject(p) {
     if (r && r.resource) { qaVendor = r.resource === 'Radicl Services' ? 'radicl' : 'sitecapture'; try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {} }
   }
   _qaIntake(); _qaLikely(); _qaBar();
-  if (qaProj && qaInbox[qaProj] && qaInbox[qaProj].pdf) { qaOpenInbox(qaProj); return; }
+  if (qaProj && qaInbox[qaProj] && (qaInbox[qaProj].pdf || qaInbox[qaProj].back)) { qaOpenInbox(qaProj); return; }
   if (qaProj) { const f = document.getElementById('qa-intake'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
 
@@ -891,23 +892,25 @@ async function qaPickMany(list) {
   const want = qaLikely().map(x => ({ p: x.r.project, k: qaKeysFor(x.r.project) }));
   const byName = f => { const n = f.name.replace(/\.[^.]+$/, ''); const m = want.filter(w => OpsQA.namesProject(n, w.k)); return m.length === 1 ? m[0].p : ''; };
   let found = 0, missed = [];
+  // A Radicl go back (partial survey) is held beside the project's original, never over it.
   const put = (p, f, kind) => { const cur = qaInbox[p] || (qaInbox[p] = {}); if (!cur[kind] || cur[kind].lastModified < f.lastModified) cur[kind] = f; };
   for (const z of zips) { const p = byName(z); if (p) put(p, z, 'zip'); }
   let deps = null;
   for (let i = 0; i < pdfs.length; i++) {
     const f = pdfs[i];
     qaSetBusy('pdf', `Matching reports… ${i + 1} of ${pdfs.length}`);
-    let p = byName(f);
-    if (!p) {
+    let p = byName(f), kind = 'pdf';
+    {
       try {
         deps = deps || await qaDepsLoad();
         const { pages } = await deps.mod.pdfToBlocks(new Uint8Array(await f.arrayBuffer()), { pdfjs: deps.pdfjs, maxPages: 1 });
+        kind = OpsQA.isPartialReport(pages) ? 'back' : 'pdf';
         const text = pages.map(pg => pg.blocks.map(b => b.text).join(' ')).join(' ');
-        const m = want.filter(w => OpsQA.namesProject(text, w.k)), byId = m.filter(w => OpsQA.namesProject(text, { id: w.k.id }));
-        p = (byId.length === 1 ? byId : m.length === 1 ? m : [])[0]?.p || '';
+        const m = p ? [] : want.filter(w => OpsQA.namesProject(text, w.k)), byId = m.filter(w => OpsQA.namesProject(text, { id: w.k.id }));
+        if (!p) p = (byId.length === 1 ? byId : m.length === 1 ? m : [])[0]?.p || '';
       } catch (e) {}
     }
-    if (p) { put(p, f, 'pdf'); found++; } else missed.push(f.name);
+    if (p) { put(p, f, kind); found++; } else missed.push(f.name);
   }
   qaSetBusy('pdf', '');
   qaInboxNote = `${qaPlural(found, 'report')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
@@ -915,9 +918,12 @@ async function qaPickMany(list) {
 }
 // The card was clicked and its report is waiting: open it.
 async function qaOpenInbox(p) {
-  const got = qaInbox[p]; if (!got || !got.pdf) return false;
+  const got = qaInbox[p]; if (!got || !(got.pdf || got.back)) return false;
   if (got.zip) await qaOpenPack(got.zip);
-  await qaOpenReport(got.pdf);
+  // The original opens the review and the go back is added to it as one survey; a go back with
+  // no original in the drop opens on its own.
+  await qaOpenReport(got.pdf || got.back);
+  if (got.pdf && got.back && qaRun && !qaRun.docs.some(d => d.name === got.back.name)) await qaAddReport(got.back);
   return true;
 }
 

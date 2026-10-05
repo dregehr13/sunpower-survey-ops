@@ -854,3 +854,31 @@ test('only the report link and the summary carry a copy button on the Salesforce
   assert.equal(P.__.get('QA_SF_FIELDS').length, 6);
   assert.equal(/qaCopyAll/.test(pageSrc), false);
 });
+
+test('a Radicl partial survey as it prints: untouched sections read "No information" and are not answers or misses', () => {
+  // Shaped from a real go back (17 pages, 11 sections, only Exterior Electrical revisited).
+  const chrome = n => [blk('2830 Fashion Avenue', 467, 819), blk('radicl', 32, 812), blk('Partial Survey Report', 478, 807), blk('Page ' + n, 538, 26)];
+  const cover = page(1, [blk('PARTIAL SURVEY REP ORT', 400, 808), blk('radicl', 32, 817), blk('Partial Survey\n2830 Fashion Avenue, Long Beach, CA 90810', 32, 658),
+    blk('S U RV E Y DAT E\nOct 03, 2026', 53, 524), blk('Site Address', 49, 387), blk('2830 Fashion Avenue, Long Beach, CA 90810', 341, 387)]);
+  const empty = (n, i, name) => page(n, [...chrome(n), blk(`S E C T I O N ${i}\n${name}`, 32, 767), blk('No information', 32, 711)]);
+  const pages = [cover, page(2, [...chrome(2), blk('Exterior Electrical', 68, 558), blk('Roof Photos', 68, 300)]),
+    empty(3, 1, 'Quality Check'),
+    page(4, [...chrome(4), blk('S E C T I O N 3\nExterior Electrical', 32, 767), blk('Electric Service Type', 32, 700), blk('Overhead', 480, 700)]),
+    empty(5, 7, 'Roof Photos')];
+  assert.equal(QA.isPartialReport(pages), true, 'the cover title kerns ("REP ORT") and is still read');
+  assert.equal(QA.isPartialReport([page(1, [blk('SITE SURVEY REPORT', 400, 808), blk('radicl', 32, 817)])]), false);
+  const d = QA.detectTemplate(pages, specs);
+  assert.equal(d.partial, true);
+  const S = QA.parseRadicl(pages, { specId: d.specId, partial: true });
+  assert.equal(S.entries.some(e => /No information/i.test(e.ref)), false, 'it is not an answer');
+  assert.deepEqual(S.meta.emptySections, ['Quality Check', 'Roof Photos']);
+  assert.equal(S.value(/^Electric Service Type$/), 'Overhead');
+  const names = f => f.filter(x => x.layer === 'A').map(x => x.area);
+  const alone = QA.evaluate(S, specs, {}).findings;
+  assert.equal(names(alone).includes('Roof Photos'), false, 'a section the go back did not revisit is the original\'s to answer');
+  assert.equal(names(alone).includes('Quality Check'), false);
+  assert.equal(QA.evaluate(S, specs, {}).templateReport.newToSpec.some(x => /No information/.test(x)), false);
+  // the same survey read as a full report (not partial) still asks for every section
+  const full = QA.parseRadicl(pages, { specId: 'radicl-v2', partial: false });
+  assert.equal(names(QA.evaluate(full, specs, {}).findings).includes('Roof Photos'), true);
+});
