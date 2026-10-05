@@ -432,3 +432,14 @@ day. What replaced it:
 - **Salesforce fields:** only the Report Link and the Summary have Copy; the other four are
   picked from a list or a calendar. Copy all is gone. The order is one list, `QA_SF_FIELDS`,
   meant to match the Site Survey task's layout
+
+### 2026-10-05 — Radicl partial survey as it really prints
+A real go back (17 pages, "PARTIAL SURVEY REP ORT" kerned on the cover) printed every section of the
+template, with the ones not revisited reading "No information". Detection already worked; the rest did not:
+- `No information` is no longer parsed as an answer, and the sections that print it are kept in
+  `meta.emptySections`. A partial reviewed on its own skips Layer A for those sections (the original
+  answers them); once merged with the original the survey is not partial and nothing is skipped
+- `OpsQA.isPartialReport(pages)` reads page 1 only. The multi-file drop uses it to hold a project's
+  go back beside its original (`qaInbox[p].back` / `.pdf`) instead of the newer file replacing the
+  other, and opening the card reads the original then adds the go back as one review
+- Adding the full report to a review that started from a partial is refused with a message
