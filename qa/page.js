@@ -349,7 +349,7 @@ async function qaOpenReport(file) {
     const hash = await qaHash(bytes);
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
-    if (det.vendor === 'unknown') throw new Error(/^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture or Radicl survey report');
+    if (det.vendor === 'unknown') throw new Error(/^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture or Radicl survey report. ' + det.reason.replace(/^No known vendor signature on the first pages\s*/, ''));
     const spec = deps.specs.find(s => s.id === det.specId) || null;
     const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
     const how = qaAutoProject(S);

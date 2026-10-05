@@ -882,3 +882,11 @@ test('a Radicl partial survey as it prints: untouched sections read "No informat
   const full = QA.parseRadicl(pages, { specId: 'radicl-v2', partial: false });
   assert.equal(names(QA.evaluate(full, specs, {}).findings).includes('Roof Photos'), true);
 });
+
+test('an unrecognised report says what page 1 starts with; a Site Capture date in another order is still read', () => {
+  const sc = d => [page(1, [blk('Report Created: ' + d, 400, 800), blk('1 - Customer Information', 40, 700)])];
+  assert.equal(QA.detectTemplate(sc('05/10/2026'), specs).vendor, 'sitecapture');
+  assert.equal(QA.detectTemplate(sc('2026-10-05'), specs).vendor, 'sitecapture');
+  const u = QA.detectTemplate([page(1, [blk('Some Other Report', 40, 700)])], specs);
+  assert.equal(u.vendor, 'unknown'); assert.match(u.reason, /page 1 starts: Some Other Report/);
+});
