@@ -391,12 +391,22 @@ async function qaAddReport(file) {
     const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('add', `Reading page ${n} of ${t}…`) });
     const det = OpsQA.detectTemplate(pages, deps.specs);
     if (det.vendor !== run.det.vendor) throw new Error(det.vendor === 'unknown' ? 'That\'s not a Site Capture or Radicl survey report' : 'That report is from the other survey type');
-    if (run.det.partial && !det.partial) throw new Error('That is the full report. Start over with it, then add the go back here');
+    // The go back was opened first and the original is dropped second: the original becomes the
+    // base and the go back follows it, the same review as the other order.
+    const flip = run.det.partial && !det.partial;
+    if (flip && run.docs.length > 1) throw new Error('That is the full report. Start over with it, then add the go back here');
     const spec = deps.specs.find(x => x.id === det.specId) || null;
     const S2 = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
     if (qaRun !== run) return;
-    run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages });
-    run.S = OpsQA.mergeSurveys(run.S, S2);
+    if (flip) {
+      const back = run.docs[0];
+      run.docs = [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S2.meta.pages }, Object.assign({}, back, { from: S2.meta.pages + 1 })];
+      run.S = OpsQA.mergeSurveys(S2, run.S);
+      run.det = det; run.spec = spec;
+    } else {
+      run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages });
+      run.S = OpsQA.mergeSurveys(run.S, S2);
+    }
     run.det = Object.assign({}, run.det, { partial: run.S.template.partial });
     // The review's file is the set: names joined, and a hash over the reports' own hashes.
     run.file = { name: run.docs.map(d => d.name).join(' + '), size: run.docs.reduce((n, d) => n + d.size, 0), hash: await qaHash(new TextEncoder().encode(run.docs.map(d => d.hash).join(''))) };
@@ -919,6 +929,9 @@ async function qaPickMany(list) {
   qaSetBusy('pdf', '');
   qaInboxNote = `${qaPlural(found, 'report')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
   _qaIntake(); _qaLikely();
+  // A project already picked and its reports just dropped: open it, there is nothing left to choose.
+  const picked = qaProj.trim().toUpperCase();
+  if (picked && qaInbox[picked] && (qaInbox[picked].pdf || qaInbox[picked].back)) qaOpenInbox(picked);
 }
 // The card was clicked and its report is waiting: open it.
 async function qaOpenInbox(p) {
