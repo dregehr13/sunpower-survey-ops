@@ -8,8 +8,9 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const QA = require('../lib/qa.cjs');
-const SC = require('../qa/specs/sitecapture-v13.json');
-const specs = [SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
+const SC = require("../qa/specs/sitecapture-v13.json");
+const SC14 = require("../qa/specs/sitecapture-v14.json");
+const specs = [SC14, SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
 
 const tk = QA.tok;
 const blk = (text, x0 = 18, y0 = 700) => ({ text, x0, y0, x1: x0 + 100, y1: y0 - 10 });
@@ -228,11 +229,31 @@ test('summarize emits only Salesforce picklist labels and leaves template gaps o
 
 // ── The registry against the template ──
 test('every Site Capture requirement that names fields still resolves against the spec', () => {
-  for (const r of QA.REQUIREMENTS) {
-    if (!r.sc) continue;
-    const keys = [...QA.scKeys(SC, r.sc.match), ...QA.scKeys(SC, r.sc.equipment), ...QA.scKeys(SC, r.sc.combo)];
-    assert.ok(keys.length > 0, `${r.id}: no template field matches — the template changed or the rule is stale`);
+  for (const spec of [SC, SC14]) for (const r of QA.REQUIREMENTS) {
+    const src = Array.isArray(r.sc) ? r.sc.find(a => !a.versions || a.versions.includes(spec.id)) : r.sc;
+    if (!src) continue;
+    const keys = [...QA.scKeys(spec, src.match), ...QA.scKeys(spec, src.equipment), ...QA.scKeys(spec, src.combo)];
+    assert.ok(keys.length > 0, `${spec.id} ${r.id}: no template field matches — the template changed or the rule is stale`);
   }
+});
+
+test('Site Capture V.14 is V.13 with the template gaps closed: told apart by its own labels, and the gaps become checks', () => {
+  const page1 = ls => [page(1, [blk('Report Created: 09/25/2026'), blk('1 - Customer Information'), ...ls.map((l, i) => blk(l, 40, 600 - i * 20))])];
+  assert.equal(QA.detectTemplate(page1([]), specs).specId, 'sitecapture-v13', 'a report with none of the new fields is V.13');
+  const v14 = page1(['Overhang - Measure the eave overhang in inches (outside wall to the edge of the roof), with a photo showing the tape.']);
+  assert.equal(QA.detectTemplate(v14, specs).specId, 'sitecapture-v14');
+  const base = { template: { vendor: 'sitecapture', specId: 'sitecapture-v14' }, meta: {} };
+  const miss = Rr => Rr.findings.filter(f => f.status === 'miss').map(f => f.id);
+  const none = QA.evaluate(QA.makeSurvey({ ...base }), specs, {});
+  assert.ok(miss(none).includes('roof_overhang'), 'overhang is asked for on V.14');
+  assert.equal(none.findings.find(f => f.id === 'service_voltage').status, 'miss');
+  const old = QA.evaluate(QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-v13' }, meta: {} }), specs, {});
+  assert.equal(old.findings.find(f => f.id === 'roof_overhang').status, 'gap', 'on V.13 the same item is still a template gap');
+  const given = QA.makeSurvey({ ...base, entries: [{ ref: 'roof_overhang_inches', value: '14', page: 3 }, { ref: 'utility_meter_service_voltage', value: '120/240V Single Phase', instance: 'M1', page: 5 }] });
+  const ok = QA.evaluate(given, specs, {});
+  assert.equal(ok.findings.find(f => f.id === 'roof_overhang').status, 'pass');
+  assert.equal(QA.checklist('sitecapture-v14').find(c => c.id === 'roof_overhang').inTemplate, true);
+  assert.equal(QA.checklist('sitecapture-v13').find(c => c.id === 'roof_overhang').inTemplate, false);
 });
 
 test('every requirement has an area, a severity and an evidence trail or a reason', () => {
