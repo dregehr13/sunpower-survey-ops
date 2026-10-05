@@ -11,9 +11,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 ## Pages
 Current · WIP · Performance · Trends · Quality · Map · Resource · Billing. WIP sits second
 because it is the page the manager sits in; the order changed 2026-08-17.
-**"Quality" is the nav label only** — the page id, the `#resurvey` hash, the
-`renderResurvey()` function and every drill title are still `resurvey`, so
-bookmarks and the Settings default-page picker keep working. Don't rename the id.
+**The nav label is "Resurveys"** (renamed back from Quality 2026-10-05, Doug) and matches the page id, `#resurvey` hash and `renderResurvey()`. Prose below still says "Quality" for this page.
 
 ## People
 - **Doug Regehr** — Site Survey Manager, the user. douglas.regehr@sunpower.com · 801-793-1861

@@ -1403,7 +1403,7 @@ body{padding-left:180px;}
   .brand span{font-size:11px;}
   .ntab{height:46px;padding:0 8px;margin:0;border-left:none;border-radius:0;border-bottom:2px solid transparent;font-size:11px;white-space:nowrap;}
   .ntab.active{background:transparent;border-left:none;border-bottom-color:var(--accent);padding-left:8px;}
-  .ntab[data-page="resurvey"],.ntab[data-page="map"]{display:none;}
+  .ntab[data-page="map"],.ntab[data-page="resource"],.ntab[data-page="billing"],.ntab[data-page="qa"]{display:none;}
   /* #999 to match .ntab: over glass the nav's effective background lightens to
      roughly #4a4a4a, and #777 does not hold up against it. */
   .nmenu-more{display:flex;height:46px;padding:0 6px;align-items:center;border-bottom:2px solid transparent;color:#999;font-size:11px;cursor:pointer;position:relative;flex-shrink:0;}
@@ -1443,7 +1443,7 @@ body{padding-left:180px;}
   <div class="nav-group-label nav-group-div">Analysis</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
+  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nav-group-label nav-group-div">Ops</div>
   <div class="ntab" data-page="resource" role="button" tabindex="0">Resource</div>
@@ -1469,8 +1469,10 @@ body{padding-left:180px;}
      overflow-y:hidden. Moving it out also stops an item click bubbling to
      mobileMoreBtn and re-opening the menu that nav() had just closed. -->
 <div class="nmenu-dropdown" id="mobileMoreMenu">
-  <div class="nmenu-item" onclick="nav('resurvey')">Quality</div>
   <div class="nmenu-item" onclick="nav('map')">Map</div>
+  <div class="nmenu-item" onclick="nav('resource')">Resource</div>
+  <div class="nmenu-item" onclick="nav('billing')">Billing</div>
+  <div class="nmenu-item" onclick="nav('qa')">QA</div>
 </div>
 
 <div class="stale-banner" id="staleBanner"></div>
@@ -8775,7 +8777,7 @@ function _resRepTable(){
     <div class="note">
       ${rated.length} of ${all.length} reps clear the ${RS_MIN_CELL}-completion floor, covering
       ${rated.reduce((a,d)=>a+d.n,0).toLocaleString()} of ${done.length.toLocaleString()} self-surveyed completions.
-      <b>Came back</b> is resurveys attributed to a defect, the same population Quality ranks on.
+      <b>Came back</b> is resurveys attributed to a defect, the same population Resurveys ranks on.
       No activity cutoff &mdash; a rep who has left still did those surveys.
     </div>`;
 }
@@ -9621,7 +9623,10 @@ async function billingImportSave(){
 function renderSettings(){
   // Every page the nav can reach, so the landing-page setting can name any of
   // them. Map was missing, which made it the one page you could not start on.
-  const allPages = [{v:'week',l:'This Week'},{v:'wip',l:'WIP'},{v:'performance',l:'Performance'},{v:'trends',l:'Trends'},{v:'resurvey',l:'Quality'},{v:'map',l:'Map'}];
+  // Built from the nav so a new tab can never be missing from the picker.
+  const allPages = [...new Set([...document.querySelectorAll('.ntab')].map(t=>t.dataset.page))]
+    .map(v=>({v,l:document.querySelector(`.ntab[data-page="${v}"]`).textContent.trim().replace(/\s+\d+$/,'')}))
+    .map(p=>p.v==='week'?{...p,l:'This Week'}:p);
   const activeFields = FIELDS.filter(f=>!f.computed&&!f.pending&&f.sfCol);
 
   document.getElementById('settings-content').innerHTML=`
@@ -9674,7 +9679,7 @@ function renderSettings(){
       <div class="set-sec">
         <div class="set-title">Rates</div>
         <div class="set-row">
-          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before its first-pass-yield or resurvey rate is shown instead of a sample count · Quality table, Resource markets, map Cycle/Resurvey colouring</div></div>
+          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before its first-pass-yield or resurvey rate is shown instead of a sample count · Resurveys table, Resource markets, map Cycle/Resurvey colouring</div></div>
           <div class="set-control"><input type="number" min="1" max="100" value="${S.minCell}" onchange="setSetting('minCell',parseInt(this.value)||1)"></div>
         </div>
       </div>
@@ -9856,7 +9861,7 @@ function renderDefinitions(){
     ['targets','Targets',[
       {t:'Median target',v:S.targetMedian+'d',d:'Green threshold for cycle time — Spec 12744.'},
       {t:'Average target',v:S.targetAvg+'d',d:'Chart annotation line and the "On target" cutoff — Spec 12744.'},
-      {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Quality table, Resource markets, Map colouring.'},
+      {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Resurveys table, Resource markets, Map colouring.'},
       {t:'Outlier threshold',v:S.outlierDays+'d',d:'Cycle time above this counts as an outlier for the filter bar\'s "Hide outliers" toggle.'},
     ]],
     ['current','This Week / Last Week',[
@@ -9890,7 +9895,7 @@ function renderDefinitions(){
       {t:'Resource mix',eq:[{f:'complete'},'count, grouped by',{f:'resource'}],d:TIP.resourceMix},
       {t:'Survey resource mix (chart)',eq:[{f:'complete'},'count per week, grouped by',{f:'resource'}],d:TIP.trResMix},
     ]],
-    ['quality','Quality',[
+    ['quality','Resurveys',[
       {t:'First pass yield (FPY)',eq:['(Completions − Defects)','÷','Completions','× 100'],extra:['complete','resurvey_requested','resurvey_complete','resurvey_reason','reopened_by_design'],d:TIP.fpy},
       {t:'FPY trend',eq:['weekly (Completions − Defects)','÷','Completions'],extra:['complete','resurvey_requested','resurvey_complete','resurvey_reason','reopened_by_design'],d:TIP.fpyTrend},
       {t:'Why they come back',eq:[{f:'resurvey_details'},'keyword match'],d:TIP.rsCat},
