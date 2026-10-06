@@ -181,6 +181,12 @@ async function qaHash(bytes) {
 }
 
 // ── Salesforce project lookup ──────────────────────
+// A project ID as the Salesforce link projLink() draws elsewhere in the app. Inside a clickable row
+// the click must not also toggle the row.
+function qaProjLink(id) {
+  const r = qaProjectRow(id), url = r ? sfUrl(r) : '';
+  return url ? `<a href="${qaH(url)}" target="_blank" rel="noopener" class="sf-link" onclick="event.stopPropagation()">${qaH(id)}</a>` : qaH(id);
+}
 function qaProjectRow(id) {
   id = String(id || '').trim().toUpperCase();
   if (!id) return null;
@@ -1706,7 +1712,7 @@ function _qaLogTable() {
       .sort((x, y) => y.a.length - x.a.length || y.last.created.localeCompare(x.last.created));
     if (sub) sub.textContent = qaPlural(accts.length, 'account') + ' · ' + qaPlural(rows.length, 'review');
     host.innerHTML = accts.length ? `<div class="xscroll"><table class="tbl" id="qa-acct-tbl"><thead><tr><th>Project</th><th class="r">Reviews</th><th>First review</th><th>Latest</th><th>Last reviewed</th></tr></thead><tbody>
-      ${accts.map(x => `<tr class="drill-tgt" style="cursor:pointer;" onclick="qaLens='reviews';qaQ='${qaH(x.p)}';_qaLog();"><td><b>${qaH(x.p)}</b>${x.last.surveyor ? `<div class="cmeta">${qaH(x.last.surveyor)}</div>` : ''}</td>
+      ${accts.map(x => `<tr class="drill-tgt" style="cursor:pointer;" onclick="qaLens='reviews';qaQ='${qaH(x.p)}';_qaLog();"><td><b>${qaProjLink(x.p)}</b>${x.last.surveyor ? `<div class="cmeta">${qaH(x.last.surveyor)}</div>` : ''}</td>
         <td class="r">${x.a.length}</td><td>${qaStatusPill(x.first.status)}</td><td>${qaStatusPill(x.last.status)}</td><td style="color:var(--muted);white-space:nowrap;">${qaH(qaDate(x.last))}</td></tr>`).join('')}
     </tbody></table></div>` : `<div class="note" style="padding:10px 0;">Nothing matches.</div>`;
     return;
@@ -1717,7 +1723,7 @@ function _qaLogTable() {
       const open = qaOpen === r.id;
       return `<tr id="qa-row-${qaH(r.id)}" class="${open ? 'qa-row-open ' : ''}drill-tgt" style="cursor:pointer;" onclick="qaToggleOpen('${qaH(r.id)}')">
         <td style="width:18px;"><span class="qa-caret">›</span></td><td style="white-space:nowrap;">${qaH(qaDate(r))}</td>
-        <td><b>${qaH(r.project)}</b>${r.surveyor ? `<div class="cmeta">${qaH(r.surveyor)}</div>` : ''}</td>
+        <td><b>${qaProjLink(r.project)}</b>${r.surveyor ? `<div class="cmeta">${qaH(r.surveyor)}</div>` : ''}</td>
         <td class="r">${r.n}</td><td style="color:var(--muted);">${qaH(tname(r))}</td><td>${qaStatusPill(r.status)}</td>
         <td class="r">${r.counts.missHard ? `<span style="color:var(--red);font-weight:600;">${r.counts.missHard}</span>` : '0'}<span style="color:var(--faint);"> / ${r.counts.missWarn}</span></td>
         <td style="color:var(--muted);">${qaH(r.reviewer)}</td></tr>${open ? `<tr><td class="qa-expand" colspan="8">${qaRecordDetail(r)}</td></tr>` : ''}`;

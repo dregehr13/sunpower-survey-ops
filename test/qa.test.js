@@ -1206,3 +1206,9 @@ test('pitch is not asked of a ground mount, or a battery-only survey', () => {
   assert.equal(get(bat, 'roof_pitch'), undefined);
   assert.equal(get(QA.evaluate(QA.parseRep(repPages()), specs, { sfSurveyType: 'Battery Only Survey' }), 'roof_pitch').status, 'na');
 });
+
+test('History project IDs link to Salesforce through the shared sf-link style', () => {
+  assert.ok(pageSrc.includes('function qaProjLink'));
+  assert.ok(pageSrc.includes('class="sf-link"'));
+  assert.equal((pageSrc.match(/<b>\$\{qaProjLink\(/g) || []).length, 2, 'reviews and accounts lenses');
+});
