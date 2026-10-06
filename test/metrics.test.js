@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, wipTag, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, wipTag, qaBadgeKind, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
@@ -701,4 +701,14 @@ test('wipTag reads GB for a pre-completion go back, RS for an ordinary open resu
   assert.equal(wipTag({ ...base, resurvey_requested: '2026-10-03' }), 'RS');
   assert.equal(wipTag({ ...base, resurvey_requested: '2026-10-03', resurvey_complete: '2026-10-05' }), '');
   assert.equal(wipTag({ ...base }), '');
+});
+
+test('qaBadgeKind: ok / ov / no by review, blank when not reviewed', () => {
+  const d = '2026-10-01';
+  assert.equal(qaBadgeKind({ qa_status: 'Passed', qa_date: d }), 'ok');
+  assert.equal(qaBadgeKind({ qa_status: 'Passed with Override', qa_date: d }), 'ov');
+  assert.equal(qaBadgeKind({ qa_status: 'Failed - Gaps Found', qa_date: d }), 'no');
+  assert.equal(qaBadgeKind({ qa_status: 'Not Started', qa_date: '' }), '');
+  assert.equal(qaBadgeKind({ qa_status: 'Passed', qa_date: '' }), '');
+  assert.equal(qaBadgeKind({}), '');
 });
