@@ -994,6 +994,43 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
   assert.equal(QA.reviewMetrics([]).firstPassRate, null);
 });
 
+test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named blank surveyors', () => {
+  const rv = (id, project, n, status, date, extra) => ({ id, project, n, status, date, vendor: 'radicl', surveyor: '', reviewer: 'Doug', created: date + 'T15:00:00Z', findings: [], ...extra });
+  const log = [
+    rv('r1', 'A1', 1, 'Failed - Gaps Found', '2026-10-01', { template: 'radicl-v2', findings: [{ id: 'roof_pitch', area: 'Roof', severity: 'hard', status: 'miss', title: 'Roof pitch' }] }),
+    rv('r2', 'A1', 2, 'Passed', '2026-10-05', { template: 'radicl-v1' }),
+    rv('r3', 'B2', 1, 'Passed', '2026-10-05', { vendor: 'sitecapture', surveyor: 'Pat' }),
+    rv('r4', 'C3', 1, 'Passed', '2026-10-05', { vendor: 'rep', template: 'rep-v1' }),
+  ];
+  const d = QA.reviewMetrics(log, { by: 'day', minCell: 2 });
+  assert.equal(d.periods.length, 5);                                   // Oct 1..5, the empty days kept
+  assert.deepEqual(d.periods.map(p => p.total), [1, 0, 0, 0, 3]);
+  const last = d.periods[4];
+  assert.equal(last.goBacks, 1); assert.equal(last.firstReviews, 2); assert.equal(last.firstPassed, 2); assert.equal(last.accounts, 3);
+  assert.deepEqual(last.ids.sort(), ['r2', 'r3', 'r4']);
+  assert.equal(d.periods[0].topMisses[0].label, 'Roof pitch');
+  const w = QA.reviewMetrics(log, { by: 'week', minCell: 2 });          // Oct 1 is a Thursday: weeks of Sep 28 and Oct 5
+  assert.deepEqual(w.periods.map(p => [p.period, p.total]), [['2026-09-28', 1], ['2026-10-05', 3]]);
+  assert.equal(QA.reviewMetrics(log, { by: 'day', weeks: 2 }).periods.length, 2);
+  const names = d.bySurveyor.map(c => c.key).sort();
+  assert.deepEqual(names, ['Pat', 'Radicl', 'Sales rep']);
+  assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl').ids.sort(), ['r1', 'r2']);
+});
+
+test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
+  const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
+  const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 5), ...ph('Location Photos', 5), ...ph('Trench Path', 5), ...over] });
+  const R = QA.evaluate(ground(), specs);
+  for (const id of ['roof_pitch', 'roof_overhang', 'plane_count', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(R, 'gm_trench').status, 'pass');
+  assert.ok(!R.findings.some(f => f.layer === 'A' && /^(Roof Photos|Attic Info)$/.test(f.area)));
+  // missing the trench photos is a miss; a roof survey never sees these checks
+  const S2 = survey('radicl', { photos: [...ph('Trench Path'), ...ph('Horizon Photos')] });
+  assert.equal(get(QA.evaluate(S2, specs), 'gm_location').status, 'miss');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench'), undefined);
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
+});
+
 const repPages = () => [
   page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('8 photos, 5 sections', 40, 640)]),
   page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650), blk('UtilityBill (1)', 40, 450), blk('Attach Roof Condition Photos (1)', 40, 250)]),
@@ -1095,4 +1132,38 @@ test('ground mount: the checklist drops roof checks, adds the three photo checks
   assert.equal(QA.checklist('radicl-groundmount', { gm_trench: 'hard' }).find(c => c.id === 'gm_trench').severity, 'hard');
   assert.ok(QA.allChecks().filter(c => /^gm_/.test(c.id)).every(c => c.def === 'warn' && c.vendors.join() === 'radicl'));
   assert.equal(QA.templateChanges('radicl-groundmount').some(c => /roof|attic|pitch|plane|overhang/i.test(c.title)), false);
+
+});
+// Pitch rule (Doug, 2026-10-06): per mounting plane, a tilt read on the roof OR in the attic
+// satisfies it. Never both, and a missing one is never flagged when the other exists.
+test('Site Capture V.14: a plane passes on a roof tilt or an attic tilt, either one', () => {
+  const roofKey = SC14.fields.find(f => /^Roof Pitch - Tilt reading/.test(f.label) && f.group === 'mounting_plane_roof').key;
+  const atticKey = SC14.fields.find(f => /Tilt Reading/.test(f.label) && f.group === 'mounting_plane_attic').key;
+  const s14 = o => ({ ...survey('sitecapture', o), template: { vendor: 'sitecapture', specId: 'sitecapture-v14' } });
+  const planes = ids => ({ mounting_plane_roof: ids.map((id, i) => ({ idx: i + 1, id })), mounting_plane_attic: ids.map((id, i) => ({ idx: i + 1, id })) });
+  const run = entries => QA.evaluate(s14({ groups: planes(['MP1', 'MP2']), entries }), specs);
+  const roof = id => ({ ref: roofKey, instance: id, value: '25' }), attic = id => ({ ref: atticKey, instance: id, value: '25' });
+  assert.equal(get(run([roof('MP1'), roof('MP2')]), 'roof_pitch').status, 'pass');
+  assert.equal(get(run([attic('MP1'), attic('MP2')]), 'roof_pitch').status, 'pass');
+  // one of each, one per plane
+  assert.equal(get(run([roof('MP1'), attic('MP2')]), 'roof_pitch').status, 'pass');
+  // a plane with neither is the surveyor's miss, and only that plane
+  const miss = get(run([roof('MP1')]), 'roof_pitch');
+  assert.equal(miss.status, 'miss'); assert.deepEqual(miss.instances, ['MP2']);
+  // completeness does not ask for the roof tilt a plane already has from the attic
+  assert.equal(run([attic('MP1'), attic('MP2')]).findings.some(f => f.id === 'tpl:' + roofKey), false);
+});
+
+test('Site Capture V.13: the attic tilt is the only pitch it can hold a plane to', () => {
+  const tiltKey = SC.fields.find(f => /Tilt Reading/.test(f.label) && f.group === 'mounting_plane_attic').key;
+  const R = QA.evaluate(survey('sitecapture', { groups: { mounting_plane_roof: [{ idx: 1, id: 'MP1' }], mounting_plane_attic: [{ idx: 1, id: 'MP1' }] }, entries: [{ ref: tiltKey, instance: 'MP1', value: '25' }] }), specs);
+  assert.equal(get(R, 'roof_pitch').status, 'pass');
+});
+
+test('pitch is not asked of a ground mount, a battery-only survey or a rep report', () => {
+  const gm = survey('radicl', { photos: [{ ref: 'Trench Path', instance: null }] });
+  assert.equal(get(QA.evaluate(gm, specs), 'roof_pitch').status, 'na');
+  const bat = QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-battery' } }), specs);
+  assert.equal(get(bat, 'roof_pitch'), undefined);
+  assert.equal(get(QA.evaluate(survey('rep'), specs), 'roof_pitch'), undefined);
 });

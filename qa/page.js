@@ -23,6 +23,7 @@ const QA_TEMPLATE_NAMES = {
   'radicl-groundmount': 'Radicl · ground mount template',
 };
 
+let qaMGran = 'week', qaDrillSets = [];   // Metrics: week or day buckets; the id lists behind each clickable number
 let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 'all', qaOpen = null;
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
@@ -406,11 +407,21 @@ async function qaAddReport(file) {
       return qaOpenReport(file, { rep: run });
     }
     if (det.vendor !== run.det.vendor) throw new Error('That report is from the other survey type');
-    if (run.det.partial && !det.partial) throw new Error('That is the full report. Start over with it, then add the go back here');
+    // The go back was opened first and the original is dropped second: the original becomes the
+    // base and the go back follows it, the same review as the other order.
+    const flip = run.det.partial && !det.partial;
+    if (flip && run.docs.length > 1) throw new Error('That is the full report. Start over with it, then add the go back here');
     const S2 = parse();
     if (qaRun !== run) return;
-    run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages, role: 'Go back report' });
-    run.S = OpsQA.mergeSurveys(run.S, S2);
+    if (flip) {
+      const back = run.docs[0];
+      run.docs = [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S2.meta.pages }, Object.assign({}, back, { from: S2.meta.pages + 1, role: 'Go back report' })];
+      run.S = OpsQA.mergeSurveys(S2, run.S);
+      run.det = det; run.spec = spec;
+    } else {
+      run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages, role: 'Go back report' });
+      run.S = OpsQA.mergeSurveys(run.S, S2);
+    }
     run.det = Object.assign({}, run.det, { partial: run.S.template.partial });
     await qaRefreshFile(run);
     qaReeval(true);
@@ -575,7 +586,9 @@ const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breake
   msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap',
   gm_horizon: 'gm_horizon', gm_location: 'gm_location', gm_trench: 'gm_trench',
   attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
-const qaCatOf = f => { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
+// A rep report's check rows are named for the section they count, and its photo categories are the same names.
+const qaFindCats = f => /^rep:/.test(f.id) ? (f.id === 'rep:count' ? [] : [f.id]) : [].concat(QA_FIND_CAT[f.id] || []);
+const qaCatOf = f => { const c = qaFindCats(f); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
 // first three of its category), not all 36 dead-front photos; a decided check asks for none.
 const qaNeedsLook = it => !!(qaRun && (it.soft || (it.ai && !it.ai.readable) ||
@@ -1010,6 +1023,9 @@ async function qaPickMany(list) {
   }
   qaInboxNote = `${qaPlural(found, 'file')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
   _qaIntake(); _qaLikely();
+  // A project already picked and its reports just dropped: open it, there is nothing left to choose.
+  const picked = qaProj.trim().toUpperCase();
+  if (picked && qaInbox[picked] && (qaInbox[picked].pdf || qaInbox[picked].back)) qaOpenInbox(picked);
 }
 const qaInboxReady = g => !!g && !!(g.pdf || g.back || g.rep);
 // The set's lead opens the review. A full report leads, then a go back, then a sales rep report;
@@ -1130,7 +1146,7 @@ function qaRowState(f) {
   return vs.includes('bad') ? 'bad' : vs.includes('ok') ? 'ok' : null;
 }
 // The photo categories a check rests on that this report has photos for.
-function qaCatsOf(f) { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.filter(x => qaRun.items && qaRun.items.some(it => it.id === x)); }
+function qaCatsOf(f) { const c = qaFindCats(f); return c.filter(x => qaRun.items && qaRun.items.some(it => it.id === x)); }
 const qaOpenRows = () => qaRun.open || (qaRun.open = {});
 const qaActs = () => qaRun.R.findings.filter(qaActionable);
 const qaFindingAt = fi => { const a = qaActs()[fi]; return a && qaFindings().find(x => x.fk === qaFlagKey(a)); };
@@ -1560,27 +1576,41 @@ function qaOpenRecord(id) { qaView = 'log'; qaLens = 'reviews'; qaOpen = id; qaQ
 // from the export.
 function _qaMetrics() {
   const host = document.getElementById('qa-body'); if (!host) return;
-  const M = OpsQA.reviewMetrics(qaLoad(), { weeks: 12, minCell: RS_MIN_CELL });
+  const M = OpsQA.reviewMetrics(qaLoad(), { by: qaMGran, minCell: RS_MIN_CELL });
+  qaDrillSets = [];
+  // Every clickable number registers the reviews behind it; the click opens them in the shared drill drawer.
+  const dr = (title, sub, ids) => ids.length ? `data-drill="${qaDrillSets.push({ title, sub, ids }) - 1}" ` + drillAttrs(`qaDrill(${qaDrillSets.length - 1})`) : '';
   if (!M.reviews) {
     host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">No reviews yet</div><div class="ssub">Metrics appear once reviews are saved.</div></div></div></div>`;
     return;
   }
   const pct = v => v == null ? '—' : Math.round(v * 100) + '%';
   const cell = (label, val, sub, tip) => `<div class="srail-cell"><div class="klabel">${label}${tip ? kinfo(tip) : ''}</div><div class="srail-val">${val}${sub ? `<span class="srail-sub">${sub}</span>` : ''}</div></div>`;
-  const maxW = Math.max(1, ...M.weeks.map(w => w.total));
-  const wk = M.weeks.map(w => {
+  const maxW = Math.max(1, ...M.periods.map(w => w.total));
+  const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const plabel = w => M.by === 'day' ? `${DOW[new Date(w.period + 'T12:00:00').getDay()]} ${+w.period.slice(5, 7)}/${+w.period.slice(8)}` : 'Week of ' + `${+w.period.slice(5, 7)}/${+w.period.slice(8)}`;
+  const top = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ');
+  const tip = w => !w.total ? `${plabel(w)}: no reviews` : [
+    `${plabel(w)}: ${qaPlural(w.total, 'review')} on ${qaPlural(w.accounts, 'project')}`,
+    `Passed ${w.passed} · Override ${w.override} · Failed ${w.failed}`,
+    `First reviews ${w.firstReviews}${w.firstReviews ? ` (${Math.round(w.firstPassed / w.firstReviews * 100)}% passed first time)` : ''} · Go backs ${w.goBacks}`,
+    w.topMisses.length ? 'Most missed: ' + w.topMisses.map(m => `${m.label} (${m.reviews})`).join(', ') : 'No misses recorded',
+    'By ' + top(w.reviewers) + ' · ' + top(Object.fromEntries(Object.entries(w.vendors).map(([k, v]) => [({ radicl: 'Radicl', sitecapture: 'Site Capture', rep: 'Sales rep' })[k] || k, v])))
+  ].join('\n');
+  const wk = M.periods.map(w => {
     const seg = (n, c) => n ? `<span style="flex:${n};background:${c};"></span>` : '';
-    return `<div class="qa-mwk" title="${qaH(w.week)}: ${w.total} reviews"><div class="qa-mwk-n">${w.total}</div>
-      <div class="qa-mwk-bar" style="height:${Math.max(4, Math.round(w.total / maxW * 90))}px;">${seg(w.failed, 'var(--red)')}${seg(w.override, 'var(--amber)')}${seg(w.passed, 'var(--green)')}</div>
-      <div class="qa-mwk-d">${qaH(w.week.slice(5).replace('-', '/'))}</div></div>`;
+    const d = w.total ? dr(plabel(w), qaPlural(w.total, 'review') + ' · ' + qaPlural(w.accounts, 'project'), w.ids) : '';
+    return `<div class="qa-mwk${d ? ' drill-tgt' : ''}" title="${qaH(tip(w))}" ${d}><div class="qa-mwk-n">${w.total}</div>
+      <div class="qa-mwk-bar" style="height:${Math.max(4, Math.round(w.total / maxW * 90))}px;${w.total ? '' : 'background:var(--border-lt);'}">${seg(w.failed, 'var(--red)')}${seg(w.override, 'var(--amber)')}${seg(w.passed, 'var(--green)')}</div>
+      <div class="qa-mwk-d">${qaH(M.by === 'day' ? plabel(w).replace(' ', '\u00a0') : w.period.slice(5).replace('-', '/'))}</div></div>`;
   }).join('');
   const rateTbl = (rows, head) => rows.length ? `<div class="xscroll"><table class="tbl"><thead><tr><th>${head}</th><th class="r">Accounts</th><th class="r">Passed first</th><th class="r">Go back</th></tr></thead><tbody>
-    ${rows.map(c => `<tr><td><b>${qaH(c.key)}</b></td><td class="r">${c.accounts}</td>
+    ${rows.map(c => `<tr class="drill-tgt" ${dr(head + ' · ' + c.key, qaPlural(c.accounts, 'account') + ' · ' + qaPlural(c.reviews, 'review'), c.ids)}><td><b>${qaH(c.key)}</b></td><td class="r">${c.accounts}</td>
       <td class="r">${pct(c.accounts ? c.firstPass / c.accounts : null)}</td>
       <td class="r">${c.rated ? pct(c.rate) : `<span class="pna-n">${c.goBacks} of ${c.accounts}</span>`}</td></tr>`).join('')}
     </tbody></table></div>` : `<div class="note" style="padding:8px 0;">Nothing yet.</div>`;
   const missTbl = (rows, head, max) => rows.length ? `<div class="xscroll"><table class="tbl"><thead><tr><th>${head}</th><th class="r">Reviews</th><th class="r">Share</th></tr></thead><tbody>
-    ${rows.slice(0, max).map(c => `<tr><td>${qaH(c.label)}</td><td class="r">${c.reviews}</td><td class="r">${pct(c.share)}</td></tr>`).join('')}
+    ${rows.slice(0, max).map(c => `<tr class="drill-tgt" ${dr(head + ' · ' + c.label, qaPlural(c.reviews, 'review') + ' with this miss', c.ids)}><td>${qaH(c.label)}</td><td class="r">${c.reviews}</td><td class="r">${pct(c.share)}</td></tr>`).join('')}
     </tbody></table></div>` : `<div class="note" style="padding:8px 0;">No misses recorded.</div>`;
   host.innerHTML = `
     <div class="srail">
@@ -1589,12 +1619,25 @@ function _qaMetrics() {
       ${cell('Go back', pct(M.goBackRate), 'of accounts', 'Accounts reviewed more than once. Salesforce keeps only the latest review, so this is counted here.')}
       ${cell('Overrides', pct(M.overrideRate), '', 'Reviews passed with an override.')}
     </div>
-    <div class="sec"><div class="shead"><div><div class="stitle">Reviews by week</div><div class="ssub">Last ${M.weeks.length} weeks · passed, override, failed</div></div></div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Reviews by ${M.by}</div><div class="ssub">Last ${M.periods.length} ${M.by === 'day' ? 'days' : 'weeks'} · passed, override, failed · hover for detail, click for the projects</div></div>
+      <div class="toggle-group"><button class="tgl-btn${M.by === 'week' ? ' active' : ''}" onclick="qaSetMGran('week')">Week</button><button class="tgl-btn${M.by === 'day' ? ' active' : ''}" onclick="qaSetMGran('day')">Day</button></div></div>
       <div class="qa-mwks">${wk}</div></div>
     <div class="sec"><div class="shead"><div><div class="stitle">Go backs by vendor</div><div class="ssub">Rates need ${M.minCell}+ accounts; smaller groups show the count</div></div></div>${rateTbl(M.byVendor, 'Vendor')}</div>
-    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by surveyor</div></div></div>${rateTbl(M.bySurveyor, 'Surveyor')}</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by surveyor</div><div class="ssub">Radicl and sales rep reports carry no surveyor name</div></div></div>${rateTbl(M.bySurveyor, 'Surveyor')}</div>
     <div class="sec"><div class="shead"><div><div class="stitle">Misses by area</div><div class="ssub">Reviews with at least one miss in the area. Template gaps are not counted.</div></div></div>${missTbl(M.missesByArea, 'Area', 12)}</div>
     <div class="sec"><div class="shead"><div><div class="stitle">Most-missed checks</div></div></div>${missTbl(M.missesByCheck, 'Check', 10)}</div>`;
+}
+
+function qaSetMGran(g) { qaMGran = g === 'day' ? 'day' : 'week'; _qaMetrics(); }
+// Open the reviews behind a Metrics number in the shared drill drawer, one row per review
+// with its Salesforce project beside it so the project ID links out like everywhere else.
+function qaDrill(i) {
+  const set = qaDrillSets[i]; if (!set) return;
+  const byId = {}; qaLoad().forEach(r => { byId[r.id] = r; });
+  const rows = set.ids.map(id => byId[id]).filter(Boolean)
+    .sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')) || a.project.localeCompare(b.project))
+    .map(rec => Object.assign({}, qaProjectRow(rec.project) || { project: rec.project }, { project: rec.project, _qa: rec }));
+  openDrill(set.title, set.sub, rows, { mode: 'qa' });
 }
 
 // ── Log ────────────────────────────────────────────
