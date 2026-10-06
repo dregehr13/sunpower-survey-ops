@@ -5361,9 +5361,6 @@ function renderAgingWIP(){
   // dim-filtered queue so the "Open resurveys" pointer cell and the All-view
   // subtitle always show both halves regardless of the lens.
   const allWip=wipFiltered().filter(inView).map(r=>({...r,daysOpen:ssDaysOpen(r,today)??0,projectedCt:projCt(r),projectAge:r.start?dDiff(r.start,today)??0:null}));
-  const wipUnfilteredCount=wipRows().filter(r=>isOpenQueue(r)&&inView(r)).length;
-  const wipDimFiltered=allWip.length!==wipUnfilteredCount;
-  const totalWip=allWip.length;
   // Mean Days Open in SS. Past due held this slot and was the weakest cell on
   // the rail: it reads 0 or 1 most days, and it is one click away as a status
   // chip directly below. Avg age describes the whole queue instead.
@@ -5378,6 +5375,10 @@ function renderAgingWIP(){
   const railOpenRs=wipFiltered().filter(isOpenResurvey).length;
   const railGoBack=wipFiltered().filter(isOpenGoBack).length;
   const railInitial=wipFiltered().filter(isWIP).length;
+  // Open now is the open INITIAL survey count whichever lens is active — it
+  // never follows the Go backs / Resurveys / All lens.
+  const railInitialAll=wipRows().filter(r=>isOpenQueue(r)&&isWIP(r)).length;
+  const railInitialFiltered=railInitial!==railInitialAll;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
   // Both sides of the ratio come from the same filtered population.
@@ -5507,7 +5508,7 @@ function renderAgingWIP(){
     <div class="srail">
       <div class="srail-cell">
         <div class="klabel">Open now${kinfo(TIP.wip)}</div>
-        <div class="srail-val">${totalWip}${wipDimFiltered?`<span class="srail-sub">of ${wipUnfilteredCount}</span>`:''}</div>
+        <div class="srail-val">${railInitial}${railInitialFiltered?`<span class="srail-sub">of ${railInitialAll}</span>`:''}</div>
       </div>
       <div class="srail-cell">
         <div class="klabel">Avg age${kinfo(TIP.avgAge)}</div>
