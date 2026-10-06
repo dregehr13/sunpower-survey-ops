@@ -994,6 +994,20 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
   assert.equal(QA.reviewMetrics([]).firstPassRate, null);
 });
 
+test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
+  const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
+  const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 3), ...ph('Location Photos', 2), ...ph('Trench Path', 2), ...over] });
+  const R = QA.evaluate(ground(), specs);
+  for (const id of ['roof_pitch', 'roof_overhang', 'plane_count', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(R, 'gm_trench').status, 'pass');
+  assert.ok(!R.findings.some(f => f.layer === 'A' && /^(Roof Photos|Attic Info)$/.test(f.area)));
+  // missing the trench photos is a miss; a roof survey never sees these checks
+  const S2 = survey('radicl', { photos: [...ph('Trench Path'), ...ph('Horizon Photos')] });
+  assert.equal(get(QA.evaluate(S2, specs), 'gm_location').status, 'miss');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench').status, 'na');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
+});
+
 const repPages = () => [
   page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('8 photos, 5 sections', 40, 640)]),
   page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650), blk('UtilityBill (1)', 40, 450), blk('Attach Roof Condition Photos (1)', 40, 250)]),
