@@ -573,6 +573,7 @@ const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 
 // report that cuts both captions to "Dead Front…".
 const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave',
   msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap',
+  gm_horizon: 'gm_horizon', gm_location: 'gm_location', gm_trench: 'gm_trench',
   attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
 const qaCatOf = f => { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
@@ -1230,6 +1231,12 @@ function qaDecide(i, v) {
 // is not legible or there is none, a clear photo from a past survey (the image says which).
 // They sit beside the survey's photo in the zoom.
 const QA_REFS = {
+  gm_horizon: { what: 'A 360 degree set of photos from the center of the proposed ground mount location, showing the whole area around it.', why: 'Design finds the trees and buildings that could shade the panels from the horizon, and sizes the array around them.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-horizon-1.jpg', cap: 'Open ground and the tree line' }, { src: 'qa/ref/gm-horizon-2.jpg', cap: 'Buildings and trees on the horizon' }] },
+  gm_location: { what: 'The proposed array location and the area around it, from several angles.', why: 'Design places the array on the ground from these and checks what is near it.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-location-1.jpg', cap: 'The location with what stands near it' }, { src: 'qa/ref/gm-location-2.jpg', cap: 'The same ground from another angle' }] },
+  gm_trench: { what: 'The path from the array location to the meter, walked in photos. Any concrete or asphalt it crosses gets its own photos.', why: 'Design routes the trench and conduit from these, and prices what has to be cut.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-trench-1.jpg', cap: 'The path across the yard toward the house' }, { src: 'qa/ref/gm-trench-2.jpg', cap: 'Arriving at the meter wall' }] },
   breaker: { what: 'A picture of the main breaker, with its rating readable.', why: 'The main breaker is the largest breaker and shuts off the whole panel. Its rating tells Design how the solar system ties into the grid.',
     imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Panel with the dead front on' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
   label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
