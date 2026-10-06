@@ -1638,6 +1638,14 @@ Full notes in `docs/QA.md`. The engine (`lib/qa.cjs`) and the QA page (`#qa`,
   out of the Salesforce summary; Radicl Sep 2026 dead front is one row needing two photos; only
   the Report Link and Summary fields have Copy, in `QA_SF_FIELDS` order
 
+## QA fields in the export (2026-10-06)
+Eight `Site Survey QA …` columns ride on every row (`qa_status`, `qa_source`, `qa_by`, `qa_date`, `qa_summary`, `qa_link`, `qa_override`, `qa_called`), carried through `lib/parse-sf-core.cjs` and the `FIELDS` registry. Things not to undo:
+- **"Reviewed" is `qa_date`, never `qa_status`** — `Not Started` is a real status value on 143 rows
+- **`isQAEscape`** (lib/metrics.cjs) is a resurvey defect on a survey QA passed, requested on/after the QA date, not `qa_called`. The **QA passed, Design resurveyed** panel (`renderQAGap`) shows them on This/Last Week (resurveys requested in the week) and on Resurveys (completions in the range), with the categories asked for and a link to the QA report. It renders nothing until the dataset carries any review
+- Vocabulary: go back = caught by our QA, resurvey = called out by Design after
+- **Open go backs replaced Unscheduled in the WIP rail** (2026-10-06, Doug). `isOpenGoBack` = `qa_called` ticked, no `resurvey_complete`, list not Complete, In Progress, not parked; it needs no `resurvey_requested`, and is part of `isOpenQueue` (so the nav badge counts it). The lens control gained **Go backs** (`wipView==='goback'`); the unscheduled bracket under the status bar is unchanged. A go back that also has a request sits in both the Resurveys and Go backs lenses, so the lenses no longer partition exactly
+- **QA reviews panel on Resurveys** (`renderQARollup`): weekly bars by QA date split normal pass / override / not passed, and pass rate by resource. Under `RS_MIN_CELL` reviews a group shows its count, not a percentage. Complete-to-review lag is not built: the survey date lives only in the report PDF and the QA log, not in Salesforce
+
 ## Rep surveys phased out (2026-10-01)
 Sales reps stop self-surveying as of 2026-10-01; new work goes to SPWR or Radicl.
 **Nothing was changed in code** (Doug's call) — history is kept, and every rep
