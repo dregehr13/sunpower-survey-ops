@@ -4283,7 +4283,7 @@ function renderQARollup(id,reviewed){
   const el=document.getElementById(id); if(!el) return;
   if(!reviewed.length){ el.innerHTML=''; return; }
   const tally=list=>{ const t={n:list.length,ok:0,ov:0,no:0}; list.forEach(r=>{t[_qaKind(r)]++;}); t.pass=t.ok+t.ov; return t; };
-  const rate=t=>t.n>=RS_MIN_CELL?`<b>${Math.round(t.pass/t.n*100)}%</b>`:`<span class="pna-n">${t.pass} of ${t.n}</span>`;
+  const rate=t=>t.n>=RS_MIN_CELL?`<b style="color:var(--text);">${Math.round(t.pass/t.n*100)}%</b>`:`<span class="pna-n">${t.pass} of ${t.n}</span>`;
   const bar=t=>`<div style="display:flex;height:100%;width:${Math.max(t.n/maxN*100,4)}%;border-radius:3px;overflow:hidden;">${['ok','ov','no'].filter(k=>t[k]).map(k=>`<div style="flex:${t[k]};background:${QA_KIND_C[k]};"></div>`).join('')}</div>`;
   const mix=t=>[t.ok?`${t.ok} passed`:'',t.ov?`<span style="color:var(--amber);">${t.ov} override</span>`:'',t.no?`<span style="color:var(--red);">${t.no} not passed</span>`:''].filter(Boolean).join(' \u00b7 ');
   const byWk={}; reviewed.forEach(r=>{(byWk[weekOf(r.qa_date)]=byWk[weekOf(r.qa_date)]||[]).push(r);});
@@ -4310,7 +4310,7 @@ function renderQARollup(id,reviewed){
     <div style="overflow-x:auto;margin-top:12px;"><table class="tbl-static"><thead><tr>
       <th>Pass rate by resource</th><th class="r">Reviewed</th><th class="r">Passed</th><th class="r">Normal</th><th class="r">Override</th><th class="r">Not passed</th></tr></thead>
       <tbody>${resRows}</tbody></table></div>
-    <div class="note">By QA review date. Passed includes override; Normal is a pass with no override. Latest verdict per survey.</div>
+    <div class="note">By QA review date, latest verdict. Passed includes override; Normal is a pass without one.</div>
   </div>`;
 }
 
@@ -4332,9 +4332,9 @@ function renderQAGap(id,o){
   const sub=o.reviewed!=null
     ?`${list.length} of ${o.reviewed} QA-passed survey${o.reviewed===1?'':'s'} came back as a resurvey · ${o.when}`
     :`${list.length} of ${o.pool.length} ${o.poolLabel} ${o.when} had passed QA`;
-  const drill=list.length?`<button class="fbtn" onclick="drillCur('${o.key}','QA passed, resurveyed','${list.length} resurvey${list.length===1?'':'s'} on surveys QA had passed · ${o.when}',{mode:'resurvey'})" style="font-size:11px;">All ${list.length} \u2197</button>`:'';
+  const drill=list.length?`<button class="fbtn" onclick="drillCur('${o.key}','Resurveys on QA-passed surveys','${list.length} resurvey${list.length===1?'':'s'} on surveys QA had passed · ${o.when}',{mode:'resurvey'})" style="font-size:11px;">All ${list.length} \u2197</button>`:'';
   el.innerHTML=`<div class="sec">
-    <div class="shead"><div><div class="stitle">QA passed, Design resurveyed</div><div class="ssub">${sub}</div></div>${drill}</div>
+    <div class="shead"><div><div class="stitle">Resurveys on QA-passed surveys</div><div class="ssub">${sub}</div></div>${drill}</div>
     ${list.length?`
     ${catRows.length?`<div class="rswk-rows">${catRows.map(([k,v])=>`<div class="rswk-row rswk-cat">
       <div class="rswk-wk">${esc(rsCatLabel(k))}</div>
