@@ -1669,7 +1669,7 @@ Chart.defaults.font.family = "'Archivo',-apple-system,BlinkMacSystemFont,'Segoe 
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, qaReviewed, qaPassed, qaCalled, isQAEscape, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -1734,6 +1734,16 @@ const FIELDS = [
   {key:'m1a_approved',         sfCol:'M1A Approved',                                               label:'M1A Approved',      type:'date',    filterable:false, editable:false},
   {key:'gross_price',          sfCol:'Opportunity: Gross Price',                                   label:'Gross Price',       type:'number',  filterable:false, editable:false},
   {key:'dealer_fee',           sfCol:'Project Event : Opportunity : Dealer Fee Amount',            label:'Dealer Fee',        type:'number',  filterable:false, editable:false},
+  // Site Survey QA (2026-10-06). Carried from the export; the views read them
+  // through qaPassed / isQAEscape in lib/metrics.cjs.
+  {key:'qa_status',            sfCol:'Site Survey QA Review Status',                              label:'QA Status',         type:'text',    filterable:false, editable:false},
+  {key:'qa_source',            sfCol:'Site Survey QA Review Source',                              label:'QA Source',         type:'text',    filterable:false, editable:false},
+  {key:'qa_by',                sfCol:'Site Survey QA Reviewed By: Full Name',                     label:'QA Reviewed By',    type:'text',    filterable:false, editable:false},
+  {key:'qa_date',              sfCol:'Site Survey QA Review Date',                                label:'QA Review Date',    type:'date',    filterable:false, editable:false},
+  {key:'qa_summary',           sfCol:'Site Survey QA Summary',                                    label:'QA Summary',        type:'text',    filterable:false, editable:false},
+  {key:'qa_link',              sfCol:'Site Survey QA Report Link',                                label:'QA Report Link',    type:'text',    filterable:false, editable:false},
+  {key:'qa_override',          sfCol:'Site Survey QA Override Reason',                            label:'QA Override Reason',type:'text',    filterable:false, editable:false},
+  {key:'qa_called',            sfCol:'Resurvey Called by Site Survey QA',                         label:'Called by QA',      type:'text',    filterable:false, editable:false},
   {key:'ct_s2r',     computed:true, label:'Start→Req (d)',      type:'number'},
   {key:'ct_r2s',     computed:true, label:'Req→Sched (d)',      type:'number'},
   {key:'ct_total',   computed:true, label:'Total (d)',           type:'number'},
@@ -3051,6 +3061,10 @@ function drillCols(mode,shown,today){
     det:{k:'det',label:'What was missing',tdClass:'drill-det',tdTitle:r=>r.resurvey_details||'',
       sortVal:r=>drillDetText(r).toLowerCase()||null, txt:r=>drillDetText(r),
       cell:r=>{const d=drillDetText(r); return d?hl(d):dash;}},
+    // Site Survey QA fields carried on the row itself (not the Metrics page's _qa).
+    sfQa:{k:'sfQa',label:'QA',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>r.qa_date?r.qa_date:null, txt:r=>r.qa_date?(r.qa_status+' '+r.qa_date):'',
+      cell:r=>r.qa_date?hl((r.qa_status||'')+' · '+fmtDateShort(r.qa_date)):dash},
     rsCycle:{k:'rsCycle',label:'Cycle',cls:'r',th:TIP.rsCycle,
       sortVal:r=>r.ct_resurvey!=null?r.ct_resurvey:null,
       txt:r=>r.ct_resurvey!=null?r.ct_resurvey+'d':'',
@@ -3087,8 +3101,8 @@ function drillCols(mode,shown,today){
     ? [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
     : [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsCycle];
   if(mode==='resurvey') return openRs
-    ? [col.proj,col.region,col.surveyor,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
-    : [col.proj,col.region,col.surveyor,col.attr,col.reason,col.det,col.rsCycle];
+    ? [col.proj,col.region,col.surveyor,col.sfQa,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
+    : [col.proj,col.region,col.surveyor,col.sfQa,col.attr,col.reason,col.det,col.rsCycle];
   if(mode==='groupBy')  return [col.proj,col.region,col.reason,col.complete,{...col.days,label:'Cycle'}];
   if(mode==='byDate')   return [col.proj,col.region,col.resource,col.complete,col.days];
   return [col.proj,col.region,col.resource,col.start,col.complete,col.days];
@@ -3465,9 +3479,14 @@ function renderWeek(){
         <div class="srail" id="cur-kpis"></div>
       </div>
       <div id="week-inner"></div>
+      <div id="qa-gap-week"></div>
     </div>`;
   renderWipCountBadge();
   weekView==='last' ? renderLastWeek() : renderThisWeek();
+  const _qaw=weekRange(weekView==='last'?-1:0);
+  renderQAGap('qa-gap-week',{key:'qaGapWk',rows:rows.filter(r=>isQAEscape(r)&&r.resurvey_requested>=_qaw.from&&r.resurvey_requested<=_qaw.to),
+    pool:rows.filter(r=>isResurveyDefect(r)&&r.resurvey_requested>=_qaw.from&&r.resurvey_requested<=_qaw.to),
+    when:weekView==='last'?'last week':'this week',poolLabel:'resurveys called out'});
 }
 
 // ═══ WIP NAV BADGE ══════════════════════════════════════
@@ -4244,6 +4263,49 @@ function renderRsReq(){
       <div class="note">By request date · fixed two weeks · <b>ignores the date range</b>, obeys region/office/resource.${dismissedN?` ${dismissedN} greyed ${dismissedN===1?'row is':'rows are'} Unnecessary Request — excluded from yield.`:''}</div>`
       :`<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No resurveys requested ${fmtDate(w.from)} — ${fmtDate(w.to)}.</div>`}
     </div>`;
+}
+
+// ═══ QA GAP ══════════════════════════════════════════════
+// Resurveys on surveys our QA had already passed — what the checklist missed,
+// read for whether the template needs a new requirement. Shared by Last Week /
+// This Week (resurveys requested in the week) and Resurveys (completions in the
+// filter range). `rows` is the escapes, `pool` what they are a share of. The
+// panel does not render until the dataset carries any QA review at all, so an
+// export predating the QA columns shows nothing rather than an empty panel.
+function renderQAGap(id,o){
+  const el=document.getElementById(id); if(!el) return;
+  if(!rows.some(qaReviewed)){ el.innerHTML=''; return; }
+  const list=[...o.rows].sort((a,b)=>(b.resurvey_requested||'').localeCompare(a.resurvey_requested||''));
+  _curD[o.key]=list;
+  const cats={}; list.forEach(r=>rsCategories(r).forEach(k=>{cats[k]=(cats[k]||0)+1;}));
+  const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  const catMax=catRows.length?catRows[0][1]:1;
+  const sub=o.reviewed!=null
+    ?`${list.length} of ${o.reviewed} QA-passed survey${o.reviewed===1?'':'s'} came back as a resurvey · ${o.when}`
+    :`${list.length} of ${o.pool.length} ${o.poolLabel} ${o.when} had passed QA`;
+  const drill=list.length?`<button class="fbtn" onclick="drillCur('${o.key}','QA passed, resurveyed','${list.length} resurvey${list.length===1?'':'s'} on surveys QA had passed · ${o.when}',{mode:'resurvey'})" style="font-size:11px;">All ${list.length} \u2197</button>`:'';
+  el.innerHTML=`<div class="sec">
+    <div class="shead"><div><div class="stitle">QA passed, Design resurveyed</div><div class="ssub">${sub}</div></div>${drill}</div>
+    ${list.length?`
+    ${catRows.length?`<div class="rswk-rows">${catRows.map(([k,v])=>`<div class="rswk-row rswk-cat">
+      <div class="rswk-wk">${esc(rsCatLabel(k))}</div>
+      <div class="rswk-barwrap"><div class="rswk-bar stale" style="width:${Math.max(v/catMax*100,6)}%;"></div></div>
+      <div class="rswk-n">${v}</div></div>`).join('')}</div>`:''}
+    <div class="rsreq-items" style="margin-left:0;border-left:0;padding:0;">
+      ${list.map(r=>{
+        const det=(r.resurvey_details||'').replace(/\s*\n\s*/g,' \u00b7 ').replace(/^\s*(RESURVEY (EXPLANATION|REQUIRED)|REQUEST DETAILS)\s*:?\s*/i,'').trim();
+        const reason=rsReasons(r).join(' \u00b7 ');
+        const link=/^https?:\/\//.test(r.qa_link||'')?` \u00b7 <a href="${esc(r.qa_link)}" target="_blank" rel="noopener" class="sf-link">QA report \u2197</a>`:'';
+        return `<div class="rsreq-item">
+          <div class="rsreq-top"><span class="rsreq-proj" title="${esc(r.project||r.address||'')}">${projLink(r)}</span>
+            <span class="rsreq-attr" style="color:var(--muted);">${esc(r.resource||'')}</span></div>
+          <div class="rsreq-why"><b>QA ${esc(r.qa_status||'')}</b> ${fmtDateShort(r.qa_date)}${r.qa_by?' \u00b7 '+esc(r.qa_by):''}${r.qa_override?' \u00b7 override: '+esc(r.qa_override):''}${link}</div>
+          <div class="rsreq-why" title="${esc(r.resurvey_details||'')}"><b>${reason?esc(reason):'No reason recorded'}</b>${det?' \u00b7 '+esc(det):''} <span style="color:var(--faint);">\u00b7 requested ${fmtDateShort(r.resurvey_requested)}</span></div>
+        </div>`;}).join('')}
+    </div>
+    <div class="note">Resurvey requested on or after the QA date, not called by QA itself. Categories are read from the request details.</div>`
+    :`<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No resurveys on QA-passed surveys ${o.when}.</div>`}
+  </div>`;
 }
 
 // ═══ PERFORMANCE ═════════════════════════════════════════
@@ -5993,9 +6055,11 @@ function renderResurvey(){
   </div>`:''}
   <div id="rsreq-wrap"></div>
   </div>
+  <div id="qa-gap-rs"></div>
   `;
 
   renderRsReq();
+  renderQAGap('qa-gap-rs',{key:'qaGapRs',rows:defects.filter(isQAEscape),reviewed:completions.filter(qaPassed).length,when:'in the selected range'});
 
   // ── Yield by completion week ──────────────────────────────────────────
   // Two forms behind the panel toggle. Both read the same fpyWeeks, both mark

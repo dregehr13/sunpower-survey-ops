@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
@@ -651,4 +651,34 @@ test('trendLabel with the median dead band (compose)', () => {
 test('trendLabel returns null when either side is missing', () => {
   assert.equal(trendLabel(null, 3, TREND_BAND_MED), null);
   assert.equal(trendLabel(3, null, TREND_BAND_MED), null);
+});
+
+// ── Site Survey QA: reviewed, passed, escaped ──
+test('qaReviewed keys on the review date, not the status', () => {
+  assert.equal(qaReviewed({ qa_status: 'Not Started', qa_date: '' }), false);
+  assert.equal(qaReviewed({ qa_status: 'Passed', qa_date: '2026-10-05' }), true);
+  assert.equal(qaReviewed({}), false);
+});
+
+test('qaPassed covers Passed and Passed with Override only', () => {
+  const d = '2026-10-05';
+  assert.equal(qaPassed({ qa_status: 'Passed', qa_date: d }), true);
+  assert.equal(qaPassed({ qa_status: 'Passed with Override', qa_date: d }), true);
+  assert.equal(qaPassed({ qa_status: 'Failed - Gaps Found', qa_date: d }), false);
+  assert.equal(qaPassed({ qa_status: 'Passed', qa_date: '' }), false);
+});
+
+test('isQAEscape is a QA-passed survey Design called back afterwards', () => {
+  const base = { qa_status: 'Passed', qa_date: '2026-10-05', reopened_by_design: '1',
+    resurvey_requested: '2026-10-08', resurvey_reason: 'Survey Incomplete' };
+  assert.equal(isQAEscape(base), true);
+  assert.equal(isQAEscape({ ...base, qa_status: 'Passed with Override' }), true);
+  assert.equal(isQAEscape({ ...base, qa_status: 'Failed - Gaps Found' }), false);
+  // Design had already flagged it before QA looked: not a QA miss.
+  assert.equal(isQAEscape({ ...base, resurvey_requested: '2026-10-01' }), false);
+  // QA called the resurvey itself: a go back.
+  assert.equal(isQAEscape({ ...base, qa_called: '1' }), false);
+  // Dismissed as unnecessary: nothing was re-surveyed.
+  assert.equal(isQAEscape({ ...base, resurvey_reason: 'Unnecessary Request' }), false);
+  assert.equal(isQAEscape({ qa_status: 'Passed', qa_date: '2026-10-05' }), false);
 });
