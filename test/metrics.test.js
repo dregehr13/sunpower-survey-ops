@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, wipTag, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
@@ -692,4 +692,13 @@ test('isOpenGoBack is a QA-called go back, open, with no resurvey complete date'
   assert.equal(isOpenGoBack({ ...g, list: 'Complete' }), false);
   assert.equal(isOpenGoBack({ ...g, project_status: 'Canceled' }), false);
   assert.equal(isOpenGoBack({ ...g, list: 'Inactive' }), false);
+});
+
+test('wipTag reads GB for a pre-completion go back, RS for an ordinary open resurvey', () => {
+  const base = { list: 'Reopened', project_status: 'In Progress', complete: '2026-10-01' };
+  assert.equal(wipTag({ ...base, qa_called: '1' }), 'GB');
+  assert.equal(wipTag({ ...base, qa_called: '1', resurvey_requested: '2026-10-03' }), 'GB');
+  assert.equal(wipTag({ ...base, resurvey_requested: '2026-10-03' }), 'RS');
+  assert.equal(wipTag({ ...base, resurvey_requested: '2026-10-03', resurvey_complete: '2026-10-05' }), '');
+  assert.equal(wipTag({ ...base }), '');
 });
