@@ -1669,7 +1669,7 @@ Chart.defaults.font.family = "'Archivo',-apple-system,BlinkMacSystemFont,'Segoe 
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, qaReviewed, qaPassed, qaCalled, isQAEscape, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -2802,6 +2802,7 @@ const TIP={
   wipRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the open WIP queue shown above — revenue still sitting with Site Survey, not yet moved through.',
   perfRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the completed surveys in view — revenue Site Survey has moved through in the current filter/date range.',
   curRevenue:'Sum of Opportunity: Gross Price minus the dealer fee, across the Completions cell beside it — revenue that moved out of WIP this week.',
+  goBack:'Go backs Site Survey QA called (Resurvey Called by Site Survey QA ticked) with no resurvey complete date, on an open or reopened task. A live snapshot of the queue.',
   rsOpen:'Resurveys requested but not yet complete, as of the latest export. A live snapshot: unlike the yield figures on this page it ignores the date filter, because a queue you still have to work is not a thing you can measure over a past window. Region, office and resource filters do apply.',
 
   // ── Map ──
@@ -3065,6 +3066,8 @@ function drillCols(mode,shown,today){
     sfQa:{k:'sfQa',label:'QA',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
       sortVal:r=>r.qa_date?r.qa_date:null, txt:r=>r.qa_date?(r.qa_status+' '+r.qa_date):'',
       cell:r=>r.qa_date?hl((r.qa_status||'')+' · '+fmtDateShort(r.qa_date)):dash},
+    sfQaBy:{k:'sfQaBy',label:'Reviewed by',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>(r.qa_by||'').toLowerCase()||null, txt:r=>r.qa_by||'', cell:r=>hl(r.qa_by||'—')},
     rsCycle:{k:'rsCycle',label:'Cycle',cls:'r',th:TIP.rsCycle,
       sortVal:r=>r.ct_resurvey!=null?r.ct_resurvey:null,
       txt:r=>r.ct_resurvey!=null?r.ct_resurvey+'d':'',
@@ -3103,6 +3106,7 @@ function drillCols(mode,shown,today){
   if(mode==='resurvey') return openRs
     ? [col.proj,col.region,col.surveyor,col.sfQa,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
     : [col.proj,col.region,col.surveyor,col.sfQa,col.attr,col.reason,col.det,col.rsCycle];
+  if(mode==='qaRev')    return [col.proj,col.region,col.resource,col.sfQa,col.sfQaBy,col.complete];
   if(mode==='groupBy')  return [col.proj,col.region,col.reason,col.complete,{...col.days,label:'Cycle'}];
   if(mode==='byDate')   return [col.proj,col.region,col.resource,col.complete,col.days];
   return [col.proj,col.region,col.resource,col.start,col.complete,col.days];
@@ -4265,6 +4269,51 @@ function renderRsReq(){
     </div>`;
 }
 
+// ═══ QA ROLL-UP ══════════════════════════════════════════
+// Resurveys page: QA reviews by week (normal pass vs override vs not passed)
+// and pass rate by resource. Reviewed = qa_date; the status is the latest
+// verdict on the survey. Population is the page's completions (filter bar
+// applies), bucketed by the QA date. Below RS_MIN_CELL reviews a group shows
+// its count instead of a percentage, as every other rate on this page does.
+function _qaKind(r){ return /override/i.test(r.qa_status||'')?'ov':qaPassed(r)?'ok':'no'; }
+const QA_KIND_C={ok:'var(--green)',ov:'var(--amber)',no:'var(--red)'};
+let _qaRollD={};
+function drillQARoll(key,title,sub){ openDrill(title,sub,_qaRollD[key]||[],{mode:'qaRev'}); }
+function renderQARollup(id,reviewed){
+  const el=document.getElementById(id); if(!el) return;
+  if(!reviewed.length){ el.innerHTML=''; return; }
+  const tally=list=>{ const t={n:list.length,ok:0,ov:0,no:0}; list.forEach(r=>{t[_qaKind(r)]++;}); t.pass=t.ok+t.ov; return t; };
+  const rate=t=>t.n>=RS_MIN_CELL?`<b>${Math.round(t.pass/t.n*100)}%</b>`:`<span class="pna-n">${t.pass} of ${t.n}</span>`;
+  const bar=t=>`<div style="display:flex;height:100%;width:${Math.max(t.n/maxN*100,4)}%;border-radius:3px;overflow:hidden;">${['ok','ov','no'].filter(k=>t[k]).map(k=>`<div style="flex:${t[k]};background:${QA_KIND_C[k]};"></div>`).join('')}</div>`;
+  const mix=t=>[t.ok?`${t.ok} passed`:'',t.ov?`<span style="color:var(--amber);">${t.ov} override</span>`:'',t.no?`<span style="color:var(--red);">${t.no} not passed</span>`:''].filter(Boolean).join(' \u00b7 ');
+  const byWk={}; reviewed.forEach(r=>{(byWk[weekOf(r.qa_date)]=byWk[weekOf(r.qa_date)]||[]).push(r);});
+  const wks=Object.keys(byWk).sort().reverse().slice(0,12);
+  const maxN=Math.max(...wks.map(w=>byWk[w].length),1);
+  _qaRollD={};
+  const wkRows=wks.map(w=>{ const list=byWk[w], t=tally(list), k='wk'+w; _qaRollD[k]=list;
+    return `<div class="rswk-row drill-tgt" ${drillAttrs(`drillQARoll('${k}','QA reviews · week of ${fmtDateShort(w)}','${list.length} reviewed')`)}>
+      <div class="rswk-wk">Week of ${fmtDateShort(w)}</div>
+      <div class="rswk-barwrap">${bar(t)}</div>
+      <div class="rswk-n">${t.n}</div>
+      <div class="rswk-meta" style="color:var(--muted);">${rate(t)}${mix(t)?' \u00b7 '+mix(t):''}</div></div>`; }).join('');
+  const RES=[['SunPower Surveyor','SPWR'],['Radicl Services','Radicl'],['Sales Rep','Sales Rep']];
+  const resRows=RES.map(([res,lab])=>{ const list=reviewed.filter(r=>r.resource===res); if(!list.length) return '';
+    const t=tally(list), k='res'+res; _qaRollD[k]=list;
+    return `<tr class="drill-tgt" ${drillAttrs(`drillQARoll('${k}','QA reviews \u00b7 ${lab}','${list.length} reviewed')`)}>
+      <td>${_drillResSpan(res)}</td><td class="r">${t.n}</td><td class="r">${rate(t)}</td>
+      <td class="r">${t.ok}</td><td class="r" style="color:var(--amber);">${t.ov||'<span class="pna">0</span>'}</td><td class="r" style="color:var(--red);">${t.no||'<span class="pna">0</span>'}</td></tr>`; }).join('');
+  const all=tally(reviewed);
+  el.innerHTML=`<div class="sec">
+    <div class="shead"><div><div class="stitle">QA reviews</div>
+      <div class="ssub">${all.n} reviewed \u00b7 ${all.ok} passed \u00b7 ${all.ov} with override \u00b7 ${all.no} not passed</div></div></div>
+    <div class="rswk-rows">${wkRows}</div>
+    <div style="overflow-x:auto;margin-top:12px;"><table class="tbl-static"><thead><tr>
+      <th>Pass rate by resource</th><th class="r">Reviewed</th><th class="r">Passed</th><th class="r">Normal</th><th class="r">Override</th><th class="r">Not passed</th></tr></thead>
+      <tbody>${resRows}</tbody></table></div>
+    <div class="note">By QA review date. Passed includes override; Normal is a pass with no override. Latest verdict per survey.</div>
+  </div>`;
+}
+
 // ═══ QA GAP ══════════════════════════════════════════════
 // Resurveys on surveys our QA had already passed — what the checklist missed,
 // read for whether the template needs a new requirement. Shared by Last Week /
@@ -5190,11 +5239,12 @@ function renderTrends(){
 // backlog that came back, tracked on its own), or All (the two together, for
 // the team). isWIP and isOpenResurvey partition the union exactly. Initial is
 // the default; the Resurveys rail cell is the shortcut into that lens.
-let wipView='initial'; // 'initial' | 'openrs' | 'all' — Initial is the reported WIP; All is the combined team view
+let wipView='initial'; // 'initial' | 'openrs' | 'goback' | 'all' — Initial is the reported WIP; All is the combined team view
 const WIP_VIEWS={
   initial: {noun:'initial surveys', full:'initial surveys', sub:'First visits — the reported WIP'},
   openrs:  {noun:'open resurveys',  full:'open resurveys',  sub:'Resurveys requested and not yet complete — tracked separately'},
-  all:     {noun:'open',            full:'open surveys',    sub:'Initial surveys and open resurveys together'},
+  goback:  {noun:'open go backs',   full:'open go backs',   sub:'Go backs QA called that have not come back yet'},
+  all:     {noun:'open',            full:'open surveys',    sub:'Initial surveys, open resurveys and go backs together'},
 };
 const wipViewIs=v=>wipView===v;
 // A plain assignment, because the lens toggle is a segmented control: clicking
@@ -5252,7 +5302,7 @@ function renderAgingWIP(){
   }));
   // The view is the outermost cut: every count on the page — rail, bands,
   // chips, footer — is computed within it, not against the national queue.
-  const inView=r=>wipView==='openrs'?isOpenResurvey(r):wipView==='initial'?isWIP(r):true;
+  const inView=r=>wipView==='openrs'?isOpenResurvey(r):wipView==='goback'?isOpenGoBack(r):wipView==='initial'?isWIP(r):true;
   wip=wip.filter(inView);
   const viewPool=wip;
 
@@ -5322,11 +5372,11 @@ function renderAgingWIP(){
   // Revenue still sitting in the open queue shown above — same population as
   // Open now, so the two read off the same set of rows by construction.
   const wipRevenue=revenueValue(allWip);
-  const railUnsched=allWip.filter(r=>QS_UNSCHED.includes(qStat(r).key)).length;
   // The whole dim-filtered queue split into its two halves — not lens-scoped,
   // so the "Open resurveys" cell and the All-view subtitle read the same
   // whichever lens is active. isWIP and isOpenResurvey partition the union.
   const railOpenRs=wipFiltered().filter(isOpenResurvey).length;
+  const railGoBack=wipFiltered().filter(isOpenGoBack).length;
   const railInitial=wipFiltered().filter(isWIP).length;
   // SS ratio, live variant: WIP right now ÷ completions of the last 3 complete
   // weeks. Deliberately not the weekly reported number — see lib/metrics.cjs.
@@ -5467,17 +5517,10 @@ function renderAgingWIP(){
         // Three filter cells. Each mirrors a control that already exists below
         // — the age bands, the Unscheduled bracket, the view toggle — so the
         // rail is a shortcut into the queue rather than a fourth vocabulary.
-        // Only the unscheduled statuses that actually have rows, which is the
-        // same list the bracket under the status bar drives — and the list
-        // line 3958 prunes wipQsSel down to. Testing all of QS_UNSCHED meant
-        // the cell could never light up: Likely cancel is empty most days, so
-        // "every key selected" was unreachable.
-        const unschedKeys=QS_UNSCHED.filter(k=>qsCounts[k]);
-        const unschedOn=unschedKeys.length>0&&unschedKeys.every(k=>wipQsSel.has(k));
-        // The two lens cells. Mutually exclusive by construction — setWipView
+        // The lens cells. Mutually exclusive by construction — setWipView
         // replaces the state rather than ORing into it — so the queue can
         // never claim to be showing both halves of a partition at once.
-        const rsOn=wipViewIs('openrs');
+        const rsOn=wipViewIs('openrs'), gbOn=wipViewIs('goback');
         const cell=(on,call,label,tip,val,color,hint)=>`
       <div class="srail-cell rail-f${on?' on':''}" role="button" tabindex="0" aria-pressed="${on}"
            title="${esc(on?'Showing only these — click to clear':hint)}"
@@ -5489,8 +5532,8 @@ function renderAgingWIP(){
         <div class="klabel">WIP revenue${kinfo(TIP.wipRevenue+' Exact: '+fmtRevenueExact(wipRevenue)+'.')}</div>
         <div class="srail-val">${fmtRevenue(wipRevenue)}</div>
       </div>`
-          +cell(unschedOn,`toggleWipUnscheduled('${unschedKeys.join(',')}')`,'Unscheduled','',railUnsched,null,
-                    'Filter the queue to everything with no booking')
+          +cell(gbOn,`setWipView('${gbOn?'initial':'goback'}')`,'Open go backs',kinfo(TIP.goBack),railGoBack,
+                    railGoBack?'var(--amber)':'var(--text)','Show only the go backs QA called that are still open')
           +cell(rsOn,`setWipView('${rsOn?'initial':'openrs'}')`,'Open resurveys',kinfo(TIP.rsOpen),railOpenRs,
                     railOpenRs?'var(--amber)':'var(--text)','Show only the open resurveys');
       })()}
@@ -5518,7 +5561,7 @@ function renderAgingWIP(){
           // already follow — the rail cell is a shortcut into a control that
           // exists below it, not the only place the state can be reached.
           const lt=(v,l,tip)=>`<button class="tgl-btn${wipView===v?' active':''}" onclick="setWipView('${v}')"${tip?` title="${esc(tip)}"`:''} aria-pressed="${wipView===v}">${l}</button>`;
-          return `<div class="wip-lens">${lt('initial','Initial',TIP.wipInitial)}${lt('openrs','Resurveys',TIP.rsOpen)}${lt('all','All',TIP.wip)}</div>`;
+          return `<div class="wip-lens">${lt('initial','Initial',TIP.wipInitial)}${lt('openrs','Resurveys',TIP.rsOpen)}${lt('goback','Go backs',TIP.goBack)}${lt('all','All',TIP.wip)}</div>`;
         })()}
       </div>
 
@@ -6055,10 +6098,12 @@ function renderResurvey(){
   </div>`:''}
   <div id="rsreq-wrap"></div>
   </div>
+  <div id="qa-rollup-rs"></div>
   <div id="qa-gap-rs"></div>
   `;
 
   renderRsReq();
+  renderQARollup('qa-rollup-rs',completions.filter(qaReviewed));
   renderQAGap('qa-gap-rs',{key:'qaGapRs',rows:defects.filter(isQAEscape),reviewed:completions.filter(qaPassed).length,when:'in the selected range'});
 
   // ── Yield by completion week ──────────────────────────────────────────

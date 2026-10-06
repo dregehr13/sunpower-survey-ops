@@ -7,7 +7,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
-  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
+  effectiveComplete, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
   businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
@@ -681,4 +681,15 @@ test('isQAEscape is a QA-passed survey Design called back afterwards', () => {
   // Dismissed as unnecessary: nothing was re-surveyed.
   assert.equal(isQAEscape({ ...base, resurvey_reason: 'Unnecessary Request' }), false);
   assert.equal(isQAEscape({ qa_status: 'Passed', qa_date: '2026-10-05' }), false);
+});
+
+test('isOpenGoBack is a QA-called go back, open, with no resurvey complete date', () => {
+  const g = { qa_called: '1', list: 'Reopened', project_status: 'In Progress', complete: '2026-10-01' };
+  assert.equal(isOpenGoBack(g), true);
+  assert.equal(isOpenQueue(g), true);
+  assert.equal(isOpenGoBack({ ...g, qa_called: '0' }), false);
+  assert.equal(isOpenGoBack({ ...g, resurvey_complete: '2026-10-04' }), false);
+  assert.equal(isOpenGoBack({ ...g, list: 'Complete' }), false);
+  assert.equal(isOpenGoBack({ ...g, project_status: 'Canceled' }), false);
+  assert.equal(isOpenGoBack({ ...g, list: 'Inactive' }), false);
 });
