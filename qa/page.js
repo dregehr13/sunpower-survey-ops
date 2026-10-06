@@ -288,80 +288,91 @@ function qaSetReviewer(v) {
 }
 
 // ── Reading a report ───────────────────────────────
-async function qaPick(kind, file) {
-  if (!file) return;
-  if (kind === 'pdf') return qaOpenReport(file);
-  if (kind === 'add') return qaAddReport(file);
-  return qaOpenPack(file);
+function qaDropState() {
+  const busy = qaBusy.pdf, err = qaErr.pdf, big = !qaRun;
+  const title = big ? 'Upload the files for a review' : 'Add more files';
+  const sub = busy || err || (big
+    ? 'Drop everything for one survey here: the report, a go back, a sales rep report, the photo export (zip). The tool sorts out which is which. A whole day\'s files at once also works.'
+    : 'A go back report, a sales rep report or the photo export. Whatever you drop is sorted by what it is.');
+  return { cls: (busy ? ' busy' : err ? ' err' : '') + (big ? ' big' : ''), title, sub };
 }
-function qaDropState(kind) {
-  const busy = qaBusy[kind], err = qaErr[kind];
-  if (kind === 'add') {
-    const docs = qaRun && qaRun.docs ? qaRun.docs.slice(1) : [];
-    const sub = busy || err || (docs.length ? docs.map(d => d.name + ' · ' + qaPlural(d.pages, 'page')).join('; ') : 'The partial survey a go back sends. Drop it here to check it with the original as one survey');
-    return { cls: busy ? ' busy' : err ? ' err' : docs.length ? ' loaded' : '', title: docs.length && !busy && !err ? 'Go back report added' : 'Go back report (optional)', sub };
-  }
-  const have = kind === 'pdf' ? qaRun && qaRun.docs[0] : qaPack;
-  const cls = busy ? ' busy' : err ? ' err' : have ? ' loaded' : '';
-  // Before a report is loaded the report drop is the page's one call to action.
-  const big = kind === 'pdf' && !qaRun;
-  const title = big ? 'Upload a survey report to begin a review' : kind === 'pdf' ? 'Drop the report (PDF)' : 'Full-resolution photos (optional)';
-  const sub = busy || err || (have ? (have.name + ' · ' + (kind === 'pdf' ? have.pages + ' pages' : have.note)) : (big ? 'Drop the PDF here or click to choose. You can select all of today\'s reports at once.' : kind === 'pdf' ? 'Drop the PDF here or click to choose' : 'Drop the photo export (zip)'));
-  return { cls: cls + (big ? ' big' : ''), title: have && !busy && !err ? (kind === 'pdf' ? 'Report loaded' : 'Photos loaded') : title, sub };
+// What is loaded in the review and the role each file plays.
+function qaFilesHtml() {
+  const run = qaRun; if (!run) return '';
+  const rows = run.docs.map(d => ({ role: d.role || 'Report', name: d.name, meta: qaPlural(d.pages, 'page') }));
+  if (qaPack) rows.push({ role: 'Photo export', name: qaPack.name, meta: qaPack.note });
+  return `<div class="qa-files">${rows.map(r => `<div class="qa-file"><span class="pill qa-pill-mute">${qaH(r.role)}</span><span class="qa-file-n">${qaH(r.name)}</span><span class="qa-file-m">${qaH(r.meta)}</span></div>`).join('')}</div>`;
 }
-function qaDropHtml(kind) {
-  const d = qaDropState(kind), id = 'qa-file-' + kind;
-  return `<input type="file" id="${id}" accept="${kind !== 'zip' ? (qaRun ? '.pdf,application/pdf' : '.pdf,application/pdf,.zip,application/zip') : '.zip,application/zip'}"${kind === 'pdf' && !qaRun ? ' multiple' : ''} style="display:none;" onchange="${kind === 'pdf' && !qaRun ? 'qaPickMany(this.files)' : `qaPick('${kind}',this.files[0])`};this.value='';">
-    <div class="upd-drophere${d.cls}" id="qa-drop-${kind}" tabindex="0" role="button"
+function qaDropHtml() {
+  const d = qaDropState(), id = 'qa-file-pdf';
+  return `${qaFilesHtml()}<input type="file" id="${id}" accept=".pdf,application/pdf,.zip,application/zip" multiple style="display:none;" onchange="qaPickMany(this.files);this.value='';">
+    <div class="upd-drophere${d.cls}" id="qa-drop-pdf" tabindex="0" role="button"
       onclick="document.getElementById('${id}').click()"
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('${id}').click();}"
       ondragover="event.preventDefault();this.classList.add('drag-over');"
       ondragleave="this.classList.remove('drag-over');"
-      ondrop="event.preventDefault();this.classList.remove('drag-over');${kind === 'pdf' && !qaRun ? 'qaPickMany(event.dataTransfer.files)' : `qaPick('${kind}',event.dataTransfer.files[0])`};">
+      ondrop="event.preventDefault();this.classList.remove('drag-over');qaPickMany(event.dataTransfer.files);">
       <strong>${qaH(d.title)}</strong><span>${qaH(d.sub)}</span></div>`;
 }
 function qaSetBusy(kind, msg, err) {
-  qaBusy[kind] = msg || ''; qaErr[kind] = err || '';
-  const el = document.getElementById('qa-dz-' + kind); if (el) el.innerHTML = qaDropHtml(kind);
+  kind = 'pdf';                                   // one drop, one status
+  qaBusy.pdf = msg || ''; qaErr.pdf = err || '';
+  const el = document.getElementById('qa-dz-pdf'); if (el) el.innerHTML = qaDropHtml();
 }
 
 // ── Intake ─────────────────────────────────────────
-const QA_VENDORS = { sitecapture: 'SunPower survey', radicl: 'Radicl survey' };
+const QA_VENDORS = { sitecapture: 'SunPower survey', radicl: 'Radicl survey', rep: 'Sales rep survey' };
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
   // No report yet: one field. A job picked from the list rides along and the report
   // is matched to it; otherwise the report names the project itself.
   if (!qaRun) {
-    host.innerHTML = `<div class="qa-hero"><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div>
+    host.innerHTML = `<div class="qa-hero"><div id="qa-dz-pdf">${qaDropHtml()}</div>
       ${qaProj.trim() ? `<div class="qa-picked">Starting with <b>${qaH(qaProj.trim().toUpperCase())}</b> <button class="qa-link" onclick="qaStartOver()">Clear</button></div><div id="qa-match">${qaMatchHtml()}</div>` : '<div id="qa-match"></div>'}${qaInboxNote ? `<div class="qa-picked">${qaH(qaInboxNote)}</div>` : ''}</div>`;
     return;
   }
   host.innerHTML = `<div class="qa-form">
     <div class="qa-field"><span class="klabel">Project</span><div id="qa-projcard">${qaProjCard()}</div></div>
-    <div class="qa-field"><span class="klabel">Report</span><div id="qa-dz-pdf">${qaDropHtml('pdf')}</div></div>
-    <div class="qa-field"><span class="klabel">Photos</span><div id="qa-dz-zip">${qaDropHtml('zip')}</div></div>
-    ${qaRun.saved ? '' : `<div class="qa-field"><span class="klabel">Go back</span><div id="qa-dz-add">${qaDropHtml('add')}</div></div>`}
+    <div class="qa-field"><span class="klabel">Files</span><div id="qa-dz-pdf">${qaDropHtml()}</div></div>
   </div>`;
 }
 
-async function qaOpenReport(file) {
+// One reader for every report that goes into a review. A sales rep report is a survey of its own
+// kind: photos only, so it is read by section (OpsQA.parseRep) and reviewed on photo coverage.
+async function qaReadPdf(file) {
+  const deps = await qaDepsLoad();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const hash = await qaHash(bytes);
+  const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
+  const det = OpsQA.detectTemplate(pages, deps.specs);
+  const spec = det.rep ? null : deps.specs.find(x => x.id === det.specId) || null;
+  const parse = () => det.rep ? OpsQA.parseRep(pages) : det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
+  return { deps, bytes, hash, pages, det, spec, parse };
+}
+const qaNotSurvey = det => /^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture, Radicl or sales rep survey report. ' + det.reason.replace(/^No known vendor signature on the first pages\s*/, '');
+// The review's file is the set: names joined, and a hash over the reports' own hashes.
+async function qaRefreshFile(run) {
+  run.file = { name: run.docs.map(d => d.name).join(' + '), size: run.docs.reduce((n, d) => n + d.size, 0), hash: await qaHash(new TextEncoder().encode(run.docs.map(d => d.hash).join(''))) };
+}
+
+async function qaOpenReport(file, opts) {
   qaSetBusy('pdf', 'Reading the report…');
   try {
-    const deps = await qaDepsLoad();
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const hash = await qaHash(bytes);
-    const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('pdf', `Reading page ${n} of ${t}…`) });
-    const det = OpsQA.detectTemplate(pages, deps.specs);
-    if (det.vendor === 'unknown') throw new Error(/^This is a Radicl/.test(det.reason) ? det.reason + '. Only site surveys are reviewed here.' : 'That\'s not a Site Capture or Radicl survey report. ' + det.reason.replace(/^No known vendor signature on the first pages\s*/, ''));
-    const spec = deps.specs.find(s => s.id === det.specId) || null;
-    const S = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
+    const { deps, bytes, hash, det, spec, parse } = await qaReadPdf(file);
+    if (det.vendor === 'unknown') throw new Error(qaNotSurvey(det));
+    const S = parse();
     const how = qaAutoProject(S);
     qaRevokeDocs(qaRun);
-    qaVendor = det.vendor;                                    // the report says what it is
-    try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {}
+    if (!det.rep) {
+      qaVendor = det.vendor;                                    // the report says what it is
+      try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {}
+    }
     qaRun = { file: { name: file.name, size: file.size, hash }, det, S, spec, specs: deps.specs, R: null, items: null, allKey: [], expand: {},
       verdicts: {}, decisions: {}, status: null, override: '', summary: '', edited: false, saved: null, step: 0, visited: { 0: true },
-      docs: [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S.meta.pages }] };
+      docs: [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S.meta.pages, role: det.rep ? 'Sales rep report' : det.partial ? 'Go back report' : 'Original report' }] };
+    // A sales rep report that was loaded first and a go back that then arrived: the go back is
+    // what is reviewed, and the rep report rides along beside it as the original.
+    if (opts && opts.rep) { const r = opts.rep; qaRun.docs.push(Object.assign({}, r.docs[0], { from: S.meta.pages + 1, role: 'Sales rep report' })); qaRun.rep = r.rep; await qaRefreshFile(qaRun); }
     qaFlag = 'all'; qaProjEdit = false;
     qaReeval(true);
     if (how) toast('Project ' + qaProj + ' filled in from ' + how);
@@ -381,44 +392,71 @@ async function qaOpenReport(file) {
 // beside it, then both are checked as one survey (OpsQA.mergeSurveys). It is a new review of
 // the project, so History keeps both reviews, not one written over the other.
 async function qaAddReport(file) {
-  const run = qaRun; if (!run || run.saved) return;
-  qaSetBusy('add', 'Reading the go back report…');
+  const run = qaRun; if (!run) return;
+  if (run.saved) return qaSetBusy('pdf', '', 'This review is saved. Start a new review to add files');
+  qaSetBusy('pdf', 'Reading the report…');
   try {
-    const deps = await qaDepsLoad();
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const hash = await qaHash(bytes);
+    const rd = await qaReadPdf(file), { deps, bytes, hash, det, spec, parse } = rd;
     if (run.docs.some(d => d.hash === hash)) throw new Error('That report is already in this review');
-    const { pages } = await deps.mod.pdfToBlocks(bytes, { pdfjs: deps.pdfjs, onPage: (n, t) => qaSetBusy('add', `Reading page ${n} of ${t}…`) });
-    const det = OpsQA.detectTemplate(pages, deps.specs);
-    if (det.vendor !== run.det.vendor) throw new Error(det.vendor === 'unknown' ? 'That\'s not a Site Capture or Radicl survey report' : 'That report is from the other survey type');
+    if (det.rep) return qaAttachRep(file, rd);
+    if (det.vendor === 'unknown') throw new Error(qaNotSurvey(det));
+    if (run.det.rep) {
+      if (!det.partial) throw new Error('That is a full survey report, and this review is a sales rep report. Start over with it');
+      return qaOpenReport(file, { rep: run });
+    }
+    if (det.vendor !== run.det.vendor) throw new Error('That report is from the other survey type');
     // The go back was opened first and the original is dropped second: the original becomes the
     // base and the go back follows it, the same review as the other order.
     const flip = run.det.partial && !det.partial;
     if (flip && run.docs.length > 1) throw new Error('That is the full report. Start over with it, then add the go back here');
-    const spec = deps.specs.find(x => x.id === det.specId) || null;
-    const S2 = det.vendor === 'sitecapture' ? OpsQA.parseSiteCapture(pages, spec) : OpsQA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
+    const S2 = parse();
     if (qaRun !== run) return;
     if (flip) {
       const back = run.docs[0];
-      run.docs = [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S2.meta.pages }, Object.assign({}, back, { from: S2.meta.pages + 1 })];
+      run.docs = [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S2.meta.pages }, Object.assign({}, back, { from: S2.meta.pages + 1, role: 'Go back report' })];
       run.S = OpsQA.mergeSurveys(S2, run.S);
       run.det = det; run.spec = spec;
     } else {
-      run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages });
+      run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages, role: 'Go back report' });
       run.S = OpsQA.mergeSurveys(run.S, S2);
     }
     run.det = Object.assign({}, run.det, { partial: run.S.template.partial });
-    // The review's file is the set: names joined, and a hash over the reports' own hashes.
-    run.file = { name: run.docs.map(d => d.name).join(' + '), size: run.docs.reduce((n, d) => n + d.size, 0), hash: await qaHash(new TextEncoder().encode(run.docs.map(d => d.hash).join(''))) };
+    await qaRefreshFile(run);
     qaReeval(true);
-    qaSetBusy('add', '');
+    qaSetBusy('pdf', '');
     if (qaPack) qaCrossCheckPack();
     qaRender();
     qaLoadPhotos();
     toast('Go back report added: ' + qaPlural(S2.photos.length, 'photo'));
   } catch (e) {
     console.error(e);
-    qaSetBusy('add', '', e.message || 'Couldn\'t read that file');
+    qaSetBusy('pdf', '', e.message || 'Couldn\'t read that file');
+  }
+}
+
+// A sales rep report beside a go back: the rep did the initial survey, Radicl or SunPower came
+// back for the resurvey. The go back is what is reviewed; the rep report is kept as the original
+// (its pages open in the viewer and its sections are summarised), not merged, because the two
+// are different forms with nothing in common to join on.
+async function qaAttachRep(file, rd) {
+  const run = qaRun; if (!run) return;
+  if (run.saved) return qaSetBusy('pdf', '', 'This review is saved. Start a new review to add files');
+  try {
+    if (run.det.rep) throw new Error('This review already is a sales rep report. Start over to review a different one');
+    qaSetBusy('pdf', 'Reading the sales rep report…');
+    rd = rd || await qaReadPdf(file);
+    if (run.docs.some(d => d.hash === rd.hash)) throw new Error('That report is already in this review');
+    const R = rd.parse();
+    if (qaRun !== run) return;
+    run.docs.push({ name: file.name, size: file.size, hash: rd.hash, bytes: rd.bytes, from: run.docs.reduce((n, d) => n + d.pages, 0) + 1, pages: R.meta.pages, role: 'Sales rep report' });
+    run.rep = { photos: R.photos.length, sections: (R.meta.sections || []).length, address: R.meta.address };
+    await qaRefreshFile(run);
+    qaSetBusy('pdf', '');
+    qaRefresh();
+    toast('Sales rep report added as the original: ' + qaPlural(R.photos.length, 'photo'));
+  } catch (e) {
+    console.error(e);
+    qaSetBusy('pdf', '', e.message || 'Couldn\'t read that file');
   }
 }
 function qaRevokeDocs(run) { for (const d of (run && run.docs) || []) if (d.url) URL.revokeObjectURL(d.url); }
@@ -428,7 +466,7 @@ function qaDocAt(page) {
   const d = docs.slice().reverse().find(x => page >= x.from) || docs[0];
   return d ? { d, page: Math.max(1, page - d.from + 1), i: docs.indexOf(d) } : null;
 }
-const qaPageLabel = p => { const a = qaDocAt(p); return a && a.i > 0 ? `Go back p.${a.page}` : `PDF p.${a ? a.page : p}`; };
+const qaPageLabel = p => { const a = qaDocAt(p); return a && a.i > 0 ? `${a.d.role === 'Sales rep report' ? 'Rep report' : 'Go back'} p.${a.page}` : `PDF p.${a ? a.page : p}`; };
 
 // Run the checks again with the project the coordinator typed.
 // Where Salesforce's address is, looked up once per address: {lat,lon}, null (not found) or false (no lookup here).
@@ -522,7 +560,7 @@ async function qaOpenPack(file) {
     qaPack = { name: file.name, zip, pack, kind, note: names.length + ' photos', check: null };
     qaSetBusy('zip', '');
     if (qaRun) { qaCrossCheckPack(); qaRender(); qaLoadPhotos(); }
-    else { const el = document.getElementById('qa-dz-zip'); if (el) el.innerHTML = qaDropHtml('zip'); }
+    else { const el = document.getElementById('qa-dz-pdf'); if (el) el.innerHTML = qaDropHtml(); }
   } catch (e) {
     console.error(e);
     qaSetBusy('zip', '', e.message || 'Couldn\'t read that file');
@@ -635,8 +673,9 @@ async function qaFetchImages(items) {
       if (f) { const blob = await f.async('blob'); it.url = URL.createObjectURL(blob); qaUrls.push(it.url); it.from = 'Original'; await qaMeasure(it, blob); qaPhotoReady(it); }
     }
   }
-  const need = items.filter(i => !i.url);
-  if (!need.length) return;
+  if (run.S.template.vendor === 'rep') await qaFetchRepImages(run, items);
+  const need = items.filter(i => !i.url && run.S.template.vendor !== 'rep');
+  if (!need.length) { qaNotFound(items); return; }
   try {
     const deps = await qaDepsLoad();
     // Pages run on across the reports of a go back; each report is read for its own pages.
@@ -660,7 +699,42 @@ async function qaFetchImages(items) {
       qaPhotoReady(it);
     }
   } catch (e) { console.error(e); }
+  qaNotFound(items);
+}
+function qaNotFound(items) {
   for (const it of items) if (!it.url) { const c = document.querySelector(`.qa-ph[data-i="${qaRun.items.indexOf(it)}"] .qa-ph-img`); if (c) { c.classList.remove('loading'); c.textContent = 'Not found in the report'; } }
+}
+// A rep report prints no caption beside a photo, only a heading per section with its photos in a
+// grid under it. A picture belongs to the nearest heading above it (or, at the top of a page, to
+// the section the previous page ended in); inside a section the grid is read left to right, top
+// to bottom. Page coordinates run upward, so "above" is the larger y.
+async function qaFetchRepImages(run, items) {
+  const S = run.S, secs = S.meta.sections || [], d = run.docs[0];
+  if (!secs.length) return;
+  try {
+    const deps = await qaDepsLoad();
+    const nums = []; for (let n = Math.min(...secs.map(x => x.page)); n <= d.pages; n++) nums.push(n);
+    const got = await deps.mod.pdfImages(d.bytes, nums, { pdfjs: deps.pdfjs });
+    const per = secs.map(() => []);
+    let carry = 0;
+    for (const n of nums) {
+      const heads = secs.map((x, i) => ({ y: x.y, i })).filter(h => secs[h.i].page === n);
+      for (const m of (got[n] || []).filter(m => m.width >= 300 && m.height >= 200)) {
+        const cy = (m.top + m.bottom) / 2, above = heads.filter(h => h.y >= cy - 14).sort((a, b) => a.y - b.y)[0];
+        per[above ? above.i : carry].push({ m, n, row: Math.floor(((above ? above.y : 800) - cy) / 200) });
+      }
+      if (heads.length) carry = Math.max(...heads.map(h => h.i));
+    }
+    per.forEach(l => l.sort((a, b) => a.n - b.n || a.row - b.row || a.m.left - b.m.left));
+    for (const it of items) {
+      const c = (per[it.photo.sec] || [])[it.photo.k]; if (!c) continue;
+      const blob = await c.m.get();
+      it.url = URL.createObjectURL(blob); qaUrls.push(it.url); it.from = 'From the report';
+      it.w = c.m.width; it.h = c.m.height; it.photo.page = c.n;
+      await qaMeasure(it, blob);
+      qaPhotoReady(it);
+    }
+  } catch (e) { console.error(e); }
 }
 
 // How sharp is it? The variance of a Laplacian over a small grey copy: a soft or
@@ -864,7 +938,7 @@ function _qaLikely() {
     return `<button class="qa-lk${on ? ' on' : ''}" data-p="${qaH(x.r.project)}" onclick="qaPickProject(this.dataset.p)">
       <span class="qa-lk-p">${qaH(x.r.project)}</span>
       <span class="qa-lk-a">${qaH((x.r.address || '').replace(/,?\s*[A-Z]{2}\s+\d{5}.*$/, '') || 'no address')}</span>
-      <span class="qa-lk-m">${held ? `<b class="qa-lk-busy" title="Opened at ${qaH(qaClock(held.at))}">In progress · ${qaH(held.by)}</b> · ` : ''}${qaInbox[x.r.project] && (qaInbox[x.r.project].pdf || qaInbox[x.r.project].back) ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
+      <span class="qa-lk-m">${held ? `<b class="qa-lk-busy" title="Opened at ${qaH(qaClock(held.at))}">In progress · ${qaH(held.by)}</b> · ` : ''}${qaInboxReady(qaInbox[x.r.project]) ? '<b class="qa-lk-ready">Report ready</b> · ' : ''}${x.r.resource === 'Radicl Services' ? 'Radicl' : 'SunPower'}${x.ago > 1 ? ' · ' + x.ago + ' days ago' : ''}${n ? ` · reviewed ${n}×` : ''}</span></button>`;
   };
   host.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Expected surveys</div>
     <div class="ssub">${qaPlural(all.length, 'survey')} booked for today or earlier and not complete in Salesforce. Pick one, then upload its report.</div></div></div>
@@ -880,7 +954,7 @@ function qaPickProject(p) {
     if (r && r.resource) { qaVendor = r.resource === 'Radicl Services' ? 'radicl' : 'sitecapture'; try { localStorage.setItem('ops_qa_vendor', qaVendor); } catch (e) {} }
   }
   _qaIntake(); _qaLikely(); _qaBar();
-  if (qaProj && qaInbox[qaProj] && (qaInbox[qaProj].pdf || qaInbox[qaProj].back)) { qaOpenInbox(qaProj); return; }
+  if (qaProj && qaInboxReady(qaInbox[qaProj])) { qaOpenInbox(qaProj); return; }
   if (qaProj) { const f = document.getElementById('qa-intake'); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
 
@@ -895,53 +969,75 @@ function qaKeysFor(p) {
   const r = qaProjectRow(p), a = qaAddrParts(r && r.address);
   return { id: String(p).toUpperCase().split(' - ')[0], num: a.num, word: a.first };
 }
+// What is this file? A zip is the photo export; a PDF is a sales rep report (photos only), a
+// go back (Radicl partial survey) or a full report. Read from the first two pages only.
+async function qaClassify(file, deps) {
+  if (/\.zip$/i.test(file.name) || /zip/.test(file.type || '')) return { file, kind: 'zip', text: '' };
+  if (!(/\.pdf$/i.test(file.name) || file.type === 'application/pdf')) return { file, kind: 'other', text: '' };
+  try {
+    const { pages } = await deps.mod.pdfToBlocks(new Uint8Array(await file.arrayBuffer()), { pdfjs: deps.pdfjs, maxPages: 2 });
+    const det = OpsQA.detectTemplate(pages, deps.specs);
+    return { file, kind: det.rep ? 'rep' : OpsQA.isPartialReport(pages) ? 'back' : 'pdf', text: pages.map(pg => pg.blocks.map(b => b.text).join(' ')).join(' ') };
+  } catch (e) { return { file, kind: 'pdf', text: '' }; }
+}
+// The one upload. Before a review is open the files are sorted into sets, one per expected
+// survey; with a review open, whatever is dropped is added to it.
 async function qaPickMany(list) {
-  const files = [...(list || [])];
-  const pdfs = files.filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf'), zips = files.filter(f => /\.zip$/i.test(f.name));
-  if (pdfs.length <= 1 && zips.length <= 1 && !(pdfs.length && zips.length && !qaProj.trim())) {
-    if (zips[0]) await qaOpenPack(zips[0]);
-    if (pdfs[0]) return qaOpenReport(pdfs[0]);
-    return;
+  const files = [...(list || [])]; if (!files.length) return;
+  let deps;
+  try { deps = await qaDepsLoad(); } catch (e) { return qaSetBusy('pdf', '', 'Couldn\'t load the PDF reader'); }
+  const use = [];
+  for (let i = 0; i < files.length; i++) {
+    qaSetBusy('pdf', files.length > 1 ? `Sorting the files… ${i + 1} of ${files.length}` : 'Reading the file…');
+    const c = await qaClassify(files[i], deps); if (c.kind !== 'other') use.push(c);
   }
+  if (!use.length) return qaSetBusy('pdf', '', 'Drop PDF survey reports or a photo export (zip)');
+  qaSetBusy('pdf', '');
+  if (qaRun) { for (const c of use) { if (c.kind === 'zip') await qaOpenPack(c.file); else await qaAddReport(c.file); } return; }
   const want = qaLikely().map(x => ({ p: x.r.project, k: qaKeysFor(x.r.project) }));
   const byName = f => { const n = f.name.replace(/\.[^.]+$/, ''); const m = want.filter(w => OpsQA.namesProject(n, w.k)); return m.length === 1 ? m[0].p : ''; };
-  let found = 0, missed = [];
-  // A Radicl go back (partial survey) is held beside the project's original, never over it.
-  const put = (p, f, kind) => { const cur = qaInbox[p] || (qaInbox[p] = {}); if (!cur[kind] || cur[kind].lastModified < f.lastModified) cur[kind] = f; };
-  for (const z of zips) { const p = byName(z); if (p) put(p, z, 'zip'); }
-  let deps = null;
-  for (let i = 0; i < pdfs.length; i++) {
-    const f = pdfs[i];
-    qaSetBusy('pdf', `Matching reports… ${i + 1} of ${pdfs.length}`);
-    let p = byName(f), kind = 'pdf';
-    {
-      try {
-        deps = deps || await qaDepsLoad();
-        const { pages } = await deps.mod.pdfToBlocks(new Uint8Array(await f.arrayBuffer()), { pdfjs: deps.pdfjs, maxPages: 1 });
-        kind = OpsQA.isPartialReport(pages) ? 'back' : 'pdf';
-        const text = pages.map(pg => pg.blocks.map(b => b.text).join(' ')).join(' ');
-        const m = p ? [] : want.filter(w => OpsQA.namesProject(text, w.k)), byId = m.filter(w => OpsQA.namesProject(text, { id: w.k.id }));
-        if (!p) p = (byId.length === 1 ? byId : m.length === 1 ? m : [])[0]?.p || '';
-      } catch (e) {}
-    }
-    if (p) { put(p, f, kind); found++; } else missed.push(f.name);
+  for (const c of use) {
+    let p = byName(c.file);
+    if (!p && c.text) { const m = want.filter(w => OpsQA.namesProject(c.text, w.k)), byId = m.filter(w => OpsQA.namesProject(c.text, { id: w.k.id })); p = (byId.length === 1 ? byId : m.length === 1 ? m : [])[0]?.p || ''; }
+    c.p = p;
   }
-  qaSetBusy('pdf', '');
-  qaInboxNote = `${qaPlural(found, 'report')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
+  const kinds = ['pdf', 'rep', 'back', 'zip'], one = k => use.filter(c => c.kind === k).length <= 1;
+  // Files for one survey (at most one of each kind, at most one project among them) open as one review.
+  if (new Set(use.map(c => c.p).filter(Boolean)).size <= 1 && kinds.every(one)) {
+    const set = {}; for (const c of use) set[c.kind] = c.file;
+    return qaOpenSet(set);
+  }
+  // Otherwise each is matched to its expected survey and waits on that survey's card.
+  // A Radicl go back is held beside the project's original, never over it.
+  let found = 0; const missed = [];
+  for (const c of use) {
+    if (!c.p) { missed.push(c.file.name); continue; }
+    const cur = qaInbox[c.p] || (qaInbox[c.p] = {});
+    if (!cur[c.kind] || cur[c.kind].lastModified < c.file.lastModified) cur[c.kind] = c.file;
+    found++;
+  }
+  qaInboxNote = `${qaPlural(found, 'file')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
   _qaIntake(); _qaLikely();
   // A project already picked and its reports just dropped: open it, there is nothing left to choose.
   const picked = qaProj.trim().toUpperCase();
   if (picked && qaInbox[picked] && (qaInbox[picked].pdf || qaInbox[picked].back)) qaOpenInbox(picked);
 }
-// The card was clicked and its report is waiting: open it.
-async function qaOpenInbox(p) {
-  const got = qaInbox[p]; if (!got || !(got.pdf || got.back)) return false;
+const qaInboxReady = g => !!g && !!(g.pdf || g.back || g.rep);
+// The set's lead opens the review. A full report leads, then a go back, then a sales rep report;
+// a go back with a rep original is reviewed as the go back with the rep report beside it.
+async function qaOpenSet(got) {
   if (got.zip) await qaOpenPack(got.zip);
-  // The original opens the review and the go back is added to it as one survey; a go back with
-  // no original in the drop opens on its own.
-  await qaOpenReport(got.pdf || got.back);
-  if (got.pdf && got.back && qaRun && qaRun.docs.length === 1) await qaAddReport(got.back);
+  const lead = got.pdf || got.back || got.rep;
+  if (!lead) return false;
+  await qaOpenReport(lead);
+  if (!qaRun || qaRun.docs[0].name !== lead.name) return false;                    // the lead failed to read
+  if (got.pdf && got.back) await qaAddReport(got.back);
+  if (got.rep && lead !== got.rep) await qaAttachRep(got.rep);
   return true;
+}
+async function qaOpenInbox(p) {
+  const got = qaInbox[p]; if (!qaInboxReady(got)) return false;
+  return qaOpenSet(got);
 }
 
 function qaStatusPill(s) {

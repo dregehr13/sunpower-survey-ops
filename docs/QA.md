@@ -452,3 +452,26 @@ A fourth view beside Review / Templates / History, from `OpsQA.reviewMetrics` ov
 - **Version is read from the report's labels**, not the contents page (the same on both): `pickSiteCaptureSpec` counts the labels only one version has. A report with none of the V.14 labels is V.13, where those items remain template gaps
 - A requirement's `sc` can be a list with `versions`, as Radicl's `rd` is. A check that reads an answer leaves the photo the same field asks for to completeness
 - `sitecapture-battery` (standalone battery-only form) is generated the same way with `--battery-only`; Radicl's flat export (`Section > Field` rows) is read by `parseRadiclFlat`
+
+## Sales rep reports and the one upload (2026-10-05)
+Reps are phased out as of 2026-10-01, but their history keeps arriving, so the QA page accepts the rep
+export (name, address, "N photos, M sections", a photo overview, no answers) as a survey of its own kind.
+Things not to undo:
+- **One drop takes every file** (`qaPickMany`): the report, a go back, a rep report, the photo zip, one
+  survey or a whole day. Each file is classified from its first two pages (`qaClassify`: zip, `rep`,
+  `back` via `isPartialReport`, else `pdf`). Before a review is open the files are sorted into sets, one
+  per expected survey; one survey's set (at most one of each kind) opens straight into a review
+  (`qaOpenSet`), several wait on their survey's card as before. With a review open, whatever is dropped is
+  added to it. The per-kind Report / Photos / Go back drops are gone; the Files list shows each file's role
+- **A rep report on its own is reviewed on photo coverage** (`parseRep`, `evalRep`): the sections that are
+  there, the address against Salesforce (house number, a hard miss), and the declared photo total against
+  the sections. A missing section is **Flagged, never Required** — the rep form does not say which sections
+  applied to the house (no attic, no sub panel), so absence is a prompt to look. Roof and attic sections are
+  skipped on a battery-only job. There is no spec: `REP_SECTIONS` in `lib/qa.cjs` is the list
+- **A rep report beside a go back**: the go back (Radicl or SunPower partial) is what is reviewed; the rep
+  report is kept as the original, its pages open in the viewer, and it is not merged (two different forms
+  with nothing to join on). Dropping them in either order gives the same review
+- **Photos are paired by position.** A rep report has no captions, only a heading per section with a grid
+  under it: a picture belongs to the nearest heading above its centre (`qaFetchRepImages`). `Title Check
+  Files` and proof of insurance are file attachments (an icon, not a photo) and read "Not found"
+- `rep` is a vendor in the review log (`lib/qa-store.cjs`)
