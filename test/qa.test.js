@@ -1072,3 +1072,37 @@ test('a rep report is reviewed on photo coverage: missing sections are prompts, 
   const odd = QA.parseRep([repPages()[0], page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650)])]);
   assert.ok(QA.evaluate(odd, specs, {}).findings.some(x => x.id === 'rep:count'), 'the declared total disagrees with the sections');
 });
+
+// Pitch rule (Doug, 2026-10-06): per mounting plane, a tilt read on the roof OR in the attic
+// satisfies it. Never both, and a missing one is never flagged when the other exists.
+test('Site Capture V.14: a plane passes on a roof tilt or an attic tilt, either one', () => {
+  const roofKey = SC14.fields.find(f => /^Roof Pitch - Tilt reading/.test(f.label) && f.group === 'mounting_plane_roof').key;
+  const atticKey = SC14.fields.find(f => /Tilt Reading/.test(f.label) && f.group === 'mounting_plane_attic').key;
+  const s14 = o => ({ ...survey('sitecapture', o), template: { vendor: 'sitecapture', specId: 'sitecapture-v14' } });
+  const planes = ids => ({ mounting_plane_roof: ids.map((id, i) => ({ idx: i + 1, id })), mounting_plane_attic: ids.map((id, i) => ({ idx: i + 1, id })) });
+  const run = entries => QA.evaluate(s14({ groups: planes(['MP1', 'MP2']), entries }), specs);
+  const roof = id => ({ ref: roofKey, instance: id, value: '25' }), attic = id => ({ ref: atticKey, instance: id, value: '25' });
+  assert.equal(get(run([roof('MP1'), roof('MP2')]), 'roof_pitch').status, 'pass');
+  assert.equal(get(run([attic('MP1'), attic('MP2')]), 'roof_pitch').status, 'pass');
+  // one of each, one per plane
+  assert.equal(get(run([roof('MP1'), attic('MP2')]), 'roof_pitch').status, 'pass');
+  // a plane with neither is the surveyor's miss, and only that plane
+  const miss = get(run([roof('MP1')]), 'roof_pitch');
+  assert.equal(miss.status, 'miss'); assert.deepEqual(miss.instances, ['MP2']);
+  // completeness does not ask for the roof tilt a plane already has from the attic
+  assert.equal(run([attic('MP1'), attic('MP2')]).findings.some(f => f.id === 'tpl:' + roofKey), false);
+});
+
+test('Site Capture V.13: the attic tilt is the only pitch it can hold a plane to', () => {
+  const tiltKey = SC.fields.find(f => /Tilt Reading/.test(f.label) && f.group === 'mounting_plane_attic').key;
+  const R = QA.evaluate(survey('sitecapture', { groups: { mounting_plane_roof: [{ idx: 1, id: 'MP1' }], mounting_plane_attic: [{ idx: 1, id: 'MP1' }] }, entries: [{ ref: tiltKey, instance: 'MP1', value: '25' }] }), specs);
+  assert.equal(get(R, 'roof_pitch').status, 'pass');
+});
+
+test('pitch is not asked of a ground mount, a battery-only survey or a rep report', () => {
+  const gm = survey('radicl', { photos: [{ ref: 'Trench Path', instance: null }] });
+  assert.equal(get(QA.evaluate(gm, specs), 'roof_pitch').status, 'na');
+  const bat = QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-battery' } }), specs);
+  assert.equal(get(bat, 'roof_pitch'), undefined);
+  assert.equal(get(QA.evaluate(survey('rep'), specs), 'roof_pitch'), undefined);
+});
