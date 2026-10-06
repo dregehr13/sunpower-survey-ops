@@ -1,0 +1,513 @@
+{
+ "id": "radicl-groundmount",
+ "vendor": "radicl",
+ "inferred": true,
+ "inferredFrom": 1,
+ "note": "Inferred from reference surveys; Radicl publishes no template. Branches no survey took are unseen.",
+ "sections": [
+  "Exterior Photos of Home",
+  "Exterior Electrical",
+  "Battery Placement",
+  "Interior Electrical",
+  "Site Assessment",
+  "Quality Check",
+  "Ground Mount"
+ ],
+ "fields": [
+  {
+   "ref": "Perimeter Obstructions",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "Gas Meter?",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "Is the gas meter within 10' of the electrical meter?",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "AC Units",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "# of Stories",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "Pets",
+   "section": "Exterior Photos of Home",
+   "seen": 1
+  },
+  {
+   "ref": "Electric Meter: Clearance Issues",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Electric Service Type",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Grounding Type",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "AC Unit",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Are there any breaker boxes outside?",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Generator",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Existing Solar",
+   "section": "Exterior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Battery Location — Description",
+   "section": "Battery Placement",
+   "seen": 1
+  },
+  {
+   "ref": "Is Proposed Location #1 within 10 feet of a fenceline?",
+   "section": "Battery Placement",
+   "seen": 1
+  },
+  {
+   "ref": "Is proposed location #2 within 10' of a fenceline?",
+   "section": "Battery Placement",
+   "seen": 1
+  },
+  {
+   "ref": "Does the home have AC?",
+   "section": "Battery Placement",
+   "seen": 1
+  },
+  {
+   "ref": "Are there any breaker boxes inside the home?",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Interior Breaker Box: Quantity",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Is this Breaker Box on the same wall as the electric meter?",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Clearance Issues?",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Main Breaker Rating",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Max Bus Rating",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Are all breakers returned to original position?",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Breaker Box — Subpanel Breaker",
+   "section": "Interior Electrical",
+   "seen": 1
+  },
+  {
+   "ref": "Basement",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Basement Type",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Crawlspace",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Unpermitted / Code Violations",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Concluding Notes",
+   "section": "Site Assessment",
+   "seen": 1
+  },
+  {
+   "ref": "Damage Occured",
+   "section": "Site Assessment",
+   "seen": 1
+  }
+ ],
+ "photos": [
+  {
+   "ref": "Selfie with House Number",
+   "section": "Quality Check",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Perimeter Photos of Home",
+   "section": "Exterior Photos of Home",
+   "seen": 1,
+   "min": 13,
+   "max": 13,
+   "perInstance": false
+  },
+  {
+   "ref": "Gas Meter Location: Photos",
+   "section": "Exterior Photos of Home",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Unit: Nameplate Label",
+   "section": "Exterior Photos of Home",
+   "seen": 1,
+   "min": 8,
+   "max": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Electric Meter: Location Photos",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 16,
+   "max": 16,
+   "perInstance": false
+  },
+  {
+   "ref": "Electrical Meter: Close Up",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Meter Wall: Measurements",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 6,
+   "max": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Overhead Service: Photos",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 6,
+   "max": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Grounding Type Photo",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Nameplate Label",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 8,
+   "max": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Location",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 4,
+   "max": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Nameplate",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Transfer Switch/Disconnect",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Back Up Load Center",
+   "section": "Exterior Electrical",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Battery Location — Context Photos",
+   "section": "Battery Placement",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Battery Location — Measurements",
+   "section": "Battery Placement",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Location",
+   "section": "Interior Electrical",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Dead Front",
+   "section": "Interior Electrical",
+   "seen": 1,
+   "min": 21,
+   "max": 21,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Panel La",
+   "section": "Interior Electrical",
+   "seen": 1,
+   "min": 3,
+   "max": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Back of",
+   "section": "Interior Electrical",
+   "seen": 1,
+   "min": 6,
+   "max": 6,
+   "perInstance": true
+  },
+  {
+   "ref": "Horizon Photos",
+   "section": "Ground Mount",
+   "seen": 1,
+   "min": 17,
+   "max": 17,
+   "perInstance": false
+  },
+  {
+   "ref": "Location Photos",
+   "section": "Ground Mount",
+   "seen": 1,
+   "min": 9,
+   "max": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Trench Path",
+   "section": "Ground Mount",
+   "seen": 1,
+   "min": 17,
+   "max": 17,
+   "perInstance": false
+  },
+  {
+   "ref": "Layout Map",
+   "section": "Site Assessment",
+   "seen": 1,
+   "min": 1,
+   "max": 1,
+   "perInstance": false
+  }
+ ],
+ "core": [
+  {
+   "ref": "Selfie with House Number",
+   "section": "Quality Check",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Perimeter Photos of Home",
+   "section": "Exterior Photos of Home",
+   "min": 13,
+   "perInstance": false
+  },
+  {
+   "ref": "Gas Meter Location: Photos",
+   "section": "Exterior Photos of Home",
+   "min": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Unit: Nameplate Label",
+   "section": "Exterior Photos of Home",
+   "min": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Electric Meter: Location Photos",
+   "section": "Exterior Electrical",
+   "min": 16,
+   "perInstance": false
+  },
+  {
+   "ref": "Electrical Meter: Close Up",
+   "section": "Exterior Electrical",
+   "min": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Meter Wall: Measurements",
+   "section": "Exterior Electrical",
+   "min": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Overhead Service: Photos",
+   "section": "Exterior Electrical",
+   "min": 6,
+   "perInstance": false
+  },
+  {
+   "ref": "Grounding Type Photo",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "AC Nameplate Label",
+   "section": "Exterior Electrical",
+   "min": 8,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Location",
+   "section": "Exterior Electrical",
+   "min": 4,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Nameplate",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Transfer Switch/Disconnect",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Generator: Back Up Load Center",
+   "section": "Exterior Electrical",
+   "min": 1,
+   "perInstance": false
+  },
+  {
+   "ref": "Battery Location — Context Photos",
+   "section": "Battery Placement",
+   "min": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Battery Location — Measurements",
+   "section": "Battery Placement",
+   "min": 1,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Location",
+   "section": "Interior Electrical",
+   "min": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Dead Front",
+   "section": "Interior Electrical",
+   "min": 21,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Panel La",
+   "section": "Interior Electrical",
+   "min": 3,
+   "perInstance": true
+  },
+  {
+   "ref": "Breaker Box — Back of",
+   "section": "Interior Electrical",
+   "min": 6,
+   "perInstance": true
+  },
+  {
+   "ref": "Horizon Photos",
+   "section": "Ground Mount",
+   "min": 17,
+   "perInstance": false
+  },
+  {
+   "ref": "Location Photos",
+   "section": "Ground Mount",
+   "min": 9,
+   "perInstance": false
+  },
+  {
+   "ref": "Trench Path",
+   "section": "Ground Mount",
+   "min": 17,
+   "perInstance": false
+  },
+  {
+   "ref": "Layout Map",
+   "section": "Site Assessment",
+   "min": 1,
+   "perInstance": false
+  }
+ ]
+}

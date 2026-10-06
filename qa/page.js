@@ -10,16 +10,17 @@
 const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
 const QA_API = '/api/qa-log';
-const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2'];
+const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2', 'radicl-groundmount'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
-const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
+const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026', 'radicl-groundmount': 'Radicl ground mount' };
 const QA_TEMPLATE_NAMES = {
   'sitecapture-v14': 'SunPower · Site Capture form V.14',
   'sitecapture-v13': 'SunPower · Site Capture form V.13',
   'sitecapture-battery': 'SunPower · Site Capture battery-only form',
   'radicl-v2': 'Radicl · current template',
   'radicl-v1': 'Radicl · August 2026 template',
+  'radicl-groundmount': 'Radicl · ground mount template',
 };
 
 let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 'all', qaOpen = null;
@@ -1846,6 +1847,8 @@ const QA_ACCEPTED = [
     how: 'Radicl cover, "Exterior Electrical" in the contents' },
   { id: 'radicl-v1', group: 'Radicl', name: 'August 2026 template', status: 'Earlier', forms: ['Site survey report', 'Flat export (Section > Field rows)', 'Partial survey report (a go back)'],
     how: 'Radicl cover with "Outside Electrical Information", or the flat export headed "Site Survey"' },
+  { id: 'radicl-groundmount', group: 'Radicl', name: 'Ground mount survey', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
+    how: 'Radicl cover with an untitled section of Horizon Photos, Location Photos and Trench Path, and no roof or attic' },
 ];
 function qaSetTplId(id) { qaTplId = id; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
 function _qaTemplatesBody(specs) {
