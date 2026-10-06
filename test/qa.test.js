@@ -1015,6 +1015,7 @@ test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named bl
   const names = d.bySurveyor.map(c => c.key).sort();
   assert.deepEqual(names, ['Pat', 'Radicl (no name given)', 'Sales rep (no name given)']);
   assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl (no name given)').ids.sort(), ['r1', 'r2']);
+});
 
 test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
   const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
