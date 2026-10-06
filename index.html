@@ -3009,8 +3009,8 @@ function rsDetailsHtml(r){
 // One column table per mode, so the header, the sort, the cells and the copy
 // all read from the same list. These were four separate template strings, which
 // is why the drawer could not be sorted: there was nothing to sort by.
-// A surveyor name as QA saw it: Radicl and rep reports carry none, so say whose report it was.
-function _qaSurveyor(q){ return q.surveyor||({radicl:'Radicl (no name given)',rep:'Sales rep (no name given)'})[q.vendor]||'—'; }
+// A surveyor name as QA saw it: Radicl and rep reports carry none, so the report type stands in.
+function _qaSurveyor(q){ const n=OpsQA.surveyorLabel(q); return n==='(none)'?'—':n; }
 function drillCols(mode,shown,today){
   const dash='<span class="pna">—</span>';
   // An open resurvey has no resurvey_complete, so ct_resurvey is null on every
