@@ -3009,6 +3009,8 @@ function rsDetailsHtml(r){
 // One column table per mode, so the header, the sort, the cells and the copy
 // all read from the same list. These were four separate template strings, which
 // is why the drawer could not be sorted: there was nothing to sort by.
+// A surveyor name as QA saw it: Radicl and rep reports carry none, so say whose report it was.
+function _qaSurveyor(q){ return q.surveyor||({radicl:'Radicl (no name given)',rep:'Sales rep (no name given)'})[q.vendor]||'—'; }
 function drillCols(mode,shown,today){
   const dash='<span class="pna">—</span>';
   // An open resurvey has no resurvey_complete, so ct_resurvey is null on every
@@ -3057,6 +3059,18 @@ function drillCols(mode,shown,today){
       sortVal:r=>r.resurvey_scheduled||null,
       txt:r=>r.resurvey_scheduled||'Unscheduled',
       cell:r=>r.resurvey_scheduled?fmtDateShort(r.resurvey_scheduled):'<span class="rs-unsched-pill">Unscheduled</span>'},
+    // QA review rows (Metrics page): the review rides on the row as _qa.
+    qaDate:{k:'qaDate',label:'Reviewed',tdStyle:'white-space:nowrap;color:var(--muted);',
+      sortVal:r=>r._qa.created||'', txt:r=>r._qa.date||'', cell:r=>hl(r._qa.date||'—')},
+    qaN:{k:'qaN',label:'Review',cls:'r',sortVal:r=>r._qa.n, txt:r=>r._qa.n, cell:r=>r._qa.n},
+    qaOut:{k:'qaOut',label:'Outcome',sortVal:r=>r._qa.status||'', txt:r=>r._qa.status||'', cell:r=>qaStatusPill(r._qa.status)},
+    qaSurv:{k:'qaSurv',label:'Surveyor',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>_qaSurveyor(r._qa).toLowerCase(), txt:r=>_qaSurveyor(r._qa), cell:r=>hl(_qaSurveyor(r._qa))},
+    qaMiss:{k:'qaMiss',label:'Misses',cls:'r',sortVal:r=>((r._qa.counts||{}).missHard||0)*100+((r._qa.counts||{}).missWarn||0),
+      txt:r=>((r._qa.counts||{}).missHard||0)+' hard / '+((r._qa.counts||{}).missWarn||0)+' warn',
+      cell:r=>{const c=r._qa.counts||{}; return (c.missHard?`<span style="color:var(--red);font-weight:600;">${c.missHard}</span>`:'0')+`<span style="color:var(--faint);"> / ${c.missWarn||0}</span>`;}},
+    qaBy:{k:'qaBy',label:'Reviewed by',tdStyle:'white-space:nowrap;color:var(--muted);font-size:10px;',
+      sortVal:r=>(r._qa.reviewer||'').toLowerCase(), txt:r=>r._qa.reviewer||'', cell:r=>hl(r._qa.reviewer||'—')},
     rsOpen:{k:'rsOpen',label:'Days open',cls:'r',th:TIP.rsOpenDays,
       sortVal:r=>dDiff(r.resurvey_requested,today),
       txt:r=>{const d=dDiff(r.resurvey_requested,today); return d==null?'':d+'d';},
@@ -3067,6 +3081,7 @@ function drillCols(mode,shown,today){
   // Map drills are read for "who is selling and surveying here", so they carry
   // the org columns the other modes leave to search — a town's rate is only
   // actionable once you can see which office and which reps produced it.
+  if(mode==='qa')      return [col.qaDate,col.proj,col.qaN,col.qaOut,col.qaSurv,col.qaMiss,col.qaBy];
   if(mode==='place')   return [col.proj,col.region,col.rep,col.office,col.resource,col.start,col.complete,col.days];
   if(mode==='placeRs') return openRs
     ? [col.proj,col.rep,col.office,col.attr,col.reason,col.det,col.rsSched,col.rsOpen]
@@ -3087,7 +3102,7 @@ function openDrill(title,subtitle,drillRows,opts={}){
   document.getElementById('drill-sub').textContent=subtitle;
   _renderDrill();
   const panel=document.getElementById('drill-panel');
-  panel.classList.toggle('wide',opts.mode==='resurvey'||opts.mode==='placeRs'||opts.mode==='place');
+  panel.classList.toggle('wide',opts.mode==='resurvey'||opts.mode==='placeRs'||opts.mode==='place'||opts.mode==='qa');
   panel.classList.add('open');
   document.getElementById('drill-overlay').classList.add('open');
   // A modal that never takes focus leaves the keyboard behind it — Tab from the
@@ -3104,7 +3119,7 @@ function _renderDrill(){
   // Chips only where they would actually partition the rows. A grouped
   // FPY-defect view is already resurvey-scoped, and a drill that is entirely
   // open resurveys would render three chips with identical counts.
-  const showSegs=!opts.groupBy&&counts.rs>0&&(counts.rs<counts.all||counts.rsopen<counts.rs);
+  const showSegs=!opts.groupBy&&opts.mode!=='qa'&&counts.rs>0&&(counts.rs<counts.all||counts.rsopen<counts.rs);
   if(!showSegs&&_drillSeg!=='all') _drillSeg='all';
   const seg=DRILL_SEGS.find(s=>s.k===_drillSeg)||DRILL_SEGS[0];
   let drillRows=seg.test?_drillAll.filter(seg.test):_drillAll;
@@ -3152,8 +3167,8 @@ function _renderDrill(){
   const grouped=(mode==='groupBy'||mode==='byDate')&&!sortCol;
   const total=_drillAll.length;
   document.getElementById('drill-count').innerHTML=
-    (drillRows.length===total?`<b>${total}</b> account${total!==1?'s':''}`
-      :`<b>${drillRows.length}</b> of ${total} account${total!==1?'s':''}`)
+    (()=>{ const u=opts.mode==='qa'?'review':'account'; return drillRows.length===total?`<b>${total}</b> ${u}${total!==1?'s':''}`
+      :`<b>${drillRows.length}</b> of ${total} ${u}${total!==1?'s':''}`; })()
     +(grouped?` · grouped by ${mode==='groupBy'?'resource':'day'} — sort any column to flatten`:'')
     +(_drillQ?` · matching “${esc(_drillQ)}”`:'');
 
