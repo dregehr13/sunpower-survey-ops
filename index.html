@@ -6073,7 +6073,7 @@ function renderResurvey(){
       <span class="li ltgt"><span class="ldash" style="background:var(--target);"></span>95% target</span>
     </div>
     <div class="cw" style="height:210px;"><canvas id="rs-fpy"></canvas></div>
-  </div>`:''}
+  </div>`:`<div class="sec"><div class="shead"><div><div class="stitle">Yield by completion week</div><div class="ssub">Needs completions in at least three weeks. Widen the date range to see the trend.</div></div></div></div>`}
   </div>
 
   ${rated.length?(()=>{
@@ -6126,7 +6126,7 @@ function renderResurvey(){
     </div>
     <div class="q-rate-key"><span class="q-rate-keyline"></span>${RS_CEILING}% ceiling, the mirror of the 95% yield target. Came back is the share of completions that needed a resurvey, so it is 100 minus first pass yield.</div>
     ${grpKey==='sales_rep'?`<div class="note">Only the surveys a rep ran themselves: ${grpPool.length} of ${completions.length} completions. Reps with no sale in ${RS_IDLE_TAG}+ days are tagged idle; none are filtered out.</div>`:''}
-  </div>`;})():''}
+  </div>`;})():`<div class="sec"><div class="shead"><div><div class="stitle">Resurveys by ${grpLabel.toLowerCase()}</div><div class="ssub">No ${grpLabel.toLowerCase()} has ${RS_MIN_CELL} completions in range yet, so no rate is shown. Widen the date range or switch the grouping.</div></div></div></div>`}
 
   <div class="q-two">
   ${reasonRows.length?`
