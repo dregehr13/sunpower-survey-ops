@@ -6004,10 +6004,12 @@ function renderResurvey(){
   // rate, overrides shown apart). Site survey complete = internal quality
   // (not called back as a go back). QA began 2026-10-01, so unreviewed
   // completions are left out rather than counted as clean.
-  const qaRev=completions.filter(qaReviewed);
+  // By QA review date, not completion date: a fail raised this week is often
+  // on a survey completed last week, or on a go back with no completion yet.
+  const qaRev=scoped.filter(r=>qaReviewed(r)&&r.qa_status!=='Not Started'&&gfDateIn(r.qa_date));
   const qaPass=qaRev.filter(qaPassed).length;
   const qaOv=qaRev.filter(r=>/override/i.test(r.qa_status||'')).length;
-  const qaGB=qaRev.filter(qaCalled).length;
+  const qaGB=qaRev.filter(r=>qaCalled(r)||!qaPassed(r)).length;
   const qaHero=(()=>{
     const n=qaRev.length;
     const cell=(label,tip,pass,say)=>{
@@ -6030,7 +6032,7 @@ function renderResurvey(){
       ${dCell}
       ${cell('First pass yield (Site survey complete)',TIP.fpySS,qaPass,`${qaPass} of ${n} QA passed${qaOv?` \u00b7 ${qaOv} override`:''} \u00b7 ${qaGB} go back${qaGB===1?'':'s'}${n>=RS_MIN_CELL?` (${(qaGB/n*100).toFixed(1)}%)`:''}`)}
     </div>
-    <div class="note" style="margin:-6px 0 14px;">Design: completions in range with no resurvey requested by Design. Site survey complete: of ${n} QA-reviewed completion${n===1?'':'s'}, Passed or Passed with Override on the latest review; go back rate is surveys QA called back.</div>`;
+    <div class="note" style="margin:-6px 0 14px;">Design: completions in range with no resurvey requested by Design. Site survey complete: of ${n} survey${n===1?'':'s'} QA reviewed in range, Passed or Passed with Override on the latest review; go back rate is surveys QA failed or called back.</div>`;
   })();
 
   el.innerHTML=`
@@ -6150,7 +6152,7 @@ function renderResurvey(){
   `;
 
   renderRsReq();
-  renderQARollup('qa-rollup-rs',completions.filter(qaReviewed));
+  renderQARollup('qa-rollup-rs',qaRev);
   renderQAGap('qa-gap-rs',{key:'qaGapRs',rows:defects.filter(isQAEscape),reviewed:completions.filter(qaPassed).length,when:'in the selected range'});
 
   // ── Yield by completion week ──────────────────────────────────────────
