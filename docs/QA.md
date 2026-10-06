@@ -14,6 +14,13 @@ Reports hold customer names and photos of homes. Run on your own machine; no
 report is committed (the tests build synthetic pages, the specs are the blank
 template). `qa/samples/` is gitignored for local reports.
 
+**Regression baseline.** `node scripts/qa-baseline.mjs` runs every PDF in `qa/samples/` and compares
+it with `qa/baseline.json`, which holds only each report's SHA-256, template, suggested status and
+finding ids and statuses (no customer text). It exits 1 and lists what moved; `--record` accepts the
+change. Run it after any change to `lib/qa.cjs` or a spec. Keep one report per template in the folder:
+Site Capture V.13 and V.14, battery-only, Radicl v1, v2, partial and ground mount, and rep. Only the
+rep template is recorded so far.
+
 ## Pipeline
 
 `qa/pdf-blocks.mjs` (pdf.js) → positioned text blocks → `lib/qa.cjs`:

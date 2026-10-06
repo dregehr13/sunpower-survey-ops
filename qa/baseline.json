@@ -1,0 +1,249 @@
+{
+ "reports": {
+  "333201822c611be453d3781e734f6746fccd75bb80cd8eb5a10737c0547b5ed2": {
+   "template": "rep-v1",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 1,
+    "missWarn": 1,
+    "gap": 0,
+    "standingGaps": 0,
+    "verify": 5,
+    "pass": 14,
+    "na": 6
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "rep:Ceiling Joist Size And Spacing",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Exterior",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Roof Condition",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Utility Bill",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "d5280136f6afd9d60c85e9708757ff617d1598f003001faad3a318fc799144bd": {
+   "template": "rep-v1",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 1,
+    "missWarn": 1,
+    "gap": 0,
+    "standingGaps": 0,
+    "verify": 5,
+    "pass": 15,
+    "na": 5
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "generator_details",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "rep:Ceiling Joist Size And Spacing",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Exterior",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Roof Condition",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "rep:Utility Bill",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "verify",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  }
+ }
+}
