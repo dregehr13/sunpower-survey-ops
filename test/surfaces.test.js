@@ -242,3 +242,11 @@ test('the filter bar count has one definition', () => {
     .filter(({ line, n }) => /fb-hint-|\.fhint\b/.test(line) && /textContent\s*=/.test(line) && !/fbHint\(/.test(line));
   assert.deepEqual(bad.map(b => `index.html:${b.n}  ${b.line.slice(0, 90)}`), [], 'write the bar hint through fbHint(page)');
 });
+
+test('WIP Open now is always the open initial count, never the lens', () => {
+  const src = read('index.html');
+  const cell = src.match(/Open now\$\{kinfo\(TIP\.wip\)\}<\/div>\s*<div class="srail-val">([^\n]*)/);
+  assert.ok(cell, 'Open now rail cell not found');
+  assert.match(cell[1], /railInitial/);
+  assert.doesNotMatch(cell[1], /totalWip|allWip/);
+});
