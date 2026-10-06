@@ -134,8 +134,12 @@ export async function pdfImages(src, pageNums, opts) {
         let obj = null;
         try { obj = page.objs.get(a[0]); } catch (e) { obj = await new Promise(res => page.objs.get(a[0], res)); }
         if (!obj) continue;
+        // The picture's true box: its unit square through the matrix. A rotated photo's origin
+        // is a different corner from an upright one's, so only the box says where it sits.
+        const xs = [0, 1].flatMap(u => [0, 1].map(v => ctm[0] * u + ctm[2] * v + ctm[4])), ys = [0, 1].flatMap(u => [0, 1].map(v => ctm[1] * u + ctm[3] * v + ctm[5]));
         imgs.push({
           x: ctm[4], y: ctm[5], w: Math.hypot(ctm[0], ctm[1]), h: Math.hypot(ctm[2], ctm[3]),
+          left: Math.min(...xs), right: Math.max(...xs), top: Math.max(...ys), bottom: Math.min(...ys),
           name: a[0], width: obj.width, height: obj.height,
           get: () => imageBlob(obj),
         });
