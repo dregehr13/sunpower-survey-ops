@@ -108,7 +108,6 @@ textarea.qa-in.short{min-height:54px;}
 .qa-stepbadge{font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--amber-bg);border:1px solid #e3c98a;color:var(--amber);}
 .qa-strip{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);}
 .qa-strip b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
-.qa-strip .open b{color:var(--amber);}
 .qa-strip .sp{margin-left:auto;}
 .qa-strip button{font:inherit;font-size:11.5px;font-weight:600;color:var(--blue-dk);background:none;border:0;padding:0;cursor:pointer;}
 .qa-strip button:hover{text-decoration:underline;}
@@ -208,8 +207,6 @@ textarea.qa-in.short{min-height:54px;}
 .qa-lb-desc{max-width:100%;}
 .qa-lb-desc p{margin:6px 0 0;}
 .qa-lb-desc b{display:block;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:1px;}
-.qa-lb-refcap{display:flex;gap:10px;align-items:center;justify-content:flex-end;}
-.qa-lb-refcap>b{text-transform:none;letter-spacing:0;font-size:13px;margin:0;font-weight:600;color:#e8e8e4;}
 .qa-lb-tabs{display:inline-flex;gap:6px;}
 .qa-lb-tabs button{font:inherit;font-size:11px;width:26px;height:24px;border-radius:5px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#e8e8e4;cursor:pointer;transition:background .15s;}
 .qa-lb-tabs button:hover{background:rgba(255,255,255,.14);}
@@ -266,7 +263,6 @@ textarea.qa-in.short{min-height:54px;}
 .qa-edit{display:flex;flex-direction:column;gap:8px;}
 
 /* ── Templates and Settings ── */
-.qa-tplbar{margin-bottom:10px;}
 .qa-tbl td{vertical-align:top;}
 .qa-tbl .qa-check{font-weight:600;color:var(--text);min-width:150px;}
 .qa-tbl.qa-tpl-tbl .qa-check{width:38%;}
@@ -285,10 +281,10 @@ textarea.qa-in.short{min-height:54px;}
 }
 @media (max-width:860px){
   .qa-verdict{grid-template-columns:1fr;}
-  .qa-find{grid-template-columns:14px 1fr auto;}
-  .qa-find .d{grid-column:2/-1;}
-  .qa-find .ev{grid-column:2;justify-content:flex-start;}
-  .qa-find .act{grid-column:3;}
+  .qa-find{grid-template-columns:16px 14px minmax(0,1fr) auto;}
+  .qa-find .d{grid-column:3/-1;}
+  .qa-find .ev{grid-column:3/-1;width:auto;justify-content:flex-start;}
+  .qa-find .act{grid-column:4;grid-row:1;}
   .qa-lb-cols{flex-direction:column;align-items:center;}
   .qa-lb-col,.qa-lb-cols.two .qa-lb-col{width:92vw;}
   .qa-lb-stage{height:clamp(180px,34vh,420px);}
@@ -297,7 +293,7 @@ textarea.qa-in.short{min-height:54px;}
 @media (max-width:640px){
   .qa-form{grid-template-columns:1fr;}
   .qa-sf{grid-template-columns:1fr;}
-  /* three steps fit a phone when only the current one is named */
+  /* both steps fit a phone when only the current one is named */
   .qa-stepbtn{min-width:0;flex:0 0 auto;padding:10px 14px;}
   .qa-stepbtn.on{flex:1 1 auto;}
   .qa-stepbtn:not(.on) .qa-stepl{display:none;}
@@ -352,5 +348,6 @@ textarea.qa-in.short{min-height:54px;}
 /* Files loaded in a review: one row each, role first. */
 .qa-files{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
 .qa-file{display:flex;align-items:center;gap:8px;font-size:12px;min-width:0;}
+.qa-file .pill{flex:none;white-space:nowrap;}
 .qa-file-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
 .qa-file-m{margin-left:auto;color:var(--faint);font-size:11px;white-space:nowrap;}
