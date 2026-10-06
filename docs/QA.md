@@ -18,8 +18,9 @@ template). `qa/samples/` is gitignored for local reports.
 it with `qa/baseline.json`, which holds only each report's SHA-256, template, suggested status and
 finding ids and statuses (no customer text). It exits 1 and lists what moved; `--record` accepts the
 change. Run it after any change to `lib/qa.cjs` or a spec. Keep one report per template in the folder:
-Site Capture V.13 and V.14, battery-only, Radicl v1, v2, partial and ground mount, and rep. Only the
-rep template is recorded so far.
+Site Capture V.13 and V.14, battery-only, Radicl v1, v2, partial and ground mount, and rep.
+Recorded so far: Site Capture V.13, battery-only, Radicl v1, v2 and partial, and rep. Still needed: a V.14
+report, a ground mount report, and a go back.
 
 ## Pipeline
 
