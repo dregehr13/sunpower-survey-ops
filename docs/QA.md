@@ -485,3 +485,11 @@ Things not to undo:
   under it: a picture belongs to the nearest heading above its centre (`qaFetchRepImages`). `Title Check
   Files` and proof of insurance are file attachments (an icon, not a photo) and read "Not found"
 - `rep` is a vendor in the review log (`lib/qa-store.cjs`)
+
+### 2026-10-06 — Radicl ground mount template
+- **A third Radicl template, `radicl-groundmount`.** Read from the first ground mount report (one report, so its spec is provisional and completeness checks start at three). It has no roof or attic: the roof and attic checks read N/A, as on a battery-only survey, and `completenessRadicl` skips the roof sections.
+- **Detection** is `isGroundMount`: a block reading exactly `Trench Path` plus one reading exactly `Horizon Photos`. It is tested before the contents-page match, which would otherwise call the report v2 (the contents list "Exterior Electrical"). `Horizon Photos: North` and `Electric Meter: Location Photos` belong to the roof survey and do not trigger it.
+- **Section 6 has no title** in the report or in Radicl's portal; its photo pages read "— Photos (1/4)". `parseRadicl` now reads an untitled `SECTION n` as `Untitled section n`, names a photo heading with no prefix after the open section, and renames the ground array's section **Ground Mount**. Before this, its photos were counted under Interior Electrical and the "SECTION 6" header was read as a photo.
+- **Three checks, Flagged** (`gm_horizon`, `gm_location`, `gm_trench`): fewer than `GROUND_MIN` (5) photos in a subsection asks for a review. Never an automatic fail (Doug's call); weights are in Settings like the others.
+- **Photo review rows and examples** for the three subsections (`gm_*` in `KEY_PHOTOS`, `QA_REFS`, `CRITERIA`): two example photos each in `qa/ref/gm-*.jpg`, taken from the first ground mount report with Doug's OK (2026-10-06). Swap a file to change an example.
+- **Not built:** the soil test, which Radicl will add to this template.

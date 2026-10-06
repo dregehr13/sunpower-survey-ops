@@ -10,16 +10,17 @@
 const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
 const QA_API = '/api/qa-log';
-const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2'];
+const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2', 'radicl-groundmount'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
-const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026' };
+const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026', 'radicl-groundmount': 'Radicl ground mount' };
 const QA_TEMPLATE_NAMES = {
   'sitecapture-v14': 'SunPower · Site Capture form V.14',
   'sitecapture-v13': 'SunPower · Site Capture form V.13',
   'sitecapture-battery': 'SunPower · Site Capture battery-only form',
   'radicl-v2': 'Radicl · current template',
   'radicl-v1': 'Radicl · August 2026 template',
+  'radicl-groundmount': 'Radicl · ground mount template',
 };
 
 let qaMGran = 'week', qaDrillSets = [];   // Metrics: week or day buckets; the id lists behind each clickable number
@@ -583,6 +584,7 @@ const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 
 // report that cuts both captions to "Dead Front…".
 const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave',
   msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap',
+  gm_horizon: 'gm_horizon', gm_location: 'gm_location', gm_trench: 'gm_trench',
   attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
 // A rep report's check rows are named for the section they count, and its photo categories are the same names.
 const qaFindCats = f => /^rep:/.test(f.id) ? (f.id === 'rep:count' ? [] : [f.id]) : [].concat(QA_FIND_CAT[f.id] || []);
@@ -1245,6 +1247,12 @@ function qaDecide(i, v) {
 // is not legible or there is none, a clear photo from a past survey (the image says which).
 // They sit beside the survey's photo in the zoom.
 const QA_REFS = {
+  gm_horizon: { what: 'A 360 degree set of photos from the center of the proposed ground mount location, showing the whole area around it.', why: 'Design finds the trees and buildings that could shade the panels from the horizon, and sizes the array around them.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-horizon-1.jpg', cap: 'Open ground and the tree line' }, { src: 'qa/ref/gm-horizon-2.jpg', cap: 'Buildings and trees on the horizon' }] },
+  gm_location: { what: 'The proposed array location and the area around it, from several angles.', why: 'Design places the array on the ground from these and checks what is near it.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-location-1.jpg', cap: 'The location with what stands near it' }, { src: 'qa/ref/gm-location-2.jpg', cap: 'The same ground from another angle' }] },
+  gm_trench: { what: 'The path from the array location to the meter, walked in photos. Any concrete or asphalt it crosses gets its own photos.', why: 'Design routes the trench and conduit from these, and prices what has to be cut.', from: 'a past Radicl ground mount report',
+    imgs: [{ src: 'qa/ref/gm-trench-1.jpg', cap: 'The path across the yard toward the house' }, { src: 'qa/ref/gm-trench-2.jpg', cap: 'Arriving at the meter wall' }] },
   breaker: { what: 'A picture of the main breaker, with its rating readable.', why: 'The main breaker is the largest breaker and shuts off the whole panel. Its rating tells Design how the solar system ties into the grid.',
     imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Dead front off: the main breaker and the whole panel', from: 'a past SunPower survey' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
   label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
@@ -1888,6 +1896,8 @@ const QA_ACCEPTED = [
     how: 'Radicl cover, "Exterior Electrical" in the contents' },
   { id: 'radicl-v1', group: 'Radicl', name: 'August 2026 template', status: 'Earlier', forms: ['Site survey report', 'Flat export (Section > Field rows)', 'Partial survey report (a go back)'],
     how: 'Radicl cover with "Outside Electrical Information", or the flat export headed "Site Survey"' },
+  { id: 'radicl-groundmount', group: 'Radicl', name: 'Ground mount survey', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
+    how: 'Radicl cover with an untitled section of Horizon Photos, Location Photos and Trench Path, and no roof or attic' },
 ];
 function qaSetTplId(id) { qaTplId = id; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
 function _qaTemplatesBody(specs) {

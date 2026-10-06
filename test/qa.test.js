@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const QA = require('../lib/qa.cjs');
 const SC = require("../qa/specs/sitecapture-v13.json");
 const SC14 = require("../qa/specs/sitecapture-v14.json");
-const specs = [SC14, SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json')];
+const specs = [SC14, SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json'), require('../qa/specs/radicl-groundmount.json')];
 
 const tk = QA.tok;
 const blk = (text, x0 = 18, y0 = 700) => ({ text, x0, y0, x1: x0 + 100, y1: y0 - 10 });
@@ -1019,7 +1019,7 @@ test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named bl
 
 test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
   const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
-  const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 3), ...ph('Location Photos', 2), ...ph('Trench Path', 2), ...over] });
+  const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 5), ...ph('Location Photos', 5), ...ph('Trench Path', 5), ...over] });
   const R = QA.evaluate(ground(), specs);
   for (const id of ['roof_pitch', 'roof_overhang', 'plane_count', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
   assert.equal(get(R, 'gm_trench').status, 'pass');
@@ -1027,7 +1027,7 @@ test('a Radicl ground mount is not held to roof or attic checks, and is held to 
   // missing the trench photos is a miss; a roof survey never sees these checks
   const S2 = survey('radicl', { photos: [...ph('Trench Path'), ...ph('Horizon Photos')] });
   assert.equal(get(QA.evaluate(S2, specs), 'gm_location').status, 'miss');
-  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench').status, 'na');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench'), undefined);
   assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
 });
 
@@ -1073,6 +1073,67 @@ test('a rep report is reviewed on photo coverage: missing sections are prompts, 
   assert.ok(QA.evaluate(odd, specs, {}).findings.some(x => x.id === 'rep:count'), 'the declared total disagrees with the sections');
 });
 
+// ── Radicl ground mount ──
+// Section 6 has no title: "S E C T I O N 6" with nothing under it, then photo pages headed "— Photos (1/4)".
+const gmPages = (n = { h: 17, l: 9, t: 17 }) => {
+  const caps = (label, k, y) => Array.from({ length: k }, (_, i) => blk(label, 37 + (i % 4) * 150, y - Math.floor(i / 4) * 40));
+  return [page(1, [blk('SITE SURVEY REPORT radicl', 32, 808)]), page(2, [blk('Exterior Electrical', 68, 559)]),
+    page(3, [blk('S E C T I O N 6', 32, 700)]),
+    page(4, [blk('— Photos (1/2)', 32, 767), ...caps('Horizon Photos', n.h, 733)]),
+    page(5, [blk('— Photos (2/2)', 32, 767), ...caps('Location Photos', n.l, 733), ...caps('Trench Path', n.t, 500)])];
+};
+
+test('a Radicl report with Horizon Photos and Trench Path is the ground mount template, not v2', () => {
+  assert.equal(QA.detectTemplate(gmPages(), specs).specId, 'radicl-groundmount');
+  // "Horizon Photos: North" and "Electric Meter: Location Photos" belong to the roof survey and do not trigger it
+  const roof = [page(1, [blk('SITE SURVEY REPORT radicl', 32, 808)]), page(2, [blk('Exterior Electrical', 68, 559)]),
+    page(3, [blk('Roof Photos — Photos (1/1)', 32, 767), blk('Horizon Photos: North', 37, 733), blk('Electric Meter: Location Photos', 187, 733)])];
+  assert.equal(QA.detectTemplate(roof, specs).specId, 'radicl-v2');
+});
+
+test('the untitled Section 6 parses into its own photo groups, and its header is not a photo', () => {
+  const S = QA.parseRadicl(gmPages(), { specId: 'radicl-groundmount' });
+  const n = ref => S.photos.filter(p => p.ref === ref).length;
+  assert.deepEqual([n('Horizon Photos'), n('Location Photos'), n('Trench Path')], [17, 9, 17]);
+  assert.equal(S.photos.length, 43, 'no section header or "— Photos" heading is read as a caption');
+  assert.ok(S.photos.every(p => p.section === 'Ground Mount'));
+});
+
+test('ground mount: under five photos in a subsection asks for a review and never fails the survey', () => {
+  const run = n => QA.evaluate(QA.parseRadicl(gmPages(n), { specId: 'radicl-groundmount' }), specs);
+  const ok = run({ h: 5, l: 9, t: 17 });
+  assert.equal(get(ok, 'gm_horizon').status, 'pass');
+  const R = run({ h: 4, l: 0, t: 17 });
+  assert.equal(get(R, 'gm_horizon').status, 'miss');
+  assert.equal(get(R, 'gm_horizon').detail, '4 of 5+ photos');
+  assert.equal(get(R, 'gm_location').detail, 'no photos');
+  assert.equal(get(R, 'gm_trench').status, 'pass');
+  // on their own the ground checks point to a review, never a failure (the rest of this thin synthetic report is not what is under test)
+  const gm = R.findings.filter(f => /^gm_/.test(f.id));
+  assert.equal(QA.outcomeOf(gm).suggestedStatus, 'Needs review');
+  assert.equal(QA.outcomeOf(gm).counts.missHard, 0);
+});
+
+test('ground mount: the roof and attic checks do not apply, and the Radicl v2 roof survey is unchanged', () => {
+  const R = QA.evaluate(QA.parseRadicl(gmPages(), { specId: 'radicl-groundmount' }), specs);
+  for (const id of ['plane_count', 'roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(R.findings.some(f => f.id.startsWith('gm_')), true);
+  const v2 = QA.evaluate(survey('radicl'), specs);
+  assert.equal(get(v2, 'roof_pitch').status, 'miss');
+  assert.equal(v2.findings.some(f => f.id.startsWith('gm_')), false);
+});
+
+test('ground mount: the checklist drops roof checks, adds the three photo checks and honours Settings', () => {
+  const gm = QA.checklist('radicl-groundmount');
+  assert.deepEqual(gm.filter(c => c.area === 'Ground mount').map(c => c.id), ['gm_horizon', 'gm_location', 'gm_trench']);
+  assert.ok(gm.every(c => c.area !== 'Roof' && c.area !== 'Attic'));
+  assert.equal(QA.checklist('radicl-v2').some(c => c.id === 'gm_horizon'), false);
+  assert.equal(QA.checklist('radicl-groundmount', { gm_trench: 'off' }).some(c => c.id === 'gm_trench'), false);
+  assert.equal(QA.checklist('radicl-groundmount', { gm_trench: 'hard' }).find(c => c.id === 'gm_trench').severity, 'hard');
+  assert.ok(QA.allChecks().filter(c => /^gm_/.test(c.id)).every(c => c.def === 'warn' && c.vendors.join() === 'radicl'));
+  assert.equal(QA.templateChanges('radicl-groundmount').some(c => /roof|attic|pitch|plane|overhang/i.test(c.title)), false);
+
+});
 // Pitch rule (Doug, 2026-10-06): per mounting plane, a tilt read on the roof OR in the attic
 // satisfies it. Never both, and a missing one is never flagged when the other exists.
 test('Site Capture V.14: a plane passes on a roof tilt or an attic tilt, either one', () => {
