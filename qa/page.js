@@ -1285,7 +1285,28 @@ const QA_REFS = {
   pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Angle finder held on the rafter, needle readable', from: 'a past SunPower survey' }] },
   eave: { what: 'The overhang measured with a tape against the eave.', why: 'Design needs the overhang to place the array against the roof edge. The tape and the numbers have to be in frame.', from: 'a past Radicl report',
     imgs: [{ src: 'qa/ref/eave.jpg', cap: 'Overhang measured with a tape' }] },
+  // Sales rep reports: the photo categories are the form's own section names. Where a section is the same
+  // shot as a category above it borrows that example (the alias list below); these are the ones no other
+  // template has.
+  'rep:Exterior': { what: 'The house from the street and from each side, the whole building in frame.', why: 'Design checks the house against the aerial and the plan: the roof shapes, any additions and what stands near the walls.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-exterior.jpg', cap: 'The front of the house, whole building in frame' }] },
+  'rep:Roof Condition': { what: 'The roof surface up close enough to judge the shingles, with any wear, damage or patching in view.', why: 'Design and the installer decide whether the roof can take an array or needs work first.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-roof-condition.jpg', cap: 'Shingle surface and a vent, taken from the roof' }] },
+  'rep:Mounting Plane': { what: 'Each roof face the array could go on, shot from where the whole plane can be seen.', why: 'Design counts and lays out the planes from these, so every plane the site map numbers needs its own photo.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-mounting-plane.jpg', cap: 'One plane, edge to ridge, with the trees that shade it' }] },
+  'rep:Attic Access': { what: 'The hatch or door into the attic, and the way in beyond it.', why: 'The installer and the engineer need to know how to get into the attic and what it opens onto.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-attic-access.jpg', cap: 'The door open onto a floored attic' }] },
+  'rep:Ceiling Joist Size And Spacing': { what: 'A measurement of the ceiling joist size and of how far apart the joists are. The tape has to be in the shot.', why: 'The structural engineer needs the joist size and the spacing where the roof framing is not rafters.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-ceiling-joist.jpg', cap: 'Joist width read off the tape' }] },
+  'rep:Side Wall Sticker': { what: 'The sticker on the side of the meter-main or service panel, sharp enough to read every line.', why: 'It carries the equipment\'s ratings and catalog number, which Design reads to confirm the service.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-side-wall-sticker.jpg', cap: 'Whole sticker, catalog number and ratings readable' }] },
+  'rep:Generator': { what: 'The generator, its location and how it ties to the house.', why: 'Design has to know what backup power is on site and where it connects.', from: 'a past sales rep survey',
+    imgs: [{ src: 'qa/ref/rep-generator.jpg', cap: 'A generator in its enclosure, beside the meter wall' }] },
 };
+// A rep report section that is the same shot as a category above borrows that example.
+[['Context Map', 'sitemap'], ['Electrical Equipment Location', 'location'], ['Panel Cover On', 'breaker'], ['Panel Cover Off', 'deadoff'],
+  ['Subpanel Cover Off', 'deadoff'], ['Equipment Labels', 'label'], ['Utility Meter Bulb', 'meter'], ['Utility Meter Location', 'meterloc'],
+  ['Attic', 'attic'], ['Rafter Size And Spacing', 'framing'], ['Roof Pitch', 'pitch']].forEach(([sec, k]) => { QA_REFS['rep:' + sec] = QA_REFS[k]; });
 const qaMarkBtns = (i, v) => `<button class="ok${v === 'ok' ? ' on' : ''}" title="Good" aria-label="Mark good" onclick="qaVerdict(${i},'ok')">✓</button><button class="bad${v === 'bad' ? ' on' : ''}" title="Not usable" aria-label="Mark not usable" onclick="qaVerdict(${i},'bad')">✕</button>`;
 function qaPhotoCardHtml(it, i) {
   const v = qaRun.verdicts[qaPhotoKey(it)];
