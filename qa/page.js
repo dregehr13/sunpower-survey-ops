@@ -584,7 +584,9 @@ const qaWrapPhoto = i => Object.assign({}, i, { url: null, from: null, w: 0, h: 
 const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breaker', msp_label: 'label', meter_closeup: 'meter', roof_pitch: 'pitch', attic_framing: 'framing', roof_overhang: 'eave',
   msp_location: 'location', msp_dead_front_off: ['deadoff', 'breaker'], meter_location: 'meterloc', site_map: 'sitemap',
   attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
-const qaCatOf = f => { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
+// A rep report's check rows are named for the section they count, and its photo categories are the same names.
+const qaFindCats = f => /^rep:/.test(f.id) ? (f.id === 'rep:count' ? [] : [f.id]) : [].concat(QA_FIND_CAT[f.id] || []);
+const qaCatOf = f => { const c = qaFindCats(f); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
 // first three of its category), not all 36 dead-front photos; a decided check asks for none.
 const qaNeedsLook = it => !!(qaRun && (it.soft || (it.ai && !it.ai.readable) ||
@@ -1142,7 +1144,7 @@ function qaRowState(f) {
   return vs.includes('bad') ? 'bad' : vs.includes('ok') ? 'ok' : null;
 }
 // The photo categories a check rests on that this report has photos for.
-function qaCatsOf(f) { const c = [].concat(QA_FIND_CAT[f.id] || []); return c.filter(x => qaRun.items && qaRun.items.some(it => it.id === x)); }
+function qaCatsOf(f) { const c = qaFindCats(f); return c.filter(x => qaRun.items && qaRun.items.some(it => it.id === x)); }
 const qaOpenRows = () => qaRun.open || (qaRun.open = {});
 const qaActs = () => qaRun.R.findings.filter(qaActionable);
 const qaFindingAt = fi => { const a = qaActs()[fi]; return a && qaFindings().find(x => x.fk === qaFlagKey(a)); };
