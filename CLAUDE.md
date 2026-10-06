@@ -10,7 +10,7 @@ Email generator: https://sunpower-survey-ops.vercel.app/compose
 
 ## Pages
 Nav groups (2026-10-05, Doug): a **This Week / Last Week** segmented toggle on top (one `week` page, two views), then **Ops** (WIP · QA · Resource · Billing — what the team works in) and **Analysis** (Performance · Trends · Resurveys · Map). Mobile bar keeps the toggle, WIP, Performance, Trends and Resurveys; the rest sit in More. The Settings landing-page picker is built from the nav tabs.
-**The nav label is "Quality"** (back from Resurveys 2026-10-06, Doug: it houses QA and resurvey content). The page id, `#resurvey` hash and `renderResurvey()` stay as they are. The hero opens on two rail cells over QA-reviewed completions: **First pass yield (Design)** = QA pass rate, overrides shown beside it, and **First pass yield (Site survey complete)** = not called back as a go back, with the go back rate; the older all-completions yield is labelled *Resurvey yield*.
+**The nav label is "Quality"** (back from Resurveys 2026-10-06, Doug: it houses QA and resurvey content). The page id, `#resurvey` hash and `renderResurvey()` stay as they are. The hero opens on two rail cells: **First pass yield (Design)** = the customer measure, completions Design did not send back as a resurvey, and **First pass yield (Site survey complete)** = the internal measure, QA pass rate over QA-reviewed completions (overrides, go backs and go back rate beside it). The resurvey cost lines sit in the card beneath.
 
 ## People
 - **Doug Regehr** — Site Survey Manager, the user. douglas.regehr@sunpower.com · 801-793-1861

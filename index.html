@@ -2795,8 +2795,8 @@ const TIP={
   trResMix:'Each week’s completions split by who ran the survey, bucketed on the completion date. Share is a 100%-stacked bar; Count keeps real volume and adds a sales-rep-% line.',
 
   // ── Resurveys ──
-  fpyDesign:'First pass yield (Design): QA-reviewed surveys whose latest verdict is Passed or Passed with Override ÷ all QA-reviewed surveys, by completion date. Overrides count as passes and are shown beside it. Design is the customer, so this is customer quality.',
-  fpySS:'First pass yield (Site survey complete): QA-reviewed surveys QA did not call back as a go back ÷ all QA-reviewed surveys. The go back rate is its complement. Surveys QA has not reviewed are not counted.',
+  fpyDesign:'First pass yield (Design): completions with no resurvey requested ÷ all completions in range. Design is our customer, so this is customer quality. Requests dismissed as Unnecessary Request do not count.',
+  fpySS:'First pass yield (Site survey complete): QA-reviewed surveys with a verdict of Passed or Passed with Override ÷ all QA-reviewed surveys. Overrides are shown beside it, with the go back count and rate. Surveys QA has not reviewed are not counted. This is internal quality.',
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded from this page entirely: nothing was re-surveyed, so the survey did not fail.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land.',
   rsCat:'What the request asked for, read from the Resurvey Request Details text (the reason picklist is too coarse). A request asks for 2.2 of these on average, so shares add past 100%. The drill drawer carries the raw reason beside each row.',
@@ -6016,11 +6016,21 @@ function renderResurvey(){
       const v=pass/n*100, c=v>=95?'var(--green)':v>=85?'var(--amber)':'var(--red)';
       return `<div class="srail-cell"><div class="klabel">${label}${kinfo(tip)}</div><div class="srail-val" style="color:${c};">${v.toFixed(1)}%<span class="srail-sub">${say}</span></div></div>`;
     };
+    // Design = the customer: completions Design did not send back as a
+    // resurvey (the page's own yield). Site survey complete = internal: QA's
+    // verdict on the reviewed surveys, go backs shown beside it.
+    const dN=completions.length, dD=defects.length;
+    const dCell=(()=>{
+      const lab=`First pass yield (Design)${kinfo(TIP.fpyDesign)}`;
+      if(dN<RS_MIN_CELL) return `<div class="srail-cell"><div class="klabel">${lab}</div><div class="srail-val" style="color:var(--muted);">${dN-dD} of ${dN}<span class="srail-sub">${dD} resurvey${dD===1?'':'s'}</span></div></div>`;
+      const c=pageFpy>=95?'var(--green)':pageFpy>=85?'var(--amber)':'var(--red)';
+      return `<div class="srail-cell"><div class="klabel">${lab}</div><div class="srail-val" style="color:${c};">${pageFpy.toFixed(1)}%<span class="srail-sub">${dN-dD} of ${dN} \u00b7 ${dD} resurvey${dD===1?'':'s'}</span></div></div>`;
+    })();
     return `<div class="srail">
-      ${cell('First pass yield (Design)',TIP.fpyDesign,qaPass,`${qaPass} of ${n} QA passed${qaOv?` \u00b7 ${qaOv} override`:''}`)}
-      ${cell('First pass yield (Site survey complete)',TIP.fpySS,n-qaGB,`${qaGB} go back${qaGB===1?'':'s'}${n>=RS_MIN_CELL?` \u00b7 ${(qaGB/n*100).toFixed(1)}% go back rate`:` of ${n}`}`)}
+      ${dCell}
+      ${cell('First pass yield (Site survey complete)',TIP.fpySS,qaPass,`${qaPass} of ${n} QA passed${qaOv?` \u00b7 ${qaOv} override`:''} \u00b7 ${qaGB} go back${qaGB===1?'':'s'}${n>=RS_MIN_CELL?` (${(qaGB/n*100).toFixed(1)}%)`:''}`)}
     </div>
-    <div class="note" style="margin:-6px 0 14px;">Over ${n} QA-reviewed completion${n===1?'':'s'} in range. Design: Passed or Passed with Override on the latest review. Site survey complete: not called back as a go back by QA.</div>`;
+    <div class="note" style="margin:-6px 0 14px;">Design: completions in range with no resurvey requested by Design. Site survey complete: of ${n} QA-reviewed completion${n===1?'':'s'}, Passed or Passed with Override on the latest review; go back rate is surveys QA called back.</div>`;
   })();
 
   el.innerHTML=`
@@ -6032,15 +6042,8 @@ function renderResurvey(){
       const dl=(t,v,col,tip,sub)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}${sub?`<span class="q-dl-sub">${sub}</span>`:''}</b></div>`;
       const signed=v=>(v>0?'+':'')+v.toFixed(1)+'d';
       return `<div class="sec q-hero">
-      <div class="klabel">Resurvey yield${kinfo(TIP.fpy)}</div>
-      ${thin
-        ? `<div class="q-hero-val" style="color:var(--muted);">${completions.length}</div>
-           <div class="q-hero-say">Only ${completions.length} completion${completions.length===1?'':'s'} in range — too few to rate.</div>`
-        : `<div class="q-hero-val" style="color:${c};">${pageFpy.toFixed(1)}%</div>
-           <div class="q-hero-say">${completions.length-defects.length} of ${completions.length} completions closed without a resurvey. <b>${defects.length} defect${defects.length===1?'':'s'}.</b></div>
-           <div class="q-track"><div class="q-track-fill" style="width:${Math.max(0,Math.min(100,pageFpy))}%;background:${c};"></div><div class="q-track-tgt" style="left:95%;"></div></div>
-           <div class="q-track-ax"><span>0%</span><span>95% target</span></div>`}
-      <div class="q-dl">
+      <div class="klabel">Resurvey cost</div>
+      <div class="q-dl" style="margin-top:10px;padding-top:0;border-top:0;">
         ${dl('Cost of a resurvey',costAvg!=null?signed(costAvg):'—',costAvg!=null&&costAvg>=2?'var(--red)':null,TIP.rsPenalty,
              costMed!=null?`median ${signed(costMed)}`:'')}
         ${dl('Time to flag',fmtCt(flagAvg),flagAvg!=null&&flagAvg>=7?'var(--amber)':null,TIP.rsFlag,
