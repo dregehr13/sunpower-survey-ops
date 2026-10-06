@@ -36,6 +36,13 @@ runs on plain data and the extractor can move into the browser.
   reports (`radicl-v1` has 4, `radicl-v2` 7 since the 2026-10-01 audit). Radicl changed its template between 2026-08-29
   and 2026-09-30 ("Inside Breaker Box 1: Dead Front On" became "Breaker Box /
   Electrical Panel #1 — Dead Front…"); refs are canonical across both.
+- **Radicl ground mounts** (2026-10-05, project 1202ANDR-1) have no roof or attic
+  section; the report prints an untitled section of Horizon, Location and Trench
+  Path photos. `isGroundMount` keys off the Trench Path photos (Salesforce has no
+  mount type). Roof, plane and attic checks read N/A, Layer A skips the Roof/Attic
+  sections, and three new checks (`gm_location`, `gm_horizon`, `gm_trench`, all
+  Flagged) apply instead. The weights are a default for Doug to confirm. Site
+  Capture ground mounts are not handled yet.
 - **Miss vs gap.** A requirement with no field in a template is a TEMPLATE GAP,
   never a surveyor miss, so a vendor's miss rate cannot carry something its form
   could not capture. A *standing* gap is true of every survey on the template

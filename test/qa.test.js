@@ -1015,6 +1015,19 @@ test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named bl
   const names = d.bySurveyor.map(c => c.key).sort();
   assert.deepEqual(names, ['Pat', 'Radicl (no name given)', 'Sales rep (no name given)']);
   assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl (no name given)').ids.sort(), ['r1', 'r2']);
+
+test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
+  const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
+  const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 3), ...ph('Location Photos', 2), ...ph('Trench Path', 2), ...over] });
+  const R = QA.evaluate(ground(), specs);
+  for (const id of ['roof_pitch', 'roof_overhang', 'plane_count', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(R, 'gm_trench').status, 'pass');
+  assert.ok(!R.findings.some(f => f.layer === 'A' && /^(Roof Photos|Attic Info)$/.test(f.area)));
+  // missing the trench photos is a miss; a roof survey never sees these checks
+  const S2 = survey('radicl', { photos: [...ph('Trench Path'), ...ph('Horizon Photos')] });
+  assert.equal(get(QA.evaluate(S2, specs), 'gm_location').status, 'miss');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench').status, 'na');
+  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
 });
 
 const repPages = () => [
