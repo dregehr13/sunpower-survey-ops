@@ -1669,7 +1669,7 @@ Chart.defaults.font.family = "'Archivo',-apple-system,BlinkMacSystemFont,'Segoe 
 const VERSION = 'v6.9 · 2026-06-10';
 
 // Metric definitions shared with /compose and the API — see lib/metrics.cjs
-const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
+const {inScope, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, inRepGrace, ssRatioForWeek, ssRatioLive, ssRatioBand, wipOn, weeklyFloor, rollingClearance, hasResurveySig, isResurveyDefect, isOpenResurvey, isOpenQueue, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, wipTag, QS, QS_ORDER, QS_UNSCHED, wipSchedDate, wipQueueStatus, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct, revenueValue,
        businessDays, weekDaysRemaining, buildExpectedCt,
        buildSegmentAvgs, lookupSegmentAvg, projectWeek, bandFor, queueAgeBand, TREND_BAND_AVG, trendLabel} = OpsMetrics;
 
@@ -5498,7 +5498,7 @@ function renderAgingWIP(){
       <td data-c="Scheduled" class="r" style="${qs.key==='pastdue'?'color:var(--red);':'color:var(--muted);'}">${wipSchedDate(r)?fmtDateShort(wipSchedDate(r)):'<span class="pna">—</span>'}</td>
       <td data-c="Last reviewed" style="font-size:12px;${r.last_reviewed_date?'color:var(--muted);':'color:var(--red);font-weight:500;'}">${r.last_reviewed_date?fmtReviewDay(r.last_reviewed_date)+(by?` · ${esc(by)}`:''):'No review'}</td>
       <td data-c="Proj age" class="r" style="color:var(--muted);font-size:12px;">${r.projectAge!=null?r.projectAge+'d':'—'}</td>
-      <td data-c="Open in SS" class="r">${r.resurvey_requested&&!r.resurvey_complete?`<span style="font-size:10px;font-weight:700;color:var(--amber);margin-right:4px;">RS</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
+      <td data-c="Open in SS" class="r">${wipTag(r)?`<span style="font-size:10px;font-weight:700;color:var(--amber);margin-right:4px;">${wipTag(r)}</span>`:''}${agePill(r.daysOpen,r.inGrace)}</td>
     </tr>
     <tr class="wip-detail" id="wip-detail-${i}" style="display:none;">${detailCell(r)}</tr>
   `;}).join('');
