@@ -405,11 +405,21 @@ async function qaAddReport(file) {
       return qaOpenReport(file, { rep: run });
     }
     if (det.vendor !== run.det.vendor) throw new Error('That report is from the other survey type');
-    if (run.det.partial && !det.partial) throw new Error('That is the full report. Start over with it, then add the go back here');
+    // The go back was opened first and the original is dropped second: the original becomes the
+    // base and the go back follows it, the same review as the other order.
+    const flip = run.det.partial && !det.partial;
+    if (flip && run.docs.length > 1) throw new Error('That is the full report. Start over with it, then add the go back here');
     const S2 = parse();
     if (qaRun !== run) return;
-    run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages, role: 'Go back report' });
-    run.S = OpsQA.mergeSurveys(run.S, S2);
+    if (flip) {
+      const back = run.docs[0];
+      run.docs = [{ name: file.name, size: file.size, hash, bytes, from: 1, pages: S2.meta.pages }, Object.assign({}, back, { from: S2.meta.pages + 1, role: 'Go back report' })];
+      run.S = OpsQA.mergeSurveys(S2, run.S);
+      run.det = det; run.spec = spec;
+    } else {
+      run.docs.push({ name: file.name, size: file.size, hash, bytes, from: run.S.meta.pages + 1, pages: S2.meta.pages, role: 'Go back report' });
+      run.S = OpsQA.mergeSurveys(run.S, S2);
+    }
     run.det = Object.assign({}, run.det, { partial: run.S.template.partial });
     await qaRefreshFile(run);
     qaReeval(true);
@@ -1008,6 +1018,9 @@ async function qaPickMany(list) {
   }
   qaInboxNote = `${qaPlural(found, 'file')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
   _qaIntake(); _qaLikely();
+  // A project already picked and its reports just dropped: open it, there is nothing left to choose.
+  const picked = qaProj.trim().toUpperCase();
+  if (picked && qaInbox[picked] && (qaInbox[picked].pdf || qaInbox[picked].back)) qaOpenInbox(picked);
 }
 const qaInboxReady = g => !!g && !!(g.pdf || g.back || g.rep);
 // The set's lead opens the review. A full report leads, then a go back, then a sales rep report;
