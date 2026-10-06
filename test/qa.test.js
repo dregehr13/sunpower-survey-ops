@@ -997,10 +997,10 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
 test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named blank surveyors', () => {
   const rv = (id, project, n, status, date, extra) => ({ id, project, n, status, date, vendor: 'radicl', surveyor: '', reviewer: 'Doug', created: date + 'T15:00:00Z', findings: [], ...extra });
   const log = [
-    rv('r1', 'A1', 1, 'Failed - Gaps Found', '2026-10-01', { findings: [{ id: 'roof_pitch', area: 'Roof', severity: 'hard', status: 'miss', title: 'Roof pitch' }] }),
-    rv('r2', 'A1', 2, 'Passed', '2026-10-05'),
+    rv('r1', 'A1', 1, 'Failed - Gaps Found', '2026-10-01', { template: 'radicl-v2', findings: [{ id: 'roof_pitch', area: 'Roof', severity: 'hard', status: 'miss', title: 'Roof pitch' }] }),
+    rv('r2', 'A1', 2, 'Passed', '2026-10-05', { template: 'radicl-v1' }),
     rv('r3', 'B2', 1, 'Passed', '2026-10-05', { vendor: 'sitecapture', surveyor: 'Pat' }),
-    rv('r4', 'C3', 1, 'Passed', '2026-10-05', { vendor: 'rep' }),
+    rv('r4', 'C3', 1, 'Passed', '2026-10-05', { vendor: 'rep', template: 'rep-v1' }),
   ];
   const d = QA.reviewMetrics(log, { by: 'day', minCell: 2 });
   assert.equal(d.periods.length, 5);                                   // Oct 1..5, the empty days kept
@@ -1013,8 +1013,8 @@ test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named bl
   assert.deepEqual(w.periods.map(p => [p.period, p.total]), [['2026-09-28', 1], ['2026-10-05', 3]]);
   assert.equal(QA.reviewMetrics(log, { by: 'day', weeks: 2 }).periods.length, 2);
   const names = d.bySurveyor.map(c => c.key).sort();
-  assert.deepEqual(names, ['Pat', 'Radicl (no name given)', 'Sales rep (no name given)']);
-  assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl (no name given)').ids.sort(), ['r1', 'r2']);
+  assert.deepEqual(names, ['Pat', 'Radicl', 'Sales rep']);
+  assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl').ids.sort(), ['r1', 'r2']);
 });
 
 test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {

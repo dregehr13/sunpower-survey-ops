@@ -1613,7 +1613,7 @@ function _qaMetrics() {
       <div class="toggle-group"><button class="tgl-btn${M.by === 'week' ? ' active' : ''}" onclick="qaSetMGran('week')">Week</button><button class="tgl-btn${M.by === 'day' ? ' active' : ''}" onclick="qaSetMGran('day')">Day</button></div></div>
       <div class="qa-mwks">${wk}</div></div>
     <div class="sec"><div class="shead"><div><div class="stitle">Go backs by vendor</div><div class="ssub">Rates need ${M.minCell}+ accounts; smaller groups show the count</div></div></div>${rateTbl(M.byVendor, 'Vendor')}</div>
-    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by surveyor</div><div class="ssub">A Radicl or sales rep report carries no surveyor name</div></div></div>${rateTbl(M.bySurveyor, 'Surveyor')}</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Go backs by surveyor</div><div class="ssub">Radicl and sales rep reports carry no surveyor name</div></div></div>${rateTbl(M.bySurveyor, 'Surveyor')}</div>
     <div class="sec"><div class="shead"><div><div class="stitle">Misses by area</div><div class="ssub">Reviews with at least one miss in the area. Template gaps are not counted.</div></div></div>${missTbl(M.missesByArea, 'Area', 12)}</div>
     <div class="sec"><div class="shead"><div><div class="stitle">Most-missed checks</div></div></div>${missTbl(M.missesByCheck, 'Check', 10)}</div>`;
 }
