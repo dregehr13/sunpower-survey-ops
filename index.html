@@ -1454,7 +1454,7 @@ body{padding-left:180px;}
   <div class="nav-group-label nav-group-div">Analysis</div>
   <div class="ntab" data-page="performance" role="button" tabindex="0">Performance</div>
   <div class="ntab" data-page="trends" role="button" tabindex="0">Trends</div>
-  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Resurveys</div>
+  <div class="ntab" data-page="resurvey" role="button" tabindex="0">Quality</div>
   <div class="ntab" data-page="map" role="button" tabindex="0">Map</div>
   <div class="nmenu-more" id="mobileMoreBtn" role="button" tabindex="0">More <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><polyline points="6 9 12 16 18 9"/></svg></div>
   <div class="nav-r">
@@ -2791,6 +2791,8 @@ const TIP={
   trResMix:'Each week’s completions split by who ran the survey, bucketed on the completion date. Share is a 100%-stacked bar; Count keeps real volume and adds a sales-rep-% line.',
 
   // ── Resurveys ──
+  fpyDesign:'First pass yield (Design): QA-reviewed surveys whose latest verdict is Passed or Passed with Override ÷ all QA-reviewed surveys, by completion date. Overrides count as passes and are shown beside it. Design is the customer, so this is customer quality.',
+  fpySS:'First pass yield (Site survey complete): QA-reviewed surveys QA did not call back as a go back ÷ all QA-reviewed surveys. The go back rate is its complement. Surveys QA has not reviewed are not counted.',
   fpy:'First Pass Yield = completions with no resurvey signal ÷ total completions. A completed account counts as a defect when a resurvey actually happened. Requests logged as "Unnecessary Request" are excluded from this page entirely: nothing was re-surveyed, so the survey did not fail.',
   fpyTrend:'Yield by the week the survey completed. A completion keeps collecting resurveys for weeks: only 57% arrive within 7 days of it closing, and one in seven takes more than a month. Weeks younger than 21 days are drawn hollow and kept out of the rolling line, because they read high until their defects land.',
   rsCat:'What the request asked for, read from the Resurvey Request Details text (the reason picklist is too coarse). A request asks for 2.2 of these on average, so shares add past 100%. The drill drawer carries the raw reason beside each row.',
@@ -5981,7 +5983,32 @@ function renderResurvey(){
     return;
   }
 
+  // Two hero figures over QA-reviewed completions (qa_date set), the same
+  // population as the QA reviews panel. Design = customer quality (QA pass
+  // rate, overrides shown apart). Site survey complete = internal quality
+  // (not called back as a go back). QA began 2026-10-01, so unreviewed
+  // completions are left out rather than counted as clean.
+  const qaRev=completions.filter(qaReviewed);
+  const qaPass=qaRev.filter(qaPassed).length;
+  const qaOv=qaRev.filter(r=>/override/i.test(r.qa_status||'')).length;
+  const qaGB=qaRev.filter(qaCalled).length;
+  const qaHero=(()=>{
+    const n=qaRev.length;
+    const cell=(label,tip,pass,say)=>{
+      if(!n) return `<div class="srail-cell"><div class="klabel">${label}${kinfo(tip)}</div><div class="srail-val" style="color:var(--muted);">\u2014<span class="srail-sub">No QA reviews in range</span></div></div>`;
+      if(n<RS_MIN_CELL) return `<div class="srail-cell"><div class="klabel">${label}${kinfo(tip)}</div><div class="srail-val" style="color:var(--muted);">${pass} of ${n}<span class="srail-sub">${say}</span></div></div>`;
+      const v=pass/n*100, c=v>=95?'var(--green)':v>=85?'var(--amber)':'var(--red)';
+      return `<div class="srail-cell"><div class="klabel">${label}${kinfo(tip)}</div><div class="srail-val" style="color:${c};">${v.toFixed(1)}%<span class="srail-sub">${say}</span></div></div>`;
+    };
+    return `<div class="srail">
+      ${cell('First pass yield (Design)',TIP.fpyDesign,qaPass,`${qaPass} of ${n} QA passed${qaOv?` \u00b7 ${qaOv} override`:''}`)}
+      ${cell('First pass yield (Site survey complete)',TIP.fpySS,n-qaGB,`${qaGB} go back${qaGB===1?'':'s'}${n>=RS_MIN_CELL?` \u00b7 ${(qaGB/n*100).toFixed(1)}% go back rate`:` of ${n}`}`)}
+    </div>
+    <div class="note" style="margin:-6px 0 14px;">Over ${n} QA-reviewed completion${n===1?'':'s'} in range. Design: Passed or Passed with Override on the latest review. Site survey complete: not called back as a go back by QA.</div>`;
+  })();
+
   el.innerHTML=`
+  ${qaHero}
   <div class="q-top">
     ${(()=>{
       const thin=completions.length<RS_MIN_CELL;
@@ -5989,7 +6016,7 @@ function renderResurvey(){
       const dl=(t,v,col,tip,sub)=>`<div class="q-dl-row"><span>${t}${tip?kinfo(tip):''}</span><b${col?` style="color:${col};"`:''}>${v}${sub?`<span class="q-dl-sub">${sub}</span>`:''}</b></div>`;
       const signed=v=>(v>0?'+':'')+v.toFixed(1)+'d';
       return `<div class="sec q-hero">
-      <div class="klabel">First pass yield${kinfo(TIP.fpy)}</div>
+      <div class="klabel">Resurvey yield${kinfo(TIP.fpy)}</div>
       ${thin
         ? `<div class="q-hero-val" style="color:var(--muted);">${completions.length}</div>
            <div class="q-hero-say">Only ${completions.length} completion${completions.length===1?'':'s'} in range — too few to rate.</div>`
@@ -9811,7 +9838,7 @@ function renderSettings(){
       <div class="set-sec">
         <div class="set-title">Rates</div>
         <div class="set-row">
-          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before its first-pass-yield or resurvey rate is shown instead of a sample count · Resurveys table, Resource markets, map Cycle/Resurvey colouring</div></div>
+          <div><div class="set-label">Minimum sample for a rate</div><div class="set-desc">Completions a group needs before its first-pass-yield or resurvey rate is shown instead of a sample count · Quality table, Resource markets, map Cycle/Resurvey colouring</div></div>
           <div class="set-control"><input type="number" min="1" max="100" value="${S.minCell}" onchange="setSetting('minCell',parseInt(this.value)||1)"></div>
         </div>
       </div>
@@ -9993,7 +10020,7 @@ function renderDefinitions(){
     ['targets','Targets',[
       {t:'Median target',v:S.targetMedian+'d',d:'Green threshold for cycle time — Spec 12744.'},
       {t:'Average target',v:S.targetAvg+'d',d:'Chart annotation line and the "On target" cutoff — Spec 12744.'},
-      {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Resurveys table, Resource markets, Map colouring.'},
+      {t:'Minimum sample for a rate',v:S.minCell,d:'Completions a group needs before its yield or resurvey rate is shown instead of a bare count — Quality table, Resource markets, Map colouring.'},
       {t:'Outlier threshold',v:S.outlierDays+'d',d:'Cycle time above this counts as an outlier for the filter bar\'s "Hide outliers" toggle.'},
     ]],
     ['current','This Week / Last Week',[
@@ -10027,7 +10054,7 @@ function renderDefinitions(){
       {t:'Resource mix',eq:[{f:'complete'},'count, grouped by',{f:'resource'}],d:TIP.resourceMix},
       {t:'Survey resource mix (chart)',eq:[{f:'complete'},'count per week, grouped by',{f:'resource'}],d:TIP.trResMix},
     ]],
-    ['quality','Resurveys',[
+    ['quality','Quality',[
       {t:'First pass yield (FPY)',eq:['(Completions − Defects)','÷','Completions','× 100'],extra:['complete','resurvey_requested','resurvey_complete','resurvey_reason','reopened_by_design'],d:TIP.fpy},
       {t:'FPY trend',eq:['weekly (Completions − Defects)','÷','Completions'],extra:['complete','resurvey_requested','resurvey_complete','resurvey_reason','reopened_by_design'],d:TIP.fpyTrend},
       {t:'Why they come back',eq:[{f:'resurvey_details'},'keyword match'],d:TIP.rsCat},
