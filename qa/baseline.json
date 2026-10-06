@@ -244,6 +244,1756 @@
      "v": "hard"
     }
    ]
+  },
+  "a3fe1bbe0a03f36d93ad4bad2c82f85562d82a6fdbfae889c7f3138d4353da9f": {
+   "template": "sitecapture-battery",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 0,
+    "verify": 0,
+    "pass": 15,
+    "na": 2
+   },
+   "findings": [
+    {
+     "k": "bf_garage",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bf_garage_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_meter",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_msp_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_msp_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_outside",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bf_site_map",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_stud_spacing",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bf_sub_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_sub_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_sub_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_wall_measure",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bf_wall_sketch",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    }
+   ]
+  },
+  "fed92574f8b5801ce5971d45e0c753f54ee85057765b95c8d63382b3e05a39e5": {
+   "template": "radicl-v2 partial",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 4,
+    "missWarn": 3,
+    "gap": 0,
+    "standingGaps": 5,
+    "verify": 1,
+    "pass": 5,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "existing_equipment",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "existing_interconnection",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "miss",
+     "v": "hard"
+    }
+   ]
+  },
+  "87a42087cdd5e71eb2db2721bff43fda3dea79536aa2bf84ecd7b494baa8f87a": {
+   "template": "radicl-v2 partial",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 3,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 1,
+    "pass": 9,
+    "na": 9
+   },
+   "findings": [
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "miss",
+     "v": "hard"
+    }
+   ]
+  },
+  "1d6d364b2c0416ec97d6376caa4d19f9cd11629d70a336ab892701696d366304": {
+   "template": "radicl-v2",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 2,
+    "pass": 12,
+    "na": 8
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "c15705b3007d729bbcdf2008cf55c457926b7f4a667a18046619c82a918952af": {
+   "template": "radicl-v2",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 1,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "8dded09e12f37f0dffe8fab9e838782f7879806c405aecdb60fcdd62066e8e38": {
+   "template": "radicl-v1",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 1,
+    "missWarn": 1,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 0,
+    "pass": 14,
+    "na": 6
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "tpl:Super Close-Up Roof Quality|Super Close-Up Roof Quality",
+     "s": "miss",
+     "v": "warn"
+    }
+   ]
+  },
+  "e921cbca8cec207a4f3833d22bf08e8eb6aa1eb63e4eaa1d2932968276f05635": {
+   "template": "radicl-v2",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 2,
+    "pass": 13,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "cf4c33467c5d77d6d06bd5c3a10985f606777a60ecf8fccdcfe821dfc6cded97": {
+   "template": "radicl-v2",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 1,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "78b1c126adf860f039c5502c13018cbf430e27b2880ff04d44f225100d13f22d": {
+   "template": "radicl-v2",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 3,
+    "verify": 1,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "627e52d4631f6bcab1d7f67f7bccf0e0e94fd57e8b42f816d87b720e463cfeed": {
+   "template": "sitecapture-v13",
+   "suggested": "Needs review",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 2,
+    "gap": 1,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 13,
+    "na": 6
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "generator_details",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "tpl:crm_id|Salesforce Project Name",
+     "s": "miss",
+     "v": "warn"
+    }
+   ]
+  },
+  "5f7957961635b449943e22c89ece131aab233f1bc8c978890be97b9c88029bdc": {
+   "template": "sitecapture-v13",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 1,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 14,
+    "na": 6
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "bfa33eb21f6a59d97fc4803ad8a08cc4f072479bff063db88c1de3e857f434d4": {
+   "template": "sitecapture-v13",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "31a89f5444b92f9e891cf0d262c74be197dab10c77cc8b301dcc0d4f71cae145": {
+   "template": "sitecapture-v13",
+   "suggested": "Needs review",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 2,
+    "gap": 0,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "tpl:customer_address|Customer Address and Photo of House Number",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:office_feedback_how_long_did_it_take_you_to_complete_the_survey|Office Feedback - How long did it take you to complete the survey?",
+     "s": "miss",
+     "v": "warn"
+    }
+   ]
+  },
+  "0d1903966130d9220ccb8cacde5b66d7280c4ad89c73931c9765243a6ee529d5": {
+   "template": "sitecapture-v13",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 14,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "d2481ee8ae5800e23f7d39816ba7103772fc8487bd1250576d05c4ebed524e9b": {
+   "template": "sitecapture-v13",
+   "suggested": "Passed with Override",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 1,
+    "standingGaps": 4,
+    "verify": 0,
+    "pass": 16,
+    "na": 4
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "battery_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "existing_equipment",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "existing_interconnection",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "photo_provenance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "plane_count",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "22d598dc0dfe7aa44086cfef63ce68b4d04ea7be4ff619e179867c51a4eebb66": {
+   "template": "radicl-v2",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 2,
+    "missWarn": 18,
+    "gap": 2,
+    "standingGaps": 3,
+    "verify": 2,
+    "pass": 10,
+    "na": 5
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "battery_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "bus_rating",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_equipment",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "existing_interconnection",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass+verify",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "tpl:Close-Up Roof Quality|Close-Up Roof Quality",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Drip Edge Photo|Drip Edge Photo",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Eave/Soffit Measurement Photo|Eave/Soffit Measurement Photo",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: East|Horizon Photos: East",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: North|Horizon Photos: North",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Northeast|Horizon Photos: Northeast",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Northwest|Horizon Photos: Northwest",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: South|Horizon Photos: South",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Southeast|Horizon Photos: Southeast",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Southwest|Horizon Photos: Southwest",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: West|Horizon Photos: West",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Number of Roofing Layers Photos|Number of Roofing Layers Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Measurement: Eave to Ridge|Roof Measurement: Eave to Ridge",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Measurement: Ridge|Roof Measurement: Ridge",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Obstruction Photos|Roof Obstruction Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Pitch / Slope|Roof Pitch / Slope",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Super Close-Up Roof Quality|Super Close-Up Roof Quality",
+     "s": "miss",
+     "v": "warn"
+    }
+   ]
   }
  }
 }
