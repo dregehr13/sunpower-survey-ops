@@ -3725,13 +3725,13 @@ function renderLastWeek(){
       <div class="shead"><div><div class="stitle">By surveyor type</div></div></div>
       <div>${typeRows}</div>
     </div>
-    ${stillOpen.length?`
     <div class="sec">
       <div class="shead"><div><div class="stitle">Still open from last week</div><div class="ssub">${stillOpen.length} survey${stillOpen.length!==1?'s':''} started Mon–Sun, not yet closed${soAvgAge!=null?' · '+soAvgAge+'d avg age':''}</div></div></div>
+      ${stillOpen.length?'':'<div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">Everything started last week has closed.</div>'}
       ${soRow('#3f9d6c','Within target (≤'+S.targetAvg+'d)',so1,'on track','so1')}
       ${soRow('#c0912e','Approaching ('+(S.targetAvg+1)+'–'+(S.targetAvg+3)+'d)',so2,'at risk','so2')}
       ${soRow('#d94f4e','Overdue (>'+(S.targetAvg+3)+'d)',so3,'needs attn','so3')}
-    </div>`:''}
+    </div>
     </div>
     <div class="cur-col">
     <div class="sec">
@@ -4320,10 +4320,14 @@ function renderQARollup(id,reviewed){
 // This Week (resurveys requested in the week) and Resurveys (completions in the
 // filter range). `rows` is the escapes, `pool` what they are a share of. The
 // panel does not render until the dataset carries any QA review at all, so an
-// export predating the QA columns shows nothing rather than an empty panel.
+// export predating the QA columns reads as "none yet" and the layout stays put.
 function renderQAGap(id,o){
   const el=document.getElementById(id); if(!el) return;
-  if(!rows.some(qaReviewed)){ el.innerHTML=''; return; }
+  if(!rows.some(qaReviewed)){
+    el.innerHTML=`<div class="sec">
+    <div class="shead"><div><div class="stitle">Resurveys on QA-passed surveys</div><div class="ssub">0 of ${o.pool?o.pool.length:0} ${o.poolLabel||'resurveys'} ${o.when||''} had passed QA</div></div></div>
+    <div style="padding:20px;text-align:center;color:var(--faint);font-size:12px;">No QA reviews are in the data yet. Resurveys that came back on a survey QA had passed will list here once reviews start landing.</div>
+  </div>`; return; }
   const list=[...o.rows].sort((a,b)=>(b.resurvey_requested||'').localeCompare(a.resurvey_requested||''));
   _curD[o.key]=list;
   const cats={}; list.forEach(r=>rsCategories(r).forEach(k=>{cats[k]=(cats[k]||0)+1;}));
