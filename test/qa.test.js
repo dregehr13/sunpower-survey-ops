@@ -994,6 +994,29 @@ test('reviewMetrics: first-pass, go backs, misses, weeks', () => {
   assert.equal(QA.reviewMetrics([]).firstPassRate, null);
 });
 
+test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named blank surveyors', () => {
+  const rv = (id, project, n, status, date, extra) => ({ id, project, n, status, date, vendor: 'radicl', surveyor: '', reviewer: 'Doug', created: date + 'T15:00:00Z', findings: [], ...extra });
+  const log = [
+    rv('r1', 'A1', 1, 'Failed - Gaps Found', '2026-10-01', { findings: [{ id: 'roof_pitch', area: 'Roof', severity: 'hard', status: 'miss', title: 'Roof pitch' }] }),
+    rv('r2', 'A1', 2, 'Passed', '2026-10-05'),
+    rv('r3', 'B2', 1, 'Passed', '2026-10-05', { vendor: 'sitecapture', surveyor: 'Pat' }),
+    rv('r4', 'C3', 1, 'Passed', '2026-10-05', { vendor: 'rep' }),
+  ];
+  const d = QA.reviewMetrics(log, { by: 'day', minCell: 2 });
+  assert.equal(d.periods.length, 5);                                   // Oct 1..5, the empty days kept
+  assert.deepEqual(d.periods.map(p => p.total), [1, 0, 0, 0, 3]);
+  const last = d.periods[4];
+  assert.equal(last.goBacks, 1); assert.equal(last.firstReviews, 2); assert.equal(last.firstPassed, 2); assert.equal(last.accounts, 3);
+  assert.deepEqual(last.ids.sort(), ['r2', 'r3', 'r4']);
+  assert.equal(d.periods[0].topMisses[0].label, 'Roof pitch');
+  const w = QA.reviewMetrics(log, { by: 'week', minCell: 2 });          // Oct 1 is a Thursday: weeks of Sep 28 and Oct 5
+  assert.deepEqual(w.periods.map(p => [p.period, p.total]), [['2026-09-28', 1], ['2026-10-05', 3]]);
+  assert.equal(QA.reviewMetrics(log, { by: 'day', weeks: 2 }).periods.length, 2);
+  const names = d.bySurveyor.map(c => c.key).sort();
+  assert.deepEqual(names, ['Pat', 'Radicl (no name given)', 'Sales rep (no name given)']);
+  assert.deepEqual(d.bySurveyor.find(c => c.key === 'Radicl (no name given)').ids.sort(), ['r1', 'r2']);
+});
+
 const repPages = () => [
   page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk('8 photos, 5 sections', 40, 640)]),
   page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650), blk('UtilityBill (1)', 40, 450), blk('Attach Roof Condition Photos (1)', 40, 250)]),

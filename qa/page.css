@@ -344,6 +344,8 @@ textarea.qa-in.short{min-height:54px;}
 .qa-mwks{display:flex;align-items:flex-end;gap:6px;padding:6px 0 2px;overflow-x:auto;}
 .qa-mwk{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1 0 34px;}
 .qa-mwk-bar{display:flex;flex-direction:column;width:100%;border-radius:3px;overflow:hidden;}
+.qa-mwk.drill-tgt:hover .qa-mwk-bar{filter:brightness(.9);}
+.qa-mwk:focus-visible{outline:2px solid var(--blue-dk);outline-offset:2px;border-radius:3px;}
 .qa-mwk-n{font-size:11px;color:var(--muted);}
 .qa-mwk-d{font-size:10px;color:var(--faint);}
 
