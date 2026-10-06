@@ -1058,17 +1058,56 @@ test('a rep report lists every photo under its section for the photo review', ()
   assert.ok(k.every(x => x.photo.sec != null && x.photo.k != null), 'each photo knows its section and place in it');
 });
 
-test('a rep report is reviewed on photo coverage: missing sections are prompts, a wrong address is a miss', () => {
-  const S = QA.parseRep(repPages());
-  const R = QA.evaluate(S, specs, { sfAddress: '1 Main St, Town, NC 27526' });
-  const f = id => R.findings.find(x => x.id === id);
-  assert.equal(f('rep:Exterior').status, 'pass'); assert.equal(f('rep:Panel Cover Off').status, 'miss');
-  assert.equal(f('rep:Panel Cover Off').severity, 'warn'); assert.equal(f('address_match').status, 'pass');
-  assert.equal(R.suggestedStatus, 'Needs review');
-  const bad = QA.evaluate(S, specs, { sfAddress: '9 Other Rd, Town, NC 27526' });
-  assert.equal(bad.suggestedStatus, 'Failed - Gaps Found');
-  const bo = QA.evaluate(S, specs, { sfSurveyType: 'Battery Only Survey' });
-  assert.ok(!bo.findings.some(x => x.id === 'rep:Attic'), 'a battery-only job has no roof sections');
+// A rep report with every section the standard checklist can read from photos.
+const fullRep = (over = {}) => {
+  const secs = Object.assign({ Exterior: 2, 'Utility Bill': 1, 'Context Map': 1, 'Roof Condition': 1, 'Mounting Plane': 1, 'Roof Pitch': 1, Attic: 2, 'Attic Access': 1,
+    'Rafter Size And Spacing': 1, 'Ceiling Joist Size And Spacing': 1, 'Utility Meter Location': 1, 'Utility Meter Bulb': 1, 'Electrical Equipment Location': 1,
+    'Equipment Labels': 1, 'Panel Cover On': 1, 'Panel Cover Off': 1 }, over);
+  const names = { 'Utility Bill': 'UtilityBill' };
+  const total = Object.values(secs).reduce((a, b) => a + b, 0);
+  const blocks = [blk('Photo Overview', 40, 760)];
+  Object.entries(secs).filter(([, n]) => n).forEach(([t, n], i) => blocks.push(blk(`${names[t] || 'Attach ' + t + ' Photos'} (${n})`, 40, 740 - i * 30)));
+  return [page(1, [blk('Jane Doe', 40, 700), blk('Site Survey', 40, 680), blk('1 Main St Town NC 27526', 40, 660), blk(`${total} photos, ${Object.keys(secs).length} sections`, 40, 640)]), page(2, blocks)];
+};
+const repGet = (R, id) => R.findings.find(x => x.id === id);
+
+test('a rep report is held to the standard checklist: same checks, same severities, same Settings weights', () => {
+  const R = QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '1 Main St, Town, NC 27526' });
+  const req = id => QA.REQUIREMENTS.find(r => r.id === id);
+  for (const id of ['site_map', 'roof_pitch', 'attic_framing', 'msp_location', 'msp_dead_front_on', 'msp_dead_front_off', 'msp_label', 'meter_closeup', 'meter_location']) {
+    assert.equal(repGet(R, id).status, 'pass', id);
+    assert.equal(repGet(R, id).severity, req(id).severity, id + ' keeps the standard severity');
+  }
+  assert.equal(repGet(R, 'attic_photos').severity, 'warn');
+  // the same weight setting that retunes a Radicl check retunes the rep's
+  const soft = QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0 })), specs, { checks: { msp_dead_front_off: 'warn' } });
+  assert.equal(repGet(soft, 'msp_dead_front_off').severity, 'warn');
+  assert.ok(!QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0 })), specs, { checks: { msp_dead_front_off: 'off' } }).findings.some(x => x.id === 'msp_dead_front_off'));
+});
+
+test('a rep report is no longer waived on what the form cannot hold: the overhang is a hard miss on every rep survey', () => {
+  const R = QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '1 Main St, Town, NC 27526' });
+  assert.equal(repGet(R, 'roof_overhang').status, 'miss'); assert.equal(repGet(R, 'roof_overhang').severity, 'hard');
+  assert.equal(repGet(R, 'existing_declared').status, 'miss');
+  assert.equal(R.suggestedStatus, 'Failed - Gaps Found', 'a rep survey with every section still fails on the eave');
+  assert.equal(repGet(R, 'main_breaker_rating').status, 'verify', 'a value shown only in a photo is read by eye, not missed');
+  const bo = QA.evaluate(QA.parseRep(fullRep()), specs, { sfSurveyType: 'Battery Only Survey' });
+  assert.equal(repGet(bo, 'roof_overhang').status, 'na', 'a battery-only job has no roof work');
+});
+
+test('rep: missing sections are misses at the standard severity, pitch counts per plane, a wrong address fails', () => {
+  const R = QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0, 'Utility Meter Bulb': 0, 'Roof Pitch': 1, 'Mounting Plane': 2 })), specs, { sfAddress: '1 Main St, Town, NC 27526' });
+  assert.equal(repGet(R, 'msp_dead_front_off').status, 'miss'); assert.equal(repGet(R, 'msp_dead_front_off').severity, 'hard');
+  assert.equal(repGet(R, 'meter_closeup').status, 'miss');
+  assert.equal(repGet(R, 'roof_pitch').status, 'miss', 'two planes, one pitch photo');
+  assert.equal(repGet(R, 'main_breaker_rating').status, 'verify', 'the labels photo still shows the rating');
+  assert.deepEqual(repGet(R, 'msp_dead_front_off').cats, ['rep:Panel Cover Off'], 'the finding points at its photos');
+  assert.equal(QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '9 Other Rd, Town, NC 27526' }).suggestedStatus, 'Failed - Gaps Found');
+  // no attic access and no attic photos: confirm by eye; an access photo with no attic photos is a miss
+  const none = QA.evaluate(QA.parseRep(fullRep({ Attic: 0, 'Attic Access': 0, 'Rafter Size And Spacing': 0 })), specs, {});
+  assert.equal(repGet(none, 'attic_framing').status, 'verify');
+  const acc = QA.evaluate(QA.parseRep(fullRep({ Attic: 0 })), specs, {});
+  assert.equal(repGet(acc, 'attic_photos').status, 'miss');
   const odd = QA.parseRep([repPages()[0], page(2, [blk('Photo Overview', 40, 700), blk('Exterior Photos (4)', 40, 650)])]);
   assert.ok(QA.evaluate(odd, specs, {}).findings.some(x => x.id === 'rep:count'), 'the declared total disagrees with the sections');
 });
@@ -1160,10 +1199,10 @@ test('Site Capture V.13: the attic tilt is the only pitch it can hold a plane to
   assert.equal(get(R, 'roof_pitch').status, 'pass');
 });
 
-test('pitch is not asked of a ground mount, a battery-only survey or a rep report', () => {
+test('pitch is not asked of a ground mount, or a battery-only survey', () => {
   const gm = survey('radicl', { photos: [{ ref: 'Trench Path', instance: null }] });
   assert.equal(get(QA.evaluate(gm, specs), 'roof_pitch').status, 'na');
   const bat = QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-battery' } }), specs);
   assert.equal(get(bat, 'roof_pitch'), undefined);
-  assert.equal(get(QA.evaluate(survey('rep'), specs), 'roof_pitch'), undefined);
+  assert.equal(get(QA.evaluate(QA.parseRep(repPages()), specs, { sfSurveyType: 'Battery Only Survey' }), 'roof_pitch').status, 'na');
 });

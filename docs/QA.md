@@ -473,11 +473,18 @@ Things not to undo:
   per expected survey; one survey's set (at most one of each kind) opens straight into a review
   (`qaOpenSet`), several wait on their survey's card as before. With a review open, whatever is dropped is
   added to it. The per-kind Report / Photos / Go back drops are gone; the Files list shows each file's role
-- **A rep report on its own is reviewed on photo coverage** (`parseRep`, `evalRep`): the sections that are
-  there, the address against Salesforce (house number, a hard miss), and the declared photo total against
-  the sections. A missing section is **Flagged, never Required** — the rep form does not say which sections
-  applied to the house (no attic, no sub panel), so absence is a prompt to look. Roof and attic sections are
-  skipped on a battery-only job. There is no spec: `REP_SECTIONS` in `lib/qa.cjs` is the list
+- **A rep report on its own is held to the standard checklist** (Doug, 2026-10-06; `parseRep`, `evalRep`,
+  `REP_CHECKS`): the same `REQUIREMENTS` with the same severities, Settings weights and battery-only skip as
+  any template; `REP_CHECKS` only says which photo section would hold each one. Pitch is the Roof Pitch
+  photos (one per mounting plane photo; attic or roof both count), meter close-up is Utility Meter Bulb, dead
+  front on/off is Panel Cover On/Off, and so on. A value a photo-only report can only show (main breaker
+  and bus rating, service entrance and voltage) reads "check by eye" when its photos exist, a miss when not.
+  What the form cannot hold at all is a **miss, never a waiver**: the overhang / eave (hard, so every rep
+  survey fails) and whether solar already exists. No attic access photo and no attic photos asks the
+  reviewer to confirm there is no attic; an access photo with no attic photos is a miss. The address is
+  checked against Salesforce and the declared photo total against the sections. Exterior, Utility Bill, Roof
+  Condition and Ceiling Joist stay Flagged, from `REP_SECTIONS`. Reps are phased out, so remaining rep
+  surveys are expected to need resurveys
 - **A rep report beside a go back**: the go back (Radicl or SunPower partial) is what is reviewed; the rep
   report is kept as the original, its pages open in the viewer, and it is not merged (two different forms
   with nothing to join on). Dropping them in either order gives the same review

@@ -587,7 +587,7 @@ const QA_FIND_CAT = { msp_dead_front_on: 'breaker', main_breaker_rating: 'breake
   gm_horizon: 'gm_horizon', gm_location: 'gm_location', gm_trench: 'gm_trench',
   attic_photos: 'attic', bus_rating: 'label', service_entrance: 'meterloc' };   // the bus rating is read off the label; overhead or underground shows on the meter wall
 // A rep report's check rows are named for the section they count, and its photo categories are the same names.
-const qaFindCats = f => /^rep:/.test(f.id) ? (f.id === 'rep:count' ? [] : [f.id]) : [].concat(QA_FIND_CAT[f.id] || []);
+const qaFindCats = f => f.cats ? f.cats : /^rep:/.test(f.id) ? (f.id === 'rep:count' ? [] : [f.id]) : [].concat(QA_FIND_CAT[f.id] || []);
 const qaCatOf = f => { const c = qaFindCats(f); return c.find(x => qaRun && qaRun.items && qaRun.items.some(it => it.id === x)) || c[0] || null; };
 // A check that could not be settled asks for the few photos shown beside it on the summary (the
 // first three of its category), not all 36 dead-front photos; a decided check asks for none.

@@ -28,7 +28,7 @@ const det = QA.detectTemplate(pages, specs);
 if (det.vendor === 'unknown') { console.error('Unrecognised report: ' + det.reason); process.exit(2); }
 const spec = specs.find(s => s.id === det.specId);
 if (det.vendor === 'radicl' && !spec) console.error('Note: no spec for ' + det.specId + ' — Layer A skipped');
-const S = det.vendor === 'sitecapture' ? QA.parseSiteCapture(pages, spec) : QA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
+const S = det.rep ? QA.parseRep(pages) : det.vendor === 'sitecapture' ? QA.parseSiteCapture(pages, spec) : QA.parseRadicl(pages, { specId: det.specId, partial: det.partial });
 const R = QA.evaluate(S, specs, ctx);
 
 if (args.includes('--json')) { console.log(JSON.stringify({ det, meta: R.meta, counts: R.counts, suggestedStatus: R.suggestedStatus, findings: R.findings }, null, 1)); process.exit(0); }
