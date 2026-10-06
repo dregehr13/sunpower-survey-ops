@@ -329,7 +329,6 @@ function qaSetBusy(kind, msg, err) {
 }
 
 // ── Intake ─────────────────────────────────────────
-const QA_VENDORS = { sitecapture: 'SunPower survey', radicl: 'Radicl survey', rep: 'Sales rep survey' };
 function _qaIntake() {
   const host = document.getElementById('qa-intake'); if (!host) return;
   // No report yet: one field. A job picked from the list rides along and the report
@@ -795,7 +794,7 @@ function qaPhotoSub() {
   const need = its.filter(qaNeedsLook).length, v = qaRun.vision;
   const ai = !v ? '' : v.error ? ` ${v.error}` : v.done < v.total ? ` Claude is checking the photos (${v.done} of ${v.total})…` : ` Claude checked ${v.total} photos${v.flagged ? ' and doubts ' + v.flagged : ''}.`;
   return ai && loaded >= its.length ? `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${ai}${need ? ` ${need} with a yellow border need your call.` : ''}` : loaded < its.length && !qaRun.photosSettled ? `Loading photos ${loaded} of ${its.length}…`
-    : `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${need ? ` ${need} with a yellow border need your call: ✓ if it does the job, ✕ if it doesn't.` : ' Mark one ✓ or ✕ only if you checked it.'}`;
+    : `${its.length} of ${qaRun.S.photos.length} photos, the ones that decide the checks.${need ? ` ${need} with a yellow border need your call.` : ''}`;
 }
 function _qaPhotoMeta() {
   const sub = document.getElementById('qa-ph-sub'); if (sub) sub.textContent = qaPhotoSub();
@@ -1092,9 +1091,8 @@ function _qaNav() {
 }
 function _qaStrip() {
   const host = document.getElementById('qa-strip'); if (!host || !qaRun) return;
-  const o = qaOutcome(), c = o.counts;
+  const o = qaOutcome();
   host.innerHTML = `<span class="qa-outcome">${qaStatusPill(o.suggestedStatus)}</span>
-    <span><b>${c.missHard}</b> hard ${c.missHard === 1 ? 'miss' : 'misses'}</span><span><b>${c.missWarn}</b> to review</span>${qaUndecided() ? `<span class="open"><b>${qaUndecided()}</b> to decide</span>` : ''}<span><b>${c.gap + c.standingGaps}</b> not in template</span><span><b>${qaRun.S.photos.length}</b> photos</span>
     <span class="sp"><button onclick="qaViewPdf(1)">View report PDF</button><button class="qa-startover" onclick="qaStartOver()">${qaRun.saved ? 'New review' : 'Start over'}</button></span>`;
 }
 function _qaStep() {
@@ -1107,8 +1105,8 @@ function _qaStep() {
 // template cannot capture is no one's to fix on this survey, so it closes the list.
 const QA_GROUPS = [
   { k: 'all', l: 'All', sw: '', f: x => x.status !== 'na' },
-  { k: 'miss', l: 'Missing', sw: 'hard', f: x => qaBase(x).status === 'miss' && !x.fl },
-  { k: 'verify', l: 'Look at', sw: 'look', f: x => !!x.fl },
+  { k: 'miss', l: 'Missed', sw: 'hard', f: x => qaBase(x).status === 'miss' && !x.fl },
+  { k: 'verify', l: 'To check', sw: 'look', f: x => !!x.fl },
   { k: 'pass', l: 'Passed', sw: 'pass', f: x => qaBase(x).status === 'pass' && !qaBase(x).verify && !x.fl },
   { k: 'gap', l: 'Not in template', sw: 'gap', f: x => x.status === 'gap', note: 'The template has no field for these, so no survey on it can have them. They are not the surveyor’s miss.' },
 ];
@@ -1231,7 +1229,7 @@ function _qaReviewStep(host) {
     ${rows.length ? rows.map(f => qaRowHtml(f, f.fk ? acts.findIndex(x => qaFlagKey(x) === f.fk) : -1)).join('') : `<div class="qa-empty">Nothing here.</div>`}`;
   _qaExpandBtn();
 }
-const qaReportSub = (n, left) => left ? `${qaPlural(n, 'item')} to check against the report or photos. ${left} left to decide: ✓ if it is fine, ✕ if it is a miss.` : 'Every flagged item is decided. Anything marked ✕ is now a miss.';
+const qaReportSub = (n, left) => left ? `${left} of ${qaPlural(n, 'flagged item')} left to decide. ✓ if it is fine, ✕ if it is a miss.` : 'Every flagged item is decided.';
 const qaDecideHtml = (i, d) => `<span class="qa-decide"><button class="ok${d === 'ok' ? ' on' : ''}" title="Good" aria-label="Good" onclick="qaDecide(${i},'ok')">✓</button><button class="bad${d === 'bad' ? ' on' : ''}" title="Bad" aria-label="Bad" onclick="qaDecide(${i},'bad')">✕</button></span>`;
 function qaDecide(i, v) {
   const run = qaRun, f = qaActs()[i]; if (!f) return;
