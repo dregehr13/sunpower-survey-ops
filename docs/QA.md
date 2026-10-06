@@ -231,9 +231,10 @@ photo check is built but has never run against the live API (see below).
   (`QA_FIND_CAT` maps check id → category), or that looks soft. Nobody has to
   mark the rest.
 - **Example photos** (`qa/ref/`, `QA_REFS` in page.js) sit beside the survey's
-  photo in the zoom, with what it should show and why Design needs it. Breaker,
-  label, meter and rafter size come from the Site Survey Guide; pitch and eave
-  come from a past Radicl report because the guide has none. Swap a file in
+  photo in the zoom, with what it should show and why Design needs it. Breaker
+  (dead front off), pitch (a physical angle finder) and rafter spacing come from
+  past SunPower surveys; eave comes from a past Radicl report. Meter and rafter
+  size come from the Site Survey Guide. Swap a file in
   `qa/ref/` to change an example.
 - **A saved review records which photos were marked** (`photos.marks`: category,
   panel, photo number, good or not usable). Everything else is "not individually

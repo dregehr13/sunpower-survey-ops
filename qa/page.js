@@ -1246,7 +1246,7 @@ function qaDecide(i, v) {
 // They sit beside the survey's photo in the zoom.
 const QA_REFS = {
   breaker: { what: 'A picture of the main breaker, with its rating readable.', why: 'The main breaker is the largest breaker and shuts off the whole panel. Its rating tells Design how the solar system ties into the grid.',
-    imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Panel with the dead front on' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
+    imgs: [{ src: 'qa/ref/breaker.jpg', cap: 'Dead front off: the main breaker and the whole panel', from: 'a past SunPower survey' }, { src: 'qa/ref/breaker-rating.jpg', cap: 'Rating on the breaker handle' }] },
   label: { what: 'A picture of the label on the main service panel, clear enough to read the text.', why: 'It shows what the bus bar is rated for and which parts are allowed inside the panel. The text has to be legible.',
     imgs: [{ src: 'qa/ref/label.jpg', cap: 'Whole label, every line readable', from: 'a past SunPower survey' },
       { src: 'qa/ref/label-rating.jpg', cap: 'Main ratings close up: 200 A max', from: 'a past Radicl survey' }] },
@@ -1264,12 +1264,11 @@ const QA_REFS = {
   meter: { what: 'A close-up of the meter face showing the numbers.', why: 'The plan reviewer matches the meter number to the utility bill so net metering lands on the right home. It also shows which utility owns the meter. Colorado Springs Utilities also needs a photo with a tape from the ground to the center of the glass.',
     imgs: [{ src: 'qa/ref/meter.jpg', cap: 'Meter number readable' }] },
   framing: { what: 'A measurement of the rafter size, and of how far apart the rafters are. The tape or the Measure app has to be in the shot.', why: 'The structural engineer needs 2x4, 2x6 or 2x8, and the spacing (12, 18, 24, 30 or 36 inches).',
-    imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Spacing: the next rafter at 24"', from: 'a past SunPower survey' }] },
+    imgs: [{ src: 'qa/ref/framing.jpg', cap: 'Rafter size with a tape' }, { src: 'qa/ref/framing-spacing.jpg', cap: 'Spacing: tape reading 24" at the next rafter', from: 'a past SunPower survey' }] },
   attic: { what: 'The whole attic over each mounting plane: every rafter or truss, the supports and the decking, in photos that overlap.', why: 'The structural engineer checks the framing can carry the array, and looks for damage, sagging or anything in the way.',
     imgs: [{ src: 'qa/ref/attic.jpg', cap: 'Trusses, plates and decking in one shot', from: 'a past SunPower survey' },
       { src: 'qa/ref/attic-radicl.jpg', cap: 'Down the length of the attic', from: 'a past Radicl survey' }] },
-  pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', from: 'a past Radicl report',
-    imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Pitch readable in the photo' }] },
+  pitch: { what: 'The roof pitch, readable from the photo.', why: 'Design models the roof from the pitch. A number nobody can read has to be re-shot.', imgs: [{ src: 'qa/ref/pitch.jpg', cap: 'Angle finder held on the rafter, needle readable', from: 'a past SunPower survey' }] },
   eave: { what: 'The overhang measured with a tape against the eave.', why: 'Design needs the overhang to place the array against the roof edge. The tape and the numbers have to be in frame.', from: 'a past Radicl report',
     imgs: [{ src: 'qa/ref/eave.jpg', cap: 'Overhang measured with a tape' }] },
 };
