@@ -48,7 +48,7 @@ status for five months; a colour band that disagreed with the number beside it).
 | `isOpenGoBack(r)` | `qaCalled` and no `resurvey_complete`, list not Complete, project In Progress, not parked | Go backs QA called that are still out. Part of `isOpenQueue`. WIP rail **Open go backs** and the Go backs lens read it |
 | `fpy(completions)` | `(completions − isResurveyDefect) ÷ completions × 100`, or `null` on an empty set | First Pass Yield per Spec 12744. Takes an already-scoped array — the caller owns the population, this owns only the ratio. **Weighted, never a mean of rates**: the 4-week rolling line pools the window's rows in one call, because averaging four weekly percentages lets a 6-completion week pull as hard as a 130-one. Returns `null` rather than 0 on no completions — "no data" is not "perfect yield", and 0 would colour the card red. Lived inline in **eight** places before 2026-08-07 (six in `renderResurvey`, plus `lwFpy`/`pwFpy` on Current); `test/surfaces.test.js` now fails on any inline copy |
 | `isOpenResurvey(r)` | resurvey requested, no resurvey-complete date, **and `list !== 'Complete'`** | **18 rows were resolved without the Resurvey Complete Date ever being filled in.** Testing only the dates counts those as still open. Powers the drill-drawer chips, the WIP schedule date, and the Resurveys open queue |
-| `inRepGrace(r, asOf)` | still inside the rep's first day | WIP table shows a "Rep day" pill instead of a number |
+| `inRepGrace(r, asOf)` | still inside the rep's first day | no longer surfaced (WIP shows the number; rep surveys phased out 2026-10-01) |
 
 "Proj Age" (`start → today`) is a *third* number, computed inline on the WIP page.
 It is total elapsed age regardless of owner — use it for the age-distribution bar,
