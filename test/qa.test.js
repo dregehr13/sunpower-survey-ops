@@ -1212,3 +1212,13 @@ test('History project IDs link to Salesforce through the shared sf-link style', 
   assert.ok(pageSrc.includes('class="sf-link"'));
   assert.equal((pageSrc.match(/<b>\$\{qaProjLink\(/g) || []).length, 2, 'reviews and accounts lenses');
 });
+
+test('Radicl: a pitch photo from the attic or the roof satisfies the template; neither is a miss', () => {
+  const tpl = (S, ref) => QA.evaluate(S, specs, {}).findings.find(f => f.id === 'tpl:' + ref);
+  const atticOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch', instance: null, page: 12 }] });
+  const roofOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch / Slope', instance: null, page: 31 }] });
+  for (const S of [atticOnly, roofOnly]) { S.template.specId = 'radicl-v2'; }
+  assert.equal(tpl(atticOnly, 'Roof Pitch / Slope'), undefined, 'attic reading, no roof gauge photo');
+  const none = survey('radicl'); none.template.specId = 'radicl-v2';
+  assert.ok(tpl(none, 'Roof Pitch / Slope'), 'no pitch photo at all still misses');
+});

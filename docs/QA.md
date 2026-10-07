@@ -508,3 +508,5 @@ Things not to undo:
 - **Three checks, Flagged** (`gm_horizon`, `gm_location`, `gm_trench`): fewer than `GROUND_MIN` (5) photos in a subsection asks for a review. Never an automatic fail (Doug's call); weights are in Settings like the others.
 - **Photo review rows and examples** for the three subsections (`gm_*` in `KEY_PHOTOS`, `QA_REFS`, `CRITERIA`): two example photos each in `qa/ref/gm-*.jpg`, taken from the first ground mount report with Doug's OK (2026-10-06). Swap a file to change an example.
 - **Not built:** the soil test, which Radicl will add to this template.
+
+- **Pitch is read on the roof or in the attic, never both** (Doug, 2026-10-07; most surveyors use the attic). Radicl's Layer A pitch photo (`Roof Pitch / Slope`, Roof Photos) is satisfied by the attic's `Roof Pitch` gauge photo, so an attic-only survey is no longer flagged for a missing roof gauge photo. The *Roof pitch* check already counted either section's photo; Site Capture already accepts a roof or attic tilt reading per plane.
