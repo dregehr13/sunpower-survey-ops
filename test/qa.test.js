@@ -110,16 +110,16 @@ test('plane_count: fewer planes than the proposal is hard, more is a warning', (
   const mk = (n, asked) => survey('sitecapture', {
     groups: { mounting_plane_roof: Array.from({ length: n }, (_, i) => ({ idx: i + 1, id: 'MP' + (i + 1) })) },
     entries: [{ ref: 'mounting_planes_how_many', value: String(asked), instance: null }] });
-  const fewer = get(QA.evaluate(mk(3, 4), specs), 'plane_count');
-  const more = get(QA.evaluate(mk(5, 4), specs), 'plane_count');
+  const fewer = get(QA.evaluateLegacy(mk(3, 4), specs), 'plane_count');
+  const more = get(QA.evaluateLegacy(mk(5, 4), specs), 'plane_count');
   assert.equal(fewer.severity, 'hard'); assert.equal(more.severity, 'warn');
-  assert.equal(get(QA.evaluate(mk(4, 4), specs), 'plane_count').status, 'pass');
+  assert.equal(get(QA.evaluateLegacy(mk(4, 4), specs), 'plane_count').status, 'pass');
 });
 
 test('a missing numeric main breaker rating is a Site Capture template gap, not a miss', () => {
-  const sc = get(QA.evaluate(survey('sitecapture'), specs), 'main_breaker_rating');
+  const sc = get(QA.evaluateLegacy(survey('sitecapture'), specs), 'main_breaker_rating');
   assert.equal(sc.status, 'gap'); assert.equal(sc.standing, true);
-  const rd = get(QA.evaluate(survey('radicl', { entries: [{ ref: 'Breaker Box — Main Breaker Rating', instance: '1', value: '200A' }], photos: [] }), specs), 'main_breaker_rating');
+  const rd = get(QA.evaluateLegacy(survey('radicl', { entries: [{ ref: 'Breaker Box — Main Breaker Rating', instance: '1', value: '200A' }], photos: [] }), specs), 'main_breaker_rating');
   assert.equal(rd.status, 'pass');
 });
 
@@ -138,12 +138,12 @@ const cleanRadicl = (over = {}) => {
 };
 
 test('standing template gaps do not change the outcome; an applied gap suggests an override', () => {
-  const base = QA.evaluate(cleanRadicl(), specs);
+  const base = QA.evaluateLegacy(cleanRadicl(), specs);
   assert.equal(base.counts.missHard, 0);
   // Radicl has no template gaps left (Doug, 2026-10-08): what it does not capture is not asked of it
   assert.equal(base.counts.standingGaps, 0);
   assert.equal(base.suggestedStatus, 'Passed');
-  const R = QA.evaluate(cleanRadicl({ solar: 'Yes' }), specs);
+  const R = QA.evaluateLegacy(cleanRadicl({ solar: 'Yes' }), specs);
   assert.equal(get(R, 'existing_equipment'), undefined);
   assert.equal(R.suggestedStatus, 'Passed');
 });
@@ -159,26 +159,26 @@ test('Radicl: an inside panel is checked, and an outside panel the surveyor said
       ...ph('Breaker Box — Location', 'in1', 2), ...ph('Breaker Box — Dead Front', 'in1', 5), ...ph('Breaker Box — Panel La', 'in1', 3),
       ...ph('Electrical Meter: Close Up'), ...ph('Electric Meter: Location Photos'), ...ph('Layout Map'), ...ph('Eave/Soffit Measurement Photo')],
   });
-  const R = QA.evaluate(S, specs);
+  const R = QA.evaluateLegacy(S, specs);
   assert.equal(R.counts.missHard, 0, JSON.stringify(R.findings.filter(f => f.status === 'miss').map(f => f.id + ': ' + f.detail)));
   assert.equal(get(R, 'main_breaker_rating').status, 'pass');
 });
 
-test('the checklist names every check once and marks what the template cannot capture', () => {
-  const sc = QA.checklist('sitecapture-v13'), rd = QA.checklist('radicl-v2');
-  assert.ok(sc.length > 20 && rd.length > 15);
+test('the checklist is the Blue Raven list: every item once, with its type, and what the template cannot capture', () => {
+  const sc = QA.checklist('sitecapture-v14'), rd = QA.checklist('radicl-v2');
+  assert.equal(QA.STANDARD.length, 37);
+  assert.ok(sc.length > 25 && rd.length > 25);
   assert.equal(new Set(sc.map(c => c.id)).size, sc.length);
   const by = (l, id) => l.find(c => c.id === id);
-  assert.equal(by(sc, 'roof_overhang').inTemplate, false);          // Site Capture has no overhang field
-  assert.equal(by(rd, 'roof_overhang').inTemplate, true);
-  assert.equal(by(sc, 'main_breaker_rating').inTemplate, false);
-  assert.equal(by(rd, 'main_breaker_rating').inTemplate, true);
-  assert.equal(by(rd, 'plane_count'), undefined);                  // Radicl is not asked for a plane count
-  assert.ok(by(sc, 'plane_count'));
-  assert.ok(by(sc, 'photo_provenance') && !by(rd, 'photo_provenance'));  // vendor-specific checks only appear for their vendor
-  // alarm-only checks are not part of the routine list, but a setting can bring one back
-  assert.ok(!by(sc, 'photos_deleted') && !by(sc, 'resource_match') && !by(sc, 'proposal_attached'));
-  assert.ok(QA.checklist('sitecapture-v13', { photos_deleted: 'warn' }).some(c => c.id === 'photos_deleted'));
+  assert.equal(by(sc, 'std_meter_height').inTemplate, false);       // no template asks for a meter height
+  assert.equal(by(rd, 'std_gutter').inTemplate, false);             // Radicl has no gutter photo
+  assert.equal(by(rd, 'std_exterior').inTemplate, true);
+  assert.equal(by(sc, 'std_exterior').type, 'photo');
+  assert.equal(by(sc, 'roof_pitch').type, 'measurement');
+  // the old design-need checks that are not on the list are gone
+  for (const id of ['roof_overhang', 'service_entrance', 'bus_rating', 'service_voltage', 'generator_details', 'meter_main_open', 'main_breaker_rating', 'plane_count'])
+    assert.equal(by(sc, id), undefined, id);
+  assert.ok(QA.checklist('radicl-groundmount').some(c => c.id === 'gm_trench') && !sc.some(c => c.id === 'gm_trench'), 'ground mount checks only on the ground mount template');
 });
 
 test('keyPhotos shows a few per check unless asked for all', () => {
@@ -206,17 +206,17 @@ test('photos_deleted and proposal_attached read the surveyor’s own answers', (
   const S = survey('sitecapture', { entries: [
     { ref: 'office_feedback_were_any', value: 'Yes', instance: null },
     { ref: 'office_feedback_was_the_p', value: 'No', instance: null } ] });
-  const R = QA.evaluate(S, specs);
+  const R = QA.evaluateLegacy(S, specs);
   assert.equal(get(R, 'photos_deleted').status, 'miss');
   assert.equal(get(R, 'proposal_attached').status, 'miss');
-  assert.equal(get(QA.evaluate(survey('radicl'), specs), 'photos_deleted'), undefined);   // vendor-specific
+  assert.equal(get(QA.evaluateLegacy(survey('radicl'), specs), 'photos_deleted'), undefined);   // vendor-specific
 });
 
 test('address_match compares street numbers against Salesforce when it is supplied', () => {
   const S = survey('sitecapture', { meta: { address: '23210 NE Village Ct Wood Village Oregon' } });
-  assert.equal(get(QA.evaluate(S, specs, { sfAddress: '23210 NE Village Ct, Wood Village, OR' }), 'address_match').status, 'pass');
-  assert.equal(get(QA.evaluate(S, specs, { sfAddress: '9999 Other St' }), 'address_match').status, 'miss');
-  assert.equal(get(QA.evaluate(S, specs, {}), 'address_match').status, 'na');
+  assert.equal(get(QA.evaluateLegacy(S, specs, { sfAddress: '23210 NE Village Ct, Wood Village, OR' }), 'address_match').status, 'pass');
+  assert.equal(get(QA.evaluateLegacy(S, specs, { sfAddress: '9999 Other St' }), 'address_match').status, 'miss');
+  assert.equal(get(QA.evaluateLegacy(S, specs, {}), 'address_match').status, 'na');
 });
 
 test('summarize emits only Salesforce picklist labels and leaves template gaps out', () => {
@@ -246,16 +246,14 @@ test('Site Capture V.14 is V.13 with the template gaps closed: told apart by its
   assert.equal(QA.detectTemplate(v14, specs).specId, 'sitecapture-v14');
   const base = { template: { vendor: 'sitecapture', specId: 'sitecapture-v14' }, meta: {} };
   const miss = Rr => Rr.findings.filter(f => f.status === 'miss').map(f => f.id);
-  const none = QA.evaluate(QA.makeSurvey({ ...base }), specs, {});
+  const none = QA.evaluateLegacy(QA.makeSurvey({ ...base }), specs, {});
   assert.ok(miss(none).includes('roof_overhang'), 'overhang is asked for on V.14');
   assert.equal(none.findings.find(f => f.id === 'service_voltage').status, 'miss');
-  const old = QA.evaluate(QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-v13' }, meta: {} }), specs, {});
+  const old = QA.evaluateLegacy(QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-v13' }, meta: {} }), specs, {});
   assert.equal(old.findings.find(f => f.id === 'roof_overhang').status, 'gap', 'on V.13 the same item is still a template gap');
   const given = QA.makeSurvey({ ...base, entries: [{ ref: 'roof_overhang_inches', value: '14', page: 3 }, { ref: 'utility_meter_service_voltage', value: '120/240V Single Phase', instance: 'M1', page: 5 }] });
-  const ok = QA.evaluate(given, specs, {});
+  const ok = QA.evaluateLegacy(given, specs, {});
   assert.equal(ok.findings.find(f => f.id === 'roof_overhang').status, 'pass');
-  assert.equal(QA.checklist('sitecapture-v14').find(c => c.id === 'roof_overhang').inTemplate, true);
-  assert.equal(QA.checklist('sitecapture-v13').find(c => c.id === 'roof_overhang').inTemplate, false);
 });
 
 test('every requirement has an area, a severity and an evidence trail or a reason', () => {
@@ -372,15 +370,13 @@ test('photo lines read as people say them, with no count in the title', () => {
   assert.equal(t('Location - 5+ photos showing path to opposite side of wall', 'MSP'), 'MSP location');
   assert.equal(t('Location - 5+ photos showing the entire room', 'SP1'), 'Sub panel location');
   assert.equal(t('Roof Shading Front - 8+ photos creating a 360° photo set'), 'Roof Shading Front');
-  assert.equal(QA.allChecks().find(c => c.id === 'msp_location').title, 'MSP location');
+  assert.equal(QA.allChecks().find(c => c.id === 'msp_location').title, 'Wall and area around the electrical equipment');
 });
 
 test('a plane with fewer photos than the template asks for is not a miss; none at all still is', () => {
   const S = survey('sitecapture', {});
-  const ids = QA.evaluate(S, specs, {}).findings.filter(f => f.layer === 'A').map(f => f.detail);
+  const ids = QA.evaluateLegacy(S, specs, {}).findings.filter(f => f.layer === 'A').map(f => f.detail);
   assert.ok(ids.every(d => !/ of \d+\+ photos/.test(d || '')), 'no "N of M+ photos" miss remains');
-  const engine = readFileSync(new URL('../lib/qa.cjs', import.meta.url), 'utf8');
-  assert.ok(!/of \$\{need\}\+ photos/.test(engine) && !/the reference surveys had at least/.test(engine));
 });
 
 test('the verdict step carries the summary help text and marks the suggested status', () => {
@@ -529,19 +525,19 @@ test('check settings live in the app Settings page, and the heading reads Expect
 test('alarm-only checks appear only when they fail, and Settings can promote or silence them', () => {
   const ok = survey('sitecapture', { entries: [{ ref: 'x', key: 'office_feedback_were_any', value: 'No', instance: null }] });
   const has = (res, id) => res.findings.some(f => f.id === id);
-  assert.equal(has(QA.evaluate(ok, specs), 'resource_match'), false);                      // nothing to compare: silent
-  const wrong = QA.evaluate(ok, specs, { sfResource: 'Radicl Services' });
+  assert.equal(has(QA.evaluateLegacy(ok, specs), 'resource_match'), false);                      // nothing to compare: silent
+  const wrong = QA.evaluateLegacy(ok, specs, { sfResource: 'Radicl Services' });
   const f = wrong.findings.find(x => x.id === 'resource_match');
   assert.ok(f && f.alarm && f.status === 'miss' && f.severity === 'warn');
-  assert.equal(has(QA.evaluate(ok, specs, { sfResource: 'SunPower Surveyor' }), 'resource_match'), false);   // passes: silent
-  assert.equal(has(QA.evaluate(ok, specs, { sfResource: 'Radicl Services', checks: { resource_match: 'off' } }), 'resource_match'), false);
-  const promoted = QA.evaluate(ok, specs, { sfResource: 'SunPower Surveyor', checks: { resource_match: 'warn' } }).findings.find(x => x.id === 'resource_match');
+  assert.equal(has(QA.evaluateLegacy(ok, specs, { sfResource: 'SunPower Surveyor' }), 'resource_match'), false);   // passes: silent
+  assert.equal(has(QA.evaluateLegacy(ok, specs, { sfResource: 'Radicl Services', checks: { resource_match: 'off' } }), 'resource_match'), false);
+  const promoted = QA.evaluateLegacy(ok, specs, { sfResource: 'SunPower Surveyor', checks: { resource_match: 'warn' } }).findings.find(x => x.id === 'resource_match');
   assert.ok(promoted && promoted.status === 'pass');
 });
 
 test('photos taken far from the Salesforce address are flagged, near ones pass, and a report with no GPS is left alone', () => {
   const at = (lat, lon) => survey('sitecapture', { photos: [{ ref: 'p', instance: null, page: 1, loc: { lat, lon } }, { ref: 'p', instance: null, page: 1, loc: { lat, lon } }] });
-  const run = (S, geo) => QA.evaluate(S, specs, { sfAddress: '1 Main St', sfGeo: geo }).findings.find(x => x.id === 'address_photos');
+  const run = (S, geo) => QA.evaluateLegacy(S, specs, { sfAddress: '1 Main St', sfGeo: geo }).findings.find(x => x.id === 'address_photos');
   const home = { lat: 45.5, lon: -122.5 };
   assert.equal(run(at(45.5002, -122.5), home).status, 'pass');
   assert.equal(run(at(45.5, -122.5), home).status, 'pass');
@@ -556,28 +552,27 @@ test('a finding links the page where the answer is printed, not the page where i
   const S = survey('radicl', { entries: [
     { ref: 'Electric Service Type', value: null, page: 3, instance: null },       // the label at the foot of one page
     { ref: 'Electric Service Type', value: 'Underground', page: 4, instance: null }] });   // the answer at the head of the next
-  const f = QA.evaluate(S, specs).findings.find(x => x.id === 'service_entrance');
+  const f = QA.evaluateLegacy(S, specs).findings.find(x => x.id === 'service_entrance');
   assert.equal(f.found, 'Underground');
   assert.equal(f.page, 4);
 });
 
 test('checks that only apply sometimes say when, in the checklist and in Settings', () => {
   const all = QA.allChecks(), by = id => all.find(c => c.id === id);
-  assert.ok(/solar already exists/.test(by('existing_equipment').when));
-  assert.ok(/battery/.test(by('battery_location').when));
-  assert.equal(by('roof_pitch').when, '');
-  assert.ok(QA.checklist('sitecapture-v14').find(c => c.id === 'existing_equipment').when);
-  assert.equal(QA.checklist('radicl-v2').find(c => c.id === 'existing_equipment'), undefined);
-  assert.equal(by('attic_photos').zeroHard, true);
+  assert.ok(/solar already exists/.test(by('std_existing_solar').when));
+  assert.ok(/battery/.test(by('std_battery_360').when));
+  assert.ok(/tile/.test(by('std_tile_photos').when));
+  assert.equal(by('site_map').when.length > 0, true);
+  assert.ok(QA.checklist('sitecapture-v14').find(c => c.id === 'std_existing_solar').when);
 });
 
 test('the checklist lives on the Templates tab, not the Review tab, and marks what the template lacks', () => {
   assert.ok(!/function _qaChecklist/.test(pageSrc) && !/What we check/.test(pageSrc));
   assert.ok(/What we review/.test(pageSrc) && /Add to template/.test(pageSrc));
   // a check the template cannot capture is listed with its fix
-  const lacking = QA.checklist('sitecapture-v13').filter(c => !c.inTemplate).map(c => c.id);
-  const fixes = new Set(QA.templateChanges('sitecapture-v13').map(c => c.id));
-  assert.ok(lacking.length && lacking.some(id => fixes.has(id)));
+  const lacking = QA.checklist('radicl-v2').filter(c => !c.inTemplate).map(c => c.id);
+  const fixes = new Set(QA.templateChanges('radicl-v2').map(c => c.id));
+  assert.ok(lacking.length && lacking.every(id => fixes.has(id)));
 });
 
 test('Site Capture: a group photo captioned without its instance ("Proposed Walls / ...") still counts', () => {
@@ -621,17 +616,17 @@ test('Radicl: a breaker or bus rating with no number in it is not recorded', () 
   const S = cleanRadicl();
   S.entries = S.entries.filter(e => !/Rating/.test(e.ref)).concat(
     { ref: 'Breaker Box — Main Breaker Rating', value: 'Unknown', instance: '1' }, { ref: 'Breaker Box — Max Bus Rating', value: 'No labels', instance: '1' });
-  const R = QA.evaluate(S, specs);
+  const R = QA.evaluateLegacy(S, specs);
   assert.equal(get(R, 'main_breaker_rating').status, 'miss'); assert.match(get(R, 'main_breaker_rating').detail, /Unknown/);
   assert.equal(get(R, 'bus_rating').status, 'miss');
-  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'main_breaker_rating').status, 'pass');
+  assert.equal(get(QA.evaluateLegacy(cleanRadicl(), specs), 'main_breaker_rating').status, 'pass');
 });
 
 test('a battery-only survey is not held to the roof and attic checks', () => {
   // RD-03 (3219SCHR - Battery Only): no roof was surveyed, and it read Failed for no pitch and no eave.
-  const R = QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' });
+  const R = QA.evaluateLegacy(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' });
   for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
-  assert.equal(get(QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Site Survey + Battery' }), 'roof_pitch').status, 'miss');
+  assert.equal(get(QA.evaluateLegacy(survey('radicl'), specs, { sfSurveyType: 'Site Survey + Battery' }), 'roof_pitch').status, 'miss');
 });
 
 test('Radicl: no attic access is shown for a look with the surveyor\'s note, not passed over', () => {
@@ -667,8 +662,8 @@ test('Radicl completeness runs from the reference reports and skips the roof on 
   const roofCore = v2.core.filter(c => /Roof Photos|Attic Info/.test(c.section)).length;
   assert.ok(roofCore > 0);
   const tpl = R => R.findings.filter(f => f.layer === 'A' && /Roof Photos|Attic Info/.test(f.area)).length;
-  assert.equal(tpl(QA.evaluate(survey('radicl'), specs)), roofCore);
-  assert.equal(tpl(QA.evaluate(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' })), 0);
+  assert.equal(tpl(QA.evaluateLegacy(survey('radicl'), specs)), roofCore);
+  assert.equal(tpl(QA.evaluateLegacy(survey('radicl'), specs, { sfSurveyType: 'Battery Only Survey' })), 0);
 });
 
 // The page, run for real: page.js in a VM with the few browser globals it touches at load.
@@ -705,15 +700,15 @@ test('a review cannot be saved as a pass while a flagged item is undecided', () 
 test('the address check says which numbers differ without writing either address into the review', () => {
   // A finding's detail is saved to the shared history, which promises never to hold the customer's address.
   const S = survey('radicl', { meta: { address: '21 Valley View Dr, Warren, PA 16365' } });
-  const ok = get(QA.evaluate(S, specs, { sfAddress: '21 Valley View Dr, Warren, PA 16365' }), 'address_match');
-  const bad = get(QA.evaluate(S, specs, { sfAddress: '23 Valley View Dr, Warren, PA 16365' }), 'address_match');
+  const ok = get(QA.evaluateLegacy(S, specs, { sfAddress: '21 Valley View Dr, Warren, PA 16365' }), 'address_match');
+  const bad = get(QA.evaluateLegacy(S, specs, { sfAddress: '23 Valley View Dr, Warren, PA 16365' }), 'address_match');
   assert.equal(ok.status, 'pass'); assert.equal(bad.status, 'miss');
   for (const f of [ok, bad]) assert.ok(!/Valley|Warren/.test(f.detail || ''), f.detail);
   assert.match(bad.detail, /21.*23/);
   // a one-digit house number is the house number, not a reason to compare ZIP codes
   const one = survey('radicl', { meta: { address: '5 Elm St, Warren, PA 16365' } });
-  assert.equal(get(QA.evaluate(one, specs, { sfAddress: '7 Elm St, Warren, PA 16365' }), 'address_match').status, 'miss');
-  assert.equal(get(QA.evaluate(one, specs, { sfAddress: '5 Elm St, Warren, PA 16365' }), 'address_match').status, 'pass');
+  assert.equal(get(QA.evaluateLegacy(one, specs, { sfAddress: '7 Elm St, Warren, PA 16365' }), 'address_match').status, 'miss');
+  assert.equal(get(QA.evaluateLegacy(one, specs, { sfAddress: '5 Elm St, Warren, PA 16365' }), 'address_match').status, 'pass');
 });
 
 test('a Radicl partial survey (a go back) is reviewed like a survey; an inspection report is named and refused', () => {
@@ -848,11 +843,11 @@ test('namesProject finds a report by project ID or by street number and street w
 
 test('Radicl Sep 2026: dead front is one row needing two photos, checked for one on and one off', () => {
   const two = n => survey('radicl', { photos: Array.from({ length: n }, () => ({ ref: 'Breaker Box — Dead Front', instance: '1', page: 3 })) });
-  const R = QA.evaluate(two(2), specs, {}), on = R.findings.find(f => f.id === 'msp_dead_front_on'), off = R.findings.find(f => f.id === 'msp_dead_front_off');
+  const R = QA.evaluateLegacy(two(2), specs, {}), on = R.findings.find(f => f.id === 'msp_dead_front_on'), off = R.findings.find(f => f.id === 'msp_dead_front_off');
   assert.equal(on.title, 'Dead front on and off');
   assert.equal(on.status, 'pass'); assert.equal(on.verify, true); assert.match(on.note, /one photo shows the dead front on and one shows it off/);
   assert.equal(off.status, 'na');
-  assert.equal(QA.evaluate(two(1), specs, {}).findings.find(f => f.id === 'msp_dead_front_on').status, 'miss');
+  assert.equal(QA.evaluateLegacy(two(1), specs, {}).findings.find(f => f.id === 'msp_dead_front_on').status, 'miss');
 });
 
 test('a go back is checked as one survey: the original report plus the partial that came back', () => {
@@ -907,13 +902,13 @@ test('a Radicl partial survey as it prints: untouched sections read "No informat
   assert.deepEqual(S.meta.emptySections, ['Quality Check', 'Roof Photos']);
   assert.equal(S.value(/^Electric Service Type$/), 'Overhead');
   const names = f => f.filter(x => x.layer === 'A').map(x => x.area);
-  const alone = QA.evaluate(S, specs, {}).findings;
+  const alone = QA.evaluateLegacy(S, specs, {}).findings;
   assert.equal(names(alone).includes('Roof Photos'), false, 'a section the go back did not revisit is the original\'s to answer');
   assert.equal(names(alone).includes('Quality Check'), false);
-  assert.equal(QA.evaluate(S, specs, {}).templateReport.newToSpec.some(x => /No information/.test(x)), false);
+  assert.equal(QA.evaluateLegacy(S, specs, {}).templateReport.newToSpec.some(x => /No information/.test(x)), false);
   // the same survey read as a full report (not partial) still asks for every section
   const full = QA.parseRadicl(pages, { specId: 'radicl-v2', partial: false });
-  assert.equal(names(QA.evaluate(full, specs, {}).findings).includes('Roof Photos'), true);
+  assert.equal(names(QA.evaluateLegacy(full, specs, {}).findings).includes('Roof Photos'), true);
 });
 
 test('an unrecognised report says what page 1 starts with; a Site Capture date in another order is still read', () => {
@@ -1023,16 +1018,16 @@ test('reviewMetrics: day and week buckets, gaps kept, drill ids, vendor-named bl
 test('a Radicl ground mount is not held to roof or attic checks, and is held to its own photos', () => {
   const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
   const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 5), ...ph('Location Photos', 5), ...ph('Trench Path', 5), ...over] });
-  const R = QA.evaluate(ground(), specs);
+  const R = QA.evaluateLegacy(ground(), specs);
   for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
   assert.equal(get(R, 'plane_count'), undefined);
   assert.equal(get(R, 'gm_trench').status, 'pass');
   assert.ok(!R.findings.some(f => f.layer === 'A' && /^(Roof Photos|Attic Info)$/.test(f.area)));
   // missing the trench photos is a miss; a roof survey never sees these checks
   const S2 = survey('radicl', { photos: [...ph('Trench Path'), ...ph('Horizon Photos')] });
-  assert.equal(get(QA.evaluate(S2, specs), 'gm_location').status, 'miss');
-  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'gm_trench'), undefined);
-  assert.equal(get(QA.evaluate(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
+  assert.equal(get(QA.evaluateLegacy(S2, specs), 'gm_location').status, 'miss');
+  assert.equal(get(QA.evaluateLegacy(cleanRadicl(), specs), 'gm_trench'), undefined);
+  assert.equal(get(QA.evaluateLegacy(cleanRadicl(), specs), 'roof_pitch').status, 'pass');
 });
 
 const repPages = () => [
@@ -1158,11 +1153,11 @@ test('ground mount: under five photos in a subsection asks for a review and neve
 });
 
 test('ground mount: the roof and attic checks do not apply, and the Radicl v2 roof survey is unchanged', () => {
-  const R = QA.evaluate(QA.parseRadicl(gmPages(), { specId: 'radicl-groundmount' }), specs);
+  const R = QA.evaluateLegacy(QA.parseRadicl(gmPages(), { specId: 'radicl-groundmount' }), specs);
   for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
   assert.equal(get(R, 'plane_count'), undefined);
   assert.equal(R.findings.some(f => f.id.startsWith('gm_')), true);
-  const v2 = QA.evaluate(survey('radicl'), specs);
+  const v2 = QA.evaluateLegacy(survey('radicl'), specs);
   assert.equal(get(v2, 'roof_pitch').status, 'miss');
   assert.equal(v2.findings.some(f => f.id.startsWith('gm_')), false);
 });
@@ -1219,7 +1214,7 @@ test('History project IDs link to Salesforce through the shared sf-link style', 
 });
 
 test('Radicl: a pitch photo from the attic or the roof satisfies the template; neither is a miss', () => {
-  const tpl = (S, ref) => QA.evaluate(S, specs, {}).findings.find(f => f.id === 'tpl:' + ref);
+  const tpl = (S, ref) => QA.evaluateLegacy(S, specs, {}).findings.find(f => f.id === 'tpl:' + ref);
   const atticOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch', instance: null, page: 12 }] });
   const roofOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch / Slope', instance: null, page: 31 }] });
   for (const S of [atticOnly, roofOnly]) { S.template.specId = 'radicl-v2'; }
@@ -1251,11 +1246,50 @@ test('the Oct 2026 Radicl flat template (planes and panels named in the answers)
   const d = QA.detectTemplate(pages, specs);
   assert.equal(d.specId, 'radicl-v3');
   const S = QA.parseRadicl(pages, { specId: d.specId });
-  const R = QA.evaluate(S, specs, {});
+  const R = QA.evaluateLegacy(S, specs, {});
   const st = id => (R.findings.find(f => f.id === id) || {}).status;
   assert.equal(st('roof_pitch'), 'pass');
   assert.equal(st('msp_dead_front_on'), 'pass'); assert.equal(st('msp_dead_front_off'), 'pass');
   assert.equal(st('msp_label'), 'pass'); assert.equal(st('main_breaker_rating'), 'pass');
   assert.equal(st('roof_overhang'), 'gap', 'the form has no eave field: a template gap, not a surveyor miss');
   assert.equal(R.counts.missHard, 0);
+});
+
+// ── The Blue Raven standard (2026-10-08) ─────────────────────────────────────
+const v14 = (o = {}) => QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-v14' }, meta: {}, ...o });
+
+test('standard: only list items decide the outcome; integrity alarms and template notes never do', () => {
+  const R = QA.evaluate(v14(), specs, {});
+  const ids = new Set(QA.STANDARD.map(r => r.id));
+  const counted = R.findings.filter(f => !f.alarm && !f.info && f.status === 'miss');
+  assert.ok(counted.length > 0 && counted.every(f => ids.has(f.id)), 'every counted miss is a list item');
+  assert.equal(R.suggestedStatus, 'Failed - Gaps Found');
+  assert.ok(R.findings.filter(f => f.layer === 'A').every(f => f.info), 'template fields off the list are information only');
+  assert.equal(QA.outcomeOf([{ status: 'miss', severity: 'hard', alarm: true }, { status: 'miss', severity: 'hard', info: true }]).suggestedStatus, 'Passed');
+});
+
+test('standard: a conditional item applies only when the survey says so, and asks when it does not know', () => {
+  const run = (v) => get(QA.evaluate(v14({ entries: v ? [{ ref: 'roof_condition_is_the_roo', value: v, instance: null }] : [] }), specs, {}), 'std_gutter');
+  assert.equal(run('No').status, 'na', 'a roof under 8 years has no gutter photo');
+  assert.equal(run('Yes').status, 'miss');
+  assert.equal(run(null).status, 'verify', 'unanswered: ask, never pass or fail');
+});
+
+test('standard: a measurement passes on the value or on a photo of it', () => {
+  const tile = [{ ref: 'roof_type', value: 'Tile', instance: null }, { ref: 'tile_select_tile_type', value: 'Concrete Tile', instance: null }];
+  assert.equal(get(QA.evaluate(v14({ entries: tile }), specs, {}), 'std_tile_thickness').status, 'miss');
+  assert.equal(get(QA.evaluate(v14({ entries: [...tile, { ref: 'tile_tile_width_inches', value: '0.5', instance: null }] }), specs, {}), 'std_tile_thickness').status, 'pass');
+  assert.equal(get(QA.evaluate(v14({ entries: tile, photos: [{ ref: 'tile_tile_width_inches', instance: null, page: 2 }] }), specs, {}), 'std_tile_thickness').status, 'pass');
+});
+
+test('standard: rafter size and pitch are not asked of a manufactured-truss plane', () => {
+  const groups = { mounting_plane_attic: [{ id: 'MP1', idx: 1 }] };
+  const R = QA.evaluate(v14({ groups, entries: [{ ref: 'mp1_roof_framing_type', value: 'Manufactured Truss', instance: 'MP1', group: 'mounting_plane_attic' }] }), specs, {});
+  assert.equal(get(R, 'attic_framing').status, 'na');
+  assert.notEqual(get(R, 'roof_pitch').status, 'miss');
+});
+
+test('standard: ground mount checks run only on a ground mount report', () => {
+  assert.ok(!QA.evaluate(v14(), specs, {}).findings.some(f => /^gm_/.test(f.id)));
+  assert.ok(!QA.evaluate(survey('radicl'), specs, {}).findings.some(f => /^gm_/.test(f.id)));
 });
