@@ -140,13 +140,12 @@ const cleanRadicl = (over = {}) => {
 test('standing template gaps do not change the outcome; an applied gap suggests an override', () => {
   const base = QA.evaluate(cleanRadicl(), specs);
   assert.equal(base.counts.missHard, 0);
-  assert.ok(base.counts.standingGaps > 0);
+  // Radicl has no template gaps left (Doug, 2026-10-08): what it does not capture is not asked of it
+  assert.equal(base.counts.standingGaps, 0);
   assert.equal(base.suggestedStatus, 'Passed');
-  // existing solar = Yes and no field captures it: the gap now applies to this survey
   const R = QA.evaluate(cleanRadicl({ solar: 'Yes' }), specs);
-  const eq = get(R, 'existing_equipment');
-  assert.equal(eq.status, 'gap'); assert.equal(eq.standing, false);
-  assert.equal(R.suggestedStatus, 'Passed with Override');
+  assert.equal(get(R, 'existing_equipment'), undefined);
+  assert.equal(R.suggestedStatus, 'Passed');
 });
 
 test('Radicl: an inside panel is checked, and an outside panel the surveyor said is not there is not', () => {
@@ -167,14 +166,15 @@ test('Radicl: an inside panel is checked, and an outside panel the surveyor said
 
 test('the checklist names every check once and marks what the template cannot capture', () => {
   const sc = QA.checklist('sitecapture-v13'), rd = QA.checklist('radicl-v2');
-  assert.ok(sc.length > 20 && rd.length > 20);
+  assert.ok(sc.length > 20 && rd.length > 15);
   assert.equal(new Set(sc.map(c => c.id)).size, sc.length);
   const by = (l, id) => l.find(c => c.id === id);
   assert.equal(by(sc, 'roof_overhang').inTemplate, false);          // Site Capture has no overhang field
   assert.equal(by(rd, 'roof_overhang').inTemplate, true);
   assert.equal(by(sc, 'main_breaker_rating').inTemplate, false);
   assert.equal(by(rd, 'main_breaker_rating').inTemplate, true);
-  assert.equal(by(rd, 'plane_count').inTemplate, false);
+  assert.equal(by(rd, 'plane_count'), undefined);                  // Radicl is not asked for a plane count
+  assert.ok(by(sc, 'plane_count'));
   assert.ok(by(sc, 'photo_provenance') && !by(rd, 'photo_provenance'));  // vendor-specific checks only appear for their vendor
   // alarm-only checks are not part of the routine list, but a setting can bring one back
   assert.ok(!by(sc, 'photos_deleted') && !by(sc, 'resource_match') && !by(sc, 'proposal_attached'));
@@ -188,10 +188,12 @@ test('keyPhotos shows a few per check unless asked for all', () => {
   assert.equal(QA.keyPhotos(S, null, { all: true }).length, 21);
 });
 
-test('Radicl: a pitch with no number points at the pitch photos', () => {
+test('Radicl: a pitch with no number passes on the pitch photos (Doug, 2026-10-08)', () => {
   const S = survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: 'Unable to access roof', instance: null }], photos: [{ ref: 'Roof Pitch', instance: null }, { ref: 'Roof Pitch / Slope', instance: null }] });
   const f = get(QA.evaluate(S, specs), 'roof_pitch');
-  assert.equal(f.status, 'verify'); assert.match(f.detail, /2 pitch photos/);
+  assert.equal(f.status, 'pass'); assert.match(f.detail, /2 pitch photos/);
+  const bare = survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', value: 'Unable to access roof', instance: null }] });
+  assert.equal(get(QA.evaluate(bare, specs), 'roof_pitch').status, 'verify');   // no number and no photo still asks for a look
 });
 
 test('a hard miss fails the survey; warnings alone ask for review', () => {
@@ -222,7 +224,7 @@ test('summarize emits only Salesforce picklist labels and leaves template gaps o
   const out = QA.summarize(R, { reviewNumber: 2, reviewTotal: 3 });
   assert.ok(out.text.startsWith('QA review 2 of 3'));
   assert.ok(QA.SF_STATUS.includes(out.status));
-  assert.ok(R.findings.some(f => f.status === 'gap'), 'the fixture has template gaps');
+  assert.ok(QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-v13' } }), specs).findings.some(f => f.status === 'gap'), 'a Site Capture V.13 survey has template gaps');
   assert.ok(!/template gap/i.test(out.text));
   assert.equal(QA.summarize(R, { status: 'Needs review' }).status, null);   // internal state is never sent as a picklist value
 });
@@ -564,7 +566,8 @@ test('checks that only apply sometimes say when, in the checklist and in Setting
   assert.ok(/solar already exists/.test(by('existing_equipment').when));
   assert.ok(/battery/.test(by('battery_location').when));
   assert.equal(by('roof_pitch').when, '');
-  assert.ok(QA.checklist('radicl-v2').find(c => c.id === 'existing_equipment').when);
+  assert.ok(QA.checklist('sitecapture-v14').find(c => c.id === 'existing_equipment').when);
+  assert.equal(QA.checklist('radicl-v2').find(c => c.id === 'existing_equipment'), undefined);
   assert.equal(by('attic_photos').zeroHard, true);
 });
 
@@ -597,12 +600,12 @@ test('Site Capture: a group photo captioned without its instance ("Proposed Wall
   assert.ok(!R.findings.some(f => f.id === 'tpl:garage_floor_cement_type'), 'the wall photo counts for MW1');
 });
 
-test('Radicl: no pitch written but pitch photos in the report asks for a look, not a hard miss', () => {
+test('Radicl: no pitch written but a pitch photo in the report passes; no photo is a miss', () => {
   // RD-06 and RD-08: the pitch field is blank, the pitch-gauge photos are there. RD-09, which
   // wrote "Unable to access roof", already got a look; a blank answer with photos is no worse.
   const S = survey('radicl', { photos: [{ ref: 'Roof Pitch / Slope', instance: null, page: 31 }] });
   const f = get(QA.evaluate(S, specs), 'roof_pitch');
-  assert.equal(f.status, 'verify'); assert.match(f.detail, /1 pitch photo/);
+  assert.equal(f.status, 'pass'); assert.match(f.detail, /1 pitch photo/);
   assert.equal(get(QA.evaluate(survey('radicl'), specs), 'roof_pitch').status, 'miss');
 });
 
@@ -1021,7 +1024,8 @@ test('a Radicl ground mount is not held to roof or attic checks, and is held to 
   const ph = (ref, n = 1) => Array.from({ length: n }, () => ({ ref, instance: null }));
   const ground = (over = []) => survey('radicl', { photos: [...ph('Horizon Photos', 5), ...ph('Location Photos', 5), ...ph('Trench Path', 5), ...over] });
   const R = QA.evaluate(ground(), specs);
-  for (const id of ['roof_pitch', 'roof_overhang', 'plane_count', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(R, 'plane_count'), undefined);
   assert.equal(get(R, 'gm_trench').status, 'pass');
   assert.ok(!R.findings.some(f => f.layer === 'A' && /^(Roof Photos|Attic Info)$/.test(f.area)));
   // missing the trench photos is a miss; a roof survey never sees these checks
@@ -1155,7 +1159,8 @@ test('ground mount: under five photos in a subsection asks for a review and neve
 
 test('ground mount: the roof and attic checks do not apply, and the Radicl v2 roof survey is unchanged', () => {
   const R = QA.evaluate(QA.parseRadicl(gmPages(), { specId: 'radicl-groundmount' }), specs);
-  for (const id of ['plane_count', 'roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  for (const id of ['roof_pitch', 'roof_overhang', 'attic_photos', 'attic_framing']) assert.equal(get(R, id).status, 'na', id);
+  assert.equal(get(R, 'plane_count'), undefined);
   assert.equal(R.findings.some(f => f.id.startsWith('gm_')), true);
   const v2 = QA.evaluate(survey('radicl'), specs);
   assert.equal(get(v2, 'roof_pitch').status, 'miss');
@@ -1211,6 +1216,16 @@ test('History project IDs link to Salesforce through the shared sf-link style', 
   assert.ok(pageSrc.includes('function qaProjLink'));
   assert.ok(pageSrc.includes('class="sf-link"'));
   assert.equal((pageSrc.match(/<b>\$\{qaProjLink\(/g) || []).length, 2, 'reviews and accounts lenses');
+});
+
+test('Radicl: a pitch photo from the attic or the roof satisfies the template; neither is a miss', () => {
+  const tpl = (S, ref) => QA.evaluate(S, specs, {}).findings.find(f => f.id === 'tpl:' + ref);
+  const atticOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch', instance: null, page: 12 }] });
+  const roofOnly = survey('radicl', { photos: [{ ref: 'Roof Pitch / Slope', instance: null, page: 31 }] });
+  for (const S of [atticOnly, roofOnly]) { S.template.specId = 'radicl-v2'; }
+  assert.equal(tpl(atticOnly, 'Roof Pitch / Slope'), undefined, 'attic reading, no roof gauge photo');
+  const none = survey('radicl'); none.template.specId = 'radicl-v2';
+  assert.ok(tpl(none, 'Roof Pitch / Slope'), 'no pitch photo at all still misses');
 });
 
 test('a Radicl "Go Back Report" is a partial survey, like "Partial Survey Report"', () => {
