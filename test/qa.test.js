@@ -1221,4 +1221,35 @@ test('Radicl: a pitch photo from the attic or the roof satisfies the template; n
   assert.equal(tpl(atticOnly, 'Roof Pitch / Slope'), undefined, 'attic reading, no roof gauge photo');
   const none = survey('radicl'); none.template.specId = 'radicl-v2';
   assert.ok(tpl(none, 'Roof Pitch / Slope'), 'no pitch photo at all still misses');
+
+test('a Radicl "Go Back Report" is a partial survey, like "Partial Survey Report"', () => {
+  // Radicl retitled the go back on 2026-10-07; the cover read "No known vendor signature".
+  const cover = [page(1, [blk('GO BACK REPORT', 445, 808), blk('radicl', 32, 817), blk('Go Back\n2395 Sunset Ct, Medford, OR 97501', 32, 658)]), page(2, [blk('Exterior Electrical', 68, 559)])];
+  const d = QA.detectTemplate(cover, specs);
+  assert.equal(d.vendor, 'radicl'); assert.equal(d.specId, 'radicl-v2'); assert.equal(d.partial, true);
+  assert.equal(QA.isPartialReport(cover), true);
+});
+
+test('the Oct 2026 Radicl flat template (planes and panels named in the answers) passes a complete survey', () => {
+  const ans = (label, v, y) => [blk(label, 32, y), blk(v, 538, y)];
+  const rows = [blk('Site Survey\nFelix Agoye\n1 Main St Springfield, IL 60409', 24, 820),
+    ...ans('Roof Information > Mounting Plane 1: Roof Pitch', '2/12', 700), ...ans('Roof Information > Mounting Plane 2: Roof Pitch', '3/12', 680),
+    ...ans('Interior Electrical > Interior Breaker Box 1: Main Breaker Size', '200', 660), ...ans('Interior Electrical > Interior Breaker Box 1: Max Bus Rating', '200', 640),
+    ...ans('Attic Info > Is there attic access?', 'No', 620)];
+  const cap = (sec, c, y) => [blk(sec, 16, y + 10), blk('> ' + c, 24, y)];
+  const caps = page(2, [...cap('Roof Information', 'Mounting Plane 1: Roof Pitch Photo', 810), ...cap('Roof Information', 'Mounting Plane 2: Roof Pitch Photo', 760),
+    ...cap('Interior Electrical', 'Inside Breaker Box 1: Location', 710), ...cap('Interior Electrical', 'Interior Breaker Box 1: Dead Front On', 660),
+    ...cap('Interior Electrical', 'Interior Breaker Box 1: Dead Front Off', 610), ...cap('Interior Electrical', 'Interior Breaker Box 1: Labels', 560),
+    ...cap('Site Assessment', 'Layout Map', 510), ...cap('Exterior Electrical', 'Electric Meter: Close Up', 460), ...cap('Exterior Electrical', 'Electric Meter: Location Photos', 410)]);
+  const pages = [page(1, rows), caps];
+  const d = QA.detectTemplate(pages, specs);
+  assert.equal(d.specId, 'radicl-v3');
+  const S = QA.parseRadicl(pages, { specId: d.specId });
+  const R = QA.evaluate(S, specs, {});
+  const st = id => (R.findings.find(f => f.id === id) || {}).status;
+  assert.equal(st('roof_pitch'), 'pass');
+  assert.equal(st('msp_dead_front_on'), 'pass'); assert.equal(st('msp_dead_front_off'), 'pass');
+  assert.equal(st('msp_label'), 'pass'); assert.equal(st('main_breaker_rating'), 'pass');
+  assert.equal(st('roof_overhang'), 'gap', 'the form has no eave field: a template gap, not a surveyor miss');
+  assert.equal(R.counts.missHard, 0);
 });

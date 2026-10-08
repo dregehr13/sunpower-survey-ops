@@ -1994,6 +1994,336 @@
      "v": "warn"
     }
    ]
+  },
+  "12dc7e79c8acd968bfa7f9c3cf95e37453251999718c2e71556bb1023bddfff3": {
+   "template": "radicl-v3",
+   "suggested": "Passed",
+   "counts": {
+    "missHard": 0,
+    "missWarn": 0,
+    "gap": 0,
+    "standingGaps": 4,
+    "verify": 1,
+    "pass": 12,
+    "na": 7
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "bus_rating",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_off",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "pass",
+     "v": "hard"
+    }
+   ]
+  },
+  "86b25a679653443f9ec9038ec643f4e85a6ab10ae1e717ebc538422d64a53133": {
+   "template": "radicl-v2 partial",
+   "suggested": "Failed - Gaps Found",
+   "counts": {
+    "missHard": 7,
+    "missWarn": 28,
+    "gap": 0,
+    "standingGaps": 5,
+    "verify": 1,
+    "pass": 2,
+    "na": 5
+   },
+   "findings": [
+    {
+     "k": "attic_framing",
+     "s": "pass",
+     "v": "hard"
+    },
+    {
+     "k": "attic_photos",
+     "s": "pass",
+     "v": "warn"
+    },
+    {
+     "k": "bus_rating",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "existing_declared",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "existing_equipment",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "existing_interconnection",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "main_breaker_rating",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "meter_closeup",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "meter_location",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "meter_main_open",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "msp_dead_front_on",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "msp_label",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "msp_location",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "plane_count",
+     "s": "gap",
+     "v": "hard"
+    },
+    {
+     "k": "roof_overhang",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "roof_pitch",
+     "s": "verify",
+     "v": "hard"
+    },
+    {
+     "k": "service_entrance",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "service_voltage",
+     "s": "gap",
+     "v": "warn"
+    },
+    {
+     "k": "site_map",
+     "s": "miss",
+     "v": "hard"
+    },
+    {
+     "k": "tpl:Close-Up Roof Quality|Close-Up Roof Quality",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Drip Edge Photo|Drip Edge Photo",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Eave/Soffit Measurement Photo|Eave/Soffit Measurement Photo",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Electric Meter: Location Photos|Electric Meter: Location Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Electrical Meter: Close Up|Electrical Meter: Close Up",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Exterior Perimeter Photos|Exterior Perimeter Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Grounding Type Photo|Grounding Type Photo",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: East|Horizon Photos: East",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: North|Horizon Photos: North",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Northeast|Horizon Photos: Northeast",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Northwest|Horizon Photos: Northwest",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: South|Horizon Photos: South",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Southeast|Horizon Photos: Southeast",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: Southwest|Horizon Photos: Southwest",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Horizon Photos: West|Horizon Photos: West",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Layout Map|Layout Map",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Meter Wall: Measurements|Meter Wall: Measurements",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Number of Roofing Layers Photos|Number of Roofing Layers Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Photo of Home from Street|Photo of Home from Street",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Measurement: Eave to Ridge|Roof Measurement: Eave to Ridge",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Measurement: Ridge|Roof Measurement: Ridge",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Obstruction Photos|Roof Obstruction Photos",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Roof Pitch / Slope|Roof Pitch / Slope",
+     "s": "miss",
+     "v": "warn"
+    },
+    {
+     "k": "tpl:Super Close-Up Roof Quality|Super Close-Up Roof Quality",
+     "s": "miss",
+     "v": "warn"
+    }
+   ]
   }
  }
 }
