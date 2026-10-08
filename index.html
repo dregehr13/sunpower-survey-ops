@@ -2773,7 +2773,7 @@ const TIP={
   // ── The two age metrics — different questions, don't mix them ──
   wip:'Surveys that have started but are not yet complete.',
   avgAge:'Mean Days Open in SS across every open survey: how long the queue has been ours on average, not how long surveys take start to finish.',
-  ssDaysOpen:'How long the survey has been ours to move. Counts from the resurvey request if there is one, otherwise project start, minus one rep grace day, because a rep who takes the survey has until the next calendar day before we start working it. Resurveys get no grace. This reads one day lower than Salesforce.',
+  ssDaysOpen:'How long the survey has been ours to move. Whole days from the resurvey request if there is one, otherwise from the open date (or project start, per the Settings anchor).',
   projAge:'Calendar days since the Project Start Date, no matter who has owned it.',
   drillDays:'A completed row shows its cycle time (Project Start → Site Survey Complete); an open row has no cycle yet, so it shows project age, marked "open". Neither is Days Open in SS.',
 
@@ -10046,8 +10046,8 @@ function renderDefinitions(){
     ]],
     ['wip','WIP',[
       {t:'Open now',eq:[{f:'start'},'set AND',{f:'complete'},'blank AND',{f:'list'},'not parked'],d:TIP.wip},
-      {t:'Avg age',eq:['mean of TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'},'− 1 grace day'],extra:['resource','resurvey_complete','list','project_status'],d:TIP.avgAge},
-      {t:'Days open in SS',eq:['TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'},'− 1 grace day'],extra:['resource','resurvey_complete'],d:TIP.ssDaysOpen},
+      {t:'Avg age',eq:['mean of TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'}],extra:['resource','resurvey_complete','list','project_status'],d:TIP.avgAge},
+      {t:'Days open in SS',eq:['TODAY','−',{f:'resurvey_requested'},'or',{f:'requested'},'or',{f:'start'}],extra:['resource','resurvey_complete'],d:TIP.ssDaysOpen},
       {t:'Project age',eq:['TODAY','−',{f:'start'}],d:TIP.projAge},
       {t:'Days column (table)',eq:[{f:'complete'},'−',{f:'start'},'(done) or TODAY −',{f:'start'},'(open)'],d:TIP.drillDays},
       {t:'SS ratio (live)',eq:['Open now','÷','avg weekly completions (3 wks)'],extra:['start','complete'],d:TIP.ssRatioLive},

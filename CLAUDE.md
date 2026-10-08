@@ -22,7 +22,7 @@ Nav groups (2026-10-05, Doug): a **This Week / Last Week** segmented toggle on t
 
 ## Key architectural decisions
 - Data is baked into HTML files as `const RAW = [...]` until Salesforce API is live
-- Metric definitions (DATA_CUTOFF, inScope/PARKED_LIST, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen/hasRepGrace/inRepGrace, avg/med/pct, hasResurveySig, isResurveyDefect, isOpenResurvey) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
+- Metric definitions (DATA_CUTOFF, inScope/PARKED_LIST, isComplete, isWIP, everCompleted, effectiveComplete, wipAgeFrom, ssDaysOpen, avg/med/pct, hasResurveySig, isResurveyDefect, isOpenResurvey) live in `lib/metrics.cjs` — shared by index.html, compose/index.html, and api/morning-card.js. Change definitions there, nowhere else
 - **Completion is terminal, and WIP is initial surveys only** (2026-09-09,
   Doug's call — "separate initial from rework in reporting; I report on initial
   surveys"). The through-line: the initial survey completing is final, and
@@ -93,7 +93,7 @@ Nav groups (2026-10-05, Doug): a **This Week / Last Week** segmented toggle on t
   named in the boot guard
 - **Two different age metrics — don't conflate them:**
   - `wipAgeFrom(r)` returns the *anchor date* and drives cycle-time math (`ct_total`, `projCt`, `estComplete`). Never shift it — Spec 12744 reporting depends on it
-  - `ssDaysOpen(r, asOf)` is the *queue triage* number shown as "Days Open in SS". It subtracts a **rep grace day**: when a rep elects to do the survey they have until the next calendar day before SS starts working it. Blank resource counts as rep (SF corrects it if untrue); only surveys that went straight to Radicl/SunPower with no `requested` skip the grace; open resurveys get none. `inRepGrace()` still exists in metrics.cjs but the WIP table no longer shows a "Rep day" pill (removed 2026-10-07, rep surveys phased out) — a row in its grace day reads `0d`
+  - `ssDaysOpen(r, asOf)` is the *queue triage* number shown as "Days Open in SS": whole days from `wipAgeFrom` (resurvey request, else the anchored `start`, i.e. open date by default) to the export date. The rep grace day (and `hasRepGrace`/`inRepGrace`, and the "Rep day" pill) were removed 2026-10-08 with rep surveys phased out, Doug's call — every row counts from its open date, so it now reads the same as Salesforce
 - `requested` is only populated when a rep declines, so it doubles as the rep→field/Radicl handoff date (~99% coverage on Radicl/SunPower Surveyor rows vs 13% on Sales Rep)
 - **SS Ratio has two variants in `lib/metrics.cjs` — they answer different questions, don't merge them:**
   - `ssRatioForWeek(rows, weekEnd)` — the reported weekly number (Trends line, Monday recap). WIP is the **7-day mean across the week**, not the Sunday close: intake spikes Fri/Sat (342 in vs 52 done) while Monday clears ~210, so a week-close snapshot samples the weekly maximum every time and overstates backlog by ~a third
@@ -357,7 +357,7 @@ Nav groups (2026-10-05, Doug): a **This Week / Last Week** segmented toggle on t
   - Age bands and status chips **cross-narrow**: each row counts within the other's selection, so no combination is ever offered that filters to nothing
   - Table is 8 columns; Reviewed By folds into Last reviewed as `Aug 14 · S. Mertz`. **`last_reviewed_date` is a timestamp, not an ISO date** — `fmtDateShort()` splits on `-` and prints "undefined NaN". Use `fmtReviewDay()`
   - Whole-row red/amber tinting is gone: the Open in SS figure and the status badge already carried it twice
-  - The "Rep day" pill was removed 2026-10-07 (rep surveys phased out); a grace-day row reads `0d`
+  - The "Rep day" pill and the grace day behind it are gone (2026-10-07/08, rep surveys phased out)
   - Under 640px rows stack two-line rather than scrolling sideways
 - **The nav badge beside WIP is the open count**, neutral grey. It was the "needs attention" count until 2026-08-17, when that whole concept came out: `attnItems()`, `attnKey()`, `dismissAttn()`, the per-row "Reviewed ✓" buttons and the `ops_dismissed` localStorage store are gone. It was a saved filter dressed as a view — every row it held is reachable from Past due plus the age bands — and the dismissals made the badge disagree with Salesforce for anyone who had clicked one. Its toggle slot went to **Open resurveys**, a population with no live home before then. Grey, not red: an open queue is the normal state, and a red badge on every page load teaches you to ignore red
 - Main cycle metric: **anchor → Site Survey Complete** (`ct_total`). Other intermediate dates (requested, scheduled) exist in the data but are unreliable — don't feature them in UI
@@ -1664,8 +1664,7 @@ drift in the numbers is not mistaken for a bug:
   same-week walk-ins, mostly rep self-surveys; `walkInPerWeek` is a trailing
   3-week rate and `buildProjectionModel` fits hazards over 8, so both lag the
   falling share. Model adjustment / `recentBias` should absorb it
-- **A blank `resource` still means rep** — `hasRepGrace()` grants the grace day
-  and `parse-sf.js` defaults a blank resource to Sales Rep on a completed row.
+- **A blank `resource` still means rep** — `parse-sf.js` defaults a blank resource to Sales Rep on a completed row.
   Harmless for history; a new row left blank in SF would be misfiled, so fill
   resource in at source
 - **Display-only, correct as is:** Resource page rep column, Quality rep cut,
