@@ -1221,6 +1221,7 @@ test('Radicl: a pitch photo from the attic or the roof satisfies the template; n
   assert.equal(tpl(atticOnly, 'Roof Pitch / Slope'), undefined, 'attic reading, no roof gauge photo');
   const none = survey('radicl'); none.template.specId = 'radicl-v2';
   assert.ok(tpl(none, 'Roof Pitch / Slope'), 'no pitch photo at all still misses');
+});
 
 test('a Radicl "Go Back Report" is a partial survey, like "Partial Survey Report"', () => {
   // Radicl retitled the go back on 2026-10-07; the cover read "No known vendor signature".
