@@ -21,7 +21,7 @@ const FIXTURE = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures/rows.json')
 const SNAP_PATH = path.join(HERE, 'fixtures/snapshot.json');
 
 const {
-  filterRows, isComplete, isWIP, wipAgeFrom, hasRepGrace, ssDaysOpen, inRepGrace,
+  filterRows, isComplete, isWIP, wipAgeFrom, ssDaysOpen,
   hasResurveySig, isOpenResurvey, rsCategories, avg, med, pct, normalizeName,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
   ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
@@ -64,7 +64,6 @@ function computeAll() {
   const cycle = { count: cts.length, avg: avg(cts), med: med(cts), p75: pct(cts, 75), p90: pct(cts, 90) };
 
   // ── the two age metrics, which must never converge ──
-  const graceRows = rows.filter(hasRepGrace).length;
   const ssDays = wip.map(r => ssDaysOpen(r, asOf)).filter(x => x != null);
   const projAges = wip.filter(r => r.start).map(r => {
     const [fy, fm, fd] = r.start.split('-').map(Number);
@@ -72,9 +71,6 @@ function computeAll() {
     return Math.round((new Date(ty, tm - 1, td) - new Date(fy, fm - 1, fd)) / 86400000);
   }).filter(x => x >= 0);
   const age = {
-    hasRepGrace: graceRows,
-    noRepGrace: rows.length - graceRows,
-    inGraceNow: wip.filter(r => inRepGrace(r, asOf)).length,
     ssDaysOpen: { avg: avg(ssDays), med: med(ssDays), max: Math.max(...ssDays, 0) },
     projectAge: { avg: avg(projAges), med: med(projAges), max: Math.max(...projAges, 0) },
     // the grace day must not move the cycle-time anchor

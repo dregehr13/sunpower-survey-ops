@@ -21,13 +21,10 @@
   "p90": 11
  },
  "age": {
-  "hasRepGrace": 132,
-  "noRepGrace": 19,
-  "inGraceNow": 2,
   "ssDaysOpen": {
-   "avg": 1.4,
-   "med": 0,
-   "max": 4
+   "avg": 1.8,
+   "med": 1,
+   "max": 5
   },
   "projectAge": {
    "avg": 1.8,
