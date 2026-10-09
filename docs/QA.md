@@ -202,7 +202,7 @@ Storing the reports themselves (a private bucket), and a real login. The Claude
 photo check is built but has never run against the live API (see below).
 
 ## 2026-10-01 round
-- Tabs are Review / Checklist / History. The Reviewer is read-only once a
+- Tabs are Review / QA Checklist / History. The Reviewer is read-only once a
   password names them; the bar shows the total review count, not "shared log".
 - **Expected surveys** lists Radicl and SunPower surveys booked today or earlier
   and still open in Salesforce (`isOpenQueue` + `wipSchedDate`, reps excluded).

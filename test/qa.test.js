@@ -407,8 +407,8 @@ test('a review cannot be saved without a project ID', () => {
   assert.ok(/if \(!qaProj\.trim\(\)\) return 'Add the project ID before saving';/.test(pageSrc));
 });
 
-test('the tabs read Review, Checklist, History, and the page has no import or shared-log wording', () => {
-  assert.ok(/btn\('review', 'Review'\)\}\$\{btn\('checklist', 'Checklist'\)\}\$\{btn\('log', 'History'\)/.test(pageSrc));
+test('the tabs read Review, QA Checklist, History, and the page has no import or shared-log wording', () => {
+  assert.ok(/btn\('review', 'Review'\)\}\$\{btn\('checklist', 'QA Checklist'\)\}\$\{btn\('log', 'History'\)/.test(pageSrc));
   assert.ok(!/qaImport|Shared log|shared log</.test(pageSrc.replace(/^\s*\/\/.*$/gm, '')));
 });
 
