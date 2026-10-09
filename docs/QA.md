@@ -202,7 +202,7 @@ Storing the reports themselves (a private bucket), and a real login. The Claude
 photo check is built but has never run against the live API (see below).
 
 ## 2026-10-01 round
-- Tabs are Review / Templates / History. The Reviewer is read-only once a
+- Tabs are Review / Checklist / History. The Reviewer is read-only once a
   password names them; the bar shows the total review count, not "shared log".
 - **Expected surveys** lists Radicl and SunPower surveys booked today or earlier
   and still open in Salesforce (`isOpenQueue` + `wipSchedDate`, reps excluded).
@@ -522,3 +522,9 @@ Things not to undo:
 - **Template notes are information only**: the old Layer A pass still lists template fields off the list, flagged `info`, never counted. Fields the standard already reads are not repeated.
 - **Items with no field in a template** are template gaps, not surveyor misses (`gap`, standing). Radicl: full plane photo, gutter, tile, shading, brittle/tap, joist, rafter and knee-wall sketches, asbestos, penetration test, meter height, breaker-slot height, battery path/obstruction photos and stud spacing. Site Capture: battery obstruction photos (meter height is part 4 of the meter close-up field, checked as the entered inches). The Radicl spec is inferred from reference reports, so "no field" means "not in the reports seen".
 - **Dropped from the old checks** (not on the list): overhang/eave, service entrance, service voltage, bus rating, main breaker rating (as its own check), meter/main enclosure open, generator details, existing modules/inverter. Past reviews keep the outcome they were saved with.
+
+### 2026-10-09 — Checklist tab; only the full templates are held to the whole list
+- The **Templates** tab is now **Checklist**: two columns, Shan's list on the left (his four groups: Every job, Battery job, Roof-specific, Conditional, each item tagged Photo / Measurement / Sketch / Yes/No), and the accepted template names, names only, in a narrow column on the right. The per-template detail table and "Add to template" fix list are gone from the page (`templateChanges` stays in the lib).
+- `FULL_TEMPLATES` = Site Capture V.14 and Radicl Sep 2026. They are checked against every item, and still report what their template lacks as a gap. Every other template (V.13, battery only, Radicl Aug 2026, partial, ground mount) is checked only on the items it has a field for; an item with no field reads **not applicable** ("Not on this template"), never a gap. Ground mount keeps its own photo checks. Rep surveys are unchanged.
+- A Radicl partial reviewed on its own is held only to what the go back came back with: a missing item with nothing found reads not applicable ("Not part of this go back"). Merged with the original it is a full survey again.
+- Stacked on the "fail only against the Blue Raven standard" branch (`STANDARD`).

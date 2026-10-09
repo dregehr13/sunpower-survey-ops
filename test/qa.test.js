@@ -102,7 +102,8 @@ test('Site Capture: no tilt is a surveyor miss when an attic was entered, a temp
   const noAttic = survey('sitecapture', { groups: planes('MP1') });
   const haveTilt = survey('sitecapture', { groups: planes('MP1'), entries: [{ ref: tiltKey, instance: 'MP1', value: '25' }] });
   assert.equal(get(QA.evaluate(withAttic, specs), 'roof_pitch').status, 'miss');
-  assert.equal(get(QA.evaluate(noAttic, specs), 'roof_pitch').status, 'gap');
+  // roof_pitch is not a V.14/latest-Radicl survey here, so a missing tilt reads as not applicable (Checklist rule)
+  assert.equal(get(QA.evaluate(noAttic, specs), 'roof_pitch').status, QA.FULL_TEMPLATES.includes(noAttic.template.specId) ? 'gap' : 'na');
   assert.equal(get(QA.evaluate(haveTilt, specs), 'roof_pitch').status, 'pass');
 });
 
@@ -225,7 +226,8 @@ test('summarize emits only Salesforce picklist labels and leaves template gaps o
   const out = QA.summarize(R, { reviewNumber: 2, reviewTotal: 3 });
   assert.ok(out.text.startsWith('QA review 2 of 3'));
   assert.ok(QA.SF_STATUS.includes(out.status));
-  assert.ok(QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-v13' } }), specs).findings.some(f => f.status === 'gap'), 'a Site Capture V.13 survey has template gaps');
+  assert.ok(QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-v14' } }), specs).findings.some(f => f.status === 'gap'), 'a full-template survey reports what its template lacks');
+  assert.ok(!QA.evaluate(survey('sitecapture', { template: { vendor: 'sitecapture', specId: 'sitecapture-v13' } }), specs).findings.some(f => f.layer === 'B' && f.status === 'gap'), 'V.13 is checked on the fields it has');
   assert.ok(!/template gap/i.test(out.text));
   assert.equal(QA.summarize(R, { status: 'Needs review' }).status, null);   // internal state is never sent as a picklist value
 });
@@ -405,8 +407,8 @@ test('a review cannot be saved without a project ID', () => {
   assert.ok(/if \(!qaProj\.trim\(\)\) return 'Add the project ID before saving';/.test(pageSrc));
 });
 
-test('the tabs read Review, Templates, History, and the page has no import or shared-log wording', () => {
-  assert.ok(/btn\('review', 'Review'\)\}\$\{btn\('templates', 'Templates'\)\}\$\{btn\('log', 'History'\)/.test(pageSrc));
+test('the tabs read Review, Checklist, History, and the page has no import or shared-log wording', () => {
+  assert.ok(/btn\('review', 'Review'\)\}\$\{btn\('checklist', 'Checklist'\)\}\$\{btn\('log', 'History'\)/.test(pageSrc));
   assert.ok(!/qaImport|Shared log|shared log</.test(pageSrc.replace(/^\s*\/\/.*$/gm, '')));
 });
 
@@ -567,13 +569,25 @@ test('checks that only apply sometimes say when, in the checklist and in Setting
   assert.ok(QA.checklist('sitecapture-v14').find(c => c.id === 'std_existing_solar').when);
 });
 
-test('the checklist lives on the Templates tab, not the Review tab, and marks what the template lacks', () => {
-  assert.ok(!/function _qaChecklist/.test(pageSrc) && !/What we check/.test(pageSrc));
-  assert.ok(/What we review/.test(pageSrc) && /Add to template/.test(pageSrc));
-  // a check the template cannot capture is listed with its fix
-  const lacking = QA.checklist('radicl-v2').filter(c => !c.inTemplate).map(c => c.id);
-  const fixes = new Set(QA.templateChanges('radicl-v2').map(c => c.id));
-  assert.ok(lacking.length && lacking.every(id => fixes.has(id)));
+test('the Checklist tab is two columns: the Shan list in his four groups, and the accepted template names only', () => {
+  assert.ok(!/function _qaChecklist\(\) \{[^]*What we check/.test(pageSrc));
+  const body = pageSrc.slice(pageSrc.indexOf('function _qaChecklist'));
+  assert.ok(/Shan checklist/.test(body) && /Accepted templates/.test(body) && !/Recognised by|Reports it reads|Add to template/.test(body));
+  assert.deepEqual(QA.CHECKLIST_GROUPS, ['Every job', 'Battery job', 'Roof-specific', 'Conditional']);
+  const groups = QA.STANDARD.map(r => QA.checklistGroup(r.id));
+  assert.ok(QA.CHECKLIST_GROUPS.every(g => groups.includes(g)));
+  assert.equal(QA.checklistGroup('std_ac_nameplate'), 'Battery job');
+  assert.equal(QA.checklistGroup('std_tile_photos'), 'Roof-specific');
+  assert.equal(QA.checklistGroup('std_asbestos'), 'Conditional');
+  assert.equal(QA.checklistGroup('msp_label'), 'Every job');
+});
+
+test('only V.14 and the latest Radicl template are held to the whole list; others read as not applicable where they have no field', () => {
+  assert.deepEqual(QA.FULL_TEMPLATES, ['sitecapture-v14', 'radicl-v2']);
+  const S = id => QA.makeSurvey({ template: { vendor: /^radicl/.test(id) ? 'radicl' : 'sitecapture', specId: id, partial: false }, meta: {}, entries: [], photos: [], groups: {}, unmatched: [] });
+  const v1 = QA.evaluate(S('radicl-v1'), [], {}), v2 = QA.evaluate(S('radicl-v2'), [], {});
+  assert.equal(v1.findings.filter(f => f.layer === 'B' && f.status === 'gap').length, 0);
+  assert.ok(v2.findings.some(f => f.status === 'gap'), 'the full template still reports what it lacks');
 });
 
 test('Site Capture: a group photo captioned without its instance ("Proposed Walls / ...") still counts', () => {
