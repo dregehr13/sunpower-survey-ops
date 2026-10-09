@@ -170,7 +170,8 @@ test('the checklist is the Blue Raven list: every item once, with its type, and 
   assert.ok(sc.length > 25 && rd.length > 25);
   assert.equal(new Set(sc.map(c => c.id)).size, sc.length);
   const by = (l, id) => l.find(c => c.id === id);
-  assert.equal(by(sc, 'std_meter_height').inTemplate, false);       // no template asks for a meter height
+  assert.equal(by(sc, 'std_meter_height').inTemplate, true);        // Site Capture asks for it inside the meter field
+  assert.equal(by(rd, 'std_meter_height').inTemplate, false);       // Radicl has no meter height
   assert.equal(by(rd, 'std_gutter').inTemplate, false);             // Radicl has no gutter photo
   assert.equal(by(rd, 'std_exterior').inTemplate, true);
   assert.equal(by(sc, 'std_exterior').type, 'photo');
