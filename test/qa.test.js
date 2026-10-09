@@ -1316,3 +1316,37 @@ test('Radicl: a bare pitch number up to 90 is read as degrees and asks for a loo
   assert.equal(get(QA.evaluate(mk('95'), specs), 'roof_pitch').status, 'miss');
   assert.equal(get(QA.evaluate(mk('6', 'Shingles'), specs), 'std_metal_profile').status, 'na');
 });
+
+// ── Reports Doug could not load (2026-10-09) ─────────────────────────────────
+test('a sales rep report whose Photo Overview is on page 4 (Survey Responses page first) is a rep report', () => {
+  const pages = [page(1, [blk('Craig Hill', 40, 700), blk('Site Survey', 40, 680), blk('113 Arianna Ln Coatesville, PA 19320', 40, 660), blk('29 photos, 16 sections, 9 Q&A', 40, 640)]),
+    page(2, [blk('Survey Responses', 185, 622)]), page(3, [blk('Exterior\nAre there any structures or trees shading any mounting plane?\nNo', 36, 684)]),
+    page(4, [blk('Photo Overview', 204, 622)]), page(5, [blk('Exterior Photos (4)', 36, 752)])];
+  const d = QA.detectTemplate(pages, specs);
+  assert.equal(d.rep, true); assert.equal(d.vendor, 'rep');
+  assert.equal(QA.parseRep(pages).photos.length, 4);
+  // the drop zone's sorting pass reads two pages only; the cover alone must still say rep
+  assert.equal(QA.detectTemplate(pages.slice(0, 2), specs).rep, true);
+  assert.equal(QA.detectTemplate([page(1, [blk('Someone'), blk('10 photos, 3 sections')])], specs).rep, undefined, 'no "Site Survey" title and no overview: not a rep report');
+});
+
+test('Oct 2026 Radicl template: exterior is "Perimeter Photos of Home" and roof condition is 2 quality photos per plane', () => {
+  const ph = (ref, instance, n) => Array.from({ length: n }, () => ({ ref, instance, page: 2 }));
+  const base = (quality) => QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v3' }, meta: {},
+    photos: [...ph('Perimeter Photos of Home', null, 12), ...ph('Mounting Plane — Quality Photos', 'p1', quality[0]), ...ph('Mounting Plane — Quality Photos', 'p2', quality[1])] });
+  const get2 = (S, id) => QA.evaluate(S, specs, {}).findings.find(f => f.id === id);
+  assert.equal(get2(base([3, 2]), 'std_exterior').status, 'pass');
+  assert.equal(get2(base([3, 2]), 'std_roof_condition').status, 'pass');
+  const thin = get2(base([3, 1]), 'std_roof_condition');
+  assert.equal(thin.status, 'miss'); assert.match(thin.detail, /Plane 2/);
+  const none = get2(QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v3' }, meta: {} }), 'std_roof_condition');
+  assert.equal(none.status, 'miss');
+  // the older templates keep their own label
+  const v2 = QA.makeSurvey({ template: { vendor: 'radicl', specId: 'radicl-v2' }, meta: {}, photos: ph('Close-Up Roof Quality', null, 2) });
+  assert.equal(get2(v2, 'std_roof_condition').status, 'pass');
+});
+
+test('the drop zone lets several go backs for one project open as one review (no kind limit on go backs)', () => {
+  assert.ok(pageSrc.includes("kinds = ['pdf', 'rep', 'zip']"), 'go backs are not capped at one per set');
+  assert.ok(/const backs = \[\]\.concat\(got\.back \|\| \[\]\)\.sort/.test(pageSrc), 'oldest go back leads, newest is added last');
+});

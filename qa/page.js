@@ -1012,10 +1012,12 @@ async function qaPickMany(list) {
     if (!p && c.text) { const m = want.filter(w => OpsQA.namesProject(c.text, w.k)), byId = m.filter(w => OpsQA.namesProject(c.text, { id: w.k.id })); p = (byId.length === 1 ? byId : m.length === 1 ? m : [])[0]?.p || ''; }
     c.p = p;
   }
-  const kinds = ['pdf', 'rep', 'back', 'zip'], one = k => use.filter(c => c.kind === k).length <= 1;
+  // A project can have several go backs (the first one came back short too), so any number of
+  // them ride in one set; every other kind is at most one.
+  const kinds = ['pdf', 'rep', 'zip'], one = k => use.filter(c => c.kind === k).length <= 1;
   // Files for one survey (at most one of each kind, at most one project among them) open as one review.
   if (new Set(use.map(c => c.p).filter(Boolean)).size <= 1 && kinds.every(one)) {
-    const set = {}; for (const c of use) set[c.kind] = c.file;
+    const set = {}; for (const c of use) { if (c.kind === 'back') (set.back || (set.back = [])).push(c.file); else set[c.kind] = c.file; }
     return qaOpenSet(set);
   }
   // Otherwise each is matched to its expected survey and waits on that survey's card.
@@ -1024,7 +1026,8 @@ async function qaPickMany(list) {
   for (const c of use) {
     if (!c.p) { missed.push(c.file.name); continue; }
     const cur = qaInbox[c.p] || (qaInbox[c.p] = {});
-    if (!cur[c.kind] || cur[c.kind].lastModified < c.file.lastModified) cur[c.kind] = c.file;
+    if (c.kind === 'back') { const l = cur.back || (cur.back = []); if (!l.some(f => f.name === c.file.name)) l.push(c.file); }
+    else if (!cur[c.kind] || cur[c.kind].lastModified < c.file.lastModified) cur[c.kind] = c.file;
     found++;
   }
   qaInboxNote = `${qaPlural(found, 'file')} matched to an expected survey${missed.length ? `; ${missed.length} didn't match one (${missed.slice(0, 3).join(', ')}${missed.length > 3 ? '…' : ''}). Open those one at a time.` : '.'}`;
@@ -1038,11 +1041,15 @@ const qaInboxReady = g => !!g && !!(g.pdf || g.back || g.rep);
 // a go back with a rep original is reviewed as the go back with the rep report beside it.
 async function qaOpenSet(got) {
   if (got.zip) await qaOpenPack(got.zip);
-  const lead = got.pdf || got.back || got.rep;
+  // Go backs go in oldest first, so the newest one's answers and photos are the ones that stand.
+  // Radicl names a report for the moment it was made (a leading epoch number); else the file's own date.
+  const when = f => +((f.name.match(/^(\d{12,})_/) || [])[1]) || f.lastModified || 0;
+  const backs = [].concat(got.back || []).sort((a, b) => when(a) - when(b));
+  const lead = got.pdf || backs[0] || got.rep;
   if (!lead) return false;
   await qaOpenReport(lead);
   if (!qaRun || qaRun.docs[0].name !== lead.name) return false;                    // the lead failed to read
-  if (got.pdf && got.back) await qaAddReport(got.back);
+  for (const b of got.pdf ? backs : backs.slice(1)) await qaAddReport(b);
   if (got.rep && lead !== got.rep) await qaAttachRep(got.rep);
   return true;
 }
