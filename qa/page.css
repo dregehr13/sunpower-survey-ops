@@ -262,7 +262,9 @@ textarea.qa-in.short{min-height:54px;}
 .qa-row-open .qa-caret{transform:rotate(90deg);}
 .qa-edit{display:flex;flex-direction:column;gap:8px;}
 
-/* ── Templates and Settings ── */
+/* ── Checklist and Settings ── */
+.qa-chk-grid{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px;align-items:start;}
+@media(max-width:860px){.qa-chk-grid{grid-template-columns:1fr;}}
 .qa-tbl td{vertical-align:top;}
 .qa-tbl .qa-check{font-weight:600;color:var(--text);min-width:150px;}
 .qa-tbl.qa-tpl-tbl .qa-check{width:38%;}

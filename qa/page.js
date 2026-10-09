@@ -32,7 +32,7 @@ let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '', add: '' }, qaErr = { pdf: '', zip: '', add: '' };
-let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaTplId = null, qaLikelyAll = false;
+let qaEditing = null, qaEditDraft = null, qaPendingRecord = null, qaLikelyAll = false;
 const qaUrls = [];
 
 // The hash that opened the page names a record (#qa?r=QA-...). Captured at load,
@@ -147,7 +147,7 @@ function qaAfterSync() {
   _qaConn(); _qaDup(); if (qaView === 'review' && !qaRun) _qaLikely();
   if (qaView === 'log') _qaLog();
   else if (qaView === 'metrics') _qaMetrics();
-  else if (qaView === 'templates') _qaTemplates();
+  else if (qaView === 'checklist') _qaChecklist();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && currentPage === 'qa' && (qaMode === 'shared' || qaMode === 'down')) qaSync().then(ok => ok && qaAfterSync()); });
 
@@ -844,7 +844,7 @@ function qaRender() {
   if (qaView === 'review') _qaReview();
   else if (qaView === 'log') _qaLog();
   else if (qaView === 'metrics') _qaMetrics();
-  else _qaTemplates();
+  else _qaChecklist();
 }
 function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => animateSections('page-qa')); }
 
@@ -857,7 +857,7 @@ function _qaBar() {
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
   host.innerHTML = `<div class="fbar">
     <span class="qa-title">Site Survey QA</span>
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('templates', 'Templates')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('checklist', 'Checklist')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
@@ -1904,12 +1904,7 @@ async function qaSaveChecks(next) {
   _qaSettings();
 }
 
-// ── Templates ──────────────────────────────────────
-function _qaTemplates() {
-  const host = document.getElementById('qa-body'); if (!host) return;
-  qaDepsLoad().then(d => _qaTemplatesBody(d.specs), () => { host.innerHTML = `<div class="sec"><div class="note" style="padding:12px 0;">Couldn't load the templates.</div></div>`; });
-  host.innerHTML = `<div class="sec"><div class="note" style="padding:14px 0;">Loading the templates…</div></div>`;
-}
+// ── Checklist ──────────────────────────────────────
 // Every template the tool reads, grouped by who wrote it. `how` is what the first pages must show for a
 // report to be taken as that template; `forms` are the kinds of report that carry it.
 const QA_ACCEPTED = [
@@ -1926,54 +1921,26 @@ const QA_ACCEPTED = [
   { id: 'radicl-groundmount', group: 'Radicl', name: 'Ground mount survey', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
     how: 'Radicl cover with an untitled section of Horizon Photos, Location Photos and Trench Path, and no roof or attic' },
 ];
-function qaSetTplId(id) { qaTplId = id; qaDepsLoad().then(d => _qaTemplatesBody(d.specs)); }
-function _qaTemplatesBody(specs) {
-  const host = document.getElementById('qa-body'); if (!host || qaView !== 'templates') return;
-  const cur = QA_ACCEPTED.find(t => t.id === qaTplId) || QA_ACCEPTED.find(t => t.id === (qaVendor === 'radicl' ? 'radicl-v2' : 'sitecapture-v14'));
-  const id = cur.id, vendor = /^radicl/.test(id) ? 'radicl' : 'sitecapture';
-  const spec = specs.find(s => s.id === id), ch = OpsQA.templateChanges(id), fix = {}; ch.forEach(c => { fix[c.id] = c; });
-  const srcOf = t => { const sp = specs.find(s => s.id === t.id); return !sp ? '' : /^radicl/.test(t.id) ? qaPlural(sp.inferredFrom, 'reference report') : sp.inferred ? 'One report (no form file)' : `${sp.fields.length} fields from the form file`; };
-  const note = !spec ? '' : vendor === 'radicl'
-    ? (spec.inferredFrom >= 3 ? `Standard built from ${spec.inferredFrom} reference reports.` : `Standard built from ${qaPlural(spec.inferredFrom, 'reference report')}. Completeness checks start at three.`)
-    : spec.inferred ? 'Read from one report; no form file yet.' : `${spec.fields.length} fields, ${spec.fields.filter(f => f.type === 'FOTO' || f.photoRequired).length} of them photos.`;
-  const groups = [...new Set(QA_ACCEPTED.map(t => t.group))];
-  const accepted = `<div class="sec"><div class="shead"><div><div class="stitle">Accepted templates</div>
-      <div class="ssub">${qaPlural(QA_ACCEPTED.length, 'template')} the tool reads. Pick one to see what is checked.</div></div></div>
-    <div class="xscroll"><table class="tbl qa-tbl" id="qa-accepted"><thead><tr><th>Template</th><th>Reports it reads</th><th>Recognised by</th><th>Standard from</th></tr></thead><tbody>
-      ${groups.map(g => `<tr><td colspan="4" class="qa-areahead">${qaH(g)}</td></tr>` + QA_ACCEPTED.filter(t => t.group === g).map(t => `<tr class="drill-tgt" ${drillAttrs(`qaSetTplId('${t.id}')`)}>
-        <td class="qa-check"><b${t.id === id ? ' style="text-decoration:underline;"' : ''}>${qaH(t.name)}</b><div class="qa-when">${qaH(t.status)}</div></td>
-        <td>${t.forms.map(qaH).join('<br>')}</td><td style="color:var(--muted);">${qaH(t.how)}</td><td style="color:var(--muted);white-space:nowrap;">${qaH(srcOf(t))}</td></tr>`).join('')).join('')}
-    </tbody></table></div></div>`;
-  // Everything the review checks for this template, then whether the template can capture it.
-  const own = OpsQA.checklist(id, qaChecks);
-  const other = OpsQA.allChecks().filter(c => !c.vendors.includes(vendor) && ['off', 'alarm'].indexOf(qaChecks[c.id] || c.def) < 0)
-    .map(c => ({ id: c.id, area: c.area, title: c.title, when: c.when, severity: qaChecks[c.id] === 'hard' || qaChecks[c.id] === 'warn' ? qaChecks[c.id] : c.severity, inTemplate: true, absent: true }));
-  const list = own.concat(other), ids = new Set(list.map(c => c.id));
-  const extras = ch.filter(c => !ids.has(c.id));            // template improvements that are not one of the checks
-  const areas = OpsQA.AREA_ORDER.filter(a => list.some(c => c.area === a));
-  const add = list.filter(c => !c.inTemplate && !c.absent).length + extras.length;
-  const tid = 'qa-chg-' + id;
-  const state = c => c.absent ? `<span class="qa-tag" title="This survey type's report has no field for it">not on this report</span>`
-    : c.inTemplate ? '<span class="qa-ok">In the template</span>'
-    : `<span class="qa-tag qa-tag-add">Add to template</span><div class="qa-detail">${qaH((fix[c.id] || {}).fix || (fix[c.id] || {}).gap || 'The template has no field for this.')}</div>`;
-  host.innerHTML = accepted + `
-    <div class="sec">
-      <div class="shead"><div><div class="stitle">${qaH(QA_TEMPLATE_NAMES[id])}</div>
-        <div class="ssub">${qaH(note)} ${qaPlural(own.length, 'check')} on every review${add ? `, ${add} to add to the template` : ', all in the template'}. Weights are set in Settings.</div></div>
-        ${ch.length ? `<button class="fbtn" onclick="qaCopyChanges('${id}',this)">Copy change list</button>` : ''}</div>
-      <div class="xscroll"><table class="tbl qa-tbl qa-tpl-tbl" id="${tid}"><thead><tr><th>What we review</th><th>Weight</th><th>In this template</th></tr></thead><tbody>
-        ${areas.map(a => `<tr><td colspan="3" class="qa-areahead">${qaH(a)}</td></tr>` + list.filter(c => c.area === a).map(c => `<tr>
+function _qaChecklist() {
+  const host = document.getElementById('qa-body'); if (!host) return;
+  // The list is Shan's, grouped as his summary groups it; the accepted templates sit beside it by name only.
+  const typeName = { photo: 'Photo', measurement: 'Measurement', sketch: 'Sketch', yesno: 'Yes/No' };
+  const groups = OpsQA.CHECKLIST_GROUPS;
+  const list = OpsQA.STANDARD.map(r => ({ title: r.title, when: r.when || '', type: typeName[r.type] || '', group: OpsQA.checklistGroup(r.id) }));
+  const tpls = [...new Set(QA_ACCEPTED.map(t => t.group))];
+  host.innerHTML = `<div class="qa-chk-grid">
+    <div class="sec"><div class="shead"><div><div class="stitle">Shan checklist</div>
+        <div class="ssub">${qaPlural(list.length, 'item')}. The full V.14 and the latest Radicl template are checked against all of it; every other template is checked on the fields it has. Weights are set in Settings.</div></div></div>
+      <div class="xscroll"><table class="tbl qa-tbl" id="qa-checklist"><thead><tr><th>What we review</th><th>Supplied as</th></tr></thead><tbody>
+        ${groups.map(g => `<tr><td colspan="2" class="qa-areahead">${qaH(g)}</td></tr>` + list.filter(c => c.group === g).map(c => `<tr>
           <td class="qa-check">${qaH(c.title)}${c.when ? `<div class="qa-when">${qaH(c.when)}</div>` : ''}</td>
-          <td style="color:var(--muted);white-space:nowrap;">${c.severity === 'hard' ? 'Required' : 'Flagged'}</td>
-          <td>${state(c)}</td></tr>`).join('')).join('')}
-        ${extras.length ? `<tr><td colspan="3" class="qa-areahead">Also add to the template</td></tr>` + extras.map(c => `<tr>
-          <td class="qa-check">${qaH(c.title)}</td><td style="color:var(--muted);white-space:nowrap;">${c.severity === 'hard' ? 'Required' : 'Flagged'}</td>
-          <td><span class="qa-tag qa-tag-add">Add to template</span><div class="qa-detail">${qaH(c.fix)}</div></td></tr>`).join('') : ''}
-      </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('${tid}',this,'checks')">Copy table</button></div>
-    </div>`;
-}
-function qaCopyChanges(id, btn) {
-  const ch = OpsQA.templateChanges(id);
-  const text = `${QA_TEMPLATE_NAMES[id]}: changes needed\n\n` + ch.map((c, i) => `${i + 1}. ${c.title}${c.severity === 'hard' ? ' (required)' : ''}\n   ${c.fix}`).join('\n\n');
-  navigator.clipboard.writeText(text).then(() => qaCopied(btn)).catch(_copyFail);
+          <td style="color:var(--muted);white-space:nowrap;">${qaH(c.type)}</td></tr>`).join('')).join('')}
+      </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('qa-checklist',this,'checklist')">Copy table</button></div>
+    </div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Accepted templates</div></div></div>
+      <div class="xscroll"><table class="tbl qa-tbl" id="qa-accepted"><tbody>
+        ${tpls.map(g => `<tr><td class="qa-areahead">${qaH(g)}</td></tr>` + QA_ACCEPTED.filter(t => t.group === g).map(t => `<tr><td class="qa-check">${qaH(t.name)}</td></tr>`).join('')).join('')}
+      </tbody></table></div>
+    </div>
+  </div>`;
 }
