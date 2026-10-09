@@ -857,7 +857,7 @@ function _qaBar() {
       <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
   host.innerHTML = `<div class="fbar">
     <span class="qa-title">Site Survey QA</span>
-    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('checklist', 'Checklist')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
+    <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('checklist', 'QA Checklist')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
     <div class="fgroup" style="margin-left:auto;">
       <span id="qa-conn"></span>
       ${who}
