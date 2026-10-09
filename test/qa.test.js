@@ -1087,36 +1087,37 @@ const repGet = (R, id) => R.findings.find(x => x.id === id);
 
 test('a rep report is held to the standard checklist: same checks, same severities, same Settings weights', () => {
   const R = QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '1 Main St, Town, NC 27526' });
-  const req = id => QA.REQUIREMENTS.find(r => r.id === id);
+  const req = id => QA.STANDARD.find(r => r.id === id);
   for (const id of ['site_map', 'roof_pitch', 'attic_framing', 'msp_location', 'msp_dead_front_on', 'msp_dead_front_off', 'msp_label', 'meter_closeup', 'meter_location']) {
     assert.equal(repGet(R, id).status, 'pass', id);
     assert.equal(repGet(R, id).severity, req(id).severity, id + ' keeps the standard severity');
   }
-  assert.equal(repGet(R, 'attic_photos').severity, 'warn');
+  assert.equal(repGet(R, 'attic_photos').severity, 'hard');
   // the same weight setting that retunes a Radicl check retunes the rep's
   const soft = QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0 })), specs, { checks: { msp_dead_front_off: 'warn' } });
   assert.equal(repGet(soft, 'msp_dead_front_off').severity, 'warn');
   assert.ok(!QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0 })), specs, { checks: { msp_dead_front_off: 'off' } }).findings.some(x => x.id === 'msp_dead_front_off'));
 });
 
-test('a rep report is no longer waived on what the form cannot hold: the overhang is a hard miss on every rep survey', () => {
+test('a rep report is checked against Shan\'s list: what the form cannot hold is not applicable, what it can hold is required', () => {
   const R = QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '1 Main St, Town, NC 27526' });
-  assert.equal(repGet(R, 'roof_overhang').status, 'miss'); assert.equal(repGet(R, 'roof_overhang').severity, 'hard');
-  assert.equal(repGet(R, 'existing_declared').status, 'miss');
-  assert.equal(R.suggestedStatus, 'Failed - Gaps Found', 'a rep survey with every section still fails on the eave');
-  assert.equal(repGet(R, 'main_breaker_rating').status, 'verify', 'a value shown only in a photo is read by eye, not missed');
+  assert.equal(repGet(R, 'roof_overhang'), undefined, 'overhang is not on the list');
+  assert.equal(repGet(R, 'std_exterior').status, 'pass');
+  assert.equal(repGet(R, 'std_meter_height').status, 'verify', 'a value shown only in a photo is read by eye, not missed');
+  for (const id of ['std_tile_photos', 'std_ac_nameplate', 'std_breaker_height', 'std_existing_solar']) assert.equal(repGet(R, id).status, 'na', id);
+  assert.ok(!R.findings.some(f => f.status === 'gap'), 'a rep survey carries no template gaps');
   const bo = QA.evaluate(QA.parseRep(fullRep()), specs, { sfSurveyType: 'Battery Only Survey' });
-  assert.equal(repGet(bo, 'roof_overhang').status, 'na', 'a battery-only job has no roof work');
+  assert.equal(repGet(bo, 'roof_pitch').status, 'na', 'a battery-only job has no roof work');
 });
 
-test('rep: missing sections are misses at the standard severity, pitch counts per plane, a wrong address fails', () => {
+test('rep: missing sections are misses at the standard severity, pitch counts per plane, a wrong address is an alarm', () => {
   const R = QA.evaluate(QA.parseRep(fullRep({ 'Panel Cover Off': 0, 'Utility Meter Bulb': 0, 'Roof Pitch': 1, 'Mounting Plane': 2 })), specs, { sfAddress: '1 Main St, Town, NC 27526' });
   assert.equal(repGet(R, 'msp_dead_front_off').status, 'miss'); assert.equal(repGet(R, 'msp_dead_front_off').severity, 'hard');
   assert.equal(repGet(R, 'meter_closeup').status, 'miss');
   assert.equal(repGet(R, 'roof_pitch').status, 'miss', 'two planes, one pitch photo');
-  assert.equal(repGet(R, 'main_breaker_rating').status, 'verify', 'the labels photo still shows the rating');
   assert.deepEqual(repGet(R, 'msp_dead_front_off').cats, ['rep:Panel Cover Off'], 'the finding points at its photos');
-  assert.equal(QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '9 Other Rd, Town, NC 27526' }).suggestedStatus, 'Failed - Gaps Found');
+  const wrong = QA.evaluate(QA.parseRep(fullRep()), specs, { sfAddress: '9 Other Rd, Town, NC 27526' });
+  assert.ok(repGet(wrong, 'address_match').alarm, 'a wrong address is shown for a second look, never counted');
   // no attic access and no attic photos: confirm by eye; an access photo with no attic photos is a miss
   const none = QA.evaluate(QA.parseRep(fullRep({ Attic: 0, 'Attic Access': 0, 'Rafter Size And Spacing': 0 })), specs, {});
   assert.equal(repGet(none, 'attic_framing').status, 'verify');
