@@ -531,3 +531,8 @@ Things not to undo:
 
 ### 2026-10-09 — rep surveys are checked against Shan's list
 A sales rep report (photos only) is now evaluated against `STANDARD` through `REP_STD`, which says which rep section holds each item. Exterior, plane and roof-condition photos (2 per plane), context map, attic access and attic photos, pitch (per plane), rafter, meter, equipment, labels and panel cover on/off are required; meter height is a read-by-eye. Items the rep form has no section for (tile, metal, shading, battery, existing solar, breaker-slot height and so on) read not applicable, as on any template that is not a full one. The rep form's other sections and the photo-count check show as information only; a wrong address is an alarm. The older rep engine stays behind `evaluateLegacy()`.
+
+## Reports that failed to load (2026-10-09)
+- **Sales rep report, newer export**: the cover line reads "29 photos, 16 sections, 9 Q&A" and a Survey Responses page precedes the Photo Overview (page 4), which detection did not reach. A rep report is now the cover line plus the "Site Survey" title, or the overview on any page.
+- **Oct 2026 Radicl template (radicl-v3)**: the Exterior item reads "Perimeter Photos of Home" and Roof condition is two "Mounting Plane — Quality Photos" per plane (`rdV3` on the item, `perInstance` on the part). Both were false misses.
+- **Several go backs for one project** (3467PARR-1 had two) open as one review: oldest first, newest added last. They used to share one slot, so only one was kept.
