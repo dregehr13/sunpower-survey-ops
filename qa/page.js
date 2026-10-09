@@ -529,7 +529,8 @@ const qaActionable = f => f.status !== 'na' && f.status !== 'gap';
 // Flagged items still waiting for ✓ or ✕: what blocks a pass, and what the strip and step 1 count.
 const qaUndecided = () => qaRun ? qaRun.R.findings.filter(f => qaIsFlagged(f) && !qaRun.decisions[qaFlagKey(f)]).length : 0;
 const qaBase = f => f.orig || f;
-const qaIsFlagged = f => f.status === 'verify' || (f.status === 'pass' && f.verify);
+const qaSide = f => !!(qaBase(f).alarm || qaBase(f).info);
+const qaIsFlagged = f => !qaSide(f) && (f.status === 'verify' || (f.status === 'pass' && f.verify));
 const qaFlagKey = f => f.id + '|' + (f.detail || f.note || '');
 function qaOutcome() { return OpsQA.outcomeOf(qaFindings()); }
 const qaPhotoKey = it => [it.id, it.unit || '', it.n].join('|');
@@ -1105,13 +1106,14 @@ function _qaStep() {
 // template cannot capture is no one's to fix on this survey, so it closes the list.
 const QA_GROUPS = [
   { k: 'all', l: 'All', sw: '', f: x => x.status !== 'na' },
-  { k: 'miss', l: 'Missed', sw: 'hard', f: x => qaBase(x).status === 'miss' && !x.fl },
+  { k: 'miss', l: 'Missed', sw: 'hard', f: x => qaBase(x).status === 'miss' && !x.fl && !qaSide(x) },
   { k: 'verify', l: 'To check', sw: 'look', f: x => !!x.fl },
+  { k: 'side', l: 'Double-check', sw: 'look', f: x => qaSide(x) && qaBase(x).status !== 'pass' && x.status !== 'na', note: 'Not on the Blue Raven list, so they never change the result. Integrity alarms show only when something disagrees; template notes are fields the template asks for that the list does not.' },
   { k: 'pass', l: 'Passed', sw: 'pass', f: x => qaBase(x).status === 'pass' && !qaBase(x).verify && !x.fl },
   { k: 'gap', l: 'Not in template', sw: 'gap', f: x => x.status === 'gap', note: 'The template has no field for these, so no survey on it can have them. They are not the surveyor’s miss.' },
 ];
 function qaSortFindings(a, b) {
-  const rank = f0 => { const f = qaBase(f0); return f0.fl ? 2 : f.status === 'miss' ? (f.severity === 'hard' ? 0 : 1) : f.status === 'gap' ? 4 : f.status === 'verify' || f.verify ? 2 : 3; };
+  const rank = f0 => { const f = qaBase(f0); return qaSide(f0) ? 3.5 : f0.fl ? 2 : f.status === 'miss' ? (f.severity === 'hard' ? 0 : 1) : f.status === 'gap' ? 4 : f.status === 'verify' || f.verify ? 2 : 3; };
   return rank(a) - rank(b) || String(a.area).localeCompare(String(b.area));
 }
 function qaSetFlag(k) { qaFlag = k; _qaStep(); }
@@ -1156,12 +1158,12 @@ const qaActs = () => qaRun.R.findings.filter(qaActionable);
 const qaFindingAt = fi => { const a = qaActs()[fi]; return a && qaFindings().find(x => x.fk === qaFlagKey(a)); };
 // One line: caret · dot · the check and its PDF link · what was found or is missing · thumbnails · the call.
 function qaRowInner(f, fi, open) {
-  const sw = f.status === 'miss' ? (f.severity === 'hard' ? 'hard' : 'warn') : f.status === 'gap' ? 'gap' : f.status === 'verify' || f.verify ? 'look' : 'pass';
+  const sw = qaSide(f) ? (f.status === 'pass' ? 'pass' : 'look') : f.status === 'miss' ? (f.severity === 'hard' ? 'hard' : 'warn') : f.status === 'gap' ? 'gap' : f.status === 'verify' || f.verify ? 'look' : 'pass';
   const dim = f.status === 'pass' && !f.verify, has = fi >= 0 && qaCatsOf(f).length > 0;
   const link = f.page ? `<button class="qa-link" onclick="qaViewPdf(${f.page})">${qaPageLabel(f.page)}</button>` : f.fl ? `<button class="qa-link" onclick="qaViewPdf(1)">Open report PDF</button>` : '';
   return `<div class="qa-find${dim ? ' pass' : ''}${has ? ' xp' : ''}${open ? ' open' : ''}"${has ? ` onclick="qaRowClick(event,${fi})" role="button" aria-expanded="${!!open}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();qaToggleRow(${fi});}"` : ''}>
     <span class="qa-caret">${has ? '›' : ''}</span><span class="qa-sw ${sw}"></span>
-    <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}${link ? ' &nbsp;' + link : ''}</div>
+    <div class="t">${qaH(f.title)}${f.status === 'gap' ? ' <span class="qa-tag">not in template</span>' : ''}${qaBase(f).alarm ? ' <span class="qa-tag">double-check</span>' : qaBase(f).info ? ' <span class="qa-tag">template note</span>' : ''}${link ? ' &nbsp;' + link : ''}</div>
     <div class="d">${qaH(f.detail || f.note || f.found || (dim ? 'OK' : ''))}</div>
     <div class="ev">${qaEvidence(f)}</div>
     <div class="act">${fi >= 0 ? qaDecideHtml(fi, qaRowState(f)) : ''}</div></div>`;
@@ -1522,7 +1524,7 @@ async function qaSave() {
     sf: row ? { task_id: row.task_id || '', resource: row.resource || '', status: row.project_status || '' } : null,
     pack: qaPack && qaPack.check && !qaPack.check.skipped ? { name: qaPack.name, matched: qaPack.check.matched, folders: qaPack.check.folders } : null,
     photos: qaPhotoRec(),
-    findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, title: f.title, detail: f.detail || '' })),
+    findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, alarm: !!f.alarm, info: !!f.info, title: f.title, detail: f.detail || '' })),
     newToSpec: (run.R.templateReport.newToSpec || []).slice(0, 25),
   };
   run.saving = true; _qaSaveBtn();
@@ -1555,7 +1557,7 @@ async function qaUpdate() {
     status: run.status, override: run.status === 'Passed with Override' ? run.override.trim() : '', summary: run.summary,
     counts: o.counts, suggested: o.suggestedStatus,
     photos: qaPhotoRec(),
-    findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, title: f.title, detail: f.detail || '' })),
+    findings: qaFindings().filter(f => f.status !== 'na').map(f => ({ id: f.id, layer: f.layer, area: f.area, status: f.status, severity: f.severity, standing: !!f.standing, alarm: !!f.alarm, info: !!f.info, title: f.title, detail: f.detail || '' })),
   };
   run.saving = true; _qaSaveBtn();
   const out = await qaApplyChanges(run.saved, changes);
@@ -1768,7 +1770,7 @@ function qaPrintRecord(id) {
   const ph = r.photos || { marks: [] }, marks = ph.marks || [];
   const thumb = x => { const it = live && (live.items || []).find(i => i.id === x.k && (i.unit || '') === (x.unit || '') && i.n === x.n); return it && it.url ? `<img src="${it.url}" alt="">` : ''; };
   const line = f => `<li><b>${qaH(f.title)}</b>${f.detail ? ' — ' + qaH(f.detail) : ''}</li>`;
-  const misses = r.findings.filter(f => f.status === 'miss'), gaps = r.findings.filter(f => f.status === 'gap' && !f.standing);
+  const misses = r.findings.filter(f => f.status === 'miss' && !f.alarm && !f.info), gaps = r.findings.filter(f => f.status === 'gap' && !f.standing);
   const css = `body{font:13px/1.5 -apple-system,Helvetica,Arial,sans-serif;color:#1a1a1a;margin:32px auto;max-width:760px;padding:0 20px}h1{font-size:20px;margin:0 0 2px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#666;margin:22px 0 6px;border-bottom:1px solid #ddd;padding-bottom:3px}.meta{color:#555;font-size:12px}pre{white-space:pre-wrap;font:inherit;background:#f6f5f2;padding:10px 12px;border-radius:6px}ul{margin:4px 0;padding-left:18px}.st{display:inline-block;font-weight:700;padding:2px 10px;border:1.5px solid #1a1a1a;border-radius:99px;font-size:12px}.mk{display:flex;gap:10px;align-items:center;margin:4px 0}.mk img{height:54px;border-radius:4px}.ok{color:#1d7a46;font-weight:700}.bad{color:#b3261e;font-weight:700}.fine{color:#777;font-size:11px;margin-top:6px}@media print{body{margin:0}}`;
   const html = `<!doctype html><meta charset="utf-8"><title>${qaH(r.id)}</title><style>${css}</style>
     <h1>Site Survey QA review · ${qaH(r.project)}</h1>
@@ -1786,7 +1788,7 @@ function qaPrintRecord(id) {
   setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400);
 }
 function qaRecordDetail(r) {
-  const misses = r.findings.filter(f => f.status === 'miss'), gaps = r.findings.filter(f => f.status === 'gap');
+  const misses = r.findings.filter(f => f.status === 'miss' && !f.alarm && !f.info), gaps = r.findings.filter(f => f.status === 'gap');
   const line = f => `<div>${f.severity === 'hard' ? '<span class="qa-sw hard"></span> ' : '<span class="qa-sw warn"></span> '}<b>${qaH(f.title)}</b> · ${qaH(f.detail)}</div>`;
   const left = qaEditing === r.id ? qaEditForm(r) : `<div class="klabel">Summary sent to Salesforce</div><pre class="qa-pre">${qaH(r.summary)}</pre>
       ${r.override ? `<div class="klabel" style="margin-top:12px;">Override</div><div class="qa-mini">${qaH(r.override)}</div>` : ''}
