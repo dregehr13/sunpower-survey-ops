@@ -1309,3 +1309,10 @@ test('standard: ground mount checks run only on a ground mount report', () => {
   assert.ok(!QA.evaluate(v14(), specs, {}).findings.some(f => /^gm_/.test(f.id)));
   assert.ok(!QA.evaluate(survey('radicl'), specs, {}).findings.some(f => /^gm_/.test(f.id)));
 });
+
+test('Radicl: a bare pitch number up to 90 is read as degrees and asks for a look, not a miss; the metal items follow the roof type', () => {
+  const mk = (v, roofType) => survey('radicl', { entries: [{ ref: 'Roof Pitch / Slope Measurement', instance: null, value: v }, ...(roofType ? [{ ref: 'Roof Type', instance: null, value: roofType }] : [])], photos: [] });
+  assert.equal(get(QA.evaluate(mk('25'), specs), 'roof_pitch').status, 'verify');
+  assert.equal(get(QA.evaluate(mk('95'), specs), 'roof_pitch').status, 'miss');
+  assert.equal(get(QA.evaluate(mk('6', 'Shingles'), specs), 'std_metal_profile').status, 'na');
+});
