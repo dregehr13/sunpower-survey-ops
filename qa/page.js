@@ -1927,7 +1927,9 @@ function _qaChecklist() {
   const typeName = { photo: 'Photo', measurement: 'Measurement', sketch: 'Sketch', yesno: 'Yes/No' };
   const groups = OpsQA.CHECKLIST_GROUPS;
   const list = OpsQA.STANDARD.map(r => ({ title: r.title, when: r.when || '', type: typeName[r.type] || '', group: OpsQA.checklistGroup(r.id) }));
-  const tpls = [...new Set(QA_ACCEPTED.map(t => t.group))];
+  // Only the current templates are listed; earlier ones are still recognised when a report arrives.
+  const shown = QA_ACCEPTED.filter(t => t.status === 'Current');
+  const tpls = [...new Set(shown.map(t => t.group))];
   host.innerHTML = `<div class="qa-chk-grid">
     <div class="sec"><div class="shead"><div><div class="stitle">Shan checklist</div>
         <div class="ssub">${qaPlural(list.length, 'item')}. The full V.14 and the latest Radicl template are checked against all of it; every other template is checked on the fields it has. Weights are set in Settings.</div></div></div>
@@ -1939,7 +1941,7 @@ function _qaChecklist() {
     </div>
     <div class="sec"><div class="shead"><div><div class="stitle">Accepted templates</div></div></div>
       <div class="xscroll"><table class="tbl qa-tbl" id="qa-accepted"><tbody>
-        ${tpls.map(g => `<tr><td class="qa-areahead">${qaH(g)}</td></tr>` + QA_ACCEPTED.filter(t => t.group === g).map(t => `<tr><td class="qa-check">${qaH(t.name)}</td></tr>`).join('')).join('')}
+        ${tpls.map(g => `<tr><td class="qa-areahead">${qaH(g)}</td></tr>` + shown.filter(t => t.group === g).map(t => `<tr><td class="qa-check">${qaH(t.name)}</td></tr>`).join('')).join('')}
       </tbody></table></div>
     </div>
   </div>`;
