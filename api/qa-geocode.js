@@ -14,8 +14,7 @@ const cache = new Map();
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
-  if (!QAStore.users(process.env).length) return res.status(503).json({ error: 'not_configured' });
-  if (!QAStore.identify(req.headers['x-qa-password'], process.env)) return res.status(401).json({ error: 'wrong_password' });
+  if (!QAStore.identify(req.headers['x-qa-user'], process.env)) return res.status(401).json({ error: 'no_name' });
   const address = String((req.body || {}).address || '').trim().slice(0, 200);
   if (address.length < 6) return res.status(400).json({ error: 'bad_address' });
   if (cache.has(address)) { const hit = cache.get(address); return hit ? res.status(200).json(hit) : res.status(404).json({ error: 'no_match' }); }

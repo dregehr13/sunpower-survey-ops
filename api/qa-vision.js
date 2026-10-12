@@ -17,8 +17,7 @@ const getClient = () => (_client = _client || new Anthropic());
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
-  if (!QAStore.users(process.env).length) return res.status(503).json({ error: 'not_configured', detail: 'No QA passwords are set on the server' });
-  if (!QAStore.identify(req.headers['x-qa-password'], process.env)) return res.status(401).json({ error: 'wrong_password' });
+  if (!QAStore.identify(req.headers['x-qa-user'], process.env)) return res.status(401).json({ error: 'no_name' });
   if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'not_configured', detail: 'ANTHROPIC_API_KEY is not set' });
   const b = req.body || {};
   if (!QAVision.CRITERIA[b.category]) return res.status(400).json({ error: 'unknown_category' });

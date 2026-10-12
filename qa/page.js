@@ -7,8 +7,7 @@
 // six fields Salesforce wants. Reviews go to the team's shared history
 // (api/qa-log.js); see docs/QA.md.
 
-const QA_LOCAL_PASSWORD = 'sunpower';                // only used when there is no server (a local static copy); same word as /compose
-const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PW_KEY = 'ops_qa_pw';
+const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PEOPLE_KEY = 'ops_qa_people';
 const QA_API = '/api/qa-log';
 const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2', 'radicl-groundmount'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
@@ -28,7 +27,7 @@ let qaView = 'review', qaLens = 'reviews', qaFlag = null, qaQ = '', qaStatusF = 
 let qaLog = null, qaRun = null, qaDeps = null, qaPack = null, qaProj = '', qaReviewer = null;
 let qaMode = 'checking', qaNote = '', qaSyncing = null, qaUser = '';
 let qaClaims = [];  // reviews open right now, team-wide: [{ project, by, at }]
-let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged / Off over the defaults, and whether this password may change them
+let qaChecks = {}, qaManager = false;     // which checks are Required / Flagged / Off over the defaults, and whether this person may change them
 let qaVendor = (() => { try { return localStorage.getItem('ops_qa_vendor') === 'radicl' ? 'radicl' : 'sitecapture'; } catch (e) { return 'sitecapture'; } })();
 let qaGuess = [];   // qaGuess: possible projects when the report's address fits more than one      // 'checking' | 'shared' | 'local'
 let qaBusy = { pdf: '', zip: '', add: '' }, qaErr = { pdf: '', zip: '', add: '' };
@@ -52,24 +51,62 @@ const qaPlural = (n, w) => n + ' ' + w + (n === 1 ? '' : /s$/.test(w) ? 'es' : '
 const qaDate = r => r.date || (r.created ? new Date(r.created).toLocaleDateString('en-US') : '');
 
 // ── Access ─────────────────────────────────────────
-// The prompt only decides whether the page is shown. What protects the shared
-// history is the server, which checks the same password on every call (see
-// api/qa-log.js); a static file cannot keep a secret.
-function qaPw() { try { return sessionStorage.getItem(QA_PW_KEY) || ''; } catch (e) { return ''; } }
-function qaGate() {
-  if (qaPw()) return true;
-  const pw = prompt('Password:');
-  if (!pw) return false;
-  try { sessionStorage.setItem(QA_PW_KEY, pw); } catch (e) {}
-  return true;
+// There is no password. Each person picks their name once and the browser
+// remembers it (localStorage); every call sends it in x-qa-user and the server
+// stamps "reviewed by" with it. It is attribution, not access control. A browser
+// with no stored name sees the name picker instead of the page.
+function qaName() { try { return (localStorage.getItem(QA_USER_KEY) || '').trim(); } catch (e) { return ''; } }
+function qaHdr() { return { 'content-type': 'application/json', 'x-qa-user': encodeURIComponent(qaName()) }; }
+function qaGate() { return true; }
+// The server does not know this name (or the browser lost it): back to the picker.
+function qaBounce() {
+  try { localStorage.removeItem(QA_USER_KEY); } catch (e) {}
+  qaLog = null; qaMode = 'checking'; qaUser = ''; qaReviewer = null;
+  if (currentPage === 'qa') renderQA();
 }
-// A wrong password is found out on the first call, not at the prompt: drop it and
-// go back to the page the person came from.
-function qaBounce(msg) {
-  try { sessionStorage.removeItem(QA_PW_KEY); } catch (e) {}
-  qaLog = null; qaMode = 'checking'; qaUser = '';
-  toast(msg || 'Wrong password');
-  nav(['week'].includes(currentPage) || currentPage === 'qa' ? 'week' : currentPage);
+let qaPeople = [], qaPicking = false;
+function qaLocalPeople() { try { return JSON.parse(localStorage.getItem(QA_PEOPLE_KEY) || '[]'); } catch (e) { return []; } }
+async function qaLoadPeople() {
+  let list = [];
+  try { const r = await fetch(QA_API + '?people=1'); if (r.ok) list = (await r.json()).people || []; } catch (e) {}
+  qaPeople = [...new Set(list.concat(qaLocalPeople()))].sort((a, b) => a.localeCompare(b));
+  return qaPeople;
+}
+function _qaPicker() {
+  const el = document.getElementById('qa-content'); if (!el) return;
+  el.innerHTML = `<div class="sec"><div class="shead"><div><div class="stitle">Choose your name</div><div class="ssub">Reviews are saved under this name. This browser will remember it.</div></div></div>
+    <div class="fbtn-group" role="group" aria-label="Reviewer" id="qa-people" style="flex-wrap:wrap;margin-bottom:12px;">${qaPeople.map(n => `<button class="fbtn" onclick="qaChoose(this.dataset.n)" data-n="${qaH(n)}">${qaH(n)}</button>`).join('') || '<span class="ssub">No names yet. Add yours below.</span>'}</div>
+    <div class="fgroup"><input class="drill-search" id="qa-newname" type="text" placeholder="Not listed? Add your name" maxlength="60" style="flex:0 0 220px;" aria-label="Add your name" onkeydown="if(event.key==='Enter')qaAddName()">
+    <button class="fbtn" onclick="qaAddName()">Add</button></div></div>`;
+}
+async function qaShowPicker() {
+  qaPicking = true;
+  const el = document.getElementById('qa-content'); if (el) el.innerHTML = '<div class="sec"><div class="ssub">Loading…</div></div>';
+  await qaLoadPeople(); if (currentPage === 'qa' && !qaName()) _qaPicker();
+}
+function qaChoose(name) {
+  name = String(name || '').trim(); if (!name) return;
+  try { localStorage.setItem(QA_USER_KEY, name); } catch (e) { toast('Couldn\'t remember your name. Browser storage is blocked'); }
+  qaPicking = false; qaLog = null; qaMode = 'checking'; qaReviewer = name; qaUser = name;
+  if (currentPage === 'qa') renderQA();
+}
+async function qaAddName() {
+  const inp = document.getElementById('qa-newname'), name = ((inp && inp.value) || '').trim().replace(/\s+/g, ' ');
+  if (name.length < 2) return toast('Enter your full name');
+  const found = qaPeople.find(n => n.toLowerCase() === name.toLowerCase());
+  if (found) return qaChoose(found);
+  try { localStorage.setItem(QA_USER_KEY, name); } catch (e) {}             // so this call is sent as the new person
+  const r = await qaApi('POST', '', { addPerson: name });
+  if (r.status !== 200) {
+    // No server (a local copy): keep the name in this browser's list.
+    if (r.status === 0 || r.status === 404 || r.status === 503) { try { localStorage.setItem(QA_PEOPLE_KEY, JSON.stringify(qaLocalPeople().concat(name))); } catch (e) {} }
+    else { try { localStorage.removeItem(QA_USER_KEY); } catch (e) {} return toast("Couldn't add that name. Try again"); }
+  }
+  qaChoose(name);
+}
+function qaSwitchName() {
+  if (qaRun && (!qaRun.saved || qaSnap() !== qaRun.snap) && !confirm('You have a review in progress. Switch name anyway?')) return;
+  qaRun = null; qaBounce();
 }
 
 // ── Storage ────────────────────────────────────────
@@ -93,7 +130,7 @@ function qaPersist() {
 async function qaApi(method, query, body, keepalive) {
   let r;
   try {
-    r = await fetch(QA_API + (query || ''), { method, keepalive: !!keepalive, headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: body ? JSON.stringify(body) : undefined });
+    r = await fetch(QA_API + (query || ''), { method, keepalive: !!keepalive, headers: qaHdr(), body: body ? JSON.stringify(body) : undefined });
   } catch (e) { return { status: 0, body: null }; }
   let j = null; try { j = await r.json(); } catch (e) {}
   return { status: r.status, body: j };
@@ -108,13 +145,14 @@ function qaSync() {
     qaSyncing = null;
     if (r.status === 200 && r.body && Array.isArray(r.body.reviews)) {
       qaMode = 'shared'; qaNote = ''; qaLog = r.body.reviews;
-      // The password says who this is; the Reviewer is that person and is not editable.
+      // The chosen name is the Reviewer; switching it is the Switch button.
       qaUser = r.body.user || ''; if (qaUser) qaReviewer = qaUser;
+      if (Array.isArray(r.body.people)) qaPeople = r.body.people;
       qaChecks = (r.body.settings && r.body.settings.checks) || {}; qaManager = !!r.body.manager;
       qaClaims = Array.isArray(r.body.claims) ? r.body.claims : [];
-    } else if (r.status === 401) { qaBounce('Wrong password'); return false; }
+    } else if (r.status === 401) { qaBounce(); return false; }
     else if (r.status !== 404 && r.status !== 503) {
-      // The server is there but failing (or the connection dropped). That is not a wrong password,
+      // The server is there but failing (or the connection dropped). That is not a bad name,
       // and saving into this browser instead would split the team's history without anyone knowing.
       qaMode = 'down'; qaNote = `Can't reach the review history (${r.status ? 'error ' + r.status : 'no connection'}). Nothing can be saved until it is back.`;
       if (!qaLog) qaLog = [];
@@ -123,7 +161,7 @@ function qaSync() {
       qaMode = 'local';
       qaNote = r.status === 503 ? (r.body && r.body.detail) || 'The review database isn\'t set up on the server yet.'
         : 'No server here, so reviews stay in this browser.';
-      if (qaPw() !== QA_LOCAL_PASSWORD) { qaBounce('Wrong password'); return false; }
+      qaUser = qaName(); qaReviewer = qaUser;
       qaLog = qaLocalLog();
       try { qaChecks = JSON.parse(localStorage.getItem('ops_qa_checks') || '{}') || {}; } catch (e) { qaChecks = {}; }
       qaManager = true;
@@ -143,7 +181,6 @@ async function qaReady() {
 }
 function qaAfterSync() {
   if (currentPage !== 'qa') return;
-  if (qaMode === 'shared' && qaUser) _qaBar();        // the Reviewer is now known and locked
   _qaConn(); _qaDup(); if (qaView === 'review' && !qaRun) _qaLikely();
   if (qaView === 'log') _qaLog();
   else if (qaView === 'metrics') _qaMetrics();
@@ -288,13 +325,6 @@ function qaProjectCommit() {
   if (run.step === 1) { const f = document.getElementById('qa-project-field'); if (f && qaProj.trim()) f.remove(); _qaSaveBtn(); }
   else if (run.step === 0) _qaStep();
 }
-function qaSetReviewer(v) {
-  if (qaMode === 'shared' && qaUser) return;
-  qaReviewer = v;
-  try { localStorage.setItem(QA_USER_KEY, v); } catch (e) {}
-  if (qaRun) { _qaSaveBtn(); if (qaRun.step === 1) _qaStep(); }
-}
-
 // ── Reading a report ───────────────────────────────
 function qaDropState() {
   const busy = qaBusy.pdf, err = qaErr.pdf, big = !qaRun;
@@ -484,7 +514,7 @@ async function qaGeoLookup(addr) {
   let out = false;
   if (qaMode === 'shared') {
     try {
-      const r = await fetch('/api/qa-geocode', { method: 'POST', headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: JSON.stringify({ address: addr }) });
+      const r = await fetch('/api/qa-geocode', { method: 'POST', headers: qaHdr(), body: JSON.stringify({ address: addr }) });
       if (r.status === 200) { const j = await r.json(); out = { lat: j.lat, lon: j.lon }; } else if (r.status === 404) { const j = await r.json().catch(() => null); out = j && j.error === 'no_match' ? null : false; }
     } catch (e) { out = false; }
   }
@@ -635,7 +665,7 @@ async function qaShrink(url) {
 }
 async function qaVisionCall(category, image) {
   let r;
-  try { r = await fetch('/api/qa-vision', { method: 'POST', headers: { 'content-type': 'application/json', 'x-qa-password': qaPw() }, body: JSON.stringify({ category, image }) }); }
+  try { r = await fetch('/api/qa-vision', { method: 'POST', headers: qaHdr(), body: JSON.stringify({ category, image }) }); }
   catch (e) { return { status: 0, body: null }; }
   let j = null; try { j = await r.json(); } catch (e) {}
   return { status: r.status, body: j };
@@ -653,7 +683,7 @@ async function qaVisionRun() {
       const it = list[next++];
       try {
         const r = await qaVisionCall(it.id, await qaShrink(it.url));
-        if (r.status === 401) { v.error = 'Wrong password'; qaBounce('Wrong password'); break; }
+        if (r.status === 401) { v.error = 'Choose your name again'; qaBounce(); break; }
         if (r.status === 503) { v.error = 'Claude is not set up on the server (ANTHROPIC_API_KEY).'; break; }
         if (r.status === 200 && r.body) { it.ai = r.body; if (!r.body.readable) v.flagged++; qaPhotoAi(it); }
       } catch (e) { /* one photo failing does not stop the rest */ }
@@ -822,6 +852,7 @@ const qaPhotoTip = it => [it.label, qaUnitName(it.unit), 'photo ' + it.n, it.url
 // ── Page entry ─────────────────────────────────────
 function renderQA() {
   const el = document.getElementById('qa-content'); if (!el) return;
+  if (!qaName()) return void qaShowPicker();
   qaLoad();
   qaRender();
   qaSync().then(ok => {
@@ -851,10 +882,8 @@ function qaSetView(v) { qaView = v; qaRender(); requestAnimationFrame(() => anim
 function _qaBar() {
   const host = document.getElementById('qa-bar'); if (!host) return;
   const btn = (v, l) => `<button class="fbtn${qaView === v ? ' fbtn-active' : ''}" onclick="qaSetView('${v}')">${l}</button>`;
-  const who = qaMode === 'shared' && qaUser
-    ? `<span class="qa-conn" title="Set by your password"><span class="fsel-label">Reviewer</span> <b>${qaH(qaUser)}</b></span>`
-    : `<span class="fsel-label" style="font-size:11px;color:var(--muted);">Reviewer</span>
-      <input class="drill-search" id="qa-reviewer" type="text" placeholder="Your name" value="${qaH(qaReviewer || '')}" oninput="qaSetReviewer(this.value)" style="flex:0 0 150px;min-width:110px;" aria-label="Reviewer name">`;
+  const who = `<span class="qa-conn" title="Saved in this browser"><span class="fsel-label">Reviewer</span> <b>${qaH(qaName())}</b></span>
+      <button class="fbtn" onclick="qaSwitchName()">Switch</button>`;
   host.innerHTML = `<div class="fbar">
     <span class="qa-title">Site Survey QA</span>
     <div class="fbtn-group" role="group" aria-label="QA view">${btn('review', 'Review')}${btn('checklist', 'QA Checklist')}${btn('log', 'History')}${btn('metrics', 'Metrics')}</div>
@@ -1540,7 +1569,7 @@ async function qaSave() {
     // The server numbers the review (it can see a colleague's save and a delete
     // that this browser cannot) and writes that number into the summary.
     const r = await qaApi('POST', '', { review: rec });
-    if (r.status === 401) { run.saving = false; qaBounce('Wrong password'); return; }
+    if (r.status === 401) { run.saving = false; qaBounce(); return; }
     if (r.status !== 201 || !r.body || !r.body.review) { run.saving = false; _qaSaveBtn(); toast((r.body && r.body.error) || 'Couldn\'t save. Check your connection and try again'); return; }
     saved = r.body.review;
     qaLoad().unshift(saved);
@@ -1581,7 +1610,7 @@ async function qaApplyChanges(id, changes) {
   let rec;
   if (qaMode === 'shared') {
     const r = await qaApi('PUT', '?id=' + encodeURIComponent(id), { changes });
-    if (r.status === 401) { qaBounce('Wrong password'); return null; }
+    if (r.status === 401) { qaBounce(); return null; }
     if (r.status !== 200 || !r.body || !r.body.review) { toast((r.body && r.body.error) || "Couldn't save the changes. Try again"); return null; }
     rec = r.body.review;
   } else {
@@ -1850,7 +1879,7 @@ async function qaDelete(id) {
   if (!(await qaReady())) return;
   if (qaMode === 'shared') {
     const r = await qaApi('DELETE', '?id=' + encodeURIComponent(id));
-    if (r.status === 401) return qaBounce('Wrong password');
+    if (r.status === 401) return qaBounce();
     if (r.status !== 200 && r.status !== 404) return toast('Couldn\'t delete. Try again');
   }
   qaLog = qaLoad().filter(r => r.id !== id); qaPersist(); qaOpen = null; _qaConn(); _qaLog();
@@ -1868,12 +1897,12 @@ function qaExport() {
 // What each check requires, in the app's Settings page. Required stops a handoff; Flagged asks
 // for a look; Alarm only stays out of every review and the report unless it fails; Off drops the
 // check. Only changes from a check's own default are stored. The whole team reviews against
-// this, so it lives on the server and only the manager's password may change it.
+// this, so it lives on the server and only the manager may change it.
 const QA_CHECK_SET = [['hard', 'Required'], ['warn', 'Flagged'], ['alarm', 'Alarm only'], ['off', 'Off']];
 function _qaSettings() {
   const host = document.getElementById('qa-set-host'); if (!host) return;
   const head = `<div class="set-title">Site Survey QA</div>`;
-  if (!qaPw()) { host.innerHTML = `${head}<div class="set-desc" style="margin-bottom:10px;">Sign in to the QA page to see what each check requires.</div><button class="fbtn" onclick="qaSettingsSignIn()">Sign in</button>`; return; }
+  if (!qaName()) { host.innerHTML = `${head}<div class="set-desc" style="margin-bottom:10px;">Choose your name on the QA page to see what each check requires.</div><button class="fbtn" onclick="nav('qa')">Open QA</button>`; return; }
   if (qaMode === 'checking') { host.innerHTML = `${head}<div class="set-desc">Loading…</div>`; qaSync().then(ok => { if (ok !== false) _qaSettings(); }); return; }
   const checks = OpsQA.allChecks(), areas = OpsQA.AREA_ORDER.filter(a => checks.some(c => c.area === a));
   const can = qaManager, cur = c => qaChecks[c.id] || c.def, changed = checks.filter(c => cur(c) !== c.def).length;
@@ -1890,7 +1919,6 @@ function _qaSettings() {
     <div class="set-row" style="margin-top:14px;"><div><div class="set-label">Claude photo check</div><div class="set-desc">Claude looks at each key photo in a review and says whether it can be read. It only advises: a photo it doubts moves to the front of its row, and you still mark it. Photos are sent to Claude and not stored. Needs ANTHROPIC_API_KEY on the server.</div></div>
       <div class="set-control"><input type="checkbox" ${S.qaVision ? 'checked' : ''} onchange="setSetting('qaVision',this.checked)"></div></div>`;
 }
-async function qaSettingsSignIn() { if (!qaGate()) return; qaMode = 'checking'; const ok = await qaSync(); if (ok === false) return; _qaSettings(); }
 async function qaSetCheck(id, v) {
   if (!qaManager) return;
   const def = (OpsQA.allChecks().find(c => c.id === id) || {}).def, next = Object.assign({}, qaChecks);
@@ -1903,7 +1931,7 @@ async function qaSaveChecks(next) {
   const prev = qaChecks; qaChecks = next;
   if (qaMode === 'shared') {
     const r = await qaApi('PUT', '?settings=1', { checks: next });
-    if (r.status === 401) { qaBounce('Wrong password'); return; }
+    if (r.status === 401) { qaBounce(); return; }
     if (r.status !== 200 || !r.body || !r.body.settings) { qaChecks = prev; toast(r.status === 403 ? 'Only the manager can change these' : "Couldn't save. Try again"); return _qaSettings(); }
     qaChecks = r.body.settings.checks;
   } else { try { localStorage.setItem('ops_qa_checks', JSON.stringify(next)); } catch (e) {} }

@@ -412,8 +412,10 @@ test('the tabs read Review, QA Checklist, History, and the page has no import or
   assert.ok(!/qaImport|Shared log|shared log</.test(pageSrc.replace(/^\s*\/\/.*$/gm, '')));
 });
 
-test('the reviewer is read-only once a password has named them', () => {
-  assert.ok(/qaMode === 'shared' && qaUser\s*\n?\s*\? /.test(pageSrc));
+test('there is no password: the page asks for a name, remembers it, and can switch', () => {
+  assert.ok(!/x-qa-password|prompt\('Password/.test(pageSrc));
+  assert.ok(/function qaName\(\)/.test(pageSrc) && /x-qa-user/.test(pageSrc));
+  assert.ok(/onclick="qaSwitchName\(\)"/.test(pageSrc) && /Choose your name/.test(pageSrc));
 });
 
 test('the likely-to-review list skips reps and anything scheduled after today', () => {
