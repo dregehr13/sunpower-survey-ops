@@ -130,35 +130,45 @@ test('importing a browser log keeps ids, skips what is already here, renumbers a
 });
 
 // ── The endpoint ──
-const env = { QA_PASSWORD: 'open-sesame', QA_USERS: JSON.stringify({ 'spwr-banks': 'Kendall Banks', 'spwr-mertz': 'Skylar Mertz' }) };
-const call = (db, method, o = {}, e = env) => Store.handle({ method, query: o.query, body: o.body, headers: { 'x-qa-password': o.pw === undefined ? 'open-sesame' : o.pw } }, e, db);
+const env = {};
+const call = (db, method, o = {}, e = env) => Store.handle({ method, query: o.query, body: o.body, headers: { 'x-qa-user': o.pw === undefined ? 'Douglas Regehr' : o.pw } }, e, db);
+const BANKS = 'Kendall Banks', MERTZ = 'Skylar Mertz';
 
-test('the endpoint refuses without a known password, and says so when none is set up', async () => {
+test('the endpoint needs a chosen name and a database', async () => {
   const db = await fresh();
-  assert.equal((await call(db, 'GET', { pw: 'wrong' })).status, 401);
+  assert.equal((await call(db, 'GET', { pw: '' })).status, 401);
   assert.equal((await Store.handle({ method: 'GET', headers: {} }, env, db)).status, 401);
-  assert.equal((await call(db, 'GET', {}, {})).status, 503);                        // nothing configured
   assert.equal((await call(null, 'GET')).status, 503);                              // no database
   assert.equal((await call(null, 'GET')).body.error, 'not_configured');
 });
 
-test('each person is identified by their own password', async () => {
+test('the name sent is the person; the manager is Douglas Regehr unless set', async () => {
   const db = await fresh();
-  assert.equal((await call(db, 'GET', { pw: 'spwr-banks' })).body.user, 'Kendall Banks');
-  assert.equal((await call(db, 'GET', { pw: 'spwr-mertz' })).body.user, 'Skylar Mertz');
-  assert.equal((await call(db, 'GET', { pw: 'open-sesame' })).body.user, 'Douglas Regehr');
-  assert.equal((await call(db, 'GET', { pw: 'spwr-banks ' })).status, 401);          // exact, not close
-  assert.equal(Store.identify('SPWR-BANKS', env), null);
-  assert.equal(Store.identify('spwr-banks', { QA_USERS: '{not json' }), null);       // an unreadable list grants nobody
-  assert.equal(Store.identify('x', { QA_PASSWORD: 'x', QA_PASSWORD_NAME: 'Allie Morais' }).name, 'Allie Morais');
+  assert.equal((await call(db, 'GET', { pw: BANKS })).body.user, BANKS);
+  assert.equal((await call(db, 'GET', { pw: encodeURIComponent('José Núñez') })).body.user, 'José Núñez');
+  assert.equal((await call(db, 'GET', { pw: BANKS })).body.manager, false);
+  assert.equal((await call(db, 'GET', { pw: 'douglas regehr' })).body.manager, true);
+  assert.equal(Store.identify('Allie Morais', { QA_MANAGER_NAME: 'Allie Morais' }).manager, true);
+  assert.equal(Store.identify('   ', env), null);
 });
 
-test('a review is stamped with the password owner, whatever the page sent', async () => {
+test('the name picker list: asked without a name, added to, and fed by saved reviews', async () => {
   const db = await fresh();
-  const out = await call(db, 'POST', { pw: 'spwr-banks', body: { review: review({ reviewer: 'Someone Else' }) } });
+  const ask = () => Store.handle({ method: 'GET', query: { people: '1' }, headers: {} }, env, db);
+  assert.deepEqual((await ask()).body.people, ['Douglas Regehr']);
+  assert.equal((await call(db, 'POST', { pw: BANKS, body: { addPerson: 'Kendall Banks' } })).status, 200);
+  assert.equal((await call(db, 'POST', { pw: BANKS, body: { addPerson: 'kendall banks' } })).status, 200);   // no duplicate
+  assert.equal((await call(db, 'POST', { pw: BANKS, body: { addPerson: 'x' } })).status, 400);
+  await call(db, 'POST', { pw: MERTZ, body: { review: review() } });
+  assert.deepEqual((await ask()).body.people, ['Douglas Regehr', 'Kendall Banks', 'Skylar Mertz']);
+});
+
+test('a review is stamped with the chosen name, whatever the page sent', async () => {
+  const db = await fresh();
+  const out = await call(db, 'POST', { pw: BANKS, body: { review: review({ reviewer: 'Someone Else' }) } });
   assert.equal(out.status, 201);
   assert.equal(out.body.review.reviewer, 'Kendall Banks');
-  const del = await call(db, 'DELETE', { pw: 'spwr-mertz', query: { id: out.body.review.id, by: 'Spoofed' } });
+  const del = await call(db, 'DELETE', { pw: MERTZ, query: { id: out.body.review.id, by: 'Spoofed' } });
   assert.equal(del.status, 200);
   const { rows } = await db.query('SELECT deleted_by FROM qa_reviews');
   assert.equal(rows[0].deleted_by, 'Skylar Mertz');
@@ -182,14 +192,6 @@ test('the server stamps the time, not the browser', async () => {
   const db = await fresh();
   const out = await call(db, 'POST', { body: { review: review({ created: '1999-01-01T00:00:00Z' }) } });
   assert.ok(new Date(out.body.review.created).getFullYear() >= 2026);
-});
-
-test('password comparison is exact', () => {
-  assert.equal(Store.passwordOk('a', 'a'), true);
-  assert.equal(Store.passwordOk('a', 'b'), false);
-  assert.equal(Store.passwordOk('', ''), false);
-  assert.equal(Store.passwordOk(undefined, 'x'), false);
-  assert.equal(Store.passwordOk('open-sesame ', 'open-sesame'), false);
 });
 
 test('Salesforce project names with a suffix or a dot are accepted', async () => {
@@ -222,14 +224,14 @@ test('a saved review can be revised, and only the revisable parts change', async
   assert.match((await Store.update(db, a.id, { status: 'Done' }, 'x')).error, /status/);
 });
 
-test('PUT /api/qa-log revises a review as the person the password names', async () => {
+test('PUT /api/qa-log revises a review as the person named', async () => {
   const db = await fresh();
-  const env = { QA_USERS: JSON.stringify({ pwk: 'Kendall Banks' }) };
+  const env = {};
   const a = await save(db);
-  const ok = await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-password': 'pwk' }, body: { changes: { status: 'Passed' } } }, env, db);
+  const ok = await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-user': 'Kendall Banks' }, body: { changes: { status: 'Passed' } } }, env, db);
   assert.equal(ok.status, 200); assert.equal(ok.body.review.status, 'Passed'); assert.equal(ok.body.review.editedBy, 'Kendall Banks');
-  assert.equal((await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-password': 'bad' }, body: {} }, env, db)).status, 401);
-  assert.equal((await Store.handle({ method: 'PUT', query: { id: 'QA-X-1' }, headers: { 'x-qa-password': 'pwk' }, body: { changes: {} } }, env, db)).status, 404);
+  assert.equal((await Store.handle({ method: 'PUT', query: { id: a.id }, headers: { 'x-qa-user': '' }, body: {} }, env, db)).status, 401);
+  assert.equal((await Store.handle({ method: 'PUT', query: { id: 'QA-X-1' }, headers: { 'x-qa-user': 'Kendall Banks' }, body: { changes: {} } }, env, db)).status, 404);
 });
 
 test('the photos a reviewer marked are kept with the review, and nothing else about a photo', async () => {
@@ -244,11 +246,11 @@ test('the photos a reviewer marked are kept with the review, and nothing else ab
 test('check settings are kept on the server, readable by the team, and changed only with the manager password', async () => {
   const db = await fresh();
   assert.deepEqual((await call(db, 'GET')).body.settings, { checks: {} });
-  assert.equal((await call(db, 'PUT', { query: { settings: '1' }, body: { checks: { roof_pitch: 'warn' } }, pw: 'spwr-banks' })).status, 403);
+  assert.equal((await call(db, 'PUT', { query: { settings: '1' }, body: { checks: { roof_pitch: 'warn' } }, pw: BANKS })).status, 403);
   const ok = await call(db, 'PUT', { query: { settings: '1' }, body: { checks: { roof_pitch: 'warn', site_map: 'off', bogus: 'nope', 'Bad Key': 'off' } } });
   assert.equal(ok.status, 200);
   assert.deepEqual(ok.body.settings, { checks: { roof_pitch: 'warn', site_map: 'off' } });
-  const seen = await call(db, 'GET', { pw: 'spwr-banks' });
+  const seen = await call(db, 'GET', { pw: BANKS });
   assert.deepEqual(seen.body.settings.checks, { roof_pitch: 'warn', site_map: 'off' });
   assert.equal(seen.body.manager, false);
   assert.equal((await call(db, 'GET')).body.manager, true);
@@ -267,7 +269,7 @@ test('the endpoint creates the schema once per database, not on every call', asy
   // Over Neon's HTTP driver every statement is a round trip; nine of them on every call was most of a History load.
   const pg = new PGlite(); let creates = 0;
   const db = { query: (t, p) => { if (/^\s*(CREATE|ALTER)/.test(t)) creates++; return pg.query(t, p); } };
-  const env = { QA_PASSWORD: 'pw' }, req = { method: 'GET', headers: { 'x-qa-password': 'pw' }, query: {} };
+  const env = {}, req = { method: 'GET', headers: { 'x-qa-user': 'Pat Lee' }, query: {} };
   await Store.handle(req, env, db); const once = creates;
   await Store.handle(req, env, db); await Store.handle(req, env, db);
   assert.ok(once > 0); assert.equal(creates, once);
@@ -275,7 +277,7 @@ test('the endpoint creates the schema once per database, not on every call', asy
 
 test('a review in progress is held for its coordinator, shown to the others, and let go by a save', async () => {
   const db = await fresh();
-  const banks = { pw: 'spwr-banks' }, mertz = { pw: 'spwr-mertz' };
+  const banks = { pw: BANKS }, mertz = { pw: MERTZ };
   const mine = await call(db, 'POST', { ...banks, body: { claim: '2321lope' } });
   assert.equal(mine.status, 200); assert.equal(mine.body.claim.by, 'Kendall Banks'); assert.equal(mine.body.claim.project, '2321LOPE');
   assert.equal((await call(db, 'POST', { ...banks, body: { claim: '2321LOPE' } })).status, 200, 'renewing your own hold');
@@ -295,8 +297,8 @@ test('a review in progress is held for its coordinator, shown to the others, and
 
 test('a hold nobody renews runs out', async () => {
   const db = await fresh();
-  await call(db, 'POST', { pw: 'spwr-banks', body: { claim: '2321LOPE' } });
+  await call(db, 'POST', { pw: BANKS, body: { claim: '2321LOPE' } });
   await db.query(`UPDATE qa_claims SET at = now() - interval '${Store.CLAIM_MINUTES + 1} minutes'`);
   assert.deepEqual((await call(db, 'GET')).body.claims, []);
-  assert.equal((await call(db, 'POST', { pw: 'spwr-mertz', body: { claim: '2321LOPE' } })).status, 200);
+  assert.equal((await call(db, 'POST', { pw: MERTZ, body: { claim: '2321LOPE' } })).status, 200);
 });

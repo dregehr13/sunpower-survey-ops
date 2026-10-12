@@ -131,19 +131,20 @@ One table, `qa_reviews`, created by the endpoint on first use (every statement
 is `IF NOT EXISTS`, so there is no migration step).
 
 ```
-browser ──x-qa-password──▶ /api/qa-log ──▶ lib/qa-store.cjs ──▶ Neon Postgres
+browser ──x-qa-user──▶ /api/qa-log ──▶ lib/qa-store.cjs ──▶ Neon Postgres
 ```
 
-- **Each person has their own password, and it names them.** `QA_USERS` (env,
-  never the repo) is a JSON object of `{ "<password>": "<name>" }`; `QA_PASSWORD`
-  is the manager's own (named by `QA_PASSWORD_NAME`). The server checks the
-  password on every call, in constant time, and stamps the review's Reviewer and a
-  delete's `deleted_by` with the password's owner, ignoring whatever the page
-  sent. The page shows that name read-only. The page's own prompt only decides
-  whether to show the page; a static file cannot keep a secret. A wrong password
-  is found on the first call and bounces the page
-- **Adding or removing a person** is an edit to `QA_USERS` in Vercel plus a
-  redeploy; no code changes
+- **No password; each person picks their name** (2026-10-12, Doug: security can
+  be light). The page shows a "Choose your name" picker until a name is stored
+  in the browser (`ops_qa_reviewer`, localStorage); **Switch** in the bar clears
+  it. Every call sends it in `x-qa-user` and the server stamps the review's
+  Reviewer, `edited_by` and `deleted_by` with it, ignoring what the body says.
+  This is attribution, not access control. The list comes from
+  `GET /api/qa-log?people=1` (names added on the page, everyone with a saved
+  review, the manager); "Add" on the picker stores a new name in `qa_settings`.
+  The manager (may change check weights) is the name in `QA_MANAGER_NAME`,
+  default Douglas Regehr. `QA_USERS` / `QA_PASSWORD` are no longer read, except
+  that names in `QA_USERS` seed the picker
 - **The server numbers reviews.** The count of the account's reviews so far
   (deleted ones included, so an id is never reused) is computed inside the
   INSERT; two saves in the same instant collide on the primary key and one
@@ -165,7 +166,6 @@ browser ──x-qa-password──▶ /api/qa-log ──▶ lib/qa-store.cjs ─�
 
 ```bash
 vercel integration add neon          # provisions the database; injects DATABASE_URL
-vercel env add QA_USERS production      # {"<password>":"<name>", ...}, one per person
 git push                             # deploy
 ```
 
@@ -296,7 +296,7 @@ keep "resurvey" because they measure Design's callouts. Radicl's invoices also u
 - **Settings → Site Survey QA** (the app's Settings page; it was briefly a QA tab) holds what each check requires: **Required** (stops a
   handoff, `hard`), **Flagged** (asks for a look, `warn`) or **Off**, per check, over the
   shipped defaults. Only changes are stored (`qa_settings` table, key `checks`), shared by
-  the whole team, and only the manager password (`QA_PASSWORD`) can change them
+  the whole team, and only the manager's name (`QA_MANAGER_NAME`) can change them
   (`PUT /api/qa-log?settings=1`, 403 otherwise). `OpsQA.evaluate` reads `ctx.checks`; an
   open review re-evaluates when a setting changes. The template-field layer (every field
   the template requires) is not per-check yet. The Claude photo check toggle moved here

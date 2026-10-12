@@ -5,11 +5,10 @@
 //   POST   /api/qa-log  { import }    →  { inserted, skipped, renumbered }   a browser's old local log
 //   DELETE /api/qa-log?id=&by=        →  { ok }               soft delete
 //
-// Every call carries the password in x-qa-password. It is checked HERE, against
-// the QA_PASSWORD env var — the page's own prompt only decides whether to show
-// the page, and a static file cannot keep a secret. Without QA_PASSWORD or a
-// database the endpoint answers 503 not_configured and the page falls back to
-// this browser's own log, so nothing breaks before this is set up.
+// Every call carries the reviewer's chosen name in x-qa-user. There is no password
+// (Doug, 2026-10-12): the name is attribution for "reviewed by", not access
+// control. Without a database the endpoint answers 503 not_configured and the
+// page falls back to this browser's own log, so nothing breaks before this is set up.
 //
 // The Postgres is Neon, provisioned through the Vercel Marketplace, which injects
 // DATABASE_URL. All of the logic is in lib/qa-store.cjs and is tested against a
