@@ -7380,7 +7380,7 @@ function renderMapSite(){
   const city=mapNearCity(mapSite);
 
   const cost=resWeeklyCost(MAP_SITE_SV, cap.meanMi);
-  const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
+  const billSum=_billing?OpsBilling.summarize(OpsBilling.surveyLines(OpsBilling.reconcile(_billing.lines,allRows))):null;
   const perVendor=billSum?billSum.perSurvey:null;
   const breakEven=perVendor?cost/perVendor:null;
 
@@ -7876,7 +7876,7 @@ function _resTeamCapLine(){
 // The vendor's all-in rate, which is the only thing the SPWR cost has to beat.
 const _resVendorPerSurvey = () => {
   if(!_billing){ if(!_billingErr) billingEnsure(); return null; }
-  return OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)).perSurvey;
+  return OpsBilling.summarize(OpsBilling.surveyLines(OpsBilling.reconcile(_billing.lines,allRows))).perSurvey;
 };
 
 function resEnsure(){
@@ -8062,7 +8062,7 @@ function resVendorCostByZip(){
   const out={};
   _resVendorZipSrc=_billing; _resVendorZip=out;
   if(!_billing) return out;
-  const recon=OpsBilling.reconcile(_billing.lines, allRows);
+  const recon=OpsBilling.surveyLines(OpsBilling.reconcile(_billing.lines, allRows));
   recon.forEach(l=>{
     if(!OpsBilling.isCharge(l)||!l.match) return;
     const m=(l.match.address||'').match(MAP_ZIP_RE); if(!m) return;
@@ -8378,7 +8378,7 @@ function renderResource(){
   const inhouseNow=split.res[0].perWeek;
   const outsourcedNow=split.res[1].perWeek;
   const absorbable=markets.filter(m=>m.advice.k==='absorb').reduce((a,m)=>a+m.outsourcedPerWeek,0);
-  const billSum=_billing?OpsBilling.summarize(OpsBilling.reconcile(_billing.lines,allRows)):null;
+  const billSum=_billing?OpsBilling.summarize(OpsBilling.surveyLines(OpsBilling.reconcile(_billing.lines,allRows))):null;
   const perVendor=billSum?billSum.perSurvey:null;
   const util=teamCap?inhouseNow/teamCap:null;
 
@@ -8861,7 +8861,7 @@ function _resVendorTable(billSum){
   const scope=resScope(), from=resRecentFrom();
   const lines=(_billing&&_billing.lines)||[];
   const rowsOut=Object.values(OpsBilling.VENDORS).map(v=>{
-    const mine=lines.filter(l=>l.vendor===v.id);
+    const mine=OpsBilling.surveyLines(lines).filter(l=>l.vendor===v.id);
     const sum=mine.length?OpsBilling.summarize(mine):null;
     const sf=scope.filter(r=>r.resource===v.sfResource);
     const recent=sf.filter(r=>r.start&&r.start>=from);

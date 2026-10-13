@@ -272,6 +272,14 @@ test('service lines come from the vendor spec, and top-ups are not one', () => {
   assert.equal(B.isSurveyService(line({ type: 'O&M' })), false);
 });
 
+test('survey-cost figures outside the Billing page drop O&M lines', () => {
+  const ls = [line({ type: 'Survey', subtype: 'Base', units: -14.2 }),
+    line({ type: 'O&M', subtype: 'Inspection', units: -25 }),
+    line({ type: 'O&M', subtype: 'Printing', units: -2.45 })];
+  assert.equal(B.surveyLines(ls).length, 1);
+  assert.equal(B.lineKind(ls[1]), 'other');
+});
+
 // ── External EPC accounts ─────────────────────────────────────────────────
 // Projects sold through an external EPC never reach the Site Survey export, so
 // without the registry every line we were billed for one reads as a missing
