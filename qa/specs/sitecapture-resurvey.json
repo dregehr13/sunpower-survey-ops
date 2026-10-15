@@ -1,0 +1,245 @@
+{
+ "id": "sitecapture-resurvey",
+ "vendor": "sitecapture",
+ "resurveyForm": true,
+ "title": "Site Capture resurvey form",
+ "formId": null,
+ "generatedFrom": "Survey_Report_charles_georges-2026-10-14.pdf (inferred from a report; no form JSON)",
+ "sections": [
+  {
+   "key": "customer_information",
+   "title": "Customer Information"
+  },
+  {
+   "key": "exterior_information",
+   "title": "Exterior Information"
+  },
+  {
+   "key": "roof_information",
+   "title": "Roof Information"
+  },
+  {
+   "key": "attic_structural_information",
+   "title": "Attic & Structural Information"
+  },
+  {
+   "key": "electrical_information",
+   "title": "Electrical Information"
+  },
+  {
+   "key": "battery_information",
+   "title": "Battery Information"
+  },
+  {
+   "key": "a_typical_information",
+   "title": "A-typical Information"
+  },
+  {
+   "key": "site_map",
+   "title": "Site Map"
+  },
+  {
+   "key": "home_damage",
+   "title": "Home Damage"
+  }
+ ],
+ "groups": {},
+ "fields": [
+  {
+   "key": "surveyors_name",
+   "label": "Surveyor's Name",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 0
+  },
+  {
+   "key": "customers_name",
+   "label": "Customer's Name",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 1
+  },
+  {
+   "key": "project_id",
+   "label": "Project ID",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 2
+  },
+  {
+   "key": "resurvey_information",
+   "label": "Resurvey Information",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 3
+  },
+  {
+   "key": "notes",
+   "label": "Notes",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 4
+  },
+  {
+   "key": "call_survey_closeout",
+   "label": "Call survey closeout to complete resurveys",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 5
+  },
+  {
+   "key": "unpermitted_structures",
+   "label": "Are there any unpermitted structures on the property?",
+   "type": "TEXT",
+   "section": "customer_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 6
+  },
+  {
+   "key": "mounting_on_outbuilding",
+   "label": "Are we mounting on an outbuilding?",
+   "type": "TEXT",
+   "section": "exterior_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 7
+  },
+  {
+   "key": "attic_access",
+   "label": "Is there an attic access?",
+   "type": "TEXT",
+   "section": "attic_structural_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 8
+  },
+  {
+   "key": "generator_on_site",
+   "label": "Is the customer aware of a generator on site?",
+   "type": "TEXT",
+   "section": "electrical_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 9
+  },
+  {
+   "key": "survey_in_illinois",
+   "label": "Is this survey in Illinois?",
+   "type": "TEXT",
+   "section": "electrical_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 10
+  },
+  {
+   "key": "contains_batteries",
+   "label": "Does this project contain any batteries?",
+   "type": "TEXT",
+   "section": "battery_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 11
+  },
+  {
+   "key": "atypical_information",
+   "label": "Atypical Information",
+   "type": "TEXT",
+   "section": "a_typical_information",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 12
+  },
+  {
+   "key": "home_damage",
+   "label": "Was there any damage done to the home?",
+   "type": "TEXT",
+   "section": "home_damage",
+   "group": null,
+   "required": false,
+   "dependsOnKey": null,
+   "dependsOnValue": null,
+   "photoRequired": false,
+   "commentRequired": false,
+   "minPhotos": null,
+   "order": 13
+  }
+ ]
+}
