@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const QA = require('../lib/qa.cjs');
 const SC = require("../qa/specs/sitecapture-v13.json");
 const SC14 = require("../qa/specs/sitecapture-v14.json");
-const specs = [SC14, SC, require("../qa/specs/sitecapture-battery.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json'), require('../qa/specs/radicl-groundmount.json')];
+const specs = [SC14, SC, require("../qa/specs/sitecapture-battery.json"), require("../qa/specs/sitecapture-resurvey.json"), require('../qa/specs/radicl-v1.json'), require('../qa/specs/radicl-v2.json'), require('../qa/specs/radicl-groundmount.json')];
 
 const tk = QA.tok;
 const blk = (text, x0 = 18, y0 = 700) => ({ text, x0, y0, x1: x0 + 100, y1: y0 - 10 });
@@ -983,6 +983,19 @@ test('Site Capture battery-only form: recognised from its contents, checked on i
   assert.ok(miss.includes('Outside photos'));
   assert.equal(miss.includes('Dead front on'), false);
   assert.ok(QA.checklist('sitecapture-battery').some(c => c.id === 'bf_msp_on'));
+});
+
+test('Site Capture resurvey form: recognised from its contents, held to request, answer and photos', () => {
+  const cover = page(1, [blk('Site Survey Report', 261, 723), blk('Charles Georges\n852SGEOR\nSam Parker', 400, 700), blk('Customer Information\nResurvey Information\nA-typical Information\nHome Damage', 18, 575)]);
+  const d = QA.detectTemplate([cover], specs);
+  assert.equal(d.vendor, 'sitecapture'); assert.equal(d.specId, 'sitecapture-resurvey');
+  const mk = (entries, photos) => QA.makeSurvey({ template: { vendor: 'sitecapture', specId: 'sitecapture-resurvey' }, meta: {}, entries, photos });
+  const e = (ref, value) => ({ ref, value, page: 1 });
+  const ok = QA.evaluate(mk([e('resurvey_information', 'RESURVEY REQUEST: rafter span'), e('atypical_information', '176in')], [{ ref: null, section: 'a_typical_information', label: 'Atypical Information', page: 2 }]), specs, {});
+  assert.equal(ok.suggestedStatus, 'Passed'); assert.equal(ok.counts.verify, 1);
+  const bad = QA.evaluate(mk([e('resurvey_information', 'RESURVEY REQUEST: rafter span')], []), specs, {});
+  assert.equal(bad.suggestedStatus, 'Failed - Gaps Found');
+  assert.ok(QA.checklist('sitecapture-resurvey').some(c => c.id === 'rf_photos'));
 });
 
 test('reviewMetrics: first-pass, go backs, misses, weeks', () => {

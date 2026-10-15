@@ -9,14 +9,15 @@
 
 const QA_LOG_KEY = 'ops_qa_log', QA_USER_KEY = 'ops_qa_reviewer', QA_PEOPLE_KEY = 'ops_qa_people';
 const QA_API = '/api/qa-log';
-const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'radicl-v1', 'radicl-v2', 'radicl-groundmount'];
+const QA_SPECS = ['sitecapture-v14', 'sitecapture-v13', 'sitecapture-battery', 'sitecapture-resurvey', 'radicl-v1', 'radicl-v2', 'radicl-groundmount'];
 const QA_PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/';
 const QA_SF_STATUSES = ['Passed', 'Failed - Gaps Found', 'Passed with Override'];
-const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026', 'radicl-groundmount': 'Radicl ground mount' };
+const QA_TEMPLATE_SHORT = { 'sitecapture-v14': 'Site Capture V.14', 'sitecapture-v13': 'Site Capture V.13', 'sitecapture-battery': 'Site Capture battery only', 'sitecapture-resurvey': 'Site Capture resurvey', 'radicl-v2': 'Radicl Sep 2026', 'radicl-v1': 'Radicl Aug 2026', 'radicl-groundmount': 'Radicl ground mount' };
 const QA_TEMPLATE_NAMES = {
   'sitecapture-v14': 'SunPower · Site Capture form V.14',
   'sitecapture-v13': 'SunPower · Site Capture form V.13',
   'sitecapture-battery': 'SunPower · Site Capture battery-only form',
+  'sitecapture-resurvey': 'SunPower · Site Capture resurvey form',
   'radicl-v2': 'Radicl · current template',
   'radicl-v1': 'Radicl · August 2026 template',
   'radicl-groundmount': 'Radicl · ground mount template',
@@ -1949,6 +1950,8 @@ const QA_ACCEPTED = [
     how: 'A "Report Created" date and "1 - Customer Information" on the first pages, none of the V.14 fields' },
   { id: 'sitecapture-battery', group: 'SunPower · Site Capture', name: 'Battery-only survey', status: 'Current', forms: ['Site survey report'],
     how: '"Site Survey Report" cover with Battery Location Options in the contents' },
+  { id: 'sitecapture-resurvey', group: 'SunPower · Site Capture', name: 'Resurvey form', status: 'Current', forms: ['Site survey report'],
+    how: '"Site Survey Report" cover with Resurvey Information and A-typical Information in the contents' },
   { id: 'radicl-v2', group: 'Radicl', name: 'September 2026 template', status: 'Current', forms: ['Site survey report', 'Partial survey report (a go back)'],
     how: 'Radicl cover, "Exterior Electrical" in the contents' },
   { id: 'radicl-v1', group: 'Radicl', name: 'August 2026 template', status: 'Earlier', forms: ['Site survey report', 'Flat export (Section > Field rows)', 'Partial survey report (a go back)'],
