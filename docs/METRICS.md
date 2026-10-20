@@ -96,7 +96,6 @@ The clearance threshold is fit to this team's own 20-week history — it encodes
 | `avg` / `med` / `pct` | ignore null/negative/NaN; `avg` keeps **2dp** |
 | `bandFor(v, target)` | ≤target good · ≤target+2 mid · else bad, **on the displayed value** |
 | `queueAgeBand(d, targetAvg)` | ≤target good · ≤target+3 mid · else bad. For how long something has been **open**, not how long it took — hence +3 where `bandFor` uses +2. Bands the raw day count, since `ssDaysOpen` returns whole days |
-| `buildShowRates(rows, asOf)` | measured per-resource completion-within-1-day rate; ≥5 samples, else global. Retained for reference; the projection no longer calls it |
 | `buildExpectedCt(recent)` | rep's own avg (≥3) → region\|resource segment → global |
 | `weekDaysRemaining(iso)` | fractional days left Mon–Sun; export day counts as half |
 | `buildWeekdayShape(rows, asOf, weeks)` | share of a week's completions landing on each weekday over the trailing window (Sun≈0). Used to spread the projected remainder across remaining days and to derive `remainShare` |

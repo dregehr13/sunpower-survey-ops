@@ -69,12 +69,6 @@
  },
  "projection": {
   "recentCompletions": 62,
-  "showRateGlobal": 0.982,
-  "showRateResources": [
-   "Radicl Services",
-   "Sales Rep",
-   "SunPower Surveyor"
-  ],
   "segmentKeys": 28,
   "expectedCtSample": 7.63,
   "lookupFallback": 4,

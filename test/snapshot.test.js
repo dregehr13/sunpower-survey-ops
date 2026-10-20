@@ -25,7 +25,7 @@ const {
   hasResurveySig, isOpenResurvey, rsCategories, avg, med, pct, normalizeName,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, weeklyFloor,
   ssRatioForWeek, ssRatioLive, ssRatioBand, rollingClearance, clearanceAlarm,
-  businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
+  businessDays, weekDaysRemaining, buildExpectedCt,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, projectWeek, bandFor, trendLabel,
 } = OpsMetrics;
 
@@ -103,15 +103,12 @@ function computeAll() {
   // ── projection inputs ──
   const sixWeeksAgo = isoAdd(asOf, -42);
   const recent = complete.filter(r => r.complete >= sixWeeksAgo && r.ct_total != null && r.ct_total >= 1);
-  const showRates = buildShowRates(rows, asOf);
   const expectedCt = buildExpectedCt(recent);
   const segAvgs = buildSegmentAvgs(recent, ['region', 'resource']);
   // asOf is a Monday in the fixture — project that same week from its start.
   const pw = projectWeek(rows, asOf, asOf, { _noBacktest: true });
   const projection = {
     recentCompletions: recent.length,
-    showRateGlobal: round(showRates.global),
-    showRateResources: Object.keys(showRates.byResource).sort(),
     segmentKeys: Object.keys(segAvgs).length,
     expectedCtSample: round(expectedCt({ resource: 'Sales Rep', sales_rep: 'nobody', region: 'ZZ Fixture' })),
     lookupFallback: round(lookupSegmentAvg({ region: 'nowhere', resource: 'nothing' }, ['region', 'resource'], segAvgs, 4)),

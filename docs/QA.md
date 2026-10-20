@@ -109,7 +109,7 @@ as part of the app. Three views:
 
 Things not to undo:
 - **Password, not login** (Doug's call): the same `prompt()` and `ops_auth`
-  session key as /compose. Same limits as CLAUDE.md X5 — a plaintext constant in
+  session key as /compose. Same limits as DESIGN-NOTES.md X5 — a plaintext constant in
   a static file is a speed bump, not access control
 - **The log is shared**: Postgres (Neon, through the Vercel Marketplace), behind
   `api/qa-log.js` and `lib/qa-store.cjs`. Every viewer sees one history, the
@@ -373,7 +373,7 @@ not one of the checks. Checks only the other survey type's report can answer sho
 **not on this report**. Copy change list / Copy table work on it.
 
 ### 2026-10-01 — pre-launch audit
-Full findings in `docs/QA-AUDIT-REPORT.md`. Things not to undo:
+Things not to undo (the full pre-launch audit report was retired; see git history):
 - **Battery-only surveys** (Salesforce survey type, or "Battery Only" in the project
   name) skip the roof, attic and plane checks, and Site Capture's roof and attic
   sections in Layer A. The page passes `sfSurveyType` in the context

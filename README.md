@@ -22,12 +22,16 @@ push.sh               Parse latest SF export, write data files, commit + push (�
 api/update.js         Dashboard-upload path: commits data.js + data.json via GitHub API
 api/generate.js       Claude-written email commentary options
 api/morning-card.js   Stats + AI opener for the Teams morning card
-api/team-opener.js    AI opener only (stats supplied by client)
-api/_opener-prompt.js The opener prompt, shared by the two above
-api/send-teams.js     Posts an Adaptive Card to the Teams webhook
+api/_opener-prompt.js The opener prompt, used by morning-card
+api/team-context.js   Web-searched weather/news raw material for the compose Team card
+api/update-*.js       Commit billing / outlook / overrides / resmodel changes via the GitHub API
+api/qa-*.js           QA tool: shared review log, geocode lookup, photo vision
+api/refresh-sf.js     Salesforce API refresh (JWT auth; not live yet)
 docs/METRICS.md       The metric register — every displayed number and its definition
 test/                 node:test suites (metrics, frozen snapshot, cross-surface guards)
-scripts/              build-fixture.cjs (test fixture), build-geo.cjs (geo/)
+scripts/              build-fixture.cjs (test fixture), build-geo.cjs (geo/), plus archive/epc/memo/QA/SF-refresh tools
+lib/                  metrics, coverage, billing, qa shared libraries (see CLAUDE.md, docs/DESIGN-NOTES.md)
+qa/                   Site Survey QA page, reference photos, template specs
 geo/                  ZIP centroids, state outlines, top-1k cities, per-state counties
 ```
 
@@ -45,10 +49,9 @@ Alternative: the **Update data** button in the dashboard nav accepts a dropped
 
 | Var | Used by |
 |---|---|
-| `ANTHROPIC_API_KEY` | generate, morning-card, team-opener |
-| `UPDATE_PASSWORD` | update |
-| `GITHUB_TOKEN` | update (contents:write on this repo) |
-| `TEAMS_WEBHOOK_URL` | send-teams |
+| `ANTHROPIC_API_KEY` | generate, morning-card, team-context, qa-vision |
+| `UPDATE_PASSWORD` | update, update-billing, update-overrides |
+| `GITHUB_TOKEN` | update, update-* (contents:write on this repo) |
 
 ## Metric definitions
 
@@ -64,11 +67,11 @@ and compose grew a copy of it.)
 - **Cycle time (`ct_total`):** Project Start Date → Site Survey Complete, calendar days.
   Intermediate dates (requested/scheduled) exist but are unreliable — not featured.
   `agreement_signed` is context, never the anchor.
-- **Complete:** requires *both* a Site Survey Complete date *and* `List = 'Complete'`.
-- **WIP:** has a start date and is not complete.
+- **Complete:** a Site Survey Complete date. Terminal: a later resurvey or cancellation never un-completes it.
+- **WIP:** initial surveys only — has a start date, not complete, not parked. Open resurveys are tracked separately.
 - **Two age metrics, never interchangeable:** `wipAgeFrom` is the cycle-time anchor
   (resurvey request → completion + 2 days → start); `ssDaysOpen` is queue triage,
-  the same anchor minus one rep grace day.
+  the same anchor measured to the export date.
 - **Targets:** median 3 days, average 4 days (Spec 12744).
 - **SS ratio — two variants on purpose:** `ssRatioForWeek` (the reported weekly
   number: **7-day mean WIP** across the week ÷ completions of the 3 most recent

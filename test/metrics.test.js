@@ -8,7 +8,7 @@ import OpsMetrics from '../lib/metrics.cjs';
 const {
   DATA_CUTOFF, inScope, filterRows, normalizeName, isComplete, isWIP,
   effectiveComplete, wipAgeFrom, ssDaysOpen, hasResurveySig, isResurveyDefect, isOpenResurvey, qaReviewed, qaPassed, qaCalled, isQAEscape, isOpenGoBack, wipTag, qaBadgeKind, isOpenQueue, RS_CATEGORIES, rsCategories, rsCatLabel, fpy, avg, med, pct,
-  businessDays, weekDaysRemaining, buildShowRates, buildExpectedCt,
+  businessDays, weekDaysRemaining, buildExpectedCt,
   wipOn, meanWipForWeek, avgWeeklyCompletions, lastCompleteWeekEnd, ssRatioForWeek, ssRatioLive, ssRatioBand, clearanceAlarm, floorAlarm, revenueValue,
   buildSegmentAvgs, lookupSegmentAvg, buildWeekdayShape, buildProjectionModel, projectWeek,
   bandFor, queueAgeBand, TREND_BAND_AVG, TREND_BAND_MED, trendLabel,
@@ -347,38 +347,6 @@ test('weekDaysRemaining: export day counts as half, week runs through Sunday', (
   assert.equal(weekDaysRemaining('2026-07-17'), 2.5); // Friday
   assert.equal(weekDaysRemaining('2026-07-18'), 1.5); // Saturday
   assert.equal(weekDaysRemaining('2026-07-19'), 0.5); // Sunday — still projecting
-});
-
-// ── buildShowRates: measured per-resource, ≥5 sample floor, 0.9 fallback ──
-test('buildShowRates measures completion within 1 day of scheduled date', () => {
-  const mk = (sched, complete, resource) => ({ scheduled: sched, complete, resource });
-  const rows = [
-    // 6 Sales Rep rows: 4 hit (complete ≤ sched+1), 2 miss
-    ...Array.from({ length: 4 }, () => mk('2026-07-01', '2026-07-01', 'Sales Rep')),
-    mk('2026-07-01', '2026-07-05', 'Sales Rep'),
-    mk('2026-07-01', '', 'Sales Rep'),
-    // 2 Radicl rows — below the 5-sample floor, excluded from byResource
-    mk('2026-07-02', '2026-07-02', 'Radicl Services'),
-    mk('2026-07-02', '', 'Radicl Services'),
-  ];
-  const sr = buildShowRates(rows, '2026-07-16');
-  assert.equal(Math.round(sr.byResource['Sales Rep'] * 100), 67); // 4/6
-  assert.equal(sr.byResource['Radicl Services'], undefined);
-  assert.equal(Math.round(sr.global * 100), 63); // 5/8
-});
-
-test('buildShowRates with no scheduled history falls back to 0.9 global', () => {
-  const sr = buildShowRates([], '2026-07-16');
-  assert.equal(sr.global, 0.9);
-});
-
-test('buildShowRates ignores schedules outside the trailing window', () => {
-  const rows = [
-    { scheduled: '2026-01-01', complete: '2026-01-01', resource: 'Sales Rep' }, // too old
-    { scheduled: '2026-07-20', complete: '', resource: 'Sales Rep' },           // future
-  ];
-  const sr = buildShowRates(rows, '2026-07-16');
-  assert.equal(sr.global, 0.9);
 });
 
 // ── buildExpectedCt: rep avg (≥3) → region|resource segment → global ──
