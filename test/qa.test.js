@@ -167,7 +167,7 @@ test('Radicl: an inside panel is checked, and an outside panel the surveyor said
 
 test('the checklist is the Blue Raven list: every item once, with its type, and what the template cannot capture', () => {
   const sc = QA.checklist('sitecapture-v14'), rd = QA.checklist('radicl-v2');
-  assert.equal(QA.STANDARD.length, 37);
+  assert.equal(QA.STANDARD.length, 38);
   assert.ok(sc.length > 25 && rd.length > 25);
   assert.equal(new Set(sc.map(c => c.id)).size, sc.length);
   const by = (l, id) => l.find(c => c.id === id);
@@ -574,7 +574,7 @@ test('checks that only apply sometimes say when, in the checklist and in Setting
 test('the Checklist tab is two columns: the Shan list in his four groups, and the accepted template names only', () => {
   assert.ok(!/function _qaChecklist\(\) \{[^]*What we check/.test(pageSrc));
   const body = pageSrc.slice(pageSrc.indexOf('function _qaChecklist'));
-  assert.ok(/Shan checklist/.test(body) && /Accepted templates/.test(body) && !/Recognised by|Reports it reads|Add to template/.test(body));
+  assert.ok(/Site Survey QA Checklist/.test(body) && /Accepted templates/.test(body) && !/Recognised by|Reports it reads|Add to template/.test(body));
   assert.deepEqual(QA.CHECKLIST_GROUPS, ['Every job', 'Battery job', 'Roof-specific', 'Conditional']);
   const groups = QA.STANDARD.map(r => QA.checklistGroup(r.id));
   assert.ok(QA.CHECKLIST_GROUPS.every(g => groups.includes(g)));

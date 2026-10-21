@@ -1964,16 +1964,16 @@ function _qaChecklist() {
   // The list is Shan's, grouped as his summary groups it; the accepted templates sit beside it by name only.
   const typeName = { photo: 'Photo', measurement: 'Measurement', sketch: 'Sketch', yesno: 'Yes/No' };
   const groups = OpsQA.CHECKLIST_GROUPS;
-  const list = OpsQA.STANDARD.map(r => ({ title: r.title, when: r.when || '', type: typeName[r.type] || '', group: OpsQA.checklistGroup(r.id) }));
+  const list = OpsQA.STANDARD.map(r => ({ title: r.title, when: r.when || '', req: r.req || '', type: typeName[r.type] || '', group: OpsQA.checklistGroup(r.id) }));
   // Only the current templates are listed; earlier ones are still recognised when a report arrives.
   const shown = QA_ACCEPTED.filter(t => t.status === 'Current');
   const tpls = [...new Set(shown.map(t => t.group))];
   host.innerHTML = `<div class="qa-chk-grid">
-    <div class="sec"><div class="shead"><div><div class="stitle">Shan checklist</div>
+    <div class="sec"><div class="shead"><div><div class="stitle">Site Survey QA Checklist</div>
         <div class="ssub">${qaPlural(list.length, 'item')}. The full V.14 and the latest Radicl template are checked against all of it; every other template is checked on the fields it has. Weights are set in Settings.</div></div></div>
       <div class="xscroll"><table class="tbl qa-tbl" id="qa-checklist"><thead><tr><th>What we review</th><th>Supplied as</th></tr></thead><tbody>
         ${groups.map(g => `<tr><td colspan="2" class="qa-areahead">${qaH(g)}</td></tr>` + list.filter(c => c.group === g).map(c => `<tr>
-          <td class="qa-check">${qaH(c.title)}${c.when ? `<div class="qa-when">${qaH(c.when)}</div>` : ''}</td>
+          <td class="qa-check">${qaH(c.title)}${c.when ? `<div class="qa-when">${qaH(c.when)}</div>` : ''}${c.req ? `<div class="qa-when">${qaH(c.req)}</div>` : ''}</td>
           <td style="color:var(--muted);white-space:nowrap;">${qaH(c.type)}</td></tr>`).join('')).join('')}
       </tbody></table></div><div class="tbl-foot"><button class="copy-btn" onclick="copyTableEl('qa-checklist',this,'checklist')">Copy table</button></div>
     </div>
