@@ -792,6 +792,11 @@ ticks only added unfinished rows Performance discards. Things not to undo:
   effect: the Data page can no longer show open rows on canceled/at-risk deals
 - **`resScope()` uses its own `RES_SCOPE_STATUSES`**, so the Resource page does
   not move when the default widens
+- **Pages with no Project status control read every status** (2026-10-21).
+  `scopeRows()` keys off `scopePage` (set in `nav()`); only `STATUS_PAGES`
+  (Performance, Trends, Quality, Map, Data) honor `GF.statuses`. Unticking In
+  Progress on the Map had dropped This Week to 1 completion, with no control on
+  the page saying why
 - **WIP ignores project status entirely** (2026-10-01, Doug's call). It reads
   `wipRows()` — the scope with every status ticked — not `rows`: the control is
   not shown there (`fbShow`), and a Canceled/In Progress unticked on another page

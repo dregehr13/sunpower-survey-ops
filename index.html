@@ -1927,8 +1927,13 @@ function inStatusScope(r,s){
 // test), so project status has nothing to cut and a setting made on another
 // page must not shrink the queue invisibly.
 function wipRows(){ return allRows.filter(r=>inStatusScope(r,PROJECT_STATUSES)); }
+// Project status is only a control on the pages that show it (STATUS_PAGES). A
+// page with no bar reads the full status set: a Canceled/In Progress unticked on
+// the Map must not shrink This Week's completions where nothing says it applies.
+const STATUS_PAGES=['performance','trends','resurvey','map','data'];
+let scopePage='';
 function scopeRows(){
-  const s=GF&&GF.statuses;
+  const s=(!scopePage||STATUS_PAGES.includes(scopePage))?(GF&&GF.statuses):PROJECT_STATUSES;
   if(!Array.isArray(s)){ rows=allRows.slice(); return; }
   // A List of 'Inactive' (task parked) or 'Not Required' (no survey needed) is
   // neither active work nor a finished survey — drop it from the scoped
@@ -2613,6 +2618,7 @@ function nav(page){
   if(sb) sb.classList.toggle('active', page==='settings');
   window.scrollTo({top:0,behavior:'smooth'});
   saveFilterState();
+  scopePage=page; scopeRows();
   applyFilter();
   renderPage(page);
   renderWipCountBadge();  // the badge is in the nav, so it follows every page
